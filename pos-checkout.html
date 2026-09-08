@@ -884,8 +884,8 @@
      only ever holds the publishable key, which is safe to ship in
      client-side code. See SETUP-INSTRUCTIONS.md. */
   const STRIPE_CONFIG = {
-    publishableKey: 'YOUR_STRIPE_PUBLISHABLE_KEY',
-    createIntentUrl: 'YOUR_SUPABASE_EDGE_FUNCTION_URL' // e.g. https://xyz.supabase.co/functions/v1/create-payment-intent
+    publishableKey: 'pk_live_51OLC0BGK5QXBdm2xjs35KuOCDdFypBQfjCmyCUFZAU8LLj4kRAUfRpYsIzlCRnIAgKy6WFqIZMJKQUdr0nYZzGwj005w918tk9',
+    createIntentUrl: 'https://pizwuzwkzfwgfjeolmqp.supabase.co/functions/v1/create-payment-intent' // e.g. https://xyz.supabase.co/functions/v1/create-payment-intent
   };
   const stripeReady = STRIPE_CONFIG.publishableKey.startsWith('pk_');
   const stripeClient = stripeReady ? Stripe(STRIPE_CONFIG.publishableKey) : null;
@@ -902,9 +902,9 @@
      project URL + anon key here too. This terminal signs into the
      same business account as the Back Office, then reads/writes the
      same live data (catalog, stock, staff, customers, receipts). */
-  const SUPABASE_CONFIG = {
-    url: 'YOUR_SUPABASE_PROJECT_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY'
+   const SUPABASE_CONFIG = {
+    url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA'
   };
   const AUREUM_KEY = 'aureum_pos_cache_v1'; // local cache only, for instant load + offline fallback
   const supaReady = SUPABASE_CONFIG.url.startsWith('http');
