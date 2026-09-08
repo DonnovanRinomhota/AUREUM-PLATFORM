@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AUREUM — Point of Sale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0A1B16;
+    --bg-deep-2:#0D211A;
+    --panel:#11291F;
+    --panel-alt:#153426;
+    --panel-raised:#173A2A;
+    --emerald:#1F4D3E;
+    --emerald-light:#2F6B54;
+    --emerald-glow: rgba(47,107,84,0.35);
+    --gold:#C9A227;
+    --gold-bright:#E7C766;
+    --gold-dim:#8A712A;
+    --ivory:#F4EFDF;
+    --ivory-dim:#D8D1BC;
+    --sage:#8FA79A;
+    --sage-dim:#5F7469;
+    --line: rgba(231,199,102,0.14);
+    --line-strong: rgba(231,199,102,0.28);
+    --danger:#C1584A;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(47,107,84,0.35), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(201,162,39,0.10), transparent 55%),
+      var(--bg-deep);
+    color:var(--ivory);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 1fr 420px;
+    grid-template-rows: auto 1fr;
+    height:100vh;
+    max-height:100vh;
+    overflow:hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .topbar{
+    grid-column: 1 / -1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 32px;
+    border-bottom:1px solid var(--line);
+    background: linear-gradient(180deg, rgba(21,52,38,0.6), transparent);
+  }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-seal{
+    width:40px; height:40px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, var(--gold-bright), var(--gold) 55%, var(--gold-dim) 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-weight:600; font-size:18px; color:#1B140A;
+    box-shadow: 0 0 0 1px rgba(231,199,102,0.35), 0 4px 14px rgba(201,162,39,0.25);
+  }
+  .brand-text{ line-height:1.1; }
+  .brand-text .name{
+    font-family:'Inter', sans-serif; font-size:19px; letter-spacing:0.12em; font-weight:700;
+    color:var(--ivory); font-style:normal;
+  }
+  .brand-text .sub{ font-size:11px; letter-spacing:0.18em; color:var(--sage); text-transform:uppercase; margin-top:2px;}
+
+  .topbar-right{ display:flex; align-items:center; gap:14px; }
+  .topbar-icon-btn{
+    width:38px; height:38px; border-radius:10px;
+    border:1px solid var(--line); background: var(--panel);
+    color: var(--sage); font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition: all .16s ease;
+  }
+  .topbar-icon-btn:hover{ border-color: var(--gold-dim); color: var(--gold-bright); background: var(--panel-raised); }
+  .clerk{ text-align:right; line-height:1.2; }
+  .clerk .who{ font-size:13px; color:var(--ivory); font-weight:500; }
+  .clerk .when{ font-size:11px; color:var(--sage); font-variant-numeric: tabular-nums; }
+  .avatar{
+    width:36px;height:36px;border-radius:50%;
+    background: linear-gradient(135deg, var(--emerald-light), var(--emerald));
+    border:1px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif; font-size:13px; color:var(--gold-bright);
+  }
+
+  /* ===== LEFT: CATALOG ===== */
+  .catalog{
+    padding:22px 28px 24px;
+    overflow-y:auto;
+    min-height:0;
+    display:flex; flex-direction:column; gap:20px;
+  }
+
+  .catalog-search{
+    display:flex; align-items:center; gap:12px;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius: 12px;
+    padding:14px 18px;
+  }
+  .catalog-search:focus-within{ border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(201,162,39,0.08); }
+  .catalog-search .icon-search{ color:var(--sage); font-size:16px; }
+  .catalog-search input{
+    flex:1; background:transparent; border:none; outline:none; color:var(--ivory);
+    font-family:'Inter'; font-size:15px;
+  }
+  .catalog-search input::placeholder{ color:var(--sage-dim); }
+  .scan-btn{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 14px; border-radius:9px;
+    background: var(--panel-raised); border:1px solid var(--line-strong);
+    color:var(--gold-bright); font-size:12.5px; letter-spacing:0.02em;
+    cursor:pointer; white-space:nowrap;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .scan-btn:hover{ background: var(--emerald); border-color: var(--gold-dim); }
+  .scan-btn .dot{ width:6px; height:6px; border-radius:50%; background: var(--gold-bright); }
+
+  .categories{
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .cat-pill{
+    padding:9px 18px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background: var(--panel);
+    color: var(--sage);
+    font-size:13px; letter-spacing:0.02em;
+    cursor:pointer;
+    transition: all .18s ease;
+    user-select:none;
+  }
+  .cat-pill:hover{ border-color: var(--line-strong); color:var(--ivory-dim); }
+  .cat-pill.active{
+    background: linear-gradient(135deg, var(--emerald-light), var(--emerald));
+    border-color: var(--gold-dim);
+    color: var(--ivory);
+    box-shadow: 0 4px 16px rgba(31,77,62,0.45);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap:16px;
+  }
+  .card{
+    position:relative;
+    background: linear-gradient(160deg, var(--panel-alt), var(--panel));
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding:16px 14px 14px;
+    cursor:pointer;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    overflow:hidden;
+  }
+  .card::after{
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(120px 90px at 20% 0%, var(--emerald-glow), transparent 70%);
+    opacity:0; transition:opacity .2s ease;
+  }
+  .card:hover{ transform: translateY(-3px); border-color: var(--line-strong); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+  .card:hover::after{ opacity:1; }
+  .card:active{ transform: translateY(-1px) scale(0.98); }
+
+  .card .glyph{
+    width:100%; height:84px;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    border-radius:10px;
+    margin-bottom:12px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -8px 18px rgba(0,0,0,0.25);
+  }
+  .card .glyph svg{ width:34px; height:34px; position:relative; z-index:1; }
+  .card .glyph::before{
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(70px 50px at 30% 15%, rgba(255,255,255,0.10), transparent 65%);
+  }
+  .card .pname{
+    font-size:13.5px; font-weight:600; color:#FFFFFF;
+    line-height:1.3; min-height:34px;
+  }
+  .card .pmeta{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:10px;
+  }
+  .card .pprice{
+    font-family:'JetBrains Mono', monospace; font-size:14.5px; color:var(--gold-bright); font-weight:500;
+  }
+  .card .pstock{
+    font-size:10.5px; color:#FFFFFF; font-weight:600; opacity:0.9;
+  }
+
+  .section-label{
+    font-family:'Fraunces', serif; font-size:13px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--sage); display:flex; align-items:center; gap:10px;
+  }
+  .section-label::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  /* ===== RIGHT: TICKET ===== */
+  .ticket-wrap{
+    border-left:1px solid var(--line);
+    background: linear-gradient(180deg, var(--bg-deep-2), var(--panel) 4%, var(--bg-deep-2));
+    display:flex; flex-direction:column;
+    position:relative;
+    min-height:0; overflow:hidden;
+  }
+  .ticket-scroll{
+    flex:1; min-height:0; overflow-y:auto;
+    display:flex; flex-direction:column;
+  }
+  .ticket-head{
+    padding:22px 26px 16px;
+    border-bottom: 1px dashed var(--line-strong);
+    position:relative;
+  }
+  .ticket-head .label{
+    font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--sage);
+  }
+  .ticket-head .order-no{
+    font-family:'Inter', sans-serif; font-size:20px; margin-top:4px; color:var(--ivory); font-weight:600; font-style:normal;
+  }
+  .ticket-head-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .ticket-icon-actions{ display:flex; gap:8px; }
+  .ticket-icon-btn{
+    width:30px; height:30px; border-radius:8px;
+    border:1px solid var(--line); background:var(--panel);
+    color:var(--sage); font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition: all .15s ease;
+  }
+  .ticket-icon-btn:hover{ border-color:var(--line-strong); color:var(--ivory-dim); }
+  .ticket-icon-btn.warn:hover{ color:var(--danger); border-color:var(--danger); }
+
+  .quick-chips{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .quick-chip{
+    display:flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:999px;
+    border:1px dashed var(--line-strong);
+    color:var(--sage); font-size:11.5px; letter-spacing:0.01em;
+    cursor:pointer; transition: all .15s ease;
+  }
+  .quick-chip:hover{ border-color:var(--gold-dim); color:var(--gold-bright); border-style:solid; }
+  .quick-chip.set{ border-style:solid; border-color:var(--gold-dim); color:var(--gold-bright); background:rgba(201,162,39,0.06); }
+
+  .scallop{
+    position:absolute; left:0; right:0; bottom:-11px; height:22px;
+    background:
+      radial-gradient(circle at 10px 0, transparent 10px, var(--bg-deep-2) 10.5px) 0 0/22px 22px repeat-x;
+  }
+
+  .ticket-items{
+    padding:22px 26px; display:flex; flex-direction:column; gap:14px;
+  }
+  .empty-state{
+    margin-top:40px; text-align:center; color:var(--sage-dim);
+  }
+  .empty-state .mono-glyph{ font-family:'Fraunces',serif; font-size:34px; color: var(--gold-dim); margin-bottom:10px;}
+  .empty-state p{ font-size:13px; line-height:1.6; max-width:220px; margin:0 auto; }
+
+  .line-item{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:4px 12px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+    animation: fadeIn .25s ease;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .line-item .li-name{ font-size:13.5px; color:var(--ivory); font-weight:500; }
+  .line-item .li-total{ font-family:'JetBrains Mono',monospace; font-size:13.5px; color:var(--gold-bright); text-align:right; }
+  .line-item .li-controls{
+    display:flex; align-items:center; gap:8px; grid-column:1/-1;
+  }
+  .qty-btn{
+    width:22px; height:22px; border-radius:6px; border:1px solid var(--line-strong);
+    background: var(--panel-raised); color:var(--ivory);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px;
+    user-select:none;
+  }
+  .qty-btn:hover{ border-color: var(--gold-dim); color:var(--gold-bright); }
+  .qty-val{ font-family:'JetBrains Mono',monospace; font-size:12.5px; min-width:18px; text-align:center; color:var(--sage); }
+  .li-unit{ font-size:11px; color:var(--sage-dim); margin-left:6px; }
+  .li-remove{
+    margin-left:auto; font-size:11px; color:var(--sage-dim); cursor:pointer; letter-spacing:0.03em;
+  }
+  .li-remove:hover{ color:var(--danger); }
+
+  .ticket-totals{
+    padding:18px 26px 6px;
+    border-top:1px dashed var(--line-strong);
+  }
+  .trow{
+    display:flex; justify-content:space-between; font-size:13px; color:var(--sage);
+    padding:5px 0;
+  }
+  .trow .v{ font-family:'JetBrains Mono',monospace; color:var(--ivory-dim); }
+  .trow.grand{
+    margin-top:6px; padding-top:14px; border-top:1px solid var(--line-strong);
+    align-items:baseline;
+  }
+  .trow.grand .k{ font-family:'Inter',sans-serif; font-size:14px; color:var(--ivory); letter-spacing:0.02em; font-weight:600; font-style:normal; }
+  .trow.grand .v{ font-family:'Inter',sans-serif; font-size:24px; color:var(--gold-bright); font-weight:700; font-style:normal; }
+
+  .tax-row span:first-child{ display:flex; align-items:center; gap:6px; }
+  .tax-percent-input{
+    width:42px; background: var(--panel); border:1px solid var(--line-strong);
+    border-radius:6px; padding:3px 5px; color:var(--ivory); font-family:'JetBrains Mono',monospace;
+    font-size:12px; text-align:center; outline:none;
+  }
+  .tax-percent-input:focus{ border-color: var(--gold-dim); }
+  .tax-percent-input::-webkit-inner-spin-button{ opacity: 0.5; }
+
+  .pay-methods{
+    display:grid; grid-template-columns: repeat(4,1fr); gap:8px;
+    padding:16px 26px 0;
+  }
+  .pay-btn{
+    padding:11px 6px 9px; border-radius:10px; border:1px solid var(--line);
+    background: var(--panel); color:var(--sage); font-size:11px; text-align:center;
+    cursor:pointer; transition: all .16s ease; letter-spacing:0.01em;
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+  }
+  .pay-btn svg{ width:18px; height:18px; }
+  .pay-btn:hover{ border-color:var(--line-strong); color:var(--ivory-dim); }
+  .pay-btn.active{
+    background: linear-gradient(135deg, var(--emerald-light), var(--emerald));
+    border-color: var(--gold-dim); color:var(--ivory);
+  }
+
+  .tender-panel{
+    margin:14px 26px 0;
+    padding:14px 16px;
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+  }
+  .tender-row{ display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:var(--sage); letter-spacing:0.04em; text-transform:uppercase; }
+  .payment-amount-wrap{
+    display:flex; align-items:center; gap:8px;
+    margin-top:8px;
+    background: var(--panel-raised); border:1px solid var(--line-strong); border-radius:10px;
+    padding:10px 14px;
+  }
+  .payment-amount-wrap:focus-within{ border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(201,162,39,0.08); }
+  .pa-currency{ font-family:'JetBrains Mono',monospace; color: var(--gold-bright); font-size:18px; }
+  .payment-amount-input{
+    flex:1; background:transparent; border:none; outline:none;
+    font-family:'JetBrains Mono',monospace; font-size:18px; color: var(--ivory);
+  }
+  .payment-amount-input::placeholder{ color: var(--sage-dim); }
+  .tender-chips{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .tender-chip{
+    padding:8px 12px; border-radius:8px; border:1px solid var(--line-strong);
+    background: var(--panel-raised); color:var(--ivory-dim);
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .tender-chip:hover{ border-color:var(--gold-dim); color:var(--gold-bright); }
+  .tender-chip.active{
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color:#20160A; border-color:var(--gold-dim);
+  }
+  .change-row{
+    display:flex; justify-content:space-between; margin-top:12px; padding-top:12px;
+    border-top:1px dashed var(--line-strong);
+  }
+  .change-row .k{ font-size:12.5px; color:var(--sage); }
+  .change-row .v{ font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--gold-bright); }
+
+  .charge-btn{
+    margin:18px 26px 24px;
+    padding:16px;
+    border-radius: 12px;
+    border:1px solid var(--gold-dim);
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold) 55%, var(--gold-dim));
+    color:#20160A;
+    font-family:'Fraunces', serif; font-size:16px; font-weight:600; letter-spacing:0.02em;
+    text-align:center; cursor:pointer;
+    box-shadow: 0 10px 26px rgba(201,162,39,0.28), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: transform .12s ease, box-shadow .12s ease;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .charge-btn:hover{ transform: translateY(-2px); box-shadow: 0 14px 32px rgba(201,162,39,0.38), inset 0 1px 0 rgba(255,255,255,0.4); }
+  .charge-btn:active{ transform: translateY(0); }
+  .charge-btn.disabled{
+    opacity:0.35; pointer-events:none; box-shadow:none;
+  }
+
+  .other-pay-input{
+    margin:12px 26px 0; display:none;
+  }
+  .other-pay-input input{
+    width:100%; background: var(--panel); border:1px solid var(--line-strong);
+    border-radius:10px; padding:11px 14px; color:var(--ivory);
+    font-family:'Inter'; font-size:13px; outline:none;
+  }
+  .other-pay-input input:focus{ border-color: var(--gold-dim); }
+  .other-pay-input.show{ display:block; }
+
+  /* ===== MODALS ===== */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:50;
+    background: rgba(6,14,11,0.72);
+    backdrop-filter: blur(3px);
+    display:none; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-panel{
+    width:100%; max-width:460px; max-height:82vh;
+    background: linear-gradient(165deg, var(--panel-alt), var(--bg-deep-2));
+    border:1px solid var(--line-strong);
+    border-radius:16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 24px; border-bottom:1px solid var(--line);
+  }
+  .modal-head .title{ font-family:'Inter',sans-serif; font-size:16px; font-weight:700; color:var(--ivory); }
+  .modal-close{
+    width:28px; height:28px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel); color:var(--sage); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:13px;
+  }
+  .modal-close:hover{ color:var(--ivory); border-color:var(--line-strong); }
+  .modal-body{ padding:20px 24px; overflow-y:auto; }
+
+  /* Recent sales list */
+  .sale-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:13px 0; border-bottom:1px solid var(--line);
+  }
+  .sale-row:last-child{ border-bottom:none; }
+  .sale-row .info .no{ font-size:13.5px; color:var(--ivory); font-weight:600; }
+  .sale-row .info .meta{ font-size:11px; color:var(--sage); margin-top:2px; }
+  .sale-row .amt{ text-align:right; }
+  .sale-row .amt .val{ font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--gold-bright); }
+  .sale-row .amt .method{ font-size:10.5px; color:var(--sage); text-transform:uppercase; letter-spacing:0.04em; margin-top:2px; }
+
+  /* Help content */
+  .help-section{ margin-bottom:18px; }
+  .help-section:last-child{ margin-bottom:0; }
+  .help-section h4{
+    font-family:'Inter',sans-serif; font-size:11.5px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--gold-bright); margin:0 0 10px;
+  }
+  .help-section ol, .help-section ul{ margin:0; padding-left:18px; color:var(--ivory-dim); font-size:13px; line-height:1.85; }
+  .help-shortcuts{ display:flex; flex-direction:column; gap:8px; }
+  .shortcut-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ivory-dim); }
+  .kbd{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gold-bright);
+    background: var(--panel); border:1px solid var(--line-strong); border-radius:5px; padding:2px 7px;
+  }
+
+  /* Receipt */
+  .receipt-body{ font-family:'JetBrains Mono',monospace; color:var(--ivory-dim); font-size:12.5px; }
+  .receipt-body .r-center{ text-align:center; }
+  .receipt-body .r-brand{ font-family:'Inter',sans-serif; font-weight:700; letter-spacing:0.1em; color:var(--ivory); font-size:15px; }
+  .receipt-body .r-sub{ color:var(--sage); font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; margin-top:2px; }
+  .receipt-body .r-dash{ border-top:1px dashed var(--line-strong); margin:12px 0; }
+  .receipt-body .r-row{ display:flex; justify-content:space-between; padding:3px 0; }
+  .receipt-body .r-row.total{ font-family:'Inter',sans-serif; font-weight:700; color:var(--gold-bright); font-size:14px; padding-top:6px; }
+  .receipt-thanks{ text-align:center; color:var(--sage); font-size:11px; margin-top:14px; letter-spacing:0.04em; }
+  .modal-actions{ display:flex; gap:10px; padding:16px 24px 22px; border-top:1px dashed var(--line-strong); }
+  .modal-btn{
+    flex:1; text-align:center; padding:12px; border-radius:10px; cursor:pointer;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+  }
+  .modal-btn.ghost{ border:1px solid var(--line-strong); color:var(--ivory-dim); background:transparent; }
+  .modal-btn.ghost:hover{ border-color: var(--gold-dim); color: var(--gold-bright); }
+  .modal-btn.solid{
+    border:1px solid var(--gold-dim);
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color:#20160A;
+  }
+
+  .field-label{ font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--sage); margin-bottom:8px; }
+  .modal-field{
+    width:100%; background: var(--panel); border:1px solid var(--line-strong);
+    border-radius:10px; padding:11px 14px; color:var(--ivory);
+    font-family:'Inter'; font-size:13.5px; outline:none; resize:none;
+  }
+  .modal-field:focus{ border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(201,162,39,0.08); }
+  .modal-field::placeholder{ color:var(--sage-dim); }
+
+  .seg-toggle{ display:flex; gap:8px; }
+  .seg-btn{
+    flex:1; text-align:center; padding:9px; border-radius:9px;
+    border:1px solid var(--line-strong); color:var(--sage); font-size:12.5px; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .seg-btn.active{
+    background: linear-gradient(135deg, var(--emerald-light), var(--emerald));
+    border-color: var(--gold-dim); color:var(--ivory);
+  }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--panel-raised); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  @media (max-width: 900px){
+    .app{ grid-template-columns: 1fr; grid-template-rows:auto auto 1fr; }
+    .ticket-wrap{ border-left:none; border-top:1px solid var(--line); max-height:46vh; }
+  }
+
+  @media print{
+    @page{ size:80mm auto; margin:0; }
+    body > *:not(#receiptOverlay){ display:none !important; }
+    #receiptOverlay{
+      position:static !important; background:none !important; backdrop-filter:none !important;
+      display:block !important; padding:0 !important;
+    }
+    #receiptOverlay .modal-panel{
+      max-width:80mm; width:80mm; max-height:none; margin:0; box-shadow:none !important;
+      background:#fff !important; border:none !important; border-radius:0 !important; padding:8px 6px !important;
+    }
+    #receiptOverlay .modal-head, #receiptOverlay .modal-actions{ display:none !important; }
+    #receiptOverlay .receipt-body{ color:#111 !important; font-size:11.5px !important; }
+    #receiptOverlay .receipt-body .r-brand{ color:#000 !important; }
+    #receiptOverlay .r-row.total{ color:#000 !important; }
+    #receiptOverlay .receipt-thanks{ color:#333 !important; }
+  }  /* ===== AUTH GATE ===== */
+  .auth-gate{
+    display:none; position:fixed; inset:0; z-index:500;
+    background: radial-gradient(circle at 30% 20%, rgba(20,58,42,0.9), var(--bg-deep) 65%);
+    align-items:center; justify-content:center;
+  }
+  .auth-gate.show{ display:flex; }
+  .auth-card{
+    width:340px; background:var(--panel); border:1px solid var(--line-strong); border-radius:16px;
+    padding:32px 28px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  .auth-seal{
+    width:48px; height:48px; margin:0 auto 14px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, var(--gold-bright), var(--gold) 55%, var(--gold-dim) 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-weight:600; font-size:20px; color:#1B140A;
+  }
+  .auth-title{ font-family:'Fraunces',serif; font-size:19px; color:var(--ivory); margin-bottom:4px; }
+  .auth-sub{ font-size:12px; color:var(--sage); margin-bottom:18px; line-height:1.5; }
+  .auth-field{
+    width:100%; padding:11px 12px; margin-bottom:10px; border-radius:9px;
+    border:1px solid var(--line-strong); background:var(--panel-raised); color:var(--ivory);
+    font-size:13px; outline:none; box-sizing:border-box;
+  }
+  .auth-field:focus{ border-color:var(--gold-dim); }
+  .auth-error{ font-size:11.5px; color:var(--danger); min-height:16px; margin-bottom:6px; }
+  .auth-btn{
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color:#1B140A; font-weight:700; padding:11px; border-radius:9px; cursor:pointer; font-size:13px;
+  }
+</style>
+</head>
+<body>
+<div class="auth-gate" id="authGate">
+  <div class="auth-card">
+    <div class="auth-seal">A</div>
+    <div class="auth-title">AUREUM Point of Sale</div>
+    <div class="auth-sub" id="authGateMsg">Sign in with your business account to open this terminal.</div>
+    <input class="auth-field" id="authEmail" type="email" placeholder="Email">
+    <input class="auth-field" id="authPassword" type="password" placeholder="Password">
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-btn" id="authSubmitBtn">Sign In</div>
+  </div>
+</div>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-seal">A</div>
+      <div class="brand-text">
+        <div class="name">AUREUM</div>
+        <div class="sub">Point of Sale</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-icon-btn" id="syncStatus" title="Sync status" style="width:auto;padding:0 10px;font-size:10.5px;">&#9679; <span id="syncStatusLabel">Synced</span></div>
+      <div class="topbar-icon-btn" id="shopSwitchBtn" title="Switch shop" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9733; <span id="shopChipLabel">All Shops</span></div>
+      <div class="topbar-icon-btn" id="backOfficeBtn" title="Open Back Office">&#8599;</div>
+      <div class="topbar-icon-btn" id="recentSalesBtn" title="Recent sales">&#8635;</div>
+      <div class="topbar-icon-btn" id="helpBtn" title="Help">?</div>
+      <div class="clerk" id="clerkSwitch" title="Switch cashier" style="cursor:pointer;">
+        <div class="who" id="clerkName">Cashier</div>
+        <div class="when" id="clock">—</div>
+      </div>
+      <div class="avatar" id="clerkAvatar">--</div>
+    </div>
+  </div>
+
+  <div class="catalog">
+    <div class="catalog-search">
+      <span class="icon-search">&#8981;</span>
+      <input type="text" id="searchInput" placeholder="Search products by name, SKU or code…">
+      <div class="scan-btn" id="scanBtn"><span class="dot"></span>Scan barcode</div>
+    </div>
+    <div class="categories" id="categories"></div>
+    <div class="section-label" id="sectionLabel">All Products</div>
+    <div class="grid" id="productGrid"></div>
+  </div>
+
+  <div class="ticket-wrap">
+    <div class="ticket-head">
+      <div class="ticket-head-top">
+        <div>
+          <div class="label">Current Ticket</div>
+          <div class="order-no" id="orderNo">No. 0512</div>
+        </div>
+        <div class="ticket-icon-actions">
+          <div class="ticket-icon-btn" id="holdBtn" title="Hold ticket">&#10074;&#10074;</div>
+          <div class="ticket-icon-btn warn" id="voidBtn" title="Void ticket">&#10005;</div>
+        </div>
+      </div>
+      <div class="quick-chips">
+        <div class="quick-chip" id="customerChip">+ Add customer</div>
+        <div class="quick-chip" id="discountChip">+ Discount</div>
+        <div class="quick-chip" id="noteChip">+ Note</div>
+      </div>
+      <div class="scallop"></div>
+    </div>
+
+    <div class="ticket-scroll">
+    <div class="ticket-items" id="ticketItems">
+      <div class="empty-state">
+        <div class="mono-glyph">✦</div>
+        <p>Select items from the catalog to begin a new ticket.</p>
+      </div>
+    </div>
+
+    <div class="ticket-totals">
+      <div class="trow"><span>Subtotal</span><span class="v" id="subtotalVal">$0.00</span></div>
+      <div class="trow"><span>Discount</span><span class="v" id="discountVal">$0.00</span></div>
+      <div class="trow tax-row">
+        <span>Tax <input type="number" id="taxPercentInput" class="tax-percent-input" min="0" max="100" step="0.1" value="0">%</span>
+        <span class="v" id="taxVal">$0.00</span>
+      </div>
+      <div class="trow grand"><span class="k">Total</span><span class="v" id="totalVal">$0.00</span></div>
+      <div class="trow" id="totalVal2Row" style="display:none; font-size:11.5px; color:var(--sage); padding-top:0;"><span class="k">&nbsp;</span><span class="v" id="totalVal2"></span></div>
+    </div>
+
+    <div class="pay-methods" id="payMethods">
+      <div class="pay-btn active" data-pay="cash">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 6v0M18 18v0"/></svg>
+        Cash
+      </div>
+      <div class="pay-btn" data-pay="card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="2.2"/><path d="M2.5 9.5h19"/><path d="M6 14.5h4"/></svg>
+        Card
+      </div>
+      <div class="pay-btn" data-pay="mobile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10 18.5h4"/></svg>
+        Mobile
+      </div>
+      <div class="pay-btn" data-pay="other">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 4 7v6c0 4 3.4 6.8 8 8 4.6-1.2 8-4 8-8V7l-8-4Z"/></svg>
+        Other
+      </div>
+    </div>
+    <div class="other-pay-input" id="otherPayInput">
+      <input type="text" id="otherPayLabel" placeholder="e.g. Voucher, Bank transfer, Store credit…" maxlength="30">
+    </div>
+
+    <div class="tender-panel" id="tenderPanel">
+      <div class="tender-row" style="display:flex; align-items:center; justify-content:space-between;">
+        <span>Payment Amount</span>
+        <div id="tenderCurrencyToggle" style="display:none; gap:6px;">
+          <div class="seg-btn active" data-cur="primary" style="padding:4px 10px; font-size:11px;">USD</div>
+          <div class="seg-btn" data-cur="secondary" style="padding:4px 10px; font-size:11px;">ZWG</div>
+        </div>
+      </div>
+      <div class="payment-amount-wrap">
+        <span class="pa-currency" id="paCurrencySymbol">$</span>
+        <input type="number" id="paymentAmountInput" class="payment-amount-input" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div id="tenderDueNote" style="font-size:11px;color:var(--sage);margin:-4px 0 8px;display:none;"></div>
+      <div class="tender-chips" id="tenderChips"></div>
+      <div class="change-row"><span class="k">Change due</span><span class="v" id="changeVal">$0.00</span></div>
+      <div id="cardElementWrap" style="display:none;margin-top:12px;">
+        <div class="tender-row"><span>Card Details</span></div>
+        <div id="stripeCardElement" style="padding:11px 12px;border-radius:9px;border:1px solid var(--line-strong);background:var(--panel-raised);"></div>
+        <div id="cardElementError" style="font-size:11px;color:var(--danger);margin-top:6px;min-height:14px;"></div>
+      </div>
+      <div id="mobileMoneyWrap" style="display:none;margin-top:12px;">
+        <div class="tender-row"><span>Mobile Money</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <div class="seg-btn active" data-mm="ecocash" style="flex:1;text-align:center;">EcoCash</div>
+          <div class="seg-btn" data-mm="onemoney" style="flex:1;text-align:center;">OneMoney</div>
+        </div>
+        <input type="tel" id="mobileMoneyPhone" class="auth-field" placeholder="e.g. 0771234567" style="margin-bottom:0;">
+        <div id="mobileMoneyStatus" style="font-size:11.5px;color:var(--sage);margin-top:8px;min-height:14px;"></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="charge-btn disabled" id="chargeBtn">Complete Sale</div>
+  </div>
+
+</div>
+
+<!-- Recent Sales Modal -->
+<div class="modal-overlay" id="recentSalesOverlay">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div class="title">Recent Sales</div>
+      <div class="modal-close" data-close="recentSalesOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body" id="recentSalesBody"></div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div class="title">How AUREUM works</div>
+      <div class="modal-close" data-close="helpOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="help-section">
+        <h4>Ring up a sale</h4>
+        <ol>
+          <li>Tap a category, or use the search bar to find an item by name, barcode, or SKU.</li>
+          <li>Tap a product tile to add it to the ticket — tap again to add more.</li>
+          <li>Adjust quantity with the – / + controls next to each line item.</li>
+          <li>Choose a payment method, then tap <strong>Complete Sale</strong>.</li>
+        </ol>
+      </div>
+      <div class="help-section">
+        <h4>Ticket tools</h4>
+        <ul>
+          <li><strong>+ Add customer</strong> — attach the sale to a customer record.</li>
+          <li><strong>+ Discount</strong> — apply a reduction to the ticket.</li>
+          <li><strong>Hold</strong> — park the current ticket and start a new one.</li>
+          <li><strong>Void</strong> — clear the ticket and start over.</li>
+        </ul>
+      </div>
+      <div class="help-section">
+        <h4>Payments</h4>
+        <ul>
+          <li><strong>Cash</strong> — use the quick tender chips to enter the amount received; change is calculated automatically.</li>
+          <li><strong>Other</strong> — for vouchers, bank transfers, or store credit, type the payment type manually.</li>
+        </ul>
+      </div>
+      <div class="help-section">
+        <h4>Keyboard shortcuts</h4>
+        <div class="help-shortcuts">
+          <div class="shortcut-row"><span>Focus search</span><span class="kbd">F2</span></div>
+          <div class="shortcut-row"><span>Scan barcode</span><span class="kbd">F3</span></div>
+          <div class="shortcut-row"><span>Complete sale</span><span class="kbd">F5</span></div>
+          <div class="shortcut-row"><span>Hold sale</span><span class="kbd">F8</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal-overlay" id="receiptOverlay">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div class="title">Sale Complete</div>
+      <div class="modal-close" data-close="receiptOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="receipt-body" id="receiptBody"></div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" id="receiptCloseBtn">New Sale</div>
+      <div class="modal-btn ghost" id="thermalPrintBtn" title="Print directly to a USB thermal receipt printer (Chrome/Edge desktop)">Print via USB</div>
+      <div class="modal-btn ghost" id="thermalPrintBtnBt" title="Print directly to a Bluetooth thermal receipt printer, already paired in this device's Bluetooth settings (Chrome/Edge)">Print via Bluetooth</div>
+      <div class="modal-btn solid" id="receiptPrintBtn">Print Receipt</div>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Modal -->
+<div class="modal-overlay" id="customerOverlay">
+  <div class="modal-panel" style="max-width:380px;">
+    <div class="modal-head">
+      <div class="title">Add Customer</div>
+      <div class="modal-close" data-close="customerOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">Customer name</div>
+      <input type="text" id="customerNameField" class="modal-field" placeholder="e.g. Naledi Moyo" maxlength="40">
+      <div class="field-label" style="margin-top:14px;">Phone (optional)</div>
+      <input type="text" id="customerPhoneField" class="modal-field" placeholder="e.g. +263 77 123 4567" maxlength="24">
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" id="customerRemoveBtn">Remove</div>
+      <div class="modal-btn solid" id="customerApplyBtn">Save Customer</div>
+    </div>
+  </div>
+</div>
+
+<!-- Discount Modal -->
+<div class="modal-overlay" id="discountOverlay">
+  <div class="modal-panel" style="max-width:380px;">
+    <div class="modal-head">
+      <div class="title">Add Discount</div>
+      <div class="modal-close" data-close="discountOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="seg-toggle" id="discountTypeToggle">
+        <div class="seg-btn active" data-type="percent">Percent %</div>
+        <div class="seg-btn" data-type="amount">Amount $</div>
+      </div>
+      <div class="field-label" style="margin-top:14px;">Discount value</div>
+      <input type="number" id="discountValueField" class="modal-field" placeholder="0" min="0" step="0.01">
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" id="discountRemoveBtn">Remove</div>
+      <div class="modal-btn solid" id="discountApplyBtn">Apply Discount</div>
+    </div>
+  </div>
+</div>
+
+<!-- Note Modal -->
+<div class="modal-overlay" id="noteOverlay">
+  <div class="modal-panel" style="max-width:380px;">
+    <div class="modal-head">
+      <div class="title">Add Note</div>
+      <div class="modal-close" data-close="noteOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">Note for this ticket</div>
+      <textarea id="noteField" class="modal-field" rows="4" placeholder="e.g. Gift wrap the lip oil" maxlength="200"></textarea>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" id="noteRemoveBtn">Remove</div>
+      <div class="modal-btn solid" id="noteApplyBtn">Save Note</div>
+    </div>
+  </div>
+</div>
+
+<!-- Switch Cashier Modal -->
+<div class="modal-overlay" id="cashierOverlay">
+  <div class="modal-panel" style="max-width:380px;">
+    <div class="modal-head">
+      <div class="title">Switch Cashier</div>
+      <div class="modal-close" data-close="cashierOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body" id="cashierListBody"></div>
+  </div>
+</div>
+
+<!-- Select Shop Modal -->
+<div class="modal-overlay" id="shopOverlay">
+  <div class="modal-panel" style="max-width:380px;">
+    <div class="modal-head">
+      <div class="title">Select Shop</div>
+      <div class="modal-close" data-close="shopOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body" id="shopListBody"></div>
+  </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  /* ===== STRIPE (card payments) =====
+     Real card processing needs a secret key on a server somewhere —
+     it can never live in this file. The secret key lives in the
+     create-payment-intent Supabase Edge Function instead; this file
+     only ever holds the publishable key, which is safe to ship in
+     client-side code. See SETUP-INSTRUCTIONS.md. */
+  const STRIPE_CONFIG = {
+    publishableKey: 'YOUR_STRIPE_PUBLISHABLE_KEY',
+    createIntentUrl: 'YOUR_SUPABASE_EDGE_FUNCTION_URL' // e.g. https://xyz.supabase.co/functions/v1/create-payment-intent
+  };
+  const stripeReady = STRIPE_CONFIG.publishableKey.startsWith('pk_');
+  const stripeClient = stripeReady ? Stripe(STRIPE_CONFIG.publishableKey) : null;
+  let stripeElements = null, stripeCardElement = null;
+  function mountStripeCard(){
+    if(!stripeClient || stripeCardElement) return;
+    stripeElements = stripeClient.elements();
+    stripeCardElement = stripeElements.create('card', { style:{ base:{ color:'#F2EFE9', fontSize:'14px', '::placeholder':{ color:'#8FA396' } } } });
+    stripeCardElement.mount('#stripeCardElement');
+    stripeCardElement.on('change', (e)=>{ document.getElementById('cardElementError').textContent = e.error ? e.error.message : ''; });
+  }
+  /* ===== AUREUM CLOUD BACKEND (Supabase: Postgres + Auth) =====
+     Mirrors the config in backoffice.html — fill in the same
+     project URL + anon key here too. This terminal signs into the
+     same business account as the Back Office, then reads/writes the
+     same live data (catalog, stock, staff, customers, receipts). */
+  const SUPABASE_CONFIG = {
+    url: 'YOUR_SUPABASE_PROJECT_URL',
+    anonKey: 'YOUR_SUPABASE_ANON_KEY'
+  };
+  const AUREUM_KEY = 'aureum_pos_cache_v1'; // local cache only, for instant load + offline fallback
+  const supaReady = SUPABASE_CONFIG.url.startsWith('http');
+  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
+  let currentUser = null, currentBusinessId = null, currentRole = null;
+
+  const AUREUM_PENDING_KEY = 'aureum_pending_v1';
+  const AureumDB = (function(){
+    let channel = null;
+    return {
+      cacheRead(){
+        try{ const raw = localStorage.getItem(AUREUM_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+      },
+      cacheWrite(data){
+        try{ localStorage.setItem(AUREUM_KEY, JSON.stringify(data)); }catch(e){}
+      },
+      async loadRemote(){
+        if(!sb || !currentBusinessId) return null;
+        try{
+          const { data, error } = await sb.from('business_data').select('data').eq('business_id', currentBusinessId).maybeSingle();
+          if(error){ console.error('Aureum load error', error); return null; }
+          return data ? data.data : null;
+        }catch(networkErr){ return null; } // offline on first load — cache already applied by caller
+      },
+      async writeRemote(data){
+        // No cloud backend connected at all (local/static mode) — the local
+        // cache write already covers persistence, there's nothing to sync.
+        if(!sb || !currentBusinessId) return;
+        // Backend exists but the browser has no network right now — queue
+        // it instead of even attempting the request, and pick it back up
+        // the moment 'online' fires (see window 'online' listener below).
+        if(!navigator.onLine){ this.queuePending(data); return; }
+        try{
+          const { error } = await sb.from('business_data').upsert({ business_id: currentBusinessId, data, updated_at: new Date().toISOString() });
+          if(error){ this.queuePending(data); } else { this.clearPending(); }
+        }catch(networkErr){ this.queuePending(data); }
+      },
+      queuePending(data){
+        try{ localStorage.setItem(AUREUM_PENDING_KEY, JSON.stringify({ data, queuedAt: Date.now() })); }catch(e){}
+      },
+      clearPending(){
+        try{ localStorage.removeItem(AUREUM_PENDING_KEY); }catch(e){}
+      },
+      getPending(){
+        try{ const raw = localStorage.getItem(AUREUM_PENDING_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+      },
+      async flushPending(){
+        const pending = this.getPending();
+        if(!pending || !sb || !currentBusinessId || !navigator.onLine) return;
+        try{
+          const { error } = await sb.from('business_data').upsert({ business_id: currentBusinessId, data: pending.data, updated_at: new Date().toISOString() });
+          if(!error){ this.clearPending(); return true; }
+        }catch(networkErr){ /* still offline, try again later */ }
+        return false;
+      },
+      subscribeRemote(cb){
+        if(!sb || !currentBusinessId) return;
+        channel = sb.channel('business_data_' + currentBusinessId)
+          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'business_data', filter:`business_id=eq.${currentBusinessId}` },
+            payload => cb(payload.new.data))
+          .subscribe();
+      }
+    };
+  })();
+
+  /* ===== AUTH ===== */
+  async function aureumSignIn(email, password){
+    if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    return data;
+  }
+  async function aureumSignOut(){ if(sb) await sb.auth.signOut(); location.reload(); }
+  async function resolveProfile(){
+    const { data: { user } } = await sb.auth.getUser();
+    if(!user) return null;
+    currentUser = user;
+    const { data: profile } = await sb.from('profiles').select('business_id, role, full_name').eq('id', user.id).maybeSingle();
+    if(!profile) return null;
+    currentBusinessId = profile.business_id;
+    currentRole = profile.role;
+    return profile;
+  }
+
+  let POS_SETTINGS = { businessName:'AUREUM', currency:'$', currencyCode:'USD', taxPercent:0, taxLabel:'Tax', receiptFooter:'Thank you for shopping with us', dualCurrency:false, currencyCode2:'ZWG', currencySymbol2:'ZWG ', fxRate:0 };
+  let SHOPS = [];
+  let PRODUCTS = [
+    { id:1, name:"Sparkling Water 500ml", price:1.25, cost:0.60, cat:"Beverages", stock:120, image:null, code:"100001", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
+    { id:2, name:"Cold Brew Coffee Can", price:2.75, cost:1.40, cat:"Beverages", stock:64, image:null, code:"100002", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
+    { id:3, name:"Sea Salt Crackers", price:2.10, cost:1.05, cat:"Snacks", stock:90, image:null, code:"100003", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
+    { id:4, name:"Bamboo Toothbrush", price:3.00, cost:1.20, cat:"Personal Care", stock:75, image:null, code:"100004", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
+    { id:5, name:"Linen Spray 250ml", price:8.00, cost:3.90, cat:"Household", stock:22, image:null, code:"100005", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
+    { id:6, name:"Reusable Tote Bag", price:6.00, cost:2.50, cat:"Others", stock:47, image:null, code:"100006", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
+  ];
+  let EMPLOYEES = [
+    { id:1, name:"Employee2", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
+    { id:2, name:"Employee4", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
+  ];
+  let CUSTOMERS = [
+    { id:1, name:"Rudo Chikafu", phone:"+263 77 234 5678", email:"rudo.c@example.com", shop:"", notes:"", orders:6, spent:142.50, credit:0, joined:"2026-03-14" },
+    { id:2, name:"Farai Banda", phone:"+263 71 456 7890", email:"", shop:"", notes:"", orders:2, spent:38.00, credit:0, joined:"2026-06-02" },
+  ];
+  let RECEIPTS = [];
+  let nextCustomerId = CUSTOMERS.length + 1;
+  let activeEmployee = EMPLOYEES[0] || { name:'Cashier' };
+  let activeShop = "All Shops";
+
+  let activeCat = "All";
+  let payMethod = "cash";
+  let cart = {}; // id -> qty
+  let taxPercent = 0; // tax % — pre-filled from Back Office settings, editable by the cashier
+  let discount = { type: 'percent', value: 0 };
+  let customer = null; // { name, phone }
+  let note = '';
+  let lastSale = null;
+  let usbPrinterDevice = null; // paired WebUSB thermal printer, once connected
+
+  function computeTotals(){
+    const ids = Object.keys(cart);
+    const subtotal = ids.reduce((sum,id)=> sum + PRODUCTS.find(p=>p.id==id).price*cart[id], 0);
+    let discountAmount = 0;
+    if(discount.value > 0){
+      discountAmount = discount.type === 'percent' ? subtotal * (discount.value/100) : discount.value;
+      discountAmount = Math.min(Math.max(discountAmount,0), subtotal);
+    }
+    const taxableBase = subtotal - discountAmount;
+    const tax = taxableBase * (taxPercent/100);
+    const total = taxableBase + tax;
+    return { ids, subtotal, discountAmount, tax, total };
+  }
+
+  // Categories are derived from whatever categories exist on the products themselves —
+  // add a product with a new category in the backoffice and a new pill appears automatically.
+  // Nothing here is hardcoded to a fixed list of category names.
+  function getCategories(){
+    const unique = [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))];
+    return ["All", ...unique];
+  }
+
+  // Category-driven "product photo" — a tinted gradient card + a representative icon.
+  // Swap this for real uploaded product images by rendering <img src="${p.image}"> when p.image is set.
+  // Any category not listed here (i.e. anything added in the backoffice later) simply falls back
+  // to the Default look below, so new categories always render correctly.
+  const CATEGORY_STYLE = {
+    Beverages:      { bg:"linear-gradient(160deg,#2E5A46,#173226)", icon:`<path d="M9 2h6l-.6 4H9.6L9 2Z" fill="none" stroke="#E7C766" stroke-width="1.5"/><path d="M9.4 6h5.2l.9 13.2c.1 1-.7 1.8-1.7 1.8H10.2c-1 0-1.8-.8-1.7-1.8L9.4 6Z" fill="none" stroke="#E7C766" stroke-width="1.6"/><path d="M8.8 12h6.4" stroke="#E7C766" stroke-width="1.2"/>` },
+    Snacks:         { bg:"linear-gradient(160deg,#6B4A2E,#2E1F13)", icon:`<path d="M6.5 8 12 3l5.5 5-1.2 11.4a1.6 1.6 0 0 1-1.6 1.4H9.3a1.6 1.6 0 0 1-1.6-1.4L6.5 8Z" fill="none" stroke="#E7C766" stroke-width="1.6"/><path d="M8.5 8h7" stroke="#E7C766" stroke-width="1.2"/>` },
+    "Personal Care":{ bg:"linear-gradient(160deg,#3A4E6B,#1B2438)", icon:`<circle cx="12" cy="9" r="5.2" fill="none" stroke="#E7C766" stroke-width="1.6"/><path d="M8 20c0-3 1.8-5 4-5s4 2 4 5" fill="none" stroke="#E7C766" stroke-width="1.6" stroke-linecap="round"/>` },
+    Household:      { bg:"linear-gradient(160deg,#6B2E52,#2E1326)", icon:`<path d="M4 11 12 4l8 7" fill="none" stroke="#E7C766" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10.5V20h12v-9.5" fill="none" stroke="#E7C766" stroke-width="1.6" stroke-linejoin="round"/>` },
+    Others:         { bg:"linear-gradient(160deg,#4A3A6B,#201938)", icon:`<rect x="5" y="8" width="14" height="11" rx="1.6" fill="none" stroke="#E7C766" stroke-width="1.6"/><path d="M5 8 12 4l7 4" fill="none" stroke="#E7C766" stroke-width="1.6" stroke-linejoin="round"/>` },
+    Default:        { bg:"linear-gradient(160deg,#2F6B54,#153426)", icon:`<rect x="6" y="7" width="12" height="13" rx="2" fill="none" stroke="#E7C766" stroke-width="1.6"/><path d="M9 7V5.5C9 4.1 10.1 3 11.5 3h1C13.9 3 15 4.1 15 5.5V7" fill="none" stroke="#E7C766" stroke-width="1.6"/>` },
+  };
+  function productArt(p){
+    if(p.image){ return `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">`; }
+    const style = CATEGORY_STYLE[p.cat] || CATEGORY_STYLE.Default;
+    return `<div style="position:absolute;inset:0;background:${style.bg};"></div><svg viewBox="0 0 24 24">${style.icon}</svg>`;
+  }
+
+  const catalogEl = document.getElementById('productGrid');
+  const catsEl = document.getElementById('categories');
+  const sectionLabel = document.getElementById('sectionLabel');
+  const ticketItemsEl = document.getElementById('ticketItems');
+  const searchInput = document.getElementById('searchInput');
+
+  function renderCategories(){
+    const cats = getCategories();
+    catsEl.innerHTML = cats.map(c =>
+      `<div class="cat-pill ${c===activeCat?'active':''}" data-cat="${c}">${c}</div>`
+    ).join('');
+    catsEl.querySelectorAll('.cat-pill').forEach(el=>{
+      el.addEventListener('click', ()=>{ activeCat = el.dataset.cat; sectionLabel.textContent = activeCat==="All"?"All Products":activeCat; renderCatalog(); renderCategories(); });
+    });
+  }
+
+  function renderCatalog(){
+    const q = searchInput.value.trim().toLowerCase();
+    const items = PRODUCTS.filter(p =>
+      (activeCat==="All" || p.cat===activeCat) &&
+      (q==="" || p.name.toLowerCase().includes(q))
+    );
+    catalogEl.innerHTML = items.map(p => `
+      <div class="card" data-id="${p.id}">
+        <div class="glyph">${productArt(p)}</div>
+        <div class="pname">${p.name}</div>
+        <div class="pmeta">
+          <span class="pprice">${POS_SETTINGS.currency}${p.price.toFixed(2)}</span>
+          <span class="pstock">In Stock : ${p.stock}</span>
+        </div>
+      </div>
+    `).join('') || `<div style="color:var(--sage-dim);font-size:13px;padding:20px;">No products match your search.</div>`;
+
+    catalogEl.querySelectorAll('.card').forEach(el=>{
+      el.addEventListener('click', ()=> addToCart(parseInt(el.dataset.id)));
+    });
+  }
+
+  function addToCart(id){
+    cart[id] = (cart[id]||0) + 1;
+    renderTicket();
+  }
+  function changeQty(id, delta){
+    if(!cart[id]) return;
+    cart[id] += delta;
+    if(cart[id] <= 0) delete cart[id];
+    renderTicket();
+  }
+  function removeItem(id){ delete cart[id]; renderTicket(); }
+
+  function renderTicket(){
+    const ids = Object.keys(cart);
+    if(ids.length === 0){
+      ticketItemsEl.innerHTML = `<div class="empty-state">
+        <div class="mono-glyph">✦</div>
+        <p>Select items from the catalog to begin a new ticket.</p>
+      </div>`;
+    } else {
+      ticketItemsEl.innerHTML = ids.map(id=>{
+        const p = PRODUCTS.find(p=>p.id==id);
+        const qty = cart[id];
+        return `
+        <div class="line-item">
+          <div class="li-name">${p.name}</div>
+          <div class="li-total">${POS_SETTINGS.currency}${(p.price*qty).toFixed(2)}</div>
+          <div class="li-controls">
+            <div class="qty-btn" data-act="dec" data-id="${p.id}">–</div>
+            <div class="qty-val">${qty}</div>
+            <div class="qty-btn" data-act="inc" data-id="${p.id}">+</div>
+            <span class="li-unit">× ${POS_SETTINGS.currency}${p.price.toFixed(2)}</span>
+            <span class="li-remove" data-act="rm" data-id="${p.id}">Remove</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      ticketItemsEl.querySelectorAll('[data-act]').forEach(el=>{
+        const id = parseInt(el.dataset.id);
+        const act = el.dataset.act;
+        el.addEventListener('click', ()=>{
+          if(act==='inc') changeQty(id, 1);
+          if(act==='dec') changeQty(id, -1);
+          if(act==='rm') removeItem(id);
+        });
+      });
+    }
+
+    const { subtotal, discountAmount, tax, total } = computeTotals();
+    currentTotal = total;
+
+    document.getElementById('subtotalVal').textContent = `${POS_SETTINGS.currency}${subtotal.toFixed(2)}`;
+    document.getElementById('discountVal').textContent = discountAmount > 0 ? `-${POS_SETTINGS.currency}${discountAmount.toFixed(2)}` : `${POS_SETTINGS.currency}0.00`;
+    document.getElementById('taxVal').textContent = `${POS_SETTINGS.currency}${tax.toFixed(2)}`;
+    document.getElementById('totalVal').textContent = `${POS_SETTINGS.currency}${total.toFixed(2)}`;
+    const total2Row = document.getElementById('totalVal2Row');
+    if(POS_SETTINGS.dualCurrency && POS_SETTINGS.fxRate > 0){
+      total2Row.style.display = 'flex';
+      document.getElementById('totalVal2').textContent = `≈ ${POS_SETTINGS.currencySymbol2}${(total*POS_SETTINGS.fxRate).toFixed(2)}`;
+    } else {
+      total2Row.style.display = 'none';
+    }
+
+    const chargeBtn = document.getElementById('chargeBtn');
+    if(ids.length===0){ chargeBtn.classList.add('disabled'); }
+    else { chargeBtn.classList.remove('disabled'); }
+
+    renderTender(total);
+  }
+
+  let currentTotal = 0;
+  let tenderedAmt = 0;
+  let tenderCurrency = 'primary'; // 'primary' or 'secondary' — which currency the cash in the drawer is being counted in
+
+  function tenderSymbol(){ return tenderCurrency === 'secondary' ? (POS_SETTINGS.currencySymbol2||'') : POS_SETTINGS.currency; }
+  function tenderDueAmount(total){ return tenderCurrency === 'secondary' ? total * (POS_SETTINGS.fxRate||0) : total; }
+
+  function updateChange(){
+    const dueInTenderCurrency = tenderDueAmount(currentTotal);
+    document.getElementById('changeVal').textContent = `${tenderSymbol()}${Math.max(0, tenderedAmt-dueInTenderCurrency).toFixed(2)}`;
+    document.querySelectorAll('.tender-chip').forEach(c=>{
+      c.classList.toggle('active', Math.abs(parseFloat(c.dataset.amt)-tenderedAmt) < 0.001);
+    });
+  }
+
+  function renderTender(total){
+    const panel = document.getElementById('tenderPanel');
+    if(payMethod !== 'cash' || total <= 0){ panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+
+    const toggleWrap = document.getElementById('tenderCurrencyToggle');
+    if(POS_SETTINGS.dualCurrency && POS_SETTINGS.fxRate > 0){
+      toggleWrap.style.display = 'flex';
+      toggleWrap.querySelectorAll('[data-cur]').forEach(el=>{
+        const label = el.dataset.cur === 'primary' ? POS_SETTINGS.currencyCode : POS_SETTINGS.currencyCode2;
+        el.textContent = label || el.textContent;
+      });
+    } else {
+      toggleWrap.style.display = 'none';
+      tenderCurrency = 'primary';
+    }
+    document.getElementById('paCurrencySymbol').textContent = tenderSymbol();
+
+    const dueNote = document.getElementById('tenderDueNote');
+    if(tenderCurrency === 'secondary'){
+      dueNote.style.display = 'block';
+      dueNote.textContent = `Amount due: ${tenderSymbol()}${tenderDueAmount(total).toFixed(2)} (${POS_SETTINGS.currency}${total.toFixed(2)} at ${POS_SETTINGS.fxRate})`;
+    } else {
+      dueNote.style.display = 'none';
+    }
+
+    const paInput = document.getElementById('paymentAmountInput');
+    if(document.activeElement !== paInput){
+      paInput.value = tenderedAmt > 0 ? tenderedAmt.toFixed(2) : '';
+    }
+
+    const dueInTenderCurrency = tenderDueAmount(total);
+    const rounded = Math.ceil(dueInTenderCurrency);
+    const step = tenderCurrency === 'secondary' ? Math.max(10, Math.ceil(rounded*0.1/10)*10) : 5;
+    const chipAmounts = [...new Set([dueInTenderCurrency, rounded, rounded+step, rounded+step*2, rounded+step*4])].sort((a,b)=>a-b);
+    const chipsEl = document.getElementById('tenderChips');
+    chipsEl.innerHTML = chipAmounts.map(a =>
+      `<div class="tender-chip" data-amt="${a}">${Math.abs(a-dueInTenderCurrency)<0.001 ? 'Exact' : tenderSymbol()+a.toFixed(2)}</div>`
+    ).join('');
+    chipsEl.querySelectorAll('.tender-chip').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        tenderedAmt = parseFloat(el.dataset.amt);
+        paInput.value = tenderedAmt.toFixed(2);
+        updateChange();
+      });
+    });
+    updateChange();
+  }
+  document.getElementById('tenderCurrencyToggle').querySelectorAll('[data-cur]').forEach(el=>{
+    el.addEventListener('click', function(){
+      document.querySelectorAll('#tenderCurrencyToggle [data-cur]').forEach(b=>b.classList.remove('active'));
+      this.classList.add('active');
+      tenderCurrency = this.dataset.cur;
+      tenderedAmt = 0;
+      renderTender(currentTotal);
+    });
+  });
+
+
+  /* ===== PAYNOW (EcoCash / OneMoney mobile money) =====
+     Sends a USSD payment prompt to the customer's phone, then polls
+     until they approve/decline it. Both edge functions use this
+     business's own connected Paynow account (see Back Office →
+     Settings → Payment Integrations) — money goes straight to them. */
+  const PAYNOW_CONFIG = {
+    initiateUrl: supaReady ? `${SUPABASE_CONFIG.url}/functions/v1/paynow-initiate` : null,
+    pollUrl: supaReady ? `${SUPABASE_CONFIG.url}/functions/v1/paynow-poll` : null
+  };
+  let mobileMoneyMethod = 'ecocash';
+  document.querySelectorAll('#mobileMoneyWrap [data-mm]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.querySelectorAll('#mobileMoneyWrap [data-mm]').forEach(b=>b.classList.remove('active'));
+      el.classList.add('active');
+      mobileMoneyMethod = el.dataset.mm;
+    });
+  });
+  async function payWithPaynow(amount, reference){
+    const phone = document.getElementById('mobileMoneyPhone').value.trim();
+    const statusEl = document.getElementById('mobileMoneyStatus');
+    if(!PAYNOW_CONFIG.initiateUrl){
+      statusEl.textContent = 'EcoCash/OneMoney isn\u2019t connected yet \u2014 see SETUP-PAYNOW.md to connect Paynow.';
+      statusEl.style.color = 'var(--danger)';
+      return { success:false };
+    }
+    if(!phone){ statusEl.textContent = 'Enter the customer\'s mobile number first.'; statusEl.style.color = 'var(--danger)'; return { success:false }; }
+    statusEl.style.color = 'var(--sage)';
+    statusEl.textContent = 'Sending payment prompt…';
+    try{
+      const { data: { session } } = await sb.auth.getSession();
+      const initResp = await fetch(PAYNOW_CONFIG.initiateUrl, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ phone, method: mobileMoneyMethod, amount, reference })
+      });
+      const initJson = await initResp.json();
+      if(initJson.error) throw new Error(initJson.error);
+      statusEl.textContent = initJson.instructions || 'Ask the customer to approve on their phone…';
+
+      // Poll every 3s for up to ~2 minutes
+      for(let i=0; i<40; i++){
+        await new Promise(r=>setTimeout(r, 3000));
+        const pollResp = await fetch(PAYNOW_CONFIG.pollUrl, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ pollUrl: initJson.pollUrl })
+        });
+        const pollJson = await pollResp.json();
+        if(pollJson.error) throw new Error(pollJson.error);
+        if(pollJson.paid){ statusEl.textContent = 'Payment confirmed ✓'; statusEl.style.color = 'var(--gold-bright)'; return { success:true }; }
+        if(pollJson.cancelled){ statusEl.textContent = 'Customer cancelled the payment.'; statusEl.style.color = 'var(--danger)'; return { success:false }; }
+        if(pollJson.failed){ statusEl.textContent = 'Payment failed.'; statusEl.style.color = 'var(--danger)'; return { success:false }; }
+        statusEl.textContent = `Waiting for approval… (${pollJson.status || 'pending'})`;
+      }
+      statusEl.textContent = 'Timed out waiting for approval.'; statusEl.style.color = 'var(--danger)';
+      return { success:false };
+    }catch(err){
+      statusEl.textContent = err.message; statusEl.style.color = 'var(--danger)';
+      return { success:false };
+    }
+  }
+
+  document.getElementById('payMethods').querySelectorAll('.pay-btn').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.querySelectorAll('.pay-btn').forEach(b=>b.classList.remove('active'));
+      el.classList.add('active');
+      payMethod = el.dataset.pay;
+      tenderedAmt = 0;
+      const otherInput = document.getElementById('otherPayInput');
+      const cardWrap = document.getElementById('cardElementWrap');
+      const mmWrap = document.getElementById('mobileMoneyWrap');
+      if(payMethod === 'other'){
+        otherInput.classList.add('show');
+        document.getElementById('otherPayLabel').focus();
+      } else {
+        otherInput.classList.remove('show');
+      }
+      if(payMethod === 'card' && stripeReady){
+        cardWrap.style.display = 'block';
+        mountStripeCard();
+      } else {
+        cardWrap.style.display = 'none';
+      }
+      mmWrap.style.display = (payMethod === 'mobile') ? 'block' : 'none';
+      renderTicket();
+    });
+  });
+
+  document.getElementById('paymentAmountInput').addEventListener('input', function(){
+    tenderedAmt = parseFloat(this.value) || 0;
+    updateChange();
+  });
+
+  document.getElementById('taxPercentInput').addEventListener('input', function(){
+    taxPercent = parseFloat(this.value) || 0;
+    renderTicket();
+  });
+
+  /* Real barcode-scanner support: hardware scanners — USB or Bluetooth —
+     act as a keyboard typing digits very fast, then send Enter. That's
+     true for the vast majority of commercial scanners in "keyboard
+     wedge" mode, which is the universal, driver-free standard (it's how
+     Square, Shopify POS, and most browser-based POS systems support
+     scanners with zero configuration). A Bluetooth scanner just needs to
+     be paired once in the device's own Bluetooth settings, the same as
+     pairing a Bluetooth keyboard — after that, this listener sees its
+     keystrokes exactly like a wired USB scanner's.
+
+     We detect that rhythm — characters arriving faster than a human can
+     type — and treat only that as a scan. Bluetooth adds real latency
+     and jitter versus USB, so the gap tolerance is set loose enough to
+     stay reliable over Bluetooth while still being far tighter than
+     normal typing. */
+  let scanBuffer = '';
+  let scanLastTime = 0;
+  const SCAN_GAP_MS = 80; // per-character gap ceiling; generous enough for Bluetooth's extra latency
+  function tryHandleBarcode(code){
+    const p = PRODUCTS.find(p => (p.barcode && p.barcode === code) || p.code === code);
+    // No stock gate here — scanning should behave exactly like tapping the
+    // product tile, which never blocks on stock (products with stock
+    // tracking off, or already at 0, are still sellable either way).
+    if(p){
+      addToCart(p.id);
+      flashScanFeedback(true, `Added: ${p.name}`);
+    } else {
+      flashScanFeedback(false, `No product found for "${code}"`);
+    }
+  }
+  function flashScanFeedback(found, message){
+    const btn = document.getElementById('scanBtn');
+    btn.style.borderColor = found ? 'var(--gold-bright)' : 'var(--danger)';
+    setTimeout(()=>{ btn.style.borderColor = ''; }, 350);
+    if(message) aureumToast(message, found ? 'ok' : 'danger');
+  }
+  document.addEventListener('keydown', (e)=>{
+    // Don't hijack typing in real text fields (search box, forms, etc.)
+    const tag = (e.target.tagName || '').toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+    const now = performance.now();
+    if(e.key === 'Enter'){
+      if(scanBuffer.length >= 4 && (now - scanLastTime) < SCAN_GAP_MS + 20){
+        tryHandleBarcode(scanBuffer);
+        if(typing) e.preventDefault();
+      }
+      scanBuffer = '';
+      return;
+    }
+    if(e.key.length === 1){
+      if(now - scanLastTime > SCAN_GAP_MS){ scanBuffer = ''; }
+      scanBuffer += e.key;
+      scanLastTime = now;
+    }
+  });
+  document.getElementById('scanBtn').addEventListener('click', ()=>{
+    // The button can't fabricate a scan — it just arms the field and
+    // tells the cashier to use the physical scanner now.
+    searchInput.focus();
+    const btn = document.getElementById('scanBtn');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<span class="dot"></span>Ready — scan now…';
+    setTimeout(()=>{ btn.innerHTML = original; }, 1800);
+  });
+
+  document.getElementById('holdBtn').addEventListener('click', function(){
+    if(Object.keys(cart).length===0) return;
+    this.textContent = 'Held';
+    setTimeout(()=>{ cart = {}; renderTicket(); this.innerHTML = '&#10074;&#10074;'; }, 700);
+  });
+
+  document.getElementById('voidBtn').addEventListener('click', ()=>{
+    cart = {};
+    discount = { type: 'percent', value: 0 };
+    customer = null;
+    note = '';
+    resetQuickChips();
+    renderTicket();
+  });
+
+  function resetQuickChips(){
+    const cChip = document.getElementById('customerChip');
+    const dChip = document.getElementById('discountChip');
+    const nChip = document.getElementById('noteChip');
+    cChip.textContent = '+ Add customer'; cChip.classList.remove('set');
+    dChip.textContent = '+ Discount'; dChip.classList.remove('set');
+    nChip.textContent = '+ Note'; nChip.classList.remove('set');
+  }
+
+  /* ===== CUSTOMER ===== */
+  document.getElementById('customerChip').addEventListener('click', ()=>{
+    document.getElementById('customerNameField').value = customer ? customer.name : '';
+    document.getElementById('customerPhoneField').value = customer ? (customer.phone||'') : '';
+    openModal('customerOverlay');
+  });
+  document.getElementById('customerApplyBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('customerNameField').value.trim();
+    const phone = document.getElementById('customerPhoneField').value.trim();
+    if(!name){ document.getElementById('customerNameField').focus(); return; }
+    customer = { name, phone };
+    const chip = document.getElementById('customerChip');
+    chip.textContent = `Customer: ${name}`;
+    chip.classList.add('set');
+    closeModal('customerOverlay');
+  });
+  document.getElementById('customerRemoveBtn').addEventListener('click', ()=>{
+    customer = null;
+    const chip = document.getElementById('customerChip');
+    chip.textContent = '+ Add customer';
+    chip.classList.remove('set');
+    closeModal('customerOverlay');
+  });
+
+  /* ===== DISCOUNT ===== */
+  document.getElementById('discountTypeToggle').querySelectorAll('.seg-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#discountTypeToggle .seg-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.getElementById('discountChip').addEventListener('click', ()=>{
+    document.querySelectorAll('#discountTypeToggle .seg-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.type === discount.type);
+    });
+    document.getElementById('discountValueField').value = discount.value > 0 ? discount.value : '';
+    openModal('discountOverlay');
+  });
+  document.getElementById('discountApplyBtn').addEventListener('click', ()=>{
+    const type = document.querySelector('#discountTypeToggle .seg-btn.active').dataset.type;
+    const value = parseFloat(document.getElementById('discountValueField').value) || 0;
+    discount = { type, value: Math.max(0, value) };
+    const chip = document.getElementById('discountChip');
+    if(discount.value > 0){
+      chip.textContent = `Discount: ${type==='percent' ? discount.value+'%' : '$'+discount.value.toFixed(2)}`;
+      chip.classList.add('set');
+    } else {
+      chip.textContent = '+ Discount';
+      chip.classList.remove('set');
+    }
+    renderTicket();
+    closeModal('discountOverlay');
+  });
+  document.getElementById('discountRemoveBtn').addEventListener('click', ()=>{
+    discount = { type: 'percent', value: 0 };
+    const chip = document.getElementById('discountChip');
+    chip.textContent = '+ Discount';
+    chip.classList.remove('set');
+    renderTicket();
+    closeModal('discountOverlay');
+  });
+
+  /* ===== NOTE ===== */
+  document.getElementById('noteChip').addEventListener('click', ()=>{
+    document.getElementById('noteField').value = note;
+    openModal('noteOverlay');
+  });
+  document.getElementById('noteApplyBtn').addEventListener('click', ()=>{
+    note = document.getElementById('noteField').value.trim();
+    const chip = document.getElementById('noteChip');
+    if(note){
+      chip.textContent = `Note: ${note.length > 22 ? note.slice(0,22)+'…' : note}`;
+      chip.classList.add('set');
+    } else {
+      chip.textContent = '+ Note';
+      chip.classList.remove('set');
+    }
+    closeModal('noteOverlay');
+  });
+  document.getElementById('noteRemoveBtn').addEventListener('click', ()=>{
+    note = '';
+    const chip = document.getElementById('noteChip');
+    chip.textContent = '+ Note';
+    chip.classList.remove('set');
+    closeModal('noteOverlay');
+  });
+
+  /* ===== MODALS ===== */
+  function openModal(id){ document.getElementById(id).classList.add('open'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+  document.querySelectorAll('[data-close]').forEach(el=>{
+    el.addEventListener('click', ()=> closeModal(el.dataset.close));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(overlay.id); });
+  });
+
+  document.getElementById('helpBtn').addEventListener('click', ()=> openModal('helpOverlay'));
+
+  /* ===== RECENT SALES ===== */
+  const recentSales = [];
+  function renderRecentSales(){
+    const body = document.getElementById('recentSalesBody');
+    if(recentSales.length === 0){
+      body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales recorded yet this shift.</p></div>`;
+      return;
+    }
+    body.innerHTML = recentSales.map(s => `
+      <div class="sale-row">
+        <div class="info">
+          <div class="no">${s.orderNo}</div>
+          <div class="meta">${s.time} · ${s.itemCount} item${s.itemCount===1?'':'s'}</div>
+        </div>
+        <div class="amt">
+          <div class="val">${POS_SETTINGS.currency}${s.total.toFixed(2)}</div>
+          <div class="method">${s.payment}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
+    renderRecentSales();
+    openModal('recentSalesOverlay');
+  });
+
+  /* ===== RECEIPT ===== */
+  function buildReceipt(sale){
+    const rows = sale.items.map(i => `
+      <div class="r-row"><span>${i.qty} × ${i.name}</span><span>${POS_SETTINGS.currency}${(i.qty*i.price).toFixed(2)}</span></div>
+    `).join('');
+    document.getElementById('receiptBody').innerHTML = `
+      <div class="r-center">
+        <div class="r-brand">${POS_SETTINGS.businessName}</div>
+        <div class="r-sub">Point of Sale</div>
+      </div>
+      <div class="r-dash"></div>
+      <div class="r-row"><span>${sale.orderNo}</span><span>${sale.time}</span></div>
+      <div class="r-row"><span>Cashier</span><span>${activeEmployee ? activeEmployee.name : 'Cashier'}</span></div>
+      ${activeShop && activeShop !== 'All Shops' ? `<div class="r-row"><span>Shop</span><span>${activeShop}</span></div>` : ''}
+      ${sale.customer ? `<div class="r-row"><span>Customer</span><span>${sale.customer}</span></div>` : ''}
+      <div class="r-dash"></div>
+      ${rows}
+      <div class="r-dash"></div>
+      <div class="r-row"><span>Subtotal</span><span>${POS_SETTINGS.currency}${sale.subtotal.toFixed(2)}</span></div>
+      ${sale.discountAmount > 0 ? `<div class="r-row"><span>Discount</span><span>-${POS_SETTINGS.currency}${sale.discountAmount.toFixed(2)}</span></div>` : ''}
+      <div class="r-row"><span>Tax</span><span>${POS_SETTINGS.currency}${sale.tax.toFixed(2)}</span></div>
+      <div class="r-row total"><span>Total</span><span>${POS_SETTINGS.currency}${sale.total.toFixed(2)}</span></div>
+      <div class="r-dash"></div>
+      <div class="r-row"><span>Paid via</span><span>${sale.payment}</span></div>
+      ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||POS_SETTINGS.currency}${sale.change.toFixed(2)}</span></div>` : ''}
+      ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${sale.note}</span></div>` : ''}
+      <div class="receipt-thanks">${POS_SETTINGS.receiptFooter}</div>
+    `;
+  }
+  document.getElementById('receiptCloseBtn').addEventListener('click', ()=> closeModal('receiptOverlay'));
+  document.getElementById('receiptPrintBtn').addEventListener('click', ()=> window.print());
+  document.getElementById('thermalPrintBtn').addEventListener('click', ()=> printToThermalPrinter(lastSale));
+  document.getElementById('thermalPrintBtnBt').addEventListener('click', ()=> printToThermalPrinterBluetooth(lastSale));
+
+  /* ===== THERMAL PRINTER (WebUSB + ESC/POS) =====
+     Talks directly to a USB thermal receipt printer using the real
+     WebUSB API and standard ESC/POS control codes — no drivers, no
+     print dialog. Works in Chrome/Edge on desktop with the printer
+     plugged in via USB (WebUSB isn't available on iOS, and Safari/
+     Firefox don't support it — "Print Receipt" above always works
+     everywhere as the universal fallback). */
+  const ESC = 0x1B, GS = 0x1D;
+  function escposEncode(sale){
+    const enc = new TextEncoder();
+    const bytes = [];
+    const push = (...arr) => arr.forEach(b => bytes.push(b));
+    const text = (s) => bytes.push(...enc.encode(s));
+    push(ESC, 0x40); // init
+    push(ESC, 0x61, 0x01); // center
+    push(ESC, 0x45, 0x01); text(POS_SETTINGS.businessName + '\n'); push(ESC, 0x45, 0x00);
+    text('Point of Sale\n');
+    text('--------------------------------\n');
+    push(ESC, 0x61, 0x00); // left
+    text(`${sale.orderNo}   ${sale.time}\n`);
+    text(`Cashier: ${activeEmployee ? activeEmployee.name : 'Cashier'}\n`);
+    if(activeShop && activeShop !== 'All Shops') text(`Shop: ${activeShop}\n`);
+    if(sale.customer) text(`Customer: ${sale.customer}\n`);
+    text('--------------------------------\n');
+    (sale.items||[]).forEach(it=>{
+      const line = `${it.qty} x ${it.name}`;
+      const amt = `${POS_SETTINGS.currency}${(it.qty*it.price).toFixed(2)}`;
+      const pad = Math.max(1, 32 - line.length - amt.length);
+      text(line + ' '.repeat(pad) + amt + '\n');
+    });
+    text('--------------------------------\n');
+    text(`Subtotal:${' '.repeat(Math.max(1,23-9))}${POS_SETTINGS.currency}${sale.subtotal.toFixed(2)}\n`);
+    if(sale.discountAmount) text(`Discount:${' '.repeat(Math.max(1,23-9))}-${POS_SETTINGS.currency}${sale.discountAmount.toFixed(2)}\n`);
+    if(sale.tax) text(`Tax:${' '.repeat(Math.max(1,28-4))}${POS_SETTINGS.currency}${sale.tax.toFixed(2)}\n`);
+    push(GS, 0x21, 0x11); // double size
+    text(`TOTAL ${POS_SETTINGS.currency}${sale.total.toFixed(2)}\n`);
+    push(GS, 0x21, 0x00); // normal size
+    text(`Paid via ${sale.payment}\n`);
+    if(sale.change) text(`Change: ${sale.changeCurrencySymbol||POS_SETTINGS.currency}${sale.change.toFixed(2)}\n`);
+    push(ESC, 0x61, 0x01); // center
+    text('\n' + POS_SETTINGS.receiptFooter + '\n\n\n');
+    push(GS, 0x56, 0x41, 0x10); // feed + partial cut (most 80mm printers)
+    return new Uint8Array(bytes);
+  }
+  async function getUsbPrinter(){
+    if(usbPrinterDevice) return usbPrinterDevice;
+    if(!('usb' in navigator)) throw new Error('WebUSB isn\'t supported in this browser. Use Chrome or Edge on desktop, or use "Print Receipt" instead.');
+    // Deliberately no class-code filter here: most name-brand printers
+    // declare the standard USB Printer class, but many cheap/generic
+    // ESC/POS thermal printers instead report a vendor-specific class —
+    // filtering by class risks hiding those entirely from the picker.
+    // Showing every device is less tidy but far more reliable.
+    const device = await navigator.usb.requestDevice({ filters: [] });
+    await device.open();
+    if(!device.configuration) await device.selectConfiguration(1);
+    const iface = device.configuration.interfaces.find(i =>
+      i.alternates.some(a => a.endpoints.some(e => e.direction === 'out'))
+    );
+    if(!iface) throw new Error('Could not find a USB print interface on that device.');
+    await device.claimInterface(iface.interfaceNumber);
+    const alt = iface.alternates.find(a => a.endpoints.some(e => e.direction === 'out'));
+    const endpoint = alt.endpoints.find(e => e.direction === 'out');
+    usbPrinterDevice = { device, endpointNumber: endpoint.endpointNumber };
+    return usbPrinterDevice;
+  }
+  async function printToThermalPrinter(sale){
+    if(!sale){ alert('No completed sale to print yet.'); return; }
+    const btn = document.getElementById('thermalPrintBtn');
+    const original = btn.textContent;
+    try{
+      btn.textContent = 'Connecting…';
+      const printer = await getUsbPrinter();
+      btn.textContent = 'Printing…';
+      const data = escposEncode(sale);
+      await printer.device.transferOut(printer.endpointNumber, data);
+      btn.textContent = 'Printed ✓';
+    }catch(err){
+      alert((err && err.message) || 'Could not print to the thermal printer. Falling back to the regular print dialog.');
+      window.print();
+    }finally{
+      setTimeout(()=>{ btn.textContent = original; }, 1600);
+    }
+  }
+
+  /* ===== THERMAL PRINTER (WebBluetooth + ESC/POS) =====
+     Same ESC/POS bytes as the USB path, sent over Bluetooth LE instead.
+     Unlike WebUSB, there's no single official "printer class" for BLE —
+     most inexpensive ESC/POS thermal printers (very common as portable,
+     computer-free receipt printers) implement one of two widely-used
+     generic UART-style write services. We try the more common one first
+     and fall back to the other. If your printer uses a different
+     service, its documentation will list the write characteristic UUID —
+     swap it into BLE_PRINTER_SERVICES below.
+     Requires Chrome/Edge; not supported in Safari or Firefox. The
+     printer must already be powered on and in pairing/discoverable mode
+     — the browser's Bluetooth picker handles the actual pairing. */
+  const BLE_PRINTER_SERVICES = [
+    { service: '000018f0-0000-1000-8000-00805f9b34fb', write: '00002af1-0000-1000-8000-00805f9b34fb' }, // common generic ESC/POS BLE module
+    { service: '0000ff00-0000-1000-8000-00805f9b34fb', write: '0000ff02-0000-1000-8000-00805f9b34fb' }  // second common variant
+  ];
+  let btPrinterCharacteristic = null;
+
+  async function getBluetoothPrinter(){
+    if(btPrinterCharacteristic) return btPrinterCharacteristic;
+    if(!('bluetooth' in navigator)) throw new Error('Web Bluetooth isn\'t supported in this browser. Use Chrome or Edge, or print via USB / the regular print dialog instead.');
+    const device = await navigator.bluetooth.requestDevice({
+      filters: BLE_PRINTER_SERVICES.map(s => ({ services: [s.service] })),
+      optionalServices: BLE_PRINTER_SERVICES.map(s => s.service)
+    });
+    const server = await device.gatt.connect();
+    let lastErr = null;
+    for(const candidate of BLE_PRINTER_SERVICES){
+      try{
+        const service = await server.getPrimaryService(candidate.service);
+        const characteristic = await service.getCharacteristic(candidate.write);
+        btPrinterCharacteristic = characteristic;
+        device.addEventListener('gattserverdisconnected', ()=>{ btPrinterCharacteristic = null; });
+        return characteristic;
+      }catch(e){ lastErr = e; }
+    }
+    throw new Error('Connected, but couldn\'t find a known print service on that device. It may use a different Bluetooth printing protocol than this app supports.');
+  }
+
+  async function printToThermalPrinterBluetooth(sale){
+    if(!sale){ alert('No completed sale to print yet.'); return; }
+    const btn = document.getElementById('thermalPrintBtnBt');
+    const original = btn.textContent;
+    try{
+      btn.textContent = 'Connecting…';
+      const characteristic = await getBluetoothPrinter();
+      btn.textContent = 'Printing…';
+      const data = escposEncode(sale);
+      // BLE write characteristics usually cap out around 20 bytes per
+      // write on older stacks — chunk the receipt so nothing gets dropped.
+      const CHUNK = 180;
+      for(let i=0; i<data.length; i+=CHUNK){
+        await characteristic.writeValue(data.slice(i, i+CHUNK));
+      }
+      btn.textContent = 'Printed ✓';
+    }catch(err){
+      alert((err && err.message) || 'Could not print to the Bluetooth printer. Falling back to the regular print dialog.');
+      window.print();
+    }finally{
+      setTimeout(()=>{ btn.textContent = original; }, 1600);
+    }
+  }
+
+  document.getElementById('chargeBtn').addEventListener('click', async function(){
+    if(this.classList.contains('disabled')) return;
+
+    const { ids, subtotal, discountAmount, tax, total } = computeTotals();
+    const itemCount = ids.reduce((sum,id)=> sum + cart[id], 0);
+
+    let paymentLabel = payMethod.charAt(0).toUpperCase()+payMethod.slice(1);
+    if(payMethod === 'other'){
+      const custom = document.getElementById('otherPayLabel').value.trim();
+      paymentLabel = custom || 'Other';
+    }
+
+    // Real card charge: create + confirm a Stripe PaymentIntent before
+    // the sale is allowed to complete. If this isn't set up yet, or the
+    // card is declined, the sale does NOT go through — same as a real
+    // card terminal declining a swipe.
+    let stripePaymentIntentId = null;
+    if(payMethod === 'card'){
+      if(!stripeReady){ alert('Card payments aren\'t connected yet. See SETUP-INSTRUCTIONS.md, or choose Cash / Mobile / Other for this sale.'); return; }
+      this.textContent = 'Processing card…';
+      this.classList.add('disabled');
+      try{
+        const { data: { session } } = await sb.auth.getSession();
+        const resp = await fetch(STRIPE_CONFIG.createIntentUrl, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ amount: total, currency: (POS_SETTINGS.currencyCode || 'USD').toLowerCase() })
+        });
+        const json = await resp.json();
+        if(json.error) throw new Error(json.error);
+        const result = await stripeClient.confirmCardPayment(json.client_secret, { payment_method: { card: stripeCardElement } });
+        if(result.error) throw new Error(result.error.message);
+        stripePaymentIntentId = result.paymentIntent.id;
+      }catch(err){
+        alert('Card payment failed: ' + err.message);
+        this.textContent = 'Complete Sale';
+        this.classList.remove('disabled');
+        return;
+      }
+      this.textContent = 'Complete Sale';
+      this.classList.remove('disabled');
+    }
+
+    // Real mobile money charge via Paynow: sends a USSD prompt and waits
+    // for the customer to approve on their phone before the sale completes.
+    let paynowReference = null;
+    if(payMethod === 'mobile'){
+      this.textContent = 'Awaiting phone approval…';
+      this.classList.add('disabled');
+      const orderRef = document.getElementById('orderNo').textContent;
+      const result = await payWithPaynow(total, orderRef);
+      this.textContent = 'Complete Sale';
+      this.classList.remove('disabled');
+      if(!result.success) return; // sale does not complete on decline/cancel/timeout
+      paynowReference = orderRef;
+    }
+
+    const dueInTenderCurrency = tenderDueAmount(total);
+    const change = payMethod === 'cash' ? Math.max(0, tenderedAmt-dueInTenderCurrency) : 0;
+    const changeCurrencySymbol = tenderCurrency === 'secondary' ? POS_SETTINGS.currencySymbol2 : POS_SETTINGS.currency;
+    const now = new Date();
+
+    const lineItems = ids.map(id=>{
+      const p = PRODUCTS.find(p=>p.id==id);
+      return { productId: p.id, name:p.name, qty:cart[id], price:p.price, cost:p.cost||0 };
+    });
+
+    const sale = {
+      orderNo: document.getElementById('orderNo').textContent,
+      time: now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true}),
+      items: lineItems,
+      itemCount, subtotal, discountAmount, tax, total, payment: paymentLabel, change, changeCurrencySymbol,
+      customer: customer ? customer.name : null,
+      note: note || null,
+      stripePaymentIntentId, paynowReference
+    };
+    recentSales.unshift(sale);
+
+    // Decrement live stock for every line sold
+    lineItems.forEach(it=>{
+      const p = PRODUCTS.find(p=>p.id===it.productId);
+      if(p && p.stockControl !== false) p.stock = Math.max(0, p.stock - it.qty);
+    });
+
+    // Sync the customer record (match by phone, else create) and bump their stats
+    if(customer){
+      let rec = CUSTOMERS.find(c=> customer.phone && c.phone === customer.phone) || CUSTOMERS.find(c=>c.name===customer.name);
+      if(!rec){
+        rec = { id: nextCustomerId++, name:customer.name, phone:customer.phone||'', email:'', shop:'', notes:'', orders:0, spent:0, credit:0, joined:now.toISOString().slice(0,10) };
+        CUSTOMERS.push(rec);
+      }
+      rec.orders += 1;
+      rec.spent += total;
+    }
+
+    // Push the receipt into the shared store immediately (sales are critical — don't wait for the autosave tick)
+    RECEIPTS.push({
+      id: sale.orderNo.replace('No. ',''),
+      dateTime: now.toISOString(),
+      total, payment: paymentLabel,
+      customer: sale.customer || 'N/A',
+      employee: activeEmployee ? activeEmployee.name : 'Cashier',
+      shop: activeShop,
+      refund: false,
+      items: lineItems, subtotal, discountAmount, tax,
+      stripePaymentIntentId, paynowReference
+    });
+    persistAureum();
+    renderCatalog();
+
+    cart = {};
+    tenderedAmt = 0;
+    tenderCurrency = 'primary';
+    discount = { type: 'percent', value: 0 };
+    customer = null;
+    note = '';
+    document.getElementById('otherPayLabel').value = '';
+    resetQuickChips();
+    renderTicket();
+    const num = 512 + Math.floor(Math.random()*40);
+    document.getElementById('orderNo').textContent = `No. ${String(num).padStart(4,'0')}`;
+
+    lastSale = sale;
+    buildReceipt(sale);
+    openModal('receiptOverlay');
+  });
+
+  searchInput.addEventListener('input', renderCatalog);
+
+  function tickClock(){
+    const now = new Date();
+    const opts = { hour:'2-digit', minute:'2-digit', hour12:true };
+    const dateStr = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    document.getElementById('clock').textContent = `${dateStr} · ${now.toLocaleTimeString('en-US', opts)}`;
+  }
+  tickClock();
+  setInterval(tickClock, 1000*30);
+
+  /* ===== CASHIER / SHOP ===== */
+  function renderClerkUI(){
+    document.getElementById('clerkName').textContent = activeEmployee ? activeEmployee.name : 'Cashier';
+    document.getElementById('clerkAvatar').textContent = activeEmployee ? activeEmployee.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '--';
+    document.getElementById('shopChipLabel').textContent = activeShop;
+  }
+  function renderCashierList(){
+    document.getElementById('cashierListBody').innerHTML = (EMPLOYEES.length ? EMPLOYEES : [{name:'Cashier'}]).map(e=>`
+      <div class="line-item" data-emp="${e.name}" style="cursor:pointer;">
+        <div class="li-name">${e.name}${e===activeEmployee || e.name===(activeEmployee&&activeEmployee.name) ? ' · Active' : ''}</div>
+      </div>`).join('') + `<div class="line-item" id="signOutRow" style="cursor:pointer;border-top:1px solid var(--line);margin-top:8px;padding-top:12px;"><div class="li-name" style="color:var(--danger);">Sign Out of Terminal</div></div>`;
+    document.querySelectorAll('#cashierListBody [data-emp]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        activeEmployee = EMPLOYEES.find(e=>e.name===el.dataset.emp) || { name: el.dataset.emp };
+        renderClerkUI();
+        closeModal('cashierOverlay');
+      });
+    });
+    document.getElementById('signOutRow').addEventListener('click', aureumSignOut);
+  }
+  function renderShopList(){
+    const opts = ["All Shops", ...SHOPS];
+    document.getElementById('shopListBody').innerHTML = opts.map(s=>`
+      <div class="line-item" data-shop="${s}" style="cursor:pointer;">
+        <div class="li-name">${s}${s===activeShop ? ' · Active' : ''}</div>
+      </div>`).join('');
+    document.querySelectorAll('#shopListBody [data-shop]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        activeShop = el.dataset.shop;
+        renderClerkUI();
+        renderCatalog();
+        closeModal('shopOverlay');
+      });
+    });
+  }
+  document.getElementById('clerkSwitch').addEventListener('click', ()=>{ renderCashierList(); openModal('cashierOverlay'); });
+  document.getElementById('shopSwitchBtn').addEventListener('click', ()=>{ renderShopList(); openModal('shopOverlay'); });
+  document.getElementById('backOfficeBtn').addEventListener('click', ()=>{
+    try{
+      const w = window.open('backoffice.html', '_blank');
+      if(!w) window.location.href = 'backoffice.html';
+    }catch(err){
+      alert('Could not open the Back Office automatically. Make sure backoffice.html is saved in the same folder as this file, then open it directly.');
+    }
+  });
+
+  /* ===== CLOUD SYNC ===== */
+  let _aureumSnapshot = '';
+  function aureumSnapshotData(){
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, settings:POS_SETTINGS };
+  }
+  function persistAureum(){
+    const str = JSON.stringify(aureumSnapshotData());
+    if(str === _aureumSnapshot) return;
+    _aureumSnapshot = str;
+    AureumDB.cacheWrite(aureumSnapshotData());
+    AureumDB.writeRemote(aureumSnapshotData()).then(()=>{ try{ renderSyncStatus(); }catch(e){} });
+  }
+  function applyLoadedData(shared){
+    if(!shared) return;
+    if(shared.shops && shared.shops.length) SHOPS = shared.shops;
+    if(shared.products && shared.products.length) PRODUCTS = shared.products;
+    if(shared.customers && shared.customers.length) CUSTOMERS = shared.customers;
+    if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
+    if(shared.receipts && shared.receipts.length) RECEIPTS = shared.receipts;
+    if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
+    activeEmployee = EMPLOYEES[0] || { name:'Cashier' };
+    nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
+    _aureumSnapshot = JSON.stringify(aureumSnapshotData());
+  }
+
+  async function startApp(){
+    const cached = AureumDB.cacheRead();
+    if(cached){ applyLoadedData(cached); }
+
+    const remote = await AureumDB.loadRemote();
+    if(remote && Object.keys(remote).length){ applyLoadedData(remote); }
+    else { persistAureum(); }
+
+    taxPercent = POS_SETTINGS.taxPercent || 0;
+    document.getElementById('taxPercentInput').value = taxPercent;
+
+    setInterval(persistAureum, 1200);
+    window.addEventListener('beforeunload', persistAureum);
+    AureumDB.subscribeRemote(function(shared){
+      const str = JSON.stringify(shared);
+      if(str === _aureumSnapshot) return;
+      applyLoadedData(shared);
+      try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); }catch(e){}
+    });
+
+    renderSyncStatus();
+    setInterval(async ()=>{ await AureumDB.flushPending(); renderSyncStatus(); }, 4000);
+    window.addEventListener('online', async ()=>{
+      const flushed = await AureumDB.flushPending();
+      renderSyncStatus();
+      if(flushed && supaReady && sb) aureumToast('Back online \u2014 sales are synced.', 'ok');
+    });
+    window.addEventListener('offline', ()=>{
+      renderSyncStatus();
+      if(supaReady && sb) aureumToast('You\u2019re offline \u2014 sales are saved on this device and will sync when you\u2019re back online.', 'danger');
+    });
+
+    renderClerkUI();
+    renderCategories();
+    renderCatalog();
+    renderTicket();
+  }
+
+  /* ===== CONNECTIVITY TOAST ===== */
+  let _aureumToastTimer = null;
+  function aureumToast(msg, tone){
+    let t = document.getElementById('aureumConnToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'aureumConnToast';
+      t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);z-index:9999;padding:10px 18px;border-radius:10px;font-size:12.5px;font-weight:600;letter-spacing:.2px;box-shadow:0 12px 30px rgba(0,0,0,0.4);border:1px solid var(--line-strong);opacity:0;transition:opacity .25s ease, transform .25s ease;pointer-events:none;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.background = tone === 'danger' ? 'rgba(193,88,74,0.16)' : 'rgba(143,167,154,0.14)';
+    t.style.color = tone === 'danger' ? 'var(--danger)' : 'var(--sage)';
+    t.style.borderColor = tone === 'danger' ? 'rgba(193,88,74,0.4)' : 'var(--line-strong)';
+    requestAnimationFrame(()=>{ t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
+    clearTimeout(_aureumToastTimer);
+    _aureumToastTimer = setTimeout(()=>{ t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 3200);
+  }
+
+  function renderSyncStatus(){
+    const el = document.getElementById('syncStatus');
+    const label = document.getElementById('syncStatusLabel');
+    const pending = AureumDB.getPending();
+    if(!supaReady || !sb){
+      el.style.color = 'var(--sage)';
+      label.textContent = 'Saved on this device';
+    } else if(!navigator.onLine){
+      el.style.color = 'var(--danger)';
+      label.textContent = pending ? 'Offline · sale queued' : 'Offline';
+    } else if(pending){
+      el.style.color = 'var(--gold-bright)';
+      label.textContent = 'Syncing…';
+    } else {
+      el.style.color = 'var(--sage)';
+      label.textContent = 'Synced';
+    }
+  }
+
+  /* ===== AUTH GATE =====
+     Local/static mode: Supabase is not connected right now, so we skip
+     the sign-in gate entirely and run straight off localStorage (see
+     AureumDB above — cacheRead/cacheWrite). Every AureumDB.* remote call
+     already no-ops safely when `sb` is null, so nothing here needs a
+     backend to work. To re-enable real accounts + cross-device sync
+     later, fill in SUPABASE_CONFIG near the top of this <script> and
+     restore the original boot() body (kept below, commented out). */
+  async function boot(){
+    if(!supaReady){
+      document.getElementById('authGate').classList.add('show');
+      document.getElementById('authGateMsg').textContent = "Supabase isn't connected yet — open this file and fill in SUPABASE_CONFIG near the top of the <script>, then reload. See SETUP-INSTRUCTIONS.md.";
+      return;
+    }
+    const profile = await resolveProfile();
+    if(!profile){
+      document.getElementById('authGate').classList.add('show');
+      return;
+    }
+    document.getElementById('authGate').classList.remove('show');
+    await startApp();
+  }
+
+  document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const errEl = document.getElementById('authError');
+    errEl.textContent = '';
+    if(!email || !password){ errEl.textContent = 'Email and password are required.'; return; }
+    try{
+      await aureumSignIn(email, password);
+      boot();
+    }catch(err){
+      errEl.textContent = err.message || 'Something went wrong.';
+    }
+  });
+
+  boot();
+</script>
+</body>
+</html>
