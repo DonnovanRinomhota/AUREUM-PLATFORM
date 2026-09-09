@@ -3658,8 +3658,12 @@
     // literally no real receipts recorded yet anywhere (a fresh install) —
     // once real sales exist, filtered-out results correctly show as zero
     // rather than masking with fake numbers.
+    // Demo seed volume is only ever shown in the no-backend preview file
+    // (opening this HTML directly, no Supabase connected) — a real,
+    // Supabase-connected business always shows its true numbers, zero
+    // included, never a fabricated stand-in.
     const hasAnyRealReceipts = RECEIPTS.some(r=>r.items && r.items.length);
-    if(!hasAnyRealReceipts && qty === 0 && refunds === 0){
+    if(!supaReady && !hasAnyRealReceipts && qty === 0 && refunds === 0){
       qty = SALES_QTY[p.id] || 0;
       gross = qty * p.price;
     }
@@ -6634,7 +6638,7 @@
      live-in-sync across any device signed into the same business. */
   let _aureumSnapshot = '';
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, settings:POS_SETTINGS };
   }
   function persistAureum(){
     const str = JSON.stringify(aureumSnapshotData());
@@ -6718,11 +6722,13 @@
     if(shared.products && shared.products.length) PRODUCTS = shared.products;
     if(shared.customers && shared.customers.length) CUSTOMERS = shared.customers;
     if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
-    if(shared.receipts && shared.receipts.length) RECEIPTS = shared.receipts;
+    if(shared.receipts) RECEIPTS = shared.receipts; // empty array is a valid, meaningful state — don't fall back to demo seed
+    if(shared.expenses) EXPENSES = shared.expenses;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     nextProductId = Math.max(0, ...PRODUCTS.map(p=>p.id)) + 1;
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
     nextEmployeeId = Math.max(0, ...EMPLOYEES.map(e=>e.id)) + 1;
+    nextExpenseId = Math.max(0, ...EXPENSES.map(e=>e.id)) + 1;
     _aureumSnapshot = JSON.stringify(aureumSnapshotData());
   }
 
@@ -6732,6 +6738,16 @@
 
     const remote = await AureumDB.loadRemote();
     if(remote && Object.keys(remote).length){ applyLoadedData(remote); }
+    else if(supaReady){
+      // A real, freshly-created business with nothing saved yet — start
+      // from zero, not from the developer's demo receipts/expenses. Demo
+      // numbers only belong in the no-backend preview file, never in a
+      // live business's Dashboard/Accounting.
+      RECEIPTS = [];
+      EXPENSES = [];
+      nextExpenseId = 1;
+      persistAureum();
+    }
     else { persistAureum(); }
     renderAllData();
 

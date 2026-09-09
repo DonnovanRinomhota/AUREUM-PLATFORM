@@ -1,5 +1,38 @@
 # Changelog
 
+## Phase 1.1 — Fresh-business data bug, shop dropdown clarification (2026-09)
+
+### Fixed
+- **New/real businesses were being seeded with fake demo data.** When a
+  freshly-created business had never synced anything to Supabase yet, the
+  app was pushing the developer's hardcoded demo receipts and expenses up
+  as if they were real — causing brand-new accounts to show fabricated
+  revenue (e.g. "$51.75, +100%") on Day 1 instead of $0. Receipts and
+  expenses now correctly start empty for any Supabase-connected business;
+  the demo numbers only ever appear in the no-backend local preview file.
+- **Expenses now actually sync.** They weren't part of the shared
+  data previously, so Accounting always showed the same 5 hardcoded
+  entries regardless of what was really entered — now they save and sync
+  like everything else.
+
+### Note — if your account already has the fake demo numbers
+This fix only prevents the bug going forward for new businesses — it
+doesn't retroactively clean data that already synced to Supabase under the
+old behavior. If your Dashboard/Accounting still shows the fake numbers
+after deploying this:
+1. Supabase dashboard → **Table Editor → business_data**
+2. Find your business's row, open the `data` column (JSON)
+3. Set `"receipts": []` and `"expenses": []` inside it, save
+4. Reload Back Office — it'll now load real (empty) figures instead
+
+### Clarified, no code change
+- **Adding a shop**: the POS's "no shops set up yet" message is correct —
+  no shops exist yet. Add one from **Back Office → Dashboard → "All
+  Shops" dropdown (top right, or the sidebar "VIEWING" selector) → type a
+  name into "Add a new shop…" at the bottom of that popover.** This was
+  already the mechanism; it's just easy to miss since it's inside a filter
+  dropdown rather than a dedicated "Add Shop" button.
+
 ## Phase 1 — Multi-shop data isolation, PIN login, purchasing history lock (2026-09)
 
 This phase fixed the root cause behind shops "mixing up": Purchase Orders,
