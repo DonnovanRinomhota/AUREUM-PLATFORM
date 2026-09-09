@@ -1223,14 +1223,6 @@
           <div class="fl-label">Shop</div>
           <select class="cat-select" id="sbpShopFilter"></select>
         </div>
-        <div class="filter-field">
-          <div class="fl-label">Customer</div>
-          <select class="cat-select" id="sbpCustomerFilter"><option>All customers</option></select>
-        </div>
-        <div class="filter-field">
-          <div class="fl-label">Cashier</div>
-          <select class="cat-select" id="sbpCashierFilter"><option>All cashiers</option></select>
-        </div>
       </div>
       <div class="filters-bar">
         <div class="filter-field" style="min-width:220px;">
@@ -2577,12 +2569,14 @@
 
   let POS_SETTINGS = { businessName:'AUREUM', currency:'$', currencyCode:'USD', taxPercent:0, taxLabel:'Tax', receiptFooter:'Thank you for shopping with us', dualCurrency:false, currencyCode2:'ZWG', currencySymbol2:'ZWG ', fxRate:0 };
 
+  let currentPage = 'dashboard';
   /* ===== NAVIGATION ===== */
   document.querySelectorAll('.nav-item').forEach(item=>{
     item.addEventListener('click', ()=>{
       document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
       item.classList.add('active');
       const target = item.dataset.page;
+      currentPage = target;
       document.querySelectorAll('.page').forEach(p=>{
         p.classList.toggle('active', p.dataset.page === target);
       });
@@ -2605,7 +2599,12 @@
 
   function salesAggregateForRange(rangeStart, rangeEnd){
     const s = stripTime(rangeStart).getTime(), e = stripTime(rangeEnd).getTime();
-    const receipts = RECEIPTS.filter(r=>{ const t = stripTime(new Date(r.dateTime)).getTime(); return t>=s && t<=e; });
+    const receipts = RECEIPTS.filter(r=>{
+      const t = stripTime(new Date(r.dateTime)).getTime();
+      if(t<s || t>e) return false;
+      if(viewingShop && viewingShop !== 'All Shops' && r.shop !== viewingShop) return false;
+      return true;
+    });
     const grossSales = receipts.filter(r=>!r.refund).reduce((sum,r)=>sum+r.total,0);
     const refunds = receipts.filter(r=>r.refund).reduce((sum,r)=>sum+r.total,0);
     const netSales = grossSales - refunds;
@@ -2823,6 +2822,22 @@
     document.getElementById('sidebarShopVal').textContent = s;
     document.getElementById('dashShopLabel').textContent = s;
     closeAllPopovers();
+    refreshDataForCurrentShop();
+  }
+  // Every page that shows numbers (sales, stock, cost, profit) must react
+  // when the shop being viewed changes — otherwise the shop selector is just
+  // a label and the figures underneath silently stay wrong/mixed.
+  function refreshDataForCurrentShop(){
+    if(currentPage === 'dashboard'){ if(typeof renderDashboardSales==='function') renderDashboardSales(); if(typeof renderAlerts==='function') renderAlerts(); }
+    else if(currentPage === 'products'){ if(typeof renderProducts==='function') renderProducts(); }
+    else if(currentPage === 'sales'){ if(typeof renderReceipts==='function') renderReceipts(); }
+    else if(currentPage === 'sales-by-product'){ if(typeof renderSalesByProduct==='function') renderSalesByProduct(); }
+    else if(currentPage === 'reports'){ if(typeof renderActiveReport==='function') renderActiveReport(); }
+    else if(currentPage === 'accounting'){ if(typeof renderAccounting==='function') renderAccounting(); }
+    else if(currentPage === 'purchases'){ if(typeof renderPOTable==='function') renderPOTable(); }
+    else if(currentPage === 'goods-received'){ if(typeof renderGRNTable==='function') renderGRNTable(); }
+    else if(currentPage === 'stock-adjustments'){ if(typeof renderStockAdjTable==='function') renderStockAdjTable(); }
+    else if(currentPage === 'stock-transfers'){ if(typeof renderTransfers==='function') renderTransfers(); }
   }
 
   function refreshAllShopUI(){
@@ -2838,12 +2853,19 @@
       el.innerHTML = ["All Shops", ...SHOPS].map(s=>`<option value="${s}">${s}</option>`).join('');
       el.value = ["All Shops", ...SHOPS].includes(prev) ? prev : "All Shops";
     });
-    // shop *assignment* selects that should also allow "All Shops" (PO / GRN / Stock Adjustment)
+    // shop *assignment* selects — a PO/GRN/Stock Adjustment always belongs to exactly
+    // ONE real shop (never "All Shops"), otherwise its stock/cost effects leak into
+    // every shop's numbers. If no shop exists yet, force the user to add one first.
     ["poShop","grnShop","saShop"].forEach(id=>{
       const el = document.getElementById(id); if(!el) return;
-      const prev = el.value || "All Shops";
-      el.innerHTML = ["All Shops", ...SHOPS].map(s=>`<option value="${s}">${s}</option>`).join('');
-      el.value = ["All Shops", ...SHOPS].includes(prev) ? prev : "All Shops";
+      const prev = el.value;
+      if(!SHOPS.length){
+        el.innerHTML = `<option value="">Add a shop first (Settings → Shops)</option>`;
+        el.value = '';
+        return;
+      }
+      el.innerHTML = SHOPS.map(s=>`<option value="${s}">${s}</option>`).join('');
+      el.value = SHOPS.includes(prev) ? prev : SHOPS[0];
     });
     // employee's single assigned shop — no "All Shops" here, an employee belongs to one shop
     const efShopEl = document.getElementById('efShop');
@@ -3069,6 +3091,54 @@
   let pendingImage = null;
   let productCatFilterValue = "All";
 
+  /* ===== PER-SHOP STOCK (each shop is its own inventory unit) =====
+     Every product's real inventory lives in p.shopStock = { "Shop A": 12, "Shop B": 5 }
+     (the product form already collected this per-shop — it just wasn't used
+     anywhere else yet). p.stock is kept only as a legacy mirror (sum across
+     shops) for anything that still displays a single number — always
+     read/write actual stock through these helpers, never p.stock directly. */
+  function ensureShopStock(p){
+    if(!p.shopStock || typeof p.shopStock !== 'object'){
+      p.shopStock = {};
+      const legacy = p.stock || 0;
+      const seedShops = (p.shops === 'all') ? SHOPS : (Array.isArray(p.shops) ? p.shops : []);
+      if(seedShops.length){
+        // put the old single stock number entirely against the first shop it's sold in,
+        // rather than duplicating it into every shop (duplicating would fabricate stock).
+        seedShops.forEach((s,i)=>{ p.shopStock[s] = i===0 ? legacy : 0; });
+      } else if(SHOPS.length){
+        p.shopStock[SHOPS[0]] = legacy;
+      }
+    }
+    return p.shopStock;
+  }
+  function getStock(p, shopName){
+    if(!p) return 0;
+    if(p.stockControl === false) return 0;
+    ensureShopStock(p);
+    if(!shopName || shopName === 'All Shops'){
+      return Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
+    }
+    return p.shopStock[shopName] || 0;
+  }
+  function setStock(p, shopName, value){
+    if(!p || !shopName || shopName === 'All Shops'){
+      console.warn('setStock requires a specific real shop — refusing to write to "All Shops" or blank.');
+      return;
+    }
+    ensureShopStock(p);
+    p.shopStock[shopName] = Math.max(0, value);
+    p.stock = Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
+  }
+  function addStock(p, shopName, delta){
+    setStock(p, shopName, getStock(p, shopName) + delta);
+  }
+  function syncLegacyStock(p){
+    ensureShopStock(p);
+    p.stock = Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
+    return p.stock;
+  }
+
   /* ===== PRODUCT COLUMN VISIBILITY ===== */
   const PRODUCT_COLUMNS = [
     { key:'code', label:'Product code' },
@@ -3179,7 +3249,7 @@
     );
     if(sortVal === 'name') items.sort((a,b)=>a.name.localeCompare(b.name));
     else if(sortVal === 'price') items.sort((a,b)=>b.price-a.price);
-    else if(sortVal === 'stock') items.sort((a,b)=>a.stock-b.stock);
+    else if(sortVal === 'stock') items.sort((a,b)=>getStock(a,shopFilter)-getStock(b,shopFilter));
     else items.sort((a,b)=>b.id-a.id);
 
     if(items.length === 0){
@@ -3202,7 +3272,7 @@
         <td data-col="category">${p.cat || 'Uncategorized'}</td>
         <td class="gold" data-col="price" style="text-align:right;">${p.price.toFixed(2)}</td>
         <td class="mono" data-col="cost" style="text-align:right;">${p.cost.toFixed(2)}</td>
-        <td class="mono" data-col="stock" style="text-align:right;">${p.stockControl===false ? '—' : p.stock}</td>
+        <td class="mono" data-col="stock" style="text-align:right;">${p.stockControl===false ? '—' : getStock(p, shopFilter)}</td>
         <td data-col="shops" style="text-align:right;">${productShopLabel(p)}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
@@ -3553,9 +3623,7 @@
       rangeStart: sbpDateState ? sbpDateState.rangeStart : null,
       rangeEnd: sbpDateState ? sbpDateState.rangeEnd : null,
       timeBucket: SBP_TIME_BUCKETS[timeVal] || null,
-      shop: document.getElementById('sbpShopFilter').value || 'All Shops',
-      customer: document.getElementById('sbpCustomerFilter').value || 'All customers',
-      cashier: document.getElementById('sbpCashierFilter').value || 'All cashiers'
+      shop: document.getElementById('sbpShopFilter').value || 'All Shops'
     };
   }
   function receiptMatchesFilters(r, f){
@@ -3568,8 +3636,6 @@
       if(hr < f.timeBucket[0] || hr > f.timeBucket[1]) return false;
     }
     if(f.shop && f.shop !== 'All Shops' && r.shop !== f.shop) return false;
-    if(f.customer && f.customer !== 'All customers' && r.customer !== f.customer) return false;
-    if(f.cashier && f.cashier !== 'All cashiers' && r.employee !== f.cashier) return false;
     return true;
   }
   // Computes real sales figures for a product from actual receipts, honoring
@@ -3608,22 +3674,9 @@
   const PIE_COLORS = ["var(--gold-bright)","var(--emerald-light)","var(--blue)","var(--purple)","var(--sage-dim)","var(--danger)"];
 
   let sbpTopNValue = 5;
-  function populateSBPPeopleFilters(){
-    const custEl = document.getElementById('sbpCustomerFilter');
-    const cashEl = document.getElementById('sbpCashierFilter');
-    const prevCust = custEl.value || 'All customers';
-    const prevCash = cashEl.value || 'All cashiers';
-    const customers = [...new Set(RECEIPTS.map(r=>r.customer).filter(c=>c && c !== 'N/A'))].sort();
-    const cashiers = [...new Set(RECEIPTS.map(r=>r.employee).filter(Boolean))].sort();
-    custEl.innerHTML = ['All customers', ...customers].map(c=>`<option>${c}</option>`).join('');
-    cashEl.innerHTML = ['All cashiers', ...cashiers].map(c=>`<option>${c}</option>`).join('');
-    custEl.value = ['All customers', ...customers].includes(prevCust) ? prevCust : 'All customers';
-    cashEl.value = ['All cashiers', ...cashiers].includes(prevCash) ? prevCash : 'All cashiers';
-  }
   function renderSalesByProduct(){
     const tbody = document.getElementById('sbpBody');
     if(!tbody) return;
-    populateSBPPeopleFilters();
     const q = (document.getElementById('sbpSearch').value || '').trim().toLowerCase();
     const shopFilter = document.getElementById('sbpShopFilter').value || 'All Shops';
     const catFilter = document.getElementById('sbpCatFilter').value || 'All';
@@ -3725,8 +3778,6 @@
   document.getElementById('sbpShopFilter').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpCatFilter').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpTimeFilter').addEventListener('change', renderSalesByProduct);
-  document.getElementById('sbpCustomerFilter').addEventListener('change', renderSalesByProduct);
-  document.getElementById('sbpCashierFilter').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpChartType').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpTopN').addEventListener('change', function(){
     const customInput = document.getElementById('sbpTopNCustom');
@@ -4054,7 +4105,6 @@
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
             <div class="icon-btn-sm" data-act="edit" data-id="${po.id}" title="Edit">&#9998;</div>
-            <div class="icon-btn-sm" data-act="delete" data-id="${po.id}" title="Delete">&#10005;</div>
           </div>
         </td>
       </tr>`).join('');
@@ -4063,12 +4113,9 @@
       el.addEventListener('click', (e)=>{
         e.stopPropagation();
         if(el.dataset.act === 'edit') switchToPOCreate(id);
-        if(el.dataset.act === 'delete'){
-          if(confirm(`Delete purchase order ${id}? This can't be undone.`)){
-            PURCHASE_ORDERS = PURCHASE_ORDERS.filter(p=>p.id!==id);
-            renderPOTable();
-          }
-        }
+        // Purchase orders can't be deleted — they're part of the permanent
+        // purchasing history. Cancel a mistaken order by leaving it Pending
+        // and noting so, rather than removing the record.
       });
     });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewPO(tr.dataset.id)));
@@ -4082,7 +4129,7 @@
       poLineItems = (po.items||[]).map(it=>({...it}));
       poCostItems = (po.costs||[]).map(c=>({...c}));
       document.getElementById('poSupplier').value = po.supplier || 'N/A';
-      document.getElementById('poShop').value = po.shop || 'All Shops';
+      document.getElementById('poShop').value = po.shop || SHOPS[0] || '';
       document.getElementById('poDate').value = po.date;
       document.getElementById('poExpected').value = po.expected;
       document.getElementById('poPayment').value = po.payment || 'Cash';
@@ -4111,7 +4158,7 @@
       return `<tr>
         <td>${p ? p.name : '—'}</td>
         <td>${p ? (p.soldBy==='weight'?'kg':'ea') : '—'}</td>
-        <td class="mono">${p ? p.stock : '—'}</td>
+        <td class="mono">${p ? getStock(p, document.getElementById('poShop').value) : '—'}</td>
         <td class="mono">0</td>
         <td><input type="number" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
         <td><input type="number" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="po-cost"></td>
@@ -4197,6 +4244,7 @@
   }
   document.getElementById('poAddCostBtn').addEventListener('click', ()=>{ poCostItems.push({name:'', amount:0}); renderPOCosts(); updatePOTotal(); });
   document.getElementById('poSaveBtn').addEventListener('click', ()=>{
+    if(!document.getElementById('poShop').value){ alert('Select a shop for this purchase order — add one in Settings → Shops first if you haven\'t yet.'); return; }
     const withProduct = poLineItems.filter(r=>r.productId);
     if(withProduct.length === 0){ alert('Add at least one product before saving this purchase order.'); return; }
     const validLines = withProduct.filter(r=> (r.qty||0) > 0);
@@ -4262,18 +4310,9 @@
     openDetailModal(`Goods Received Note ${g.id}`, renderGRNDetailBody(g));
   }
 
-  function deleteGRN(id){
-    const g = GRN_RECORDS.find(x=>x.id===id);
-    if(!g) return;
-    if(!confirm(`Delete ${id}? The stock it added will be reversed.`)) return;
-    (g.items||[]).forEach(it=>{
-      const p = PRODUCTS.find(x=>x.id===it.productId);
-      if(p) p.stock = Math.max(0, p.stock - (it.qty||0));
-    });
-    GRN_RECORDS = GRN_RECORDS.filter(x=>x.id!==id);
-    renderGRNTable();
-    renderProducts();
-  }
+  // Note: GRNs can no longer be deleted — they're permanent purchasing/inventory
+  // history. If a GRN was entered wrong, receive a correcting Stock Adjustment
+  // instead so there's an audit trail of the fix.
 
   let grnDateRangeFilter = null;
   function populateSupplierFilter(id, records){
@@ -4315,11 +4354,8 @@
         <td>${g.shop}</td>
         <td class="gold" style="text-align:right;">${g.total.toFixed(2)}</td>
         <td><span class="status-badge ${g.status==='Completed'?'completed':'pending'}">${g.status}</span></td>
-        <td onclick="event.stopPropagation()"><div class="icon-btn-sm grn-delete-icon" data-id="${g.id}" title="Delete">&#10005;</div></td>
+        <td onclick="event.stopPropagation()"></td>
       </tr>`).join('');
-    tbody.querySelectorAll('.grn-delete-icon').forEach(el=>{
-      el.addEventListener('click', (e)=>{ e.stopPropagation(); deleteGRN(el.dataset.id); });
-    });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewGRN(tr.dataset.id)));
   }
 
@@ -4442,6 +4478,7 @@
     renderGRNTable();
   });
   document.getElementById('grnSaveBtn').addEventListener('click', ()=>{
+    if(!document.getElementById('grnShop').value){ alert('Select a shop for this GRN — add one in Settings → Shops first if you haven\'t yet.'); return; }
     const withProduct = grnLineItems.filter(r=>r.productId);
     if(withProduct.length === 0){ alert('Add at least one product before saving this GRN.'); return; }
     const validLines = withProduct.filter(r=> (r.qty||0) > 0);
@@ -4449,10 +4486,11 @@
     if(validLines.length < withProduct.length){ alert(`${withProduct.length - validLines.length} line item(s) with a quantity of 0 were skipped.`); }
     const validCosts = grnCostItems.filter(c=> c.name && c.name.trim() && (c.amount||0) > 0);
     const total = validLines.reduce((s,r)=>s+((r.qty*r.unitCost)||0),0) + validCosts.reduce((s,c)=>s+c.amount,0);
-    // receiving stock through a GRN increases what's on hand
+    // receiving stock through a GRN increases what's on hand — ONLY at the shop this GRN is for
+    const grnShopVal = document.getElementById('grnShop').value;
     validLines.forEach(row=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
-      if(p) p.stock += (row.qty || 0);
+      if(p) addStock(p, grnShopVal, row.qty || 0);
     });
     GRN_RECORDS.unshift({
       id: "GRN-" + (11223 + GRN_RECORDS.length),
@@ -4514,18 +4552,9 @@
     openDetailModal(`Stock Adjustment ${a.id}`, renderSADetailBody(a));
   }
 
-  function deleteSA(id){
-    const a = STOCK_ADJUSTMENTS.find(x=>x.id===id);
-    if(!a) return;
-    if(!confirm(`Delete ${id}? Stock levels will be reverted to what they were before this adjustment.`)) return;
-    (a.items||[]).forEach(it=>{
-      const p = PRODUCTS.find(x=>x.id===it.productId);
-      if(p) p.stock = it.beforeStock;
-    });
-    STOCK_ADJUSTMENTS = STOCK_ADJUSTMENTS.filter(x=>x.id!==id);
-    renderStockAdjTable();
-    renderProducts();
-  }
+  // Note: stock adjustments can no longer be deleted — they're permanent
+  // inventory history. To correct a mistaken adjustment, create a new,
+  // opposite adjustment instead so both are visible in the audit trail.
 
   let saDateRangeFilter = null;
   function renderStockAdjTable(){
@@ -4557,11 +4586,8 @@
         <td style="font-weight:600;">${a.reason}</td>
         <td>${a.supplier}</td>
         <td>${a.shop}</td>
-        <td onclick="event.stopPropagation()"><div class="icon-btn-sm sa-delete-icon" data-id="${a.id}" title="Delete">&#10005;</div></td>
+        <td onclick="event.stopPropagation()"></td>
       </tr>`).join('');
-    tbody.querySelectorAll('.sa-delete-icon').forEach(el=>{
-      el.addEventListener('click', (e)=>{ e.stopPropagation(); deleteSA(el.dataset.id); });
-    });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewSA(tr.dataset.id)));
   }
 
@@ -4586,6 +4612,7 @@
     document.getElementById('saQtyColHead').textContent = SA_QTY_LABEL_BY_TYPE[type] || 'Counted stock';
   }
   document.getElementById('saType').addEventListener('change', ()=>{ populateSAReasons(); renderSALines(); });
+  document.getElementById('saShop').addEventListener('change', renderSALines);
 
   function switchToSACreate(){
     saLineItems = [];
@@ -4608,19 +4635,21 @@
   // that so the displayed cost value always matches what Save will do.
   function saLineTotal(row, p){
     const type = document.getElementById('saType').value;
-    if(type === 'Override') return ((row.counted - p.stock) * row.unitCost) || 0;
+    const shopVal = document.getElementById('saShop').value;
+    if(type === 'Override') return ((row.counted - getStock(p, shopVal)) * row.unitCost) || 0;
     return ((row.counted||0) * row.unitCost) || 0;
   }
 
   function renderSALines(){
     const tbody = document.getElementById('saLineBody');
+    const shopVal = document.getElementById('saShop').value;
     tbody.innerHTML = saLineItems.map((row,i)=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
       if(!p) return '';
       const total = saLineTotal(row, p);
       return `<tr>
         <td>${p.name}</td>
-        <td class="mono">${p.stock}</td>
+        <td class="mono">${getStock(p, shopVal)}</td>
         <td><input type="number" min="0" step="1" value="${row.counted}" data-idx="${i}" class="sa-counted"></td>
         <td><input type="number" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="sa-cost"></td>
         <td class="mono sa-line-total" data-idx="${i}">${total.toFixed(2)}</td>
@@ -4674,7 +4703,7 @@
       const type = document.getElementById('saType').value;
       // Override starts from the current count (the user edits it to the
       // true counted number); Add/Reduce start at 0 since they're deltas.
-      const startCounted = type === 'Override' ? match.stock : 0;
+      const startCounted = type === 'Override' ? getStock(match, document.getElementById('saShop').value) : 0;
       saLineItems.push({ productId: match.id, counted: startCounted, unitCost: match.cost });
       idx = saLineItems.length - 1;
     }
@@ -4703,6 +4732,8 @@
   document.getElementById('saSaveBtn').addEventListener('click', ()=>{
     const type = document.getElementById('saType').value;
     const reason = document.getElementById('saReason').value;
+    const saShopVal = document.getElementById('saShop').value;
+    if(!saShopVal){ alert('Select a shop for this adjustment — add one in Settings → Shops first if you haven\'t yet.'); return; }
     const withProduct = saLineItems.filter(row=>row.productId);
     if(!type || !reason || withProduct.length === 0){
       alert('Please choose a type, a reason, and at least one product before saving.');
@@ -4712,13 +4743,14 @@
     if(invalid){ alert(type === 'Override' ? 'Every line item needs a counted quantity of 0 or more.' : 'Every line item needs a quantity of 0 or more.'); return; }
     const savedItems = withProduct.map(row=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
-      const beforeStock = p ? p.stock : 0;
+      const beforeStock = p ? getStock(p, saShopVal) : 0;
       if(p){
         // Add/Reduce apply the entered quantity as a delta on top of
         // whatever the current stock is; Override replaces it outright.
-        if(type === 'Add') p.stock += row.counted;
-        else if(type === 'Reduce') p.stock = Math.max(0, p.stock - row.counted);
-        else if(type === 'Override') p.stock = row.counted;
+        // All of this only ever touches the ONE shop this adjustment is for.
+        if(type === 'Add') addStock(p, saShopVal, row.counted);
+        else if(type === 'Reduce') addStock(p, saShopVal, -row.counted);
+        else if(type === 'Override') setStock(p, saShopVal, row.counted);
       }
       return { productId: row.productId, counted: row.counted, unitCost: row.unitCost, beforeStock };
     });
@@ -4726,7 +4758,7 @@
       id: "SA-" + (10956 + STOCK_ADJUSTMENTS.length),
       date: "2026-07-23", type, reason,
       supplier: document.getElementById('saSupplier').value,
-      shop: document.getElementById('saShop').value,
+      shop: saShopVal,
       notes: document.getElementById('saNotes').value.trim(),
       items: savedItems
     });
@@ -4787,10 +4819,11 @@
   }
 
   function renderReceiptsKpi(){
-    const total = RECEIPTS.length;
-    const refunds = RECEIPTS.filter(r=>r.refund).length;
-    const uniqueCustomers = new Set(RECEIPTS.map(r=>r.customer).filter(c=>c && c!=='N/A')).size;
-    const amount = RECEIPTS.reduce((s,r)=>s+r.total,0);
+    const items = filteredReceiptsForPage();
+    const total = items.length;
+    const refunds = items.filter(r=>r.refund).length;
+    const uniqueCustomers = new Set(items.map(r=>r.customer).filter(c=>c && c!=='N/A')).size;
+    const amount = items.reduce((s,r)=>s+r.total,0);
     document.getElementById('rcpKpiRow').innerHTML = `
       <div class="kpi-card"><div class="lbl"><span>Total number of receipts</span></div><div class="val">${total}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Total number of refunds</span></div><div class="val">${refunds}</div></div>
@@ -4803,7 +4836,7 @@
     const svg = document.getElementById('rcpLineChart');
     if(!svg) return;
     const counts = new Array(24).fill(0);
-    RECEIPTS.forEach(r=>{ const h = new Date(r.dateTime).getHours(); counts[h]++; });
+    filteredReceiptsForPage().forEach(r=>{ const h = new Date(r.dateTime).getHours(); counts[h]++; });
     const max = Math.max(...counts, 1);
     const w = 1000, h = 260, padL = 34, padB = 26, padT = 10, padR = 10;
     const plotW = w - padL - padR, plotH = h - padT - padB;
@@ -4836,12 +4869,36 @@
     svg.innerHTML = `${gridLines}${xLabels}${dataMark}`;
   }
 
+  const RCP_TIME_BUCKETS = {
+    'Morning (6am–12pm)': [6,12], 'Afternoon (12–6pm)': [12,18],
+    'Evening (6pm–12am)': [18,24], 'Night (12–6am)': [0,6]
+  };
+  let rcpDateState = null;
+  function filteredReceiptsForPage(){
+    const shopF = document.getElementById('rcpShopFilter').value || 'All Shops';
+    const customerF = document.getElementById('rcpCustomerFilter').value || 'All customers';
+    const employeeF = document.getElementById('rcpEmployeeFilter').value || 'All employees';
+    const typeF = document.getElementById('rcpTypeFilter').value;
+    const timeF = document.getElementById('rcpTimeFilter').value;
+    const bucket = RCP_TIME_BUCKETS[timeF];
+    const s = rcpDateState ? stripTime(rcpDateState.rangeStart).getTime() : null;
+    const e = rcpDateState ? stripTime(rcpDateState.rangeEnd).getTime() : null;
+    return RECEIPTS.filter(r=>{
+      if(shopF !== 'All Shops' && r.shop !== shopF) return false;
+      if(customerF !== 'All customers' && r.customer !== customerF) return false;
+      if(employeeF !== 'All employees' && r.employee !== employeeF) return false;
+      if(typeF === 'Refunds only' && !r.refund) return false;
+      const dt = new Date(r.dateTime);
+      if(s !== null){ const t = stripTime(dt).getTime(); if(t<s || t>e) return false; }
+      if(bucket){ const h = dt.getHours(); if(h < bucket[0] || h >= bucket[1]) return false; }
+      return true;
+    });
+  }
+
   function renderReceiptsTable(){
     const tbody = document.getElementById('rcpTableBody');
     if(!tbody) return;
-    const typeFilter = document.getElementById('rcpTypeFilter').value;
-    let items = [...RECEIPTS].sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
-    if(typeFilter === 'Refunds only') items = items.filter(r=>r.refund);
+    let items = filteredReceiptsForPage().sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
     if(items.length === 0){
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No receipts for this selection.</td></tr>`;
       return;
@@ -4874,7 +4931,7 @@
   document.getElementById('rcpChartType').addEventListener('change', renderReceiptsChart);
   document.getElementById('rcpChartGroup').addEventListener('change', renderReceiptsChart);
   document.getElementById('rcpRefreshBtn').addEventListener('click', renderReceipts);
-  mountDateFilterField('rcpDateSlot', 'rcpDate', renderReceipts, true);
+  rcpDateState = mountDateFilterField('rcpDateSlot', 'rcpDate', renderReceipts, true);
 
   /* ===== CUSTOMERS ===== */
   let CUSTOMERS = [
@@ -5209,16 +5266,17 @@
         <td><div class="name-cell"><div class="row-thumb">${productThumb(p)}</div><div class="nm">${p.name}</div></div></td>
         <td>${p.cat || 'Uncategorized'}</td>
         <td>${productShopLabel(p)}</td>
-        <td class="mono" style="text-align:right;">${p.stockControl===false ? '—' : p.stock}</td>
+        <td class="mono" style="text-align:right;">${p.stockControl===false ? '—' : getStock(p, shopFilter)}</td>
         <td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td>
         <td class="gold" style="text-align:right;">$${p.price.toFixed(2)}</td>
       </tr>`).join('');
   }
 
   function renderReportValuation(){
+    const shopCtx = viewingShop;
     let totCostVal=0, totRetailVal=0;
     const rows = PRODUCTS.map(p=>{
-      const stock = p.stockControl===false ? 0 : p.stock;
+      const stock = p.stockControl===false ? 0 : getStock(p, shopCtx);
       const costVal = stock * p.cost, retailVal = stock * p.price;
       totCostVal += costVal; totRetailVal += retailVal;
       return { p, stock, costVal, retailVal };
@@ -5240,11 +5298,12 @@
   }
 
   function renderReportSummary(){
+    const shopCtx = viewingShop;
     const cats = getProductCategories();
     const totalSKUs = PRODUCTS.length;
-    const totalUnits = PRODUCTS.reduce((s,p)=> s + (p.stockControl===false?0:p.stock), 0);
-    const totalCostVal = PRODUCTS.reduce((s,p)=> s + ((p.stockControl===false?0:p.stock) * p.cost), 0);
-    const lowStockCount = PRODUCTS.filter(p=> p.stockControl!==false && p.stock <= 15).length;
+    const totalUnits = PRODUCTS.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
+    const totalCostVal = PRODUCTS.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx)) * p.cost), 0);
+    const lowStockCount = PRODUCTS.filter(p=> p.stockControl!==false && getStock(p, shopCtx) <= 15).length;
     document.getElementById('repSumKpiRow').innerHTML = `
       <div class="kpi-card"><div class="lbl"><span>Total SKUs</span></div><div class="val">${totalSKUs}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Units in stock</span></div><div class="val">${totalUnits}</div></div>
@@ -5254,19 +5313,20 @@
     document.getElementById('repSummaryBody').innerHTML = cats.map(cat=>{
       const inCat = PRODUCTS.filter(p=>p.cat===cat);
       const skus = inCat.length;
-      const units = inCat.reduce((s,p)=> s + (p.stockControl===false?0:p.stock), 0);
-      const costVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:p.stock)*p.cost), 0);
-      const retailVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:p.stock)*p.price), 0);
+      const units = inCat.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
+      const costVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx))*p.cost), 0);
+      const retailVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx))*p.price), 0);
       return `<tr><td>${cat}</td><td class="mono" style="text-align:right;">${skus}</td><td class="mono" style="text-align:right;">${units}</td><td class="mono" style="text-align:right;">$${costVal.toFixed(2)}</td><td class="gold" style="text-align:right;">$${retailVal.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">No categories yet.</td></tr>`;
   }
 
   function renderReportLowStock(){
-    const items = PRODUCTS.filter(p=> p.stockControl!==false && p.stock <= 15).sort((a,b)=>a.stock-b.stock);
+    const shopCtx = viewingShop;
+    const items = PRODUCTS.filter(p=> p.stockControl!==false && getStock(p, shopCtx) <= 15).sort((a,b)=>getStock(a,shopCtx)-getStock(b,shopCtx));
     const tbody = document.getElementById('repLowStockBody');
     if(items.length===0){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">Nothing is low on stock right now.</td></tr>`; return; }
     tbody.innerHTML = items.map(p=>`
-      <tr><td>${p.name}</td><td>${p.cat||'Uncategorized'}</td><td class="mono" style="text-align:right; color:var(--danger);">${p.stock}</td><td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td><td class="mono" style="text-align:right;">$${(p.cost*20).toFixed(2)}</td></tr>`).join('');
+      <tr><td>${p.name}</td><td>${p.cat||'Uncategorized'}</td><td class="mono" style="text-align:right; color:var(--danger);">${getStock(p,shopCtx)}</td><td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td><td class="mono" style="text-align:right;">$${(p.cost*20).toFixed(2)}</td></tr>`).join('');
   }
 
   const SALES_CAT_PERIOD_MULT = { today: 0.045, week: 0.26, month: 1, all: 2.5 };
@@ -5461,11 +5521,15 @@
         alert(`Nothing to import — ${skipped} row(s) had an unrecognized product or an invalid quantity/cost.`);
         return;
       }
+      if(!viewingShop || viewingShop === 'All Shops'){
+        alert('Select a specific shop from the shop switcher (top left) before importing — CSV stock imports go to one shop at a time.');
+        return;
+      }
       const total = items.reduce((s,it)=>s+it.qty*it.unitCost,0);
       const todayIso = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`;
       const id = 'GRN-' + Math.floor(10000 + Math.random()*89999);
-      GRN_RECORDS.unshift({ id, date: todayIso, type:'Direct GRN', po:'', created: todayIso, supplier:'N/A', shop:'All Shops', payment:'Cash', invoice:'', additional:'Imported from CSV', items, total, status:'Completed' });
-      items.forEach(it=>{ const p = PRODUCTS.find(x=>x.id===it.productId); if(p) p.stock += it.qty; });
+      GRN_RECORDS.unshift({ id, date: todayIso, type:'Direct GRN', po:'', created: todayIso, supplier:'N/A', shop:viewingShop, payment:'Cash', invoice:'', additional:'Imported from CSV', items, total, status:'Completed' });
+      items.forEach(it=>{ const p = PRODUCTS.find(x=>x.id===it.productId); if(p) addStock(p, viewingShop, it.qty); });
       renderGRNTable();
       renderProducts();
       alert(`Import finished: created ${id} with ${items.length} line item(s). ${skipped} row(s) skipped.`);
@@ -5972,16 +6036,17 @@
   function renderAlerts(){
     const el = document.getElementById('alertsList');
     const DEFAULT_LOW_STOCK_THRESHOLD = 15;
+    const shopCtx = viewingShop; // "All Shops" sums across shops via getStock; a real shop scopes to just that shop
     const stockControlled = PRODUCTS.filter(p => p.stockControl !== false);
-    const negativeStock = stockControlled.filter(p => p.stock < 0);
+    const negativeStock = stockControlled.filter(p => getStock(p, shopCtx) < 0);
     // A product only lands in one bucket — safety stock (if set) takes
     // priority over the general low-stock threshold so the same product
     // doesn't show up twice with two different warnings.
-    const belowSafety = stockControlled.filter(p => p.stock >= 0 && p.safetyStock !== undefined && p.stock <= p.safetyStock);
+    const belowSafety = stockControlled.filter(p => getStock(p, shopCtx) >= 0 && p.safetyStock !== undefined && getStock(p, shopCtx) <= p.safetyStock);
     const lowStock = stockControlled.filter(p =>
-      p.stock >= 0 &&
-      !(p.safetyStock !== undefined && p.stock <= p.safetyStock) &&
-      p.stock <= (p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD)
+      getStock(p, shopCtx) >= 0 &&
+      !(p.safetyStock !== undefined && getStock(p, shopCtx) <= p.safetyStock) &&
+      getStock(p, shopCtx) <= (p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD)
     );
     const cards = [];
 
@@ -5991,7 +6056,7 @@
       if(negativeStock.length > 0){
         const shownNeg = negativeStock.slice(0, 4);
         shownNeg.forEach(p=>{
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> has negative stock — ${p.stock} units. This usually means a sale or adjustment went through before stock was corrected; worth checking.</div><div class="go">View report &#8250;</div></div>`);
+          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> has negative stock — ${getStock(p, shopCtx)} units. This usually means a sale or adjustment went through before stock was corrected; worth checking.</div><div class="go">View report &#8250;</div></div>`);
         });
         if(negativeStock.length > shownNeg.length){
           cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt">${negativeStock.length - shownNeg.length} more product(s) also show negative stock.</div><div class="go">View all &#8250;</div></div>`);
@@ -6000,7 +6065,7 @@
       if(belowSafety.length > 0){
         const shownSafety = belowSafety.slice(0, 4);
         shownSafety.forEach(p=>{
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> is at or below its safety stock buffer — ${p.stock} of ${p.safetyStock} unit${p.safetyStock===1?'':'s'} minimum. Reorder soon to avoid a stockout.</div><div class="go">View report &#8250;</div></div>`);
+          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> is at or below its safety stock buffer — ${getStock(p, shopCtx)} of ${p.safetyStock} unit${p.safetyStock===1?'':'s'} minimum. Reorder soon to avoid a stockout.</div><div class="go">View report &#8250;</div></div>`);
         });
         if(belowSafety.length > shownSafety.length){
           cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt">${belowSafety.length - shownSafety.length} more product(s) are also below their safety stock.</div><div class="go">View all &#8250;</div></div>`);
@@ -6009,7 +6074,7 @@
       const shownLow = lowStock.slice(0, 4);
       shownLow.forEach(p=>{
         const threshold = p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
-        cards.push(`<div class="alert-card" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> is low on stock — ${p.stock} unit${p.stock===1?'':'s'} left (threshold: ${threshold}).</div><div class="go">View report &#8250;</div></div>`);
+        cards.push(`<div class="alert-card" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> is low on stock — ${getStock(p, shopCtx)} unit${getStock(p, shopCtx)===1?'':'s'} left (threshold: ${threshold}).</div><div class="go">View report &#8250;</div></div>`);
       });
       if(lowStock.length > shownLow.length){
         cards.push(`<div class="alert-card" data-alert="lowstock"><div class="dot"></div><div class="txt">${lowStock.length - shownLow.length} more product(s) are also low on stock.</div><div class="go">View all &#8250;</div></div>`);
@@ -6035,8 +6100,31 @@
       const el = document.getElementById(id);
       if(!el) return;
       const cur = el.value;
-      el.innerHTML = '<option value="N/A">N/A</option>' + SUPPLIERS.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+      el.innerHTML = '<option value="N/A">N/A</option>' + SUPPLIERS.map(s=>`<option value="${s.name}">${s.name}</option>`).join('') + '<option value="__add_new__">+ Add new supplier…</option>';
       el.value = [...el.options].some(o=>o.value===cur) ? cur : 'N/A';
+    });
+    // Adding a supplier right from the PO screen (or GRN/Stock Adjustment) saves a trip
+    // to Suppliers — picking "+ Add new supplier…" prompts for a name, creates the
+    // supplier record, and selects it immediately.
+    ['poSupplier','grnSupplier','saSupplier'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el || el.dataset.addNewBound) return;
+      el.dataset.addNewBound = '1';
+      el.addEventListener('change', function(){
+        if(this.value !== '__add_new__') return;
+        const name = prompt('New supplier name');
+        if(name && name.trim()){
+          const trimmed = name.trim();
+          const existing = SUPPLIERS.find(s=>s.name.toLowerCase() === trimmed.toLowerCase());
+          const supplier = existing || { id: nextSupplierId++, name: trimmed, phone:'', email:'', address:'', notes:'' };
+          if(!existing) SUPPLIERS.push(supplier);
+          populateSupplierSelects();
+          this.value = supplier.name;
+          if(typeof renderSuppliers === 'function') renderSuppliers();
+        } else {
+          this.value = 'N/A';
+        }
+      });
     });
   }
 
@@ -6155,7 +6243,11 @@
 
   function renderTrLines(){
     const tbody = document.getElementById('trLineBody');
-    tbody.innerHTML = trLineItems.map((row,i)=>`
+    const fromShop = document.getElementById('trFromShop').value;
+    tbody.innerHTML = trLineItems.map((row,i)=>{
+      const p = PRODUCTS.find(x=>x.id===row.productId);
+      const currentStock = p ? getStock(p, fromShop) : '—';
+      return `
       <tr>
         <td>
           <select class="tr-product" data-idx="${i}">
@@ -6163,11 +6255,14 @@
             ${PRODUCTS.map(p=>`<option value="${p.id}" ${row.productId===p.id?'selected':''}>${p.name}</option>`).join('')}
           </select>
         </td>
+        <td class="mono" style="text-align:right;">${currentStock}</td>
         <td><input type="number" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
         <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
     tbody.querySelectorAll('.tr-product').forEach(sel=> sel.addEventListener('change', function(){
       trLineItems[this.dataset.idx].productId = parseInt(this.value) || null;
+      renderTrLines();
     }));
     tbody.querySelectorAll('.tr-qty').forEach(inp=> inp.addEventListener('input', function(){
       trLineItems[this.dataset.idx].qty = parseInt(this.value) || 0;
@@ -6178,6 +6273,26 @@
     }));
   }
   document.getElementById('trAddLineBtn').addEventListener('click', ()=>{ trLineItems.push({productId:null, qty:1}); renderTrLines(); });
+  document.getElementById('trFromShop').addEventListener('change', renderTrLines);
+
+  function transferPdf(t){
+    const rows = t.items.map(it=>{
+      const p = PRODUCTS.find(x=>x.id===it.productId);
+      return [
+        p ? p.name : '—',
+        String(it.qty),
+        String(it.beforeFrom ?? '—'), String(it.afterFrom ?? '—'),
+        String(it.beforeTo ?? '—'), String(it.afterTo ?? '—')
+      ];
+    });
+    const bytes = buildTablePdfBytes({
+      title: `Stock Transfer ${t.id}`,
+      subtitle: `${fmtDisplay(t.date)}  ·  ${t.from} -> ${t.to}`,
+      head: ['Product','Qty', `Before (${t.from})`, `After (${t.from})`, `Before (${t.to})`, `After (${t.to})`],
+      rows
+    });
+    downloadPdfBytes(bytes, `${t.id}.pdf`);
+  }
 
   function renderTransfers(){
     const tbody = document.getElementById('transferTableBody');
@@ -6193,8 +6308,14 @@
         <td>${t.to}</td>
         <td class="mono" style="text-align:right;">${t.items.reduce((s,it)=>s+it.qty,0)}</td>
         <td><span class="status-badge ${t.status==='Completed'?'completed':'pending'}">${t.status}</span></td>
-        <td></td>
+        <td onclick="event.stopPropagation()"><span class="rcp-view" data-id="${t.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span></td>
       </tr>`).join('');
+    tbody.querySelectorAll('[data-id]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const t = TRANSFERS.find(x=>x.id===el.dataset.id);
+        if(t) transferPdf(t);
+      });
+    });
   }
 
   document.getElementById('addTransferBtn').addEventListener('click', switchToTransferCreate);
@@ -6213,14 +6334,33 @@
       document.getElementById('trLinesError').classList.add('show');
       return;
     }
+    // Can't transfer more than what's actually on hand at the source shop
+    const overdrawn = validLines.filter(r=>{
+      const p = PRODUCTS.find(x=>x.id===r.productId);
+      return p && r.qty > getStock(p, from);
+    });
+    if(overdrawn.length > 0){
+      alert(`Not enough stock at ${from} for: ${overdrawn.map(r=>PRODUCTS.find(p=>p.id===r.productId)?.name).join(', ')}. Check current stock in the line items.`);
+      return;
+    }
+    // Move the stock — decrease at the source shop, increase at the destination —
+    // and record before/after at BOTH shops on each line for the transfer's PDF.
+    const savedItems = validLines.map(r=>{
+      const p = PRODUCTS.find(x=>x.id===r.productId);
+      const beforeFrom = getStock(p, from), beforeTo = getStock(p, to);
+      addStock(p, from, -r.qty);
+      addStock(p, to, r.qty);
+      return { productId: r.productId, qty: r.qty, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
+    });
     TRANSFERS.unshift({
       id: 'TR-' + String(1000 + nextTransferId++),
       date: document.getElementById('trDate').value || `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`,
       from, to,
-      items: validLines.map(r=>({...r})),
+      items: savedItems,
       status: 'Completed'
     });
     renderTransfers();
+    renderProducts();
     switchToTransferList();
   });
 
@@ -6242,9 +6382,15 @@
     return EXPENSES.filter(x=>{ const t = stripTime(new Date(x.date+'T00:00:00')).getTime(); return t>=s && t<=e; });
   }
   function receiptsInRange(state){
-    if(!state) return RECEIPTS;
-    const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
-    return RECEIPTS.filter(r=>{ const t = stripTime(new Date(r.dateTime)).getTime(); return t>=s && t<=e; });
+    let items = RECEIPTS;
+    if(state){
+      const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
+      items = items.filter(r=>{ const t = stripTime(new Date(r.dateTime)).getTime(); return t>=s && t<=e; });
+    }
+    if(viewingShop && viewingShop !== 'All Shops'){
+      items = items.filter(r=> r.shop === viewingShop);
+    }
+    return items;
   }
   // Blended cost-of-revenue ratio, derived from product-level cost vs. price across everything sold —
   // used to estimate cost of revenue for a period from receipt totals (receipts aren't itemized in this demo).

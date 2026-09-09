@@ -583,6 +583,17 @@
     <div class="auth-btn" id="authSubmitBtn">Sign In</div>
   </div>
 </div>
+<div class="auth-gate" id="shiftGate">
+  <div class="auth-card">
+    <div class="auth-seal">A</div>
+    <div class="auth-title">Start Shift</div>
+    <div class="auth-sub" id="shiftGateMsg">Select this till's shop, then enter your employee PIN. Every sale is recorded under this shop only.</div>
+    <select class="auth-field" id="shiftShopSelect"></select>
+    <input class="auth-field" id="shiftPin" type="password" inputmode="numeric" placeholder="Employee PIN" maxlength="8">
+    <div class="auth-error" id="shiftError"></div>
+    <div class="auth-btn" id="shiftSubmitBtn">Start Shift</div>
+  </div>
+</div>
 <div class="app">
 
   <div class="topbar">
@@ -999,6 +1010,42 @@ async function aureumSignIn(email, password){
     { id:5, name:"Linen Spray 250ml", price:8.00, cost:3.90, cat:"Household", stock:22, image:null, code:"100005", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
     { id:6, name:"Reusable Tote Bag", price:6.00, cost:2.50, cat:"Others", stock:47, image:null, code:"100006", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
   ];
+
+  /* ===== PER-SHOP STOCK (mirrors the same helpers/field used in backoffice.html —
+     shares the same p.shopStock data via Supabase, so both files must agree on
+     how it's read/written) ===== */
+  function ensureShopStock(p){
+    if(!p.shopStock || typeof p.shopStock !== 'object'){
+      p.shopStock = {};
+      const legacy = p.stock || 0;
+      const seedShops = (p.shops === 'all') ? SHOPS : (Array.isArray(p.shops) ? p.shops : []);
+      if(seedShops.length){
+        seedShops.forEach((s,i)=>{ p.shopStock[s] = i===0 ? legacy : 0; });
+      } else if(SHOPS.length){
+        p.shopStock[SHOPS[0]] = legacy;
+      }
+    }
+    return p.shopStock;
+  }
+  function getStock(p, shopName){
+    if(!p) return 0;
+    if(p.stockControl === false) return 0;
+    ensureShopStock(p);
+    if(!shopName || shopName === 'All Shops'){
+      return Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
+    }
+    return p.shopStock[shopName] || 0;
+  }
+  function setStock(p, shopName, value){
+    if(!p || !shopName || shopName === 'All Shops') return;
+    ensureShopStock(p);
+    p.shopStock[shopName] = Math.max(0, value);
+    p.stock = Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
+  }
+  function addStock(p, shopName, delta){
+    setStock(p, shopName, getStock(p, shopName) + delta);
+  }
+
   let EMPLOYEES = [
     { id:1, name:"Employee2", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
     { id:2, name:"Employee4", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
@@ -1009,8 +1056,8 @@ async function aureumSignIn(email, password){
   ];
   let RECEIPTS = [];
   let nextCustomerId = CUSTOMERS.length + 1;
-  let activeEmployee = EMPLOYEES[0] || { name:'Cashier' };
-  let activeShop = "All Shops";
+  let activeEmployee = null; // set only after a PIN is entered at the shift gate — see startShift()
+  let activeShop = null;     // set only after a real shop is chosen at the shift gate — never "All Shops"
 
   let activeCat = "All";
   let payMethod = "cash";
@@ -1090,7 +1137,7 @@ async function aureumSignIn(email, password){
         <div class="pname">${p.name}</div>
         <div class="pmeta">
           <span class="pprice">${POS_SETTINGS.currency}${p.price.toFixed(2)}</span>
-          <span class="pstock">In Stock : ${p.stock}</span>
+          <span class="pstock">In Stock : ${getStock(p, activeShop)}</span>
         </div>
       </div>
     `).join('') || `<div style="color:var(--sage-dim);font-size:13px;padding:20px;">No products match your search.</div>`;
@@ -1740,6 +1787,7 @@ async function aureumSignIn(email, password){
 
   document.getElementById('chargeBtn').addEventListener('click', async function(){
     if(this.classList.contains('disabled')) return;
+    if(!activeShop || !activeEmployee){ aureumToast('Start a shift (shop + PIN) before ringing up a sale.', 'danger'); openShiftGate(); return; }
 
     const { ids, subtotal, discountAmount, tax, total } = computeTotals();
     const itemCount = ids.reduce((sum,id)=> sum + cart[id], 0);
@@ -1816,10 +1864,10 @@ async function aureumSignIn(email, password){
     };
     recentSales.unshift(sale);
 
-    // Decrement live stock for every line sold
+    // Decrement live stock for every line sold — ONLY at this till's active shop
     lineItems.forEach(it=>{
       const p = PRODUCTS.find(p=>p.id===it.productId);
-      if(p && p.stockControl !== false) p.stock = Math.max(0, p.stock - it.qty);
+      if(p && p.stockControl !== false) addStock(p, activeShop, -it.qty);
     });
 
     // Sync the customer record (match by phone, else create) and bump their stats
@@ -1880,7 +1928,7 @@ async function aureumSignIn(email, password){
   function renderClerkUI(){
     document.getElementById('clerkName').textContent = activeEmployee ? activeEmployee.name : 'Cashier';
     document.getElementById('clerkAvatar').textContent = activeEmployee ? activeEmployee.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '--';
-    document.getElementById('shopChipLabel').textContent = activeShop;
+    document.getElementById('shopChipLabel').textContent = activeShop || '—';
   }
   function renderCashierList(){
     document.getElementById('cashierListBody').innerHTML = (EMPLOYEES.length ? EMPLOYEES : [{name:'Cashier'}]).map(e=>`
@@ -1911,8 +1959,11 @@ async function aureumSignIn(email, password){
       });
     });
   }
-  document.getElementById('clerkSwitch').addEventListener('click', ()=>{ renderCashierList(); openModal('cashierOverlay'); });
-  document.getElementById('shopSwitchBtn').addEventListener('click', ()=>{ renderShopList(); openModal('shopOverlay'); });
+  // Switching cashier or shop mid-till is exactly what item #6 requires a PIN
+  // for — both actions now end the current shift and require the PIN gate
+  // again, rather than letting anyone pick a name/shop from a free list.
+  document.getElementById('clerkSwitch').addEventListener('click', endShift);
+  document.getElementById('shopSwitchBtn').addEventListener('click', endShift);
   document.getElementById('backOfficeBtn').addEventListener('click', ()=>{
     try{
       const w = window.open('backoffice.html', '_blank');
@@ -1942,7 +1993,10 @@ async function aureumSignIn(email, password){
     if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
     if(shared.receipts && shared.receipts.length) RECEIPTS = shared.receipts;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
-    activeEmployee = EMPLOYEES[0] || { name:'Cashier' };
+    // Don't clobber the cashier's active shift if data reloads mid-shift
+    // (e.g. a live sync update from Back Office) — only set a default
+    // employee if no one has actually started a shift yet.
+    if(!activeEmployee) activeEmployee = null;
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
     _aureumSnapshot = JSON.stringify(aureumSnapshotData());
   }
@@ -2044,7 +2098,64 @@ async function aureumSignIn(email, password){
     }
     document.getElementById('authGate').classList.remove('show');
     await startApp();
+    // Signed into the business account, but no one's told this till which
+    // shop it is or who's using it yet — that's a separate, mandatory step.
+    openShiftGate();
   }
+
+  /* ===== SHIFT GATE (shop + employee PIN — required every time the till opens) =====
+     Signing into the business account (above) only proves this device belongs
+     to the business. It does NOT identify which shop this till is at or who's
+     ringing up sales — that's exactly what item #6 requires a real PIN+shop
+     step for, so every sale is attributable to one specific person at one
+     specific shop, never a shared/anonymous session. */
+  function populateShiftShopSelect(){
+    const el = document.getElementById('shiftShopSelect');
+    if(!SHOPS.length){
+      el.innerHTML = `<option value="">No shops set up yet — add one in Back Office → Settings first</option>`;
+      el.disabled = true;
+    } else {
+      el.disabled = false;
+      el.innerHTML = SHOPS.map(s=>`<option value="${s}">${s}</option>`).join('');
+    }
+  }
+  function openShiftGate(){
+    populateShiftShopSelect();
+    document.getElementById('shiftPin').value = '';
+    document.getElementById('shiftError').textContent = '';
+    document.getElementById('shiftGate').classList.add('show');
+    setTimeout(()=> document.getElementById('shiftPin').focus(), 50);
+  }
+  function startShift(shopName, employee){
+    activeShop = shopName;
+    activeEmployee = employee;
+    document.getElementById('shiftGate').classList.remove('show');
+    renderClerkUI();
+    renderCategories();
+    renderCatalog();
+    renderTicket();
+  }
+  function endShift(){
+    if(!confirm('End this shift? You\'ll need to enter a PIN again to start a new one.')) return;
+    activeShop = null;
+    activeEmployee = null;
+    openShiftGate();
+  }
+  document.getElementById('shiftSubmitBtn').addEventListener('click', ()=>{
+    const shop = document.getElementById('shiftShopSelect').value;
+    const pin = document.getElementById('shiftPin').value.trim();
+    const errEl = document.getElementById('shiftError');
+    errEl.textContent = '';
+    if(!shop){ errEl.textContent = 'Add a shop in Back Office first — there\'s nothing to select yet.'; return; }
+    if(!pin){ errEl.textContent = 'Enter your employee PIN.'; return; }
+    // An employee with no shop assigned can work any shop (e.g. an owner/manager
+    // covering multiple locations); an employee assigned to a specific shop can
+    // only clock in there — this is what keeps sales correctly attributed per shop.
+    const match = EMPLOYEES.find(e => e.active !== false && e.pin && e.pin === pin && (!e.shop || e.shop === shop));
+    if(!match){ errEl.textContent = 'Incorrect PIN, or this employee isn\'t assigned to this shop.'; return; }
+    startShift(shop, match);
+  });
+  document.getElementById('shiftPin').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('shiftSubmitBtn').click(); });
 
   document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
     const email = document.getElementById('authEmail').value.trim();
