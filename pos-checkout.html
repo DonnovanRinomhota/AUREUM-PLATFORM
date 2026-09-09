@@ -971,12 +971,15 @@
   })();
 
   /* ===== AUTH ===== */
-  async function aureumSignIn(email, password){
-    if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if(error) throw error;
-    return data;
-  }
+ async function aureumSignUp(email, password, businessName, fullName){
+  if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
+  const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
+    email, password,
+    options: { data: { business_name: businessName, full_name: fullName } }
+  });
+  if(signUpErr) throw signUpErr;
+  return signUpData;
+}
   async function aureumSignOut(){ if(sb) await sb.auth.signOut(); location.reload(); }
   async function resolveProfile(){
     const { data: { user } } = await sb.auth.getUser();

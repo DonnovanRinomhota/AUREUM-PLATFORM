@@ -2533,18 +2533,15 @@
   })();
 
   /* ===== AUTH ===== */
-  async function aureumSignUp(email, password, businessName, fullName){
-    if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
-    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({ email, password });
-    if(signUpErr) throw signUpErr;
-    const userId = signUpData.user.id;
-    const { data: biz, error: bizErr } = await sb.from('businesses').insert({ name: businessName }).select().single();
-    if(bizErr) throw bizErr;
-    const { error: profErr } = await sb.from('profiles').insert({ id: userId, business_id: biz.id, role:'owner', full_name: fullName });
-    if(profErr) throw profErr;
-    await sb.from('business_data').insert({ business_id: biz.id, data: {} });
-    return signUpData;
-  }
+ async function aureumSignUp(email, password, businessName, fullName){
+  if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
+  const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
+    email, password,
+    options: { data: { business_name: businessName, full_name: fullName } }
+  });
+  if(signUpErr) throw signUpErr;
+  return signUpData;
+}
   async function aureumSignIn(email, password){
     if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
