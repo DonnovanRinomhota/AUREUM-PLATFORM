@@ -587,8 +587,9 @@
   <div class="auth-card">
     <div class="auth-seal">A</div>
     <div class="auth-title">Start Shift</div>
-    <div class="auth-sub" id="shiftGateMsg">Select this till's shop, then enter your employee PIN. Every sale is recorded under this shop only.</div>
+    <div class="auth-sub" id="shiftGateMsg">Select this till's shop and your name, then enter your PIN. Every sale is recorded under this shop and employee only.</div>
     <select class="auth-field" id="shiftShopSelect"></select>
+    <select class="auth-field" id="shiftEmployeeSelect"></select>
     <input class="auth-field" id="shiftPin" type="password" inputmode="numeric" placeholder="Employee PIN" maxlength="8">
     <div class="auth-error" id="shiftError"></div>
     <div class="auth-btn" id="shiftSubmitBtn">Start Shift</div>
@@ -1925,10 +1926,15 @@ async function aureumSignIn(email, password){
   setInterval(tickClock, 1000*30);
 
   /* ===== CASHIER / SHOP ===== */
+  const BACK_OFFICE_ROLES = ['Shop Manager', 'Administrator'];
   function renderClerkUI(){
     document.getElementById('clerkName').textContent = activeEmployee ? activeEmployee.name : 'Cashier';
     document.getElementById('clerkAvatar').textContent = activeEmployee ? activeEmployee.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '--';
     document.getElementById('shopChipLabel').textContent = activeShop || '—';
+    // Cashiers/Inventory Clerks ring up sales only — Back Office (payment
+    // settings, staff PINs, accounting, etc.) is restricted to managers/admins.
+    const canOpenBackOffice = activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role);
+    document.getElementById('backOfficeBtn').style.display = canOpenBackOffice ? '' : 'none';
   }
   function renderCashierList(){
     document.getElementById('cashierListBody').innerHTML = (EMPLOYEES.length ? EMPLOYEES : [{name:'Cashier'}]).map(e=>`
@@ -1965,6 +1971,10 @@ async function aureumSignIn(email, password){
   document.getElementById('clerkSwitch').addEventListener('click', endShift);
   document.getElementById('shopSwitchBtn').addEventListener('click', endShift);
   document.getElementById('backOfficeBtn').addEventListener('click', ()=>{
+    if(!activeEmployee || !BACK_OFFICE_ROLES.includes(activeEmployee.role)){
+      aureumToast('Back Office is restricted to Shop Managers and Administrators.', 'danger');
+      return;
+    }
     try{
       const w = window.open('backoffice.html', '_blank');
       if(!w) window.location.href = 'backoffice.html';
@@ -2118,7 +2128,24 @@ async function aureumSignIn(email, password){
       el.disabled = false;
       el.innerHTML = SHOPS.map(s=>`<option value="${s}">${s}</option>`).join('');
     }
+    populateShiftEmployeeSelect();
   }
+  function populateShiftEmployeeSelect(){
+    const shop = document.getElementById('shiftShopSelect').value;
+    const el = document.getElementById('shiftEmployeeSelect');
+    // An employee with no shop assigned can work any shop (e.g. an owner/manager
+    // covering multiple locations); an employee assigned to a specific shop can
+    // only clock in there — this is what keeps sales correctly attributed per shop.
+    const eligible = EMPLOYEES.filter(e => e.active !== false && e.pin && (!e.shop || e.shop === shop));
+    if(!eligible.length){
+      el.innerHTML = `<option value="">No employees set up for this shop yet — add one in Back Office → Staff</option>`;
+      el.disabled = true;
+    } else {
+      el.disabled = false;
+      el.innerHTML = eligible.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    }
+  }
+  document.getElementById('shiftShopSelect').addEventListener('change', populateShiftEmployeeSelect);
   function openShiftGate(){
     populateShiftShopSelect();
     document.getElementById('shiftPin').value = '';
@@ -2143,17 +2170,16 @@ async function aureumSignIn(email, password){
   }
   document.getElementById('shiftSubmitBtn').addEventListener('click', ()=>{
     const shop = document.getElementById('shiftShopSelect').value;
+    const employeeId = parseInt(document.getElementById('shiftEmployeeSelect').value);
     const pin = document.getElementById('shiftPin').value.trim();
     const errEl = document.getElementById('shiftError');
     errEl.textContent = '';
     if(!shop){ errEl.textContent = 'Add a shop in Back Office first — there\'s nothing to select yet.'; return; }
-    if(!pin){ errEl.textContent = 'Enter your employee PIN.'; return; }
-    // An employee with no shop assigned can work any shop (e.g. an owner/manager
-    // covering multiple locations); an employee assigned to a specific shop can
-    // only clock in there — this is what keeps sales correctly attributed per shop.
-    const match = EMPLOYEES.find(e => e.active !== false && e.pin && e.pin === pin && (!e.shop || e.shop === shop));
-    if(!match){ errEl.textContent = 'Incorrect PIN, or this employee isn\'t assigned to this shop.'; return; }
-    startShift(shop, match);
+    if(!employeeId){ errEl.textContent = 'Select your name from the list.'; return; }
+    if(!pin){ errEl.textContent = 'Enter your PIN.'; return; }
+    const employee = EMPLOYEES.find(e => e.id === employeeId);
+    if(!employee || employee.pin !== pin){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
+    startShift(shop, employee);
   });
   document.getElementById('shiftPin').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('shiftSubmitBtn').click(); });
 

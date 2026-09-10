@@ -914,21 +914,6 @@
         </div>
         <div id="salesByEmployeeList"></div>
       </div>
-
-      <div class="table-panel">
-        <div class="panel-head" style="padding:20px 22px 0;">
-          <div>
-            <div class="t">Recent Transactions</div>
-            <div class="s">Latest activity across all shops</div>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr><th>Order</th><th>Date</th><th>Items</th><th>Payment</th><th>Status</th><th style="text-align:right;">Total</th></tr>
-          </thead>
-          <tbody id="txBody"></tbody>
-        </table>
-      </div>
     </div>
 
     <!-- RECEIPTS PAGE -->
@@ -1164,9 +1149,8 @@
             <div class="switch" id="pfStockControlToggle" data-toggle="pfStockControl"></div>
           </div>
           <div id="pfStockQtyWrap" style="display:none; margin-top:10px; max-width:280px;">
-            <div class="field-label">Total stock on hand <span style="color:var(--sage);font-weight:400;">(sum of all shops below)</span></div>
-            <input type="number" id="pfStock" class="modal-field" min="0" step="1" placeholder="0" readonly style="opacity:.75;cursor:not-allowed;">
-            <div class="field-label" style="margin-top:12px;">Low stock alert threshold</div>
+            <input type="hidden" id="pfStock" value="0">
+            <div class="field-label">Low stock alert threshold</div>
             <input type="number" id="pfLowStockThreshold" class="modal-field" min="0" step="1" placeholder="15 (default)">
             <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">You'll be alerted when stock falls to or below this number. Leave blank to use the default (15).</div>
             <div class="field-label" style="margin-top:12px;">Safety stock</div>
@@ -1917,7 +1901,7 @@
             <div class="btn-outline add-line-btn" id="trAddLineBtn">+ Add product</div>
           </div>
           <table class="line-table">
-            <thead><tr><th>Product</th><th style="width:120px;">Quantity</th><th style="width:50px;"></th></tr></thead>
+            <thead><tr><th>Product</th><th style="width:110px;">Stock (From)</th><th style="width:110px;">Stock (To)</th><th style="width:120px;">Quantity</th><th style="width:50px;"></th></tr></thead>
             <tbody id="trLineBody"></tbody>
           </table>
           <div class="field-error" id="trLinesError">Add at least one product with a quantity greater than 0</div>
@@ -2747,25 +2731,7 @@
     }).join('');
   }
 
-  /* ===== RECENT TRANSACTIONS ===== */
-  const TRANSACTIONS = [
-    { order:"No. 0547", date:"Jul 21, 2:14 PM", items:4, payment:"Cash", status:"completed", total:7.14 },
-    { order:"No. 0546", date:"Jul 21, 1:52 PM", items:2, payment:"Card", status:"completed", total:12.50 },
-    { order:"No. 0545", date:"Jul 21, 1:30 PM", items:6, payment:"Mobile", status:"completed", total:34.80 },
-    { order:"No. 0544", date:"Jul 21, 12:58 PM", items:1, payment:"Cash", status:"refunded", total:4.00 },
-    { order:"No. 0543", date:"Jul 21, 11:40 AM", items:3, payment:"Voucher", status:"pending", total:18.25 },
-    { order:"No. 0542", date:"Jul 21, 10:15 AM", items:5, payment:"Card", status:"completed", total:27.60 },
-  ];
-  document.getElementById('txBody').innerHTML = TRANSACTIONS.map(t => `
-    <tr>
-      <td class="mono">${t.order}</td>
-      <td>${t.date}</td>
-      <td>${t.items}</td>
-      <td>${t.payment}</td>
-      <td><span class="status-badge ${t.status}">${t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span></td>
-      <td class="gold" style="text-align:right;">$${t.total.toFixed(2)}</td>
-    </tr>
-  `).join('');
+  /* Recent Transactions section removed from the Dashboard — Receipts page covers this. */
 
   /* ===== MODAL HELPERS ===== */
   function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -2942,7 +2908,8 @@
      Starts collapsed showing just "Today"; the presets/calendar only
      appear once the chip is clicked (used on Dashboard, Sales by
      Product, and Receipts). */
-  const TODAY = new Date(2026, 6, 23); // fixed "today" so demo data stays consistent
+  const TODAY = new Date(); // the real current date/time — every date filter (Today, This week, This month, etc.) anchors off this
+  function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DATE_PRESETS = ["Today","Yesterday","This week","Last week","This month","Last month","Custom range"];
 
@@ -4107,7 +4074,8 @@
         <td class="gold" style="text-align:right;">${po.total.toFixed(2)}</td>
         <td><span class="status-badge ${po.status==='Completed'?'completed':'pending'}">${po.status}</span></td>
         <td onclick="event.stopPropagation()">
-          <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
+          <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end; gap:10px;">
+            <span class="rcp-view" data-act="pdf" data-id="${po.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span>
             <div class="icon-btn-sm" data-act="edit" data-id="${po.id}" title="Edit">&#9998;</div>
           </div>
         </td>
@@ -4117,12 +4085,26 @@
       el.addEventListener('click', (e)=>{
         e.stopPropagation();
         if(el.dataset.act === 'edit') switchToPOCreate(id);
+        if(el.dataset.act === 'pdf'){ const po = PURCHASE_ORDERS.find(x=>x.id===id); if(po) poPdf(po); }
         // Purchase orders can't be deleted — they're part of the permanent
         // purchasing history. Cancel a mistaken order by leaving it Pending
         // and noting so, rather than removing the record.
       });
     });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewPO(tr.dataset.id)));
+  }
+  function poPdf(po){
+    const rows = (po.items||[]).map(it=>{
+      const p = PRODUCTS.find(x=>x.id===it.productId);
+      return [p ? p.name : '—', String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+    });
+    const bytes = buildTablePdfBytes({
+      title: `Purchase Order ${po.id}`,
+      subtitle: `${fmtDisplay(po.date)}  ·  ${po.shop}  ·  Supplier: ${po.supplier}  ·  Status: ${po.status}  ·  Total: $${po.total.toFixed(2)}`,
+      head: ['Product','Qty','Unit Cost','Line Total'],
+      rows
+    });
+    downloadPdfBytes(bytes, `${po.id}.pdf`);
   }
 
   function switchToPOList(){ document.getElementById('purchasesListView').classList.add('active'); document.getElementById('purchaseCreateView').classList.remove('active'); }
@@ -4141,8 +4123,8 @@
     } else {
       poLineItems = [];
       poCostItems = [];
-      document.getElementById('poDate').value = '2026-07-23';
-      document.getElementById('poExpected').value = '2026-07-23';
+      document.getElementById('poDate').value = todayStr();
+      document.getElementById('poExpected').value = todayStr();
       document.getElementById('poPayment').value = 'Cash';
       document.getElementById('poDelivery').value = '';
     }
@@ -4257,8 +4239,8 @@
     const validCosts = poCostItems.filter(c=> c.name && c.name.trim() && (c.amount||0) > 0);
     const total = validLines.reduce((s,r)=>s+((r.qty*r.unitCost)||0),0) + validCosts.reduce((s,c)=>s+c.amount,0);
     const data = {
-      date: document.getElementById('poDate').value || '2026-07-23',
-      expected: document.getElementById('poExpected').value || '2026-07-23',
+      date: document.getElementById('poDate').value || todayStr(),
+      expected: document.getElementById('poExpected').value || todayStr(),
       supplier: document.getElementById('poSupplier').value || "N/A",
       shop: document.getElementById('poShop').value,
       payment: document.getElementById('poPayment').value,
@@ -4326,6 +4308,19 @@
     el.innerHTML = ["All", ...suppliers].map(s=>`<option value="${s}">${s}</option>`).join('');
     el.value = ["All", ...suppliers].includes(prev) ? prev : "All";
   }
+  function grnPdf(g){
+    const rows = (g.items||[]).map(it=>{
+      const p = PRODUCTS.find(x=>x.id===it.productId);
+      return [p ? p.name : '—', String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+    });
+    const bytes = buildTablePdfBytes({
+      title: `Goods Received Note ${g.id}`,
+      subtitle: `${fmtDisplay(g.date)}  ·  ${g.shop}  ·  Supplier: ${g.supplier}  ·  ${g.po ? 'From PO '+g.po : g.type}  ·  Total: $${g.total.toFixed(2)}`,
+      head: ['Product','Qty Received','Unit Cost','Line Total'],
+      rows
+    });
+    downloadPdfBytes(bytes, `${g.id}.pdf`);
+  }
   function renderGRNTable(){
     const tbody = document.getElementById('grnTableBody');
     populateSupplierFilter('grnSupplierFilter', GRN_RECORDS);
@@ -4358,8 +4353,15 @@
         <td>${g.shop}</td>
         <td class="gold" style="text-align:right;">${g.total.toFixed(2)}</td>
         <td><span class="status-badge ${g.status==='Completed'?'completed':'pending'}">${g.status}</span></td>
-        <td onclick="event.stopPropagation()"></td>
+        <td onclick="event.stopPropagation()"><span class="rcp-view" data-id="${g.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span></td>
       </tr>`).join('');
+    tbody.querySelectorAll('.rcp-view[data-id]').forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const g = GRN_RECORDS.find(x=>x.id===el.dataset.id);
+        if(g) grnPdf(g);
+      });
+    });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewGRN(tr.dataset.id)));
   }
 
@@ -4367,7 +4369,7 @@
   function switchToGRNCreate(){
     grnLineItems = [];
     grnCostItems = [];
-    document.getElementById('grnDate').value = '2026-07-23';
+    document.getElementById('grnDate').value = todayStr();
     document.getElementById('grnPayment').value = 'Cash';
     document.getElementById('grnInvoice').value = '';
     document.getElementById('grnAdditional').value = '';
@@ -4498,9 +4500,9 @@
     });
     GRN_RECORDS.unshift({
       id: "GRN-" + (11223 + GRN_RECORDS.length),
-      date: document.getElementById('grnDate').value || '2026-07-23',
+      date: document.getElementById('grnDate').value || todayStr(),
       type: "Direct GRN", po: "",
-      created: document.getElementById('grnDate').value || '2026-07-23',
+      created: document.getElementById('grnDate').value || todayStr(),
       supplier: document.getElementById('grnSupplier').value,
       shop: document.getElementById('grnShop').value,
       payment: document.getElementById('grnPayment').value,
@@ -4590,9 +4592,34 @@
         <td style="font-weight:600;">${a.reason}</td>
         <td>${a.supplier}</td>
         <td>${a.shop}</td>
-        <td onclick="event.stopPropagation()"></td>
+        <td onclick="event.stopPropagation()"><span class="rcp-view" data-id="${a.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span></td>
       </tr>`).join('');
+    tbody.querySelectorAll('.rcp-view[data-id]').forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const a = STOCK_ADJUSTMENTS.find(x=>x.id===el.dataset.id);
+        if(a) saPdf(a);
+      });
+    });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewSA(tr.dataset.id)));
+  }
+  function saPdf(a){
+    const rows = (a.items||[]).map(it=>{
+      const p = PRODUCTS.find(x=>x.id===it.productId);
+      const before = it.beforeStock||0;
+      let delta, after;
+      if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
+      else if(a.type === 'Reduce'){ delta = -it.counted; after = Math.max(0, before - it.counted); }
+      else { delta = it.counted - before; after = it.counted; }
+      return [p ? p.name : 'Deleted product', String(before), String(it.counted), String(after), (delta>=0?'+':'')+delta];
+    });
+    const bytes = buildTablePdfBytes({
+      title: `Stock Adjustment ${a.id}`,
+      subtitle: `${fmtDisplay(a.date)}  ·  ${a.shop}  ·  ${a.type} — ${a.reason}`,
+      head: ['Product','Before','Counted/Qty','After','Change'],
+      rows
+    });
+    downloadPdfBytes(bytes, `${a.id}.pdf`);
   }
 
   function switchToSAList(){ document.getElementById('stockAdjListView').classList.add('active'); document.getElementById('stockAdjCreateView').classList.remove('active'); }
@@ -4760,7 +4787,7 @@
     });
     STOCK_ADJUSTMENTS.unshift({
       id: "SA-" + (10956 + STOCK_ADJUSTMENTS.length),
-      date: "2026-07-23", type, reason,
+      date: todayStr(), type, reason,
       supplier: document.getElementById('saSupplier').value,
       shop: saShopVal,
       notes: document.getElementById('saNotes').value.trim(),
@@ -5089,7 +5116,7 @@
     if(editingCustomerId){
       Object.assign(CUSTOMERS.find(c=>c.id===editingCustomerId), data);
     } else {
-      CUSTOMERS.push({ id: nextCustomerId++, orders:0, spent:0, credit:0, joined:"2026-07-23", ...data });
+      CUSTOMERS.push({ id: nextCustomerId++, orders:0, spent:0, credit:0, joined:todayStr(), ...data });
     }
     renderCustomers();
     switchToCustomerList();
@@ -6248,9 +6275,11 @@
   function renderTrLines(){
     const tbody = document.getElementById('trLineBody');
     const fromShop = document.getElementById('trFromShop').value;
+    const toShop = document.getElementById('trToShop').value;
     tbody.innerHTML = trLineItems.map((row,i)=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
-      const currentStock = p ? getStock(p, fromShop) : '—';
+      const fromStock = p ? getStock(p, fromShop) : '—';
+      const toStock = p ? getStock(p, toShop) : '—';
       return `
       <tr>
         <td>
@@ -6259,7 +6288,8 @@
             ${PRODUCTS.map(p=>`<option value="${p.id}" ${row.productId===p.id?'selected':''}>${p.name}</option>`).join('')}
           </select>
         </td>
-        <td class="mono" style="text-align:right;">${currentStock}</td>
+        <td class="mono" style="text-align:right;">${fromStock}</td>
+        <td class="mono" style="text-align:right;">${toStock}</td>
         <td><input type="number" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
         <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
@@ -6278,6 +6308,7 @@
   }
   document.getElementById('trAddLineBtn').addEventListener('click', ()=>{ trLineItems.push({productId:null, qty:1}); renderTrLines(); });
   document.getElementById('trFromShop').addEventListener('change', renderTrLines);
+  document.getElementById('trToShop').addEventListener('change', renderTrLines);
 
   function transferPdf(t){
     const rows = t.items.map(it=>{

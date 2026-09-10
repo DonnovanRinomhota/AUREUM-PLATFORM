@@ -1,5 +1,47 @@
 # Changelog
 
+## Phase 2 — Dashboard date bug, POS employee selection, PDFs, UI cleanup (2026-09)
+
+### Fixed
+- **Dashboard date was frozen in the past.** A hardcoded `TODAY = July 23,
+  2026` constant was driving every date filter on the Dashboard ("Today",
+  "This week", "This month", etc.). This is also the real cause behind
+  sales not showing up per shop — real sales made on the actual current
+  date were being checked against a fake "today" and never matched. Now
+  uses the real current date/time throughout. Several other hardcoded
+  `2026-07-23` defaults (new PO/GRN/Stock Adjustment/Customer dates) were
+  fixed the same way.
+- **Removed the "Recent Transactions" section** from the Dashboard,
+  including the hardcoded fake transaction list it was displaying.
+
+### Added
+- **POS shift login now has three steps**: shop → employee name → PIN
+  (previously shop + PIN only, matching PIN against any eligible
+  employee). The employee list is filtered to who's actually eligible for
+  the selected shop.
+- **PDF export** added to Purchase Orders, GRNs, and Stock Adjustments
+  (Transfers already had this).
+- **Transfer of Goods** line items now show current stock at *both* the
+  source and destination shop side-by-side with the transfer quantity
+  (previously only the source shop's stock was shown). The underlying
+  before/after math was already accurate — verified again as part of this
+  change.
+
+### Changed
+- **Back Office access from the POS is now restricted** to employees with
+  the Shop Manager or Administrator role — Cashiers and Inventory Clerks
+  no longer see or can use the "Open Back Office" shortcut on the till.
+  Note: this restricts the in-app shortcut only. The underlying system
+  has a single real login (the business owner's Supabase account) that
+  employees share access to via PIN-based attribution, not separate
+  per-employee accounts — so on a shared/unlocked device, someone could
+  still navigate to `backoffice.html` directly. Fully closing that would
+  require real per-employee accounts, a larger feature — flag if that's
+  wanted.
+- **Products → Stock control**: removed the redundant read-only "Total
+  stock on hand" box from the product form (the per-shop stock table
+  below it is the real source of truth now).
+
 ## Phase 1.1 — Fresh-business data bug, shop dropdown clarification (2026-09)
 
 ### Fixed
