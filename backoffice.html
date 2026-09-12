@@ -2599,32 +2599,17 @@
     const costTrend = pctChange(cur.costOfSales, prev.costOfSales);
     const profitTrend = pctChange(cur.grossProfit, prev.grossProfit);
 
-    // When there's genuinely no activity in the current period, a raw
-    // "-100%" reads as alarming/broken (e.g. a brand-new shop, or simply
-    // no sales yet today) rather than informative — the $0.00 figure
-    // already says everything, so show a neutral dash instead of a
-    // misleading decline percentage in that case.
-    function trendBadge(cur, trend){
-      if(cur === 0) return { text:'–', up:null };
-      return { text:`${trend>=0?'+':''}${trend.toFixed(1)}%`, up:trend>=0 };
-    }
-    const grossBadge = trendBadge(cur.grossSales, grossTrend);
-    const netBadge = trendBadge(cur.netSales, netTrend);
-    const costBadge = trendBadge(cur.costOfSales, costTrend);
-    const profitBadge = trendBadge(cur.grossProfit, profitTrend);
-
     const KPIS = [
-      { label:"Gross Sales", value:fmtMoney(cur.grossSales), delta:grossBadge.text, up:grossBadge.up===null?null:grossBadge.up },
-      { label:"Net Sales", value:fmtMoney(cur.netSales), delta:netBadge.text, up:netBadge.up===null?null:netBadge.up },
-      { label:"Cost of Sales", value:fmtMoney(cur.costOfSales), delta:costBadge.text, up:costBadge.up===null?null:(cur.costOfSales===0?null:costTrend<0) },
-      { label:"Gross Profit", value:fmtMoney(cur.grossProfit), delta:profitBadge.text, up:profitBadge.up===null?null:profitBadge.up },
+      { label:"Gross Sales", value:fmtMoney(cur.grossSales) },
+      { label:"Net Sales", value:fmtMoney(cur.netSales) },
+      { label:"Cost of Sales", value:fmtMoney(cur.costOfSales) },
+      { label:"Gross Profit", value:fmtMoney(cur.grossProfit) },
     ];
     document.getElementById('kpiRow').innerHTML = KPIS.map(k => {
       const colorClass = k.label==='Gross Sales' ? 'green' : (k.label==='Cost of Sales') ? 'red' : (k.label==='Gross Profit') ? 'blue' : '';
-      const deltaClass = k.up===null ? 'neutral' : (k.up?'up':'down');
       return `
-      <div class="kpi-card" title="vs. the previous period of equal length">
-        <div class="lbl"><span>${k.label}</span><span class="delta ${deltaClass}">${k.delta}</span></div>
+      <div class="kpi-card">
+        <div class="lbl"><span>${k.label}</span></div>
         <div class="val ${colorClass}">${k.value}</div>
       </div>
     `;
@@ -3503,7 +3488,12 @@
     const safetyStockRaw = document.getElementById('pfSafetyStock').value;
     const safetyStock = safetyStockRaw !== '' ? Math.max(0, parseInt(safetyStockRaw) || 0) : undefined;
     const allShops = document.getElementById('pfAllShops').checked;
-    const shops = allShops ? 'all' : [...document.querySelectorAll('.pf-shop-cb')].filter(cb=>cb.checked).map(cb=>cb.value);
+    // "All shops" means every shop that exists RIGHT NOW — a snapshot, not
+    // a standing rule. If it meant "every shop forever," a brand-new shop
+    // would silently inherit every such product with zero stock entered
+    // for it, which is exactly what was causing false low-stock alerts at
+    // new shops for products the owner never actually stocked there.
+    const shops = allShops ? [...SHOPS] : [...document.querySelectorAll('.pf-shop-cb')].filter(cb=>cb.checked).map(cb=>cb.value);
     const data = {
       name, cat: cat || 'Others', price: isNaN(price)?0:price, cost: isNaN(cost)?0:cost, stock, image: pendingImage,
       soldBy: document.getElementById('pfSoldBy').value,
@@ -4980,7 +4970,7 @@
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
             <div class="icon-btn-sm" data-act="credit" data-id="${c.id}" title="Adjust store credit">&#128176;</div>
             <div class="icon-btn-sm" data-act="edit" data-id="${c.id}" title="Edit">&#9998;</div>
-            <div class="icon-btn-sm" data-act="delete" data-id="${c.id}" title="Delete">&#10005;</div>
+            <div class="icon-btn-sm" data-act="delete" data-id="${c.id}" title="Delete customer">🗑️</div>
           </div>
         </td>
       </tr>`;}).join('');
@@ -5499,7 +5489,7 @@
         const stock = stockIdx>-1 ? (parseInt(r[stockIdx])||0) : 0;
         const cat = catIdx>-1 ? (r[catIdx]||'').trim() : '';
         const code = codeIdx>-1 ? (r[codeIdx]||'').trim() : '';
-        PRODUCTS.push({ id: nextProductId++, name, price, cost, cat, stock, image:null, code, barcode:'', soldBy:'each', description:'', shops:'all', stockControl:true });
+        PRODUCTS.push({ id: nextProductId++, name, price, cost, cat, stock, image:null, code, barcode:'', soldBy:'each', description:'', shops:[...SHOPS], stockControl:true });
         existingNames.add(name.toLowerCase());
         added++;
       }
@@ -5809,8 +5799,6 @@
     saveSettingsPanel('settings-payments');
     flashSaveConfirm('stSavePaymentsConfirm');
   });
-  document.getElementById('stSaveNotifications').addEventListener('click', ()=> flashSaveConfirm('stSaveNotificationsConfirm'));
-  document.getElementById('stSaveUsers').addEventListener('click', ()=> flashSaveConfirm('stSaveUsersConfirm'));
   document.getElementById('stGoToEmployees').addEventListener('click', ()=>{
     const navItem = document.querySelector('.nav-item[data-page="employees"]');
     if(navItem) navItem.click();
@@ -6597,6 +6585,7 @@
     } else {
       EXPENSES.push({ id: nextExpenseId++, ...data });
     }
+    persistAureum();
     closeModal('detailModal');
     renderAccountingData();
   }
@@ -6777,6 +6766,11 @@
     if(shared.receipts) RECEIPTS = shared.receipts; // empty array is a valid, meaningful state — don't fall back to demo seed
     if(shared.expenses) EXPENSES = shared.expenses;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
+    // One-time migration: "all shops" used to mean "every shop, including
+    // ones added later" — that's what caused new shops to silently inherit
+    // old products with zero stock (false low-stock alerts). Freeze it to
+    // the shops that exist right now instead, same as any new save does.
+    PRODUCTS.forEach(p=>{ if(p.shops === 'all') p.shops = [...SHOPS]; });
     nextProductId = Math.max(0, ...PRODUCTS.map(p=>p.id)) + 1;
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
     nextEmployeeId = Math.max(0, ...EMPLOYEES.map(e=>e.id)) + 1;

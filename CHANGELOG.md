@@ -1,5 +1,43 @@
 # Changelog
 
+## Phase 5 — Expense saving bug, new-shop inventory isolation, dashboard cleanup (2026-09)
+
+### Fixed
+- **Expenses weren't actually saving.** `saveExpense()` updated the
+  in-memory list and the screen looked right immediately, but never
+  synced to Supabase — so a new/edited expense would vanish on reload or
+  from another device. Now persists correctly.
+- **New shops were silently inheriting every "all shops" product with
+  zero stock**, causing false low-stock alerts the moment a new shop was
+  created. "All shops" now means "every shop that exists right now" (a
+  snapshot taken at save time) rather than "every shop, including ones
+  added later" — a brand-new shop genuinely starts with no products until
+  you explicitly add them there. Existing products get migrated
+  automatically on next load.
+- **Leftover duplicate event listeners** on the Notifications/Users
+  settings Save buttons (harmless but sloppy remnant from the last
+  settings-persistence fix) — cleaned up.
+- **Customers → Delete** now uses a clearer trash-can icon instead of the
+  generic ✕ used for every other delete action, so it's easier to spot.
+
+### Removed
+- **Trend percentage badges removed from Dashboard KPI cards** (Gross
+  Sales, Net Sales, Cost of Sales, Gross Profit) — these were producing
+  confusing "-100%"-style readouts (mathematically correct compared to a
+  prior period, but misleading for a brand-new shop or an ordinary
+  no-sales-yet-today moment). The dollar figures speak for themselves now.
+
+### Verified, no change needed
+- Custom expense categories were already supported (free-text field with
+  autocomplete, same pattern as product categories).
+- Re-verified the Taxes/Receipts/Payment Methods/Notifications/Users &
+  Permissions settings save-and-restore logic from Phase 4 — found and
+  removed the duplicate listeners above, but the core persistence was
+  already working correctly. If these still look "static" after
+  deploying this phase, please confirm Phase 4 was actually deployed
+  first (git push + Vercel redeploy) before Phase 5, and let me know
+  exactly which switch and what you see.
+
 ## Phase 4 — Dashboard polish, per-shop inventory gaps, checkout simplification, settings that actually save (2026-09)
 
 ### Fixed
