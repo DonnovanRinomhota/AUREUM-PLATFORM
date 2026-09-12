@@ -1,5 +1,51 @@
 # Changelog
 
+## Phase 4 — Dashboard polish, per-shop inventory gaps, checkout simplification, settings that actually save (2026-09)
+
+### Fixed
+- **"-100%" on a brand-new shop** — when a period has zero current
+  activity, KPI badges now show a neutral "–" instead of a raw decline
+  percentage, which read as broken/alarming for a shop with no history.
+- **Sales Summary chart overflowing off-screen on long date ranges** — now
+  buckets into weekly or monthly bars once a range gets long, instead of
+  one bar+label per day (up to 92 of them).
+- **Customers delete button** existed but never synced the deletion to
+  Supabase — deleted customers were reappearing after a reload. Fixed.
+- **Per-shop inventory gaps, two real ones found:**
+  - The Alerts widget was flagging products as low/negative stock at
+    shops they were never even assigned to.
+  - **The POS catalog wasn't filtering by shop assignment at all** —
+    products meant for one shop were showing up (and were sellable) at
+    every shop's till. This is now fixed; a product only appears at a
+    shop's till if it's actually assigned there.
+- **Settings toggles across Taxes, Receipts, Payment Methods,
+  Notifications, and Users & Permissions were cosmetic only** — flipping
+  a switch and clicking "Save changes" just flashed a checkmark without
+  persisting anything. All five now genuinely save and restore correctly
+  across reloads and devices. Payment Methods goes further: disabling
+  Cash/Card/Mobile in Back Office now actually hides that button at
+  checkout in the POS, live.
+
+### Removed
+- **Revenue Breakdown** panel removed from Dashboard (was showing a
+  hardcoded, never-updated "$43.2K" placeholder).
+- **Expenses by Category** panel removed from Accounting.
+- **Delete Expense** removed from Accounting (edit-only now, matching
+  Purchase Orders/GRNs/Stock Adjustments/Transfers).
+- **In-app Stripe and Paynow payment processing removed from checkout.**
+  Card and Mobile buttons now just record which payment method was used
+  — same as Cash or Other — with no card-entry form, no phone-number
+  prompt, and no calls to the payment edge functions. Use your own card
+  terminal or mobile money handset alongside the till. The "Payment
+  Integrations" section in Back Office → Settings was removed along with
+  it, since entering keys there no longer does anything. (The three
+  Supabase edge functions from earlier phases are left deployed but
+  unused — safe to delete later if you want to tidy up.)
+
+### Added
+- **Click-to-edit stock** in the Products list — click the stock number
+  (with a specific shop selected) to edit it inline.
+
 ## Phase 3 — Report accuracy, cross-shop data integrity, checkout validation (2026-09)
 
 ### Removed

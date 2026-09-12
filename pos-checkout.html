@@ -706,20 +706,6 @@
       <div id="tenderDueNote" style="font-size:11px;color:var(--sage);margin:-4px 0 8px;display:none;"></div>
       <div class="tender-chips" id="tenderChips"></div>
       <div class="change-row"><span class="k">Change due</span><span class="v" id="changeVal">$0.00</span></div>
-      <div id="cardElementWrap" style="display:none;margin-top:12px;">
-        <div class="tender-row"><span>Card Details</span></div>
-        <div id="stripeCardElement" style="padding:11px 12px;border-radius:9px;border:1px solid var(--line-strong);background:var(--panel-raised);"></div>
-        <div id="cardElementError" style="font-size:11px;color:var(--danger);margin-top:6px;min-height:14px;"></div>
-      </div>
-      <div id="mobileMoneyWrap" style="display:none;margin-top:12px;">
-        <div class="tender-row"><span>Mobile Money</span></div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;">
-          <div class="seg-btn active" data-mm="ecocash" style="flex:1;text-align:center;">EcoCash</div>
-          <div class="seg-btn" data-mm="onemoney" style="flex:1;text-align:center;">OneMoney</div>
-        </div>
-        <input type="tel" id="mobileMoneyPhone" class="auth-field" placeholder="e.g. 0771234567" style="margin-bottom:0;">
-        <div id="mobileMoneyStatus" style="font-size:11.5px;color:var(--sage);margin-top:8px;min-height:14px;"></div>
-      </div>
     </div>
     </div>
 
@@ -886,29 +872,11 @@
   </div>
 </div>
 
-<script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  /* ===== STRIPE (card payments) =====
-     Real card processing needs a secret key on a server somewhere —
-     it can never live in this file. The secret key lives in the
-     create-payment-intent Supabase Edge Function instead; this file
-     only ever holds the publishable key, which is safe to ship in
-     client-side code. See SETUP-INSTRUCTIONS.md. */
-  const STRIPE_CONFIG = {
-    publishableKey: 'pk_live_51OLC0BGK5QXBdm2xjs35KuOCDdFypBQfjCmyCUFZAU8LLj4kRAUfRpYsIzlCRnIAgKy6WFqIZMJKQUdr0nYZzGwj005w918tk9',
-    createIntentUrl: 'https://pizwuzwkzfwgfjeolmqp.supabase.co/functions/v1/create-payment-intent' // e.g. https://xyz.supabase.co/functions/v1/create-payment-intent
-  };
-  const stripeReady = STRIPE_CONFIG.publishableKey.startsWith('pk_');
-  const stripeClient = stripeReady ? Stripe(STRIPE_CONFIG.publishableKey) : null;
-  let stripeElements = null, stripeCardElement = null;
-  function mountStripeCard(){
-    if(!stripeClient || stripeCardElement) return;
-    stripeElements = stripeClient.elements();
-    stripeCardElement = stripeElements.create('card', { style:{ base:{ color:'#F2EFE9', fontSize:'14px', '::placeholder':{ color:'#8FA396' } } } });
-    stripeCardElement.mount('#stripeCardElement');
-    stripeCardElement.on('change', (e)=>{ document.getElementById('cardElementError').textContent = e.error ? e.error.message : ''; });
-  }
+  // Card and Mobile payment methods at checkout only record which method
+  // was used — they don't process real charges in-app. Use your own card
+  // terminal / mobile money handset alongside the till.
   /* ===== AUREUM CLOUD BACKEND (Supabase: Postgres + Auth) =====
      Mirrors the config in backoffice.html — fill in the same
      project URL + anon key here too. This terminal signs into the
@@ -1126,11 +1094,17 @@ async function aureumSignIn(email, password){
     });
   }
 
+  function productInShop(p, shop){
+    if(!shop || shop === 'All Shops') return true;
+    if(p.shops === 'all') return true;
+    return Array.isArray(p.shops) && p.shops.includes(shop);
+  }
   function renderCatalog(){
     const q = searchInput.value.trim().toLowerCase();
     const items = PRODUCTS.filter(p =>
       (activeCat==="All" || p.cat===activeCat) &&
-      (q==="" || p.name.toLowerCase().includes(q))
+      (q==="" || p.name.toLowerCase().includes(q)) &&
+      productInShop(p, activeShop)
     );
     catalogEl.innerHTML = items.map(p => `
       <div class="card" data-id="${p.id}">
@@ -1292,68 +1266,21 @@ async function aureumSignIn(email, password){
   });
 
 
-  /* ===== PAYNOW (EcoCash / OneMoney mobile money) =====
-     Sends a USSD payment prompt to the customer's phone, then polls
-     until they approve/decline it. Both edge functions use this
-     business's own connected Paynow account (see Back Office →
-     Settings → Payment Integrations) — money goes straight to them. */
-  const PAYNOW_CONFIG = {
-    initiateUrl: supaReady ? `${SUPABASE_CONFIG.url}/functions/v1/paynow-initiate` : null,
-    pollUrl: supaReady ? `${SUPABASE_CONFIG.url}/functions/v1/paynow-poll` : null
-  };
-  let mobileMoneyMethod = 'ecocash';
-  document.querySelectorAll('#mobileMoneyWrap [data-mm]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      document.querySelectorAll('#mobileMoneyWrap [data-mm]').forEach(b=>b.classList.remove('active'));
-      el.classList.add('active');
-      mobileMoneyMethod = el.dataset.mm;
-    });
-  });
-  async function payWithPaynow(amount, reference){
-    const phone = document.getElementById('mobileMoneyPhone').value.trim();
-    const statusEl = document.getElementById('mobileMoneyStatus');
-    if(!PAYNOW_CONFIG.initiateUrl){
-      statusEl.textContent = 'EcoCash/OneMoney isn\u2019t connected yet \u2014 see SETUP-PAYNOW.md to connect Paynow.';
-      statusEl.style.color = 'var(--danger)';
-      return { success:false };
-    }
-    if(!phone){ statusEl.textContent = 'Enter the customer\'s mobile number first.'; statusEl.style.color = 'var(--danger)'; return { success:false }; }
-    statusEl.style.color = 'var(--sage)';
-    statusEl.textContent = 'Sending payment prompt…';
-    try{
-      const { data: { session } } = await sb.auth.getSession();
-      const initResp = await fetch(PAYNOW_CONFIG.initiateUrl, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ phone, method: mobileMoneyMethod, amount, reference })
-      });
-      const initJson = await initResp.json();
-      if(initJson.error) throw new Error(initJson.error);
-      statusEl.textContent = initJson.instructions || 'Ask the customer to approve on their phone…';
-
-      // Poll every 3s for up to ~2 minutes
-      for(let i=0; i<40; i++){
-        await new Promise(r=>setTimeout(r, 3000));
-        const pollResp = await fetch(PAYNOW_CONFIG.pollUrl, {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({ pollUrl: initJson.pollUrl })
-        });
-        const pollJson = await pollResp.json();
-        if(pollJson.error) throw new Error(pollJson.error);
-        if(pollJson.paid){ statusEl.textContent = 'Payment confirmed ✓'; statusEl.style.color = 'var(--gold-bright)'; return { success:true }; }
-        if(pollJson.cancelled){ statusEl.textContent = 'Customer cancelled the payment.'; statusEl.style.color = 'var(--danger)'; return { success:false }; }
-        if(pollJson.failed){ statusEl.textContent = 'Payment failed.'; statusEl.style.color = 'var(--danger)'; return { success:false }; }
-        statusEl.textContent = `Waiting for approval… (${pollJson.status || 'pending'})`;
+  function applyEnabledPaymentMethods(){
+    const enabled = POS_SETTINGS.enabledPaymentMethods;
+    if(!Array.isArray(enabled)) return; // never configured in Back Office yet — leave all visible
+    document.querySelectorAll('#payMethods .pay-btn[data-pay]').forEach(btn=>{
+      const method = btn.dataset.pay;
+      if(method === 'other') return; // Other isn't gated by a Back Office toggle
+      const isEnabled = enabled.includes(method);
+      btn.style.display = isEnabled ? '' : 'none';
+      if(!isEnabled && btn.classList.contains('active')){
+        // The currently-selected method just got disabled — fall back to Cash if it's on, else the first visible method.
+        const fallback = document.querySelector('#payMethods .pay-btn[data-pay="cash"]') || document.querySelector('#payMethods .pay-btn:not([style*="display: none"])');
+        if(fallback) fallback.click();
       }
-      statusEl.textContent = 'Timed out waiting for approval.'; statusEl.style.color = 'var(--danger)';
-      return { success:false };
-    }catch(err){
-      statusEl.textContent = err.message; statusEl.style.color = 'var(--danger)';
-      return { success:false };
-    }
+    });
   }
-
   document.getElementById('payMethods').querySelectorAll('.pay-btn').forEach(el=>{
     el.addEventListener('click', ()=>{
       document.querySelectorAll('.pay-btn').forEach(b=>b.classList.remove('active'));
@@ -1361,21 +1288,15 @@ async function aureumSignIn(email, password){
       payMethod = el.dataset.pay;
       tenderedAmt = 0;
       const otherInput = document.getElementById('otherPayInput');
-      const cardWrap = document.getElementById('cardElementWrap');
-      const mmWrap = document.getElementById('mobileMoneyWrap');
       if(payMethod === 'other'){
         otherInput.classList.add('show');
         document.getElementById('otherPayLabel').focus();
       } else {
         otherInput.classList.remove('show');
       }
-      if(payMethod === 'card' && stripeReady){
-        cardWrap.style.display = 'block';
-        mountStripeCard();
-      } else {
-        cardWrap.style.display = 'none';
-      }
-      mmWrap.style.display = (payMethod === 'mobile') ? 'block' : 'none';
+      // Card and Mobile just record the payment method used — no card
+      // entry form or mobile money phone-number prompt needed, same as
+      // tapping Cash or Other.
       renderTicket();
     });
   });
@@ -1815,50 +1736,14 @@ async function aureumSignIn(email, password){
       paymentLabel = custom || 'Other';
     }
 
-    // Real card charge: create + confirm a Stripe PaymentIntent before
-    // the sale is allowed to complete. If this isn't set up yet, or the
-    // card is declined, the sale does NOT go through — same as a real
-    // card terminal declining a swipe.
+    // Card and Mobile just record which payment method was used at the
+    // till — no in-app card/mobile-money processing. Use your own card
+    // terminal or mobile money handset alongside the POS, then tap the
+    // matching button here to log the sale.
     let stripePaymentIntentId = null;
-    if(payMethod === 'card'){
-      if(!stripeReady){ alert('Card payments aren\'t connected yet. See SETUP-INSTRUCTIONS.md, or choose Cash / Mobile / Other for this sale.'); return; }
-      this.textContent = 'Processing card…';
-      this.classList.add('disabled');
-      try{
-        const { data: { session } } = await sb.auth.getSession();
-        const resp = await fetch(STRIPE_CONFIG.createIntentUrl, {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({ amount: total, currency: (POS_SETTINGS.currencyCode || 'USD').toLowerCase() })
-        });
-        const json = await resp.json();
-        if(json.error) throw new Error(json.error);
-        const result = await stripeClient.confirmCardPayment(json.client_secret, { payment_method: { card: stripeCardElement } });
-        if(result.error) throw new Error(result.error.message);
-        stripePaymentIntentId = result.paymentIntent.id;
-      }catch(err){
-        alert('Card payment failed: ' + err.message);
-        this.textContent = 'Complete Sale';
-        this.classList.remove('disabled');
-        return;
-      }
-      this.textContent = 'Complete Sale';
-      this.classList.remove('disabled');
-    }
-
-    // Real mobile money charge via Paynow: sends a USSD prompt and waits
-    // for the customer to approve on their phone before the sale completes.
     let paynowReference = null;
-    if(payMethod === 'mobile'){
-      this.textContent = 'Awaiting phone approval…';
-      this.classList.add('disabled');
-      const orderRef = document.getElementById('orderNo').textContent;
-      const result = await payWithPaynow(total, orderRef);
-      this.textContent = 'Complete Sale';
-      this.classList.remove('disabled');
-      if(!result.success) return; // sale does not complete on decline/cancel/timeout
-      paynowReference = orderRef;
-    }
+    // Mobile just records the payment method — no in-app mobile money
+    // processing happens here (see note above).
 
     const dueInTenderCurrency = tenderDueAmount(total);
     const change = payMethod === 'cash' ? Math.max(0, tenderedAmt-dueInTenderCurrency) : 0;
@@ -2037,6 +1922,7 @@ async function aureumSignIn(email, password){
 
     taxPercent = POS_SETTINGS.taxPercent || 0;
     document.getElementById('taxPercentInput').value = taxPercent;
+    applyEnabledPaymentMethods();
 
     setInterval(persistAureum, 1200);
     window.addEventListener('beforeunload', persistAureum);
@@ -2044,7 +1930,7 @@ async function aureumSignIn(email, password){
       const str = JSON.stringify(shared);
       if(str === _aureumSnapshot) return;
       applyLoadedData(shared);
-      try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); }catch(e){}
+      try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); }catch(e){}
     });
 
     renderSyncStatus();

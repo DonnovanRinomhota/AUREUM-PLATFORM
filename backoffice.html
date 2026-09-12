@@ -148,6 +148,7 @@
   .kpi-card .delta{ font-size:10.5px; padding:2px 7px; border-radius:999px; font-weight:600; }
   .kpi-card .delta.up{ background: rgba(111,168,216,0.12); color:var(--blue); }
   .kpi-card .delta.down{ background: rgba(193,88,74,0.14); color:var(--danger); }
+  .kpi-card .delta.neutral{ background: rgba(255,255,255,0.06); color:var(--sage-dim); }
   .kpi-card .val{ font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:var(--ivory); margin-top:8px; }
   .kpi-card .val.green{ color:var(--green-bright); }
   .kpi-card .val.red{ color:var(--danger); }
@@ -179,8 +180,8 @@
   .bar:hover{ opacity:0.8; }
   .bar.net{ background: linear-gradient(180deg, var(--blue), #4A7FA8); }
   .bar.gross{ background: linear-gradient(180deg, var(--emerald-light), var(--emerald)); }
-  .bars-axis{ display:flex; gap:10px; margin-top:8px; padding:0 4px; }
-  .bars-axis span{ flex:1; text-align:center; font-size:10px; color:var(--sage-dim); }
+  .bars-axis{ display:flex; gap:4px; margin-top:8px; padding:0 4px; }
+  .bars-axis span{ flex:1; min-width:0; text-align:center; font-size:10px; color:var(--sage-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
   .donut-wrap{ display:flex; flex-direction:column; align-items:center; gap:18px; }
   .donut{
@@ -1897,27 +1898,11 @@
 
       <div class="kpi-row" id="acctKpiRow"></div>
 
-      <div class="panel-row">
-        <div class="panel">
-          <div class="panel-head">
-            <div><div class="t">Income Statement</div><div class="s">For the selected period</div></div>
-          </div>
-          <div id="acctIncomeStatement"></div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><div class="t">Income Statement</div><div class="s">For the selected period</div></div>
         </div>
-        <div class="panel">
-          <div class="panel-head">
-            <div><div class="t">Expenses by Category</div><div class="s">Share of operating expenses</div></div>
-          </div>
-          <div class="donut-wrap" id="acctExpenseWrap">
-            <div class="donut" id="acctExpenseDonut">
-              <div class="donut-inner">
-                <div class="v" id="acctExpenseTotal">$0</div>
-                <div class="l">Expenses</div>
-              </div>
-            </div>
-            <div class="donut-legend" id="acctExpenseLegend"></div>
-          </div>
-        </div>
+        <div id="acctIncomeStatement"></div>
       </div>
 
       <div class="table-panel">
@@ -2245,27 +2230,6 @@
               <div class="btn-gold" id="stSavePayments">Save changes</div>
               <div class="save-confirm" id="stSavePaymentsConfirm">Saved ✓</div>
             </div>
-
-            <div class="settings-panel-head" style="margin-top:32px;">
-              <div class="t">Payment Integrations</div>
-              <div class="s">Connect your own Stripe and/or Paynow accounts so card and mobile money payments taken at checkout go directly to you. Owners/managers only — cashiers can't view or edit these.</div>
-            </div>
-            <div class="form-section">
-              <label class="field-label">Stripe Secret Key <span style="color:var(--sage);font-weight:400;">(from Stripe Dashboard → Developers → API keys — not available for Zimbabwe-registered accounts)</span></label>
-              <input type="password" class="modal-field" id="stStripeSecret" placeholder="sk_live_…">
-              <label class="field-label" style="margin-top:12px;">Stripe Publishable Key</label>
-              <input type="text" class="modal-field" id="stStripePublishable" placeholder="pk_live_…">
-            </div>
-            <div class="form-section">
-              <label class="field-label">Paynow Integration ID <span style="color:var(--sage);font-weight:400;">(from your Paynow merchant dashboard)</span></label>
-              <input type="text" class="modal-field" id="stPaynowId" placeholder="e.g. 14528">
-              <label class="field-label" style="margin-top:12px;">Paynow Integration Key</label>
-              <input type="password" class="modal-field" id="stPaynowKey" placeholder="Paste your integration key">
-            </div>
-            <div class="settings-save-row">
-              <div class="btn-gold" id="stSavePaymentIntegrations">Save changes</div>
-              <div class="save-confirm" id="stSavePaymentIntegrationsConfirm">Saved ✓</div>
-            </div>
           </div>
 
           <!-- Notifications -->
@@ -2583,14 +2547,43 @@
 
   function dashboardChartData(state){
     const start = stripTime(state.rangeStart), end = stripTime(state.rangeEnd);
+    const totalDays = Math.round((end-start)/86400000) + 1;
     const out = [];
-    const cursor = new Date(start);
-    let guard = 0;
-    while(cursor <= end && guard < 92){
-      const agg = salesAggregateForRange(cursor, cursor);
-      out.push({ day: `${MONTH_NAMES[cursor.getMonth()]} ${cursor.getDate()}`, gross: agg.netSales, profit: agg.grossProfit });
-      cursor.setDate(cursor.getDate()+1);
-      guard++;
+    // Long ranges rendered one bar per day would overflow the panel width —
+    // bucket into weeks or months once the range gets long, so the chart
+    // always fits on screen regardless of how wide a range is picked.
+    if(totalDays <= 31){
+      const cursor = new Date(start);
+      let guard = 0;
+      while(cursor <= end && guard < 31){
+        const agg = salesAggregateForRange(cursor, cursor);
+        out.push({ day: `${MONTH_NAMES[cursor.getMonth()]} ${cursor.getDate()}`, gross: agg.netSales, profit: agg.grossProfit });
+        cursor.setDate(cursor.getDate()+1);
+        guard++;
+      }
+    } else if(totalDays <= 182){
+      const cursor = new Date(start);
+      let guard = 0;
+      while(cursor <= end && guard < 27){
+        const bucketEnd = new Date(cursor); bucketEnd.setDate(bucketEnd.getDate()+6);
+        const clampedEnd = bucketEnd > end ? end : bucketEnd;
+        const agg = salesAggregateForRange(cursor, clampedEnd);
+        out.push({ day: `${MONTH_NAMES[cursor.getMonth()]} ${cursor.getDate()}`, gross: agg.netSales, profit: agg.grossProfit });
+        cursor.setDate(cursor.getDate()+7);
+        guard++;
+      }
+    } else {
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      let guard = 0;
+      while(cursor <= end && guard < 24){
+        const bucketStart = cursor < start ? start : new Date(cursor);
+        const bucketEnd = new Date(cursor.getFullYear(), cursor.getMonth()+1, 0);
+        const clampedEnd = bucketEnd > end ? end : bucketEnd;
+        const agg = salesAggregateForRange(bucketStart, clampedEnd);
+        out.push({ day: `${MONTH_NAMES[cursor.getMonth()]} '${String(cursor.getFullYear()).slice(2)}`, gross: agg.netSales, profit: agg.grossProfit });
+        cursor.setMonth(cursor.getMonth()+1);
+        guard++;
+      }
     }
     return out;
   }
@@ -2606,17 +2599,32 @@
     const costTrend = pctChange(cur.costOfSales, prev.costOfSales);
     const profitTrend = pctChange(cur.grossProfit, prev.grossProfit);
 
+    // When there's genuinely no activity in the current period, a raw
+    // "-100%" reads as alarming/broken (e.g. a brand-new shop, or simply
+    // no sales yet today) rather than informative — the $0.00 figure
+    // already says everything, so show a neutral dash instead of a
+    // misleading decline percentage in that case.
+    function trendBadge(cur, trend){
+      if(cur === 0) return { text:'–', up:null };
+      return { text:`${trend>=0?'+':''}${trend.toFixed(1)}%`, up:trend>=0 };
+    }
+    const grossBadge = trendBadge(cur.grossSales, grossTrend);
+    const netBadge = trendBadge(cur.netSales, netTrend);
+    const costBadge = trendBadge(cur.costOfSales, costTrend);
+    const profitBadge = trendBadge(cur.grossProfit, profitTrend);
+
     const KPIS = [
-      { label:"Gross Sales", value:fmtMoney(cur.grossSales), delta:`${grossTrend>=0?'+':''}${grossTrend.toFixed(1)}%`, up:grossTrend>=0 },
-      { label:"Net Sales", value:fmtMoney(cur.netSales), delta:`${netTrend>=0?'+':''}${netTrend.toFixed(1)}%`, up:netTrend>=0 },
-      { label:"Cost of Sales", value:fmtMoney(cur.costOfSales), delta:`${costTrend>=0?'+':''}${costTrend.toFixed(1)}%`, up:costTrend<0 },
-      { label:"Gross Profit", value:fmtMoney(cur.grossProfit), delta:`${profitTrend>=0?'+':''}${profitTrend.toFixed(1)}%`, up:profitTrend>=0 },
+      { label:"Gross Sales", value:fmtMoney(cur.grossSales), delta:grossBadge.text, up:grossBadge.up===null?null:grossBadge.up },
+      { label:"Net Sales", value:fmtMoney(cur.netSales), delta:netBadge.text, up:netBadge.up===null?null:netBadge.up },
+      { label:"Cost of Sales", value:fmtMoney(cur.costOfSales), delta:costBadge.text, up:costBadge.up===null?null:(cur.costOfSales===0?null:costTrend<0) },
+      { label:"Gross Profit", value:fmtMoney(cur.grossProfit), delta:profitBadge.text, up:profitBadge.up===null?null:profitBadge.up },
     ];
     document.getElementById('kpiRow').innerHTML = KPIS.map(k => {
       const colorClass = k.label==='Gross Sales' ? 'green' : (k.label==='Cost of Sales') ? 'red' : (k.label==='Gross Profit') ? 'blue' : '';
+      const deltaClass = k.up===null ? 'neutral' : (k.up?'up':'down');
       return `
       <div class="kpi-card" title="vs. the previous period of equal length">
-        <div class="lbl"><span>${k.label}</span><span class="delta ${k.up?'up':'down'}">${k.delta}</span></div>
+        <div class="lbl"><span>${k.label}</span><span class="delta ${deltaClass}">${k.delta}</span></div>
         <div class="val ${colorClass}">${k.value}</div>
       </div>
     `;
@@ -3161,7 +3169,11 @@
         <td data-col="category">${p.cat || 'Uncategorized'}</td>
         <td class="gold" data-col="price" style="text-align:right;">${p.price.toFixed(2)}</td>
         <td class="mono" data-col="cost" style="text-align:right;">${p.cost.toFixed(2)}</td>
-        <td class="mono" data-col="stock" style="text-align:right;">${p.stockControl===false ? '—' : getStock(p, shopFilter)}</td>
+        <td class="mono" data-col="stock" style="text-align:right;" ${p.stockControl!==false && shopFilter!=='All Shops' ? `onclick="event.stopPropagation()"` : ''}>
+          ${p.stockControl===false ? '—' : (shopFilter==='All Shops'
+            ? getStock(p, shopFilter)
+            : `<span class="stock-editable" data-id="${p.id}" title="Click to edit stock at ${shopFilter}" style="cursor:pointer; border-bottom:1px dashed var(--sage-dim);">${getStock(p, shopFilter)}</span>`)}
+        </td>
         <td data-col="shops" style="text-align:right;">${productShopLabel(p)}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
@@ -3184,6 +3196,33 @@
       el.addEventListener('click', (e)=>{
         e.stopPropagation();
         toggleProductSelection(parseInt(el.dataset.select));
+      });
+    });
+    // Click-to-edit stock inline — only when a specific shop is selected
+    // (editing "All Shops" wouldn't know which shop's stock to change).
+    tbody.querySelectorAll('.stock-editable').forEach(span=>{
+      span.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const id = parseInt(span.dataset.id);
+        const p = PRODUCTS.find(x=>x.id===id);
+        if(!p) return;
+        const current = getStock(p, shopFilter);
+        const input = document.createElement('input');
+        input.type = 'number'; input.min = '0'; input.step = '1'; input.value = current;
+        input.style.cssText = 'width:70px; text-align:right; background:var(--panel-raised); border:1px solid var(--gold-bright); border-radius:6px; color:var(--sand); font-family:inherit; font-size:inherit; padding:2px 6px;';
+        span.replaceWith(input);
+        input.focus(); input.select();
+        const commit = ()=>{
+          const val = Math.max(0, parseInt(input.value) || 0);
+          setStock(p, shopFilter, val);
+          persistAureum();
+          renderProducts();
+        };
+        input.addEventListener('keydown', ev=>{
+          if(ev.key === 'Enter') commit();
+          if(ev.key === 'Escape') renderProducts();
+        });
+        input.addEventListener('blur', commit);
       });
     });
 
@@ -4921,7 +4960,7 @@
     const q = (document.getElementById('customerSearch').value || '').trim().toLowerCase();
     const items = CUSTOMERS.filter(c => q === '' || c.name.toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q));
     if(items.length === 0){
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:48px 20px;color:var(--sage);">No customers yet. Add your first customer to start building profiles.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px 20px;color:var(--sage);">No customers yet. Add your first customer to start building profiles.</td></tr>`;
       return;
     }
     tbody.innerHTML = items.map(c=>{
@@ -4953,7 +4992,7 @@
         if(el.dataset.act === 'credit') openCreditAdjustModal(id);
         if(el.dataset.act === 'delete'){
           const c = CUSTOMERS.find(x=>x.id===id);
-          if(c && confirm(`Delete customer "${c.name}"? This can't be undone.`)){ CUSTOMERS = CUSTOMERS.filter(x=>x.id!==id); renderCustomers(); }
+          if(c && confirm(`Delete customer "${c.name}"? This can't be undone.`)){ CUSTOMERS = CUSTOMERS.filter(x=>x.id!==id); persistAureum(); renderCustomers(); }
         }
       });
     });
@@ -5717,34 +5756,57 @@
     flashSaveConfirm('stSaveTaxesConfirm');
   });
 
-  document.getElementById('stSavePaymentIntegrations').addEventListener('click', async ()=>{
-    if(!sb || !currentBusinessId){ alert('Connect Supabase first.'); return; }
-    const payload = {
-      business_id: currentBusinessId,
-      stripe_secret_key: document.getElementById('stStripeSecret').value.trim() || null,
-      stripe_publishable_key: document.getElementById('stStripePublishable').value.trim() || null,
-      paynow_integration_id: document.getElementById('stPaynowId').value.trim() || null,
-      paynow_integration_key: document.getElementById('stPaynowKey').value.trim() || null,
-      updated_at: new Date().toISOString()
-    };
-    const { error } = await sb.from('payment_settings').upsert(payload);
-    if(error){ alert('Could not save payment integrations: ' + error.message); return; }
-    flashSaveConfirm('stSavePaymentIntegrationsConfirm');
-  });
-  async function loadPaymentIntegrations(){
-    if(!sb || !currentBusinessId) return;
-    const { data } = await sb.from('payment_settings').select('*').eq('business_id', currentBusinessId).maybeSingle();
-    if(!data) return;
-    if(data.stripe_secret_key) document.getElementById('stStripeSecret').value = data.stripe_secret_key;
-    if(data.stripe_publishable_key) document.getElementById('stStripePublishable').value = data.stripe_publishable_key;
-    if(data.paynow_integration_id) document.getElementById('stPaynowId').value = data.paynow_integration_id;
-    if(data.paynow_integration_key) document.getElementById('stPaynowKey').value = data.paynow_integration_key;
+  // Generic persistence for every settings toggle + field that was
+  // previously just a "Saved ✓" flash with nothing actually saved —
+  // Taxes/Payments/Receipts/Notifications/Users & Permissions all share
+  // this now, so every switch and field genuinely holds its state across
+  // reloads and devices.
+  if(!POS_SETTINGS.toggles) POS_SETTINGS.toggles = {};
+  if(!POS_SETTINGS.receiptText) POS_SETTINGS.receiptText = {};
+  function saveSettingsPanel(panelId){
+    document.querySelectorAll(`#${panelId} [data-toggle]`).forEach(sw=>{
+      POS_SETTINGS.toggles[sw.id] = sw.classList.contains('on');
+    });
+    persistAureum();
+  }
+  function restoreSettingsToggles(){
+    document.querySelectorAll('.settings-content [data-toggle]').forEach(sw=>{
+      if(Object.prototype.hasOwnProperty.call(POS_SETTINGS.toggles, sw.id)){
+        sw.classList.toggle('on', POS_SETTINGS.toggles[sw.id]);
+      }
+    });
+    const hdr = document.getElementById('stReceiptHeader');
+    const ftr = document.getElementById('stReceiptFooter');
+    if(hdr && POS_SETTINGS.receiptText.header !== undefined) hdr.value = POS_SETTINGS.receiptText.header;
+    if(ftr && POS_SETTINGS.receiptText.footer !== undefined) ftr.value = POS_SETTINGS.receiptText.footer;
+  }
+  function updateEnabledPaymentMethods(){
+    POS_SETTINGS.enabledPaymentMethods = ['cash','card','mobile','credit'].filter(m=>{
+      const id = { cash:'stPayCash', card:'stPayCard', mobile:'stPayMobile', credit:'stPayCredit' }[m];
+      const el = document.getElementById(id);
+      return el ? el.classList.contains('on') : true;
+    });
   }
 
-  document.getElementById('stSaveReceipts').addEventListener('click', ()=> flashSaveConfirm('stSaveReceiptsConfirm'));
+  document.getElementById('stSaveReceipts').addEventListener('click', ()=>{
+    POS_SETTINGS.receiptText.header = document.getElementById('stReceiptHeader').value.trim();
+    POS_SETTINGS.receiptText.footer = document.getElementById('stReceiptFooter').value.trim();
+    saveSettingsPanel('settings-receipts');
+    flashSaveConfirm('stSaveReceiptsConfirm');
+  });
+  document.getElementById('stSaveNotifications').addEventListener('click', ()=>{
+    saveSettingsPanel('settings-notifications');
+    flashSaveConfirm('stSaveNotificationsConfirm');
+  });
+  document.getElementById('stSaveUsers').addEventListener('click', ()=>{
+    saveSettingsPanel('settings-users');
+    flashSaveConfirm('stSaveUsersConfirm');
+  });
   document.getElementById('stSavePayments').addEventListener('click', ()=>{
     const anyOn = ['stPayCash','stPayCard','stPayMobile','stPayCredit'].some(id=> document.getElementById(id).classList.contains('on'));
     if(!anyOn){ alert('Enable at least one payment method.'); return; }
+    updateEnabledPaymentMethods();
+    saveSettingsPanel('settings-payments');
     flashSaveConfirm('stSavePaymentsConfirm');
   });
   document.getElementById('stSaveNotifications').addEventListener('click', ()=> flashSaveConfirm('stSaveNotificationsConfirm'));
@@ -6029,7 +6091,12 @@
     const el = document.getElementById('alertsList');
     const DEFAULT_LOW_STOCK_THRESHOLD = 15;
     const shopCtx = viewingShop; // "All Shops" sums across shops via getStock; a real shop scopes to just that shop
-    const stockControlled = PRODUCTS.filter(p => p.stockControl !== false);
+    // Only ever flag a product for THIS shop if the product is actually
+    // meant to be sold there — a product never assigned to this shop was
+    // never "supposed" to have stock here, so it isn't a stockout, it's
+    // just not stocked at this location. Skipping the productInShop check
+    // was flagging every other shop's products as false low-stock alerts.
+    const stockControlled = PRODUCTS.filter(p => p.stockControl !== false && productInShop(p, shopCtx));
     const negativeStock = stockControlled.filter(p => getStock(p, shopCtx) < 0);
     // A product only lands in one bucket — safety stock (if set) takes
     // priority over the general low-stock threshold so the same product
@@ -6431,26 +6498,6 @@
       <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Net income</div><div class="pct" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
     `;
 
-    const catTotals = {};
-    rangeExpenses.forEach(e=>{ catTotals[e.category] = (catTotals[e.category]||0) + e.amount; });
-    const catRows = Object.entries(catTotals).map(([label,total])=>({label,total})).sort((a,b)=>b.total-a.total);
-    const donutEl = document.getElementById('acctExpenseDonut');
-    const totalEl = document.getElementById('acctExpenseTotal');
-    const legendEl = document.getElementById('acctExpenseLegend');
-    totalEl.textContent = '$' + totalOpex.toFixed(totalOpex>=1000?0:2);
-    if(catRows.length === 0){
-      donutEl.style.background = 'var(--panel-raised)';
-      legendEl.innerHTML = `<div style="color:var(--sage); font-size:12px; padding:8px 0;">No expenses recorded for this period.</div>`;
-    } else {
-      let acc = 0;
-      const gradient = catRows.map((r,i)=>{ const pct = totalOpex>0?(r.total/totalOpex*100):0; const start=acc; acc+=pct; return `${PIE_COLORS[i%PIE_COLORS.length]} ${start}% ${acc}%`; }).join(', ');
-      donutEl.style.background = `conic-gradient(${gradient})`;
-      legendEl.innerHTML = catRows.map((r,i)=>{
-        const pct = totalOpex>0?(r.total/totalOpex*100):0;
-        return `<div class="dl-row"><div class="name"><span class="legend-dot" style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></span>${r.label}</div><div class="pct">$${r.total.toFixed(2)} · ${pct.toFixed(1)}%</div></div>`;
-      }).join('');
-    }
-
     const tbody = document.getElementById('expenseTableBody');
     if(rangeExpenses.length === 0){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:48px 20px;color:var(--sage);">No operating expenses recorded for this period.</td></tr>`;
@@ -6464,7 +6511,6 @@
           <td onclick="event.stopPropagation()">
             <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
               <div class="icon-btn-sm" data-eact="edit" data-id="${e.id}" title="Edit">&#9998;</div>
-              <div class="icon-btn-sm" data-eact="delete" data-id="${e.id}" title="Delete">&#10005;</div>
             </div>
           </td>
         </tr>`).join('');
@@ -6472,7 +6518,8 @@
         const id = parseInt(el.dataset.id);
         el.addEventListener('click', ()=>{
           if(el.dataset.eact === 'edit') openExpenseModal(id);
-          else deleteExpense(id);
+          // Expenses can no longer be deleted — permanent accounting
+          // history. Correct a mistake by editing it instead.
         });
       });
     }
@@ -6554,13 +6601,7 @@
     renderAccountingData();
   }
 
-  function deleteExpense(id){
-    const ex = EXPENSES.find(e=>e.id===id);
-    if(!ex) return;
-    if(!confirm(`Delete this ${ex.category} expense of $${ex.amount.toFixed(2)}? This can't be undone.`)) return;
-    EXPENSES = EXPENSES.filter(e=>e.id!==id);
-    renderAccountingData();
-  }
+  // Note: expenses can no longer be deleted — see the edit-only handler above.
 
   document.getElementById('addExpenseBtn').addEventListener('click', ()=> openExpenseModal(null));
 
@@ -6724,6 +6765,8 @@
     if(fxEl && !fxEl.value && POS_SETTINGS.fxRate) fxEl.value = POS_SETTINGS.fxRate;
     const fxLabel = document.getElementById('stFxRateLabel');
     if(fxLabel) fxLabel.textContent = '1 ' + (POS_SETTINGS.currencyCode || 'USD') + ' =';
+    restoreSettingsToggles();
+    updateEnabledPaymentMethods();
   }
   function applyLoadedData(shared){
     if(!shared) return;
@@ -6834,7 +6877,6 @@
       banner.textContent = subCheck.warning;
       banner.style.display = 'block';
     }
-    await loadPaymentIntegrations();
     await startApp();
   }
   /* ===== AUTH GATE UI ===== */
