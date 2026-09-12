@@ -1793,6 +1793,22 @@ async function aureumSignIn(email, password){
     const { ids, subtotal, discountAmount, tax, total } = computeTotals();
     const itemCount = ids.reduce((sum,id)=> sum + cart[id], 0);
 
+    // Cash needs a real tendered amount before the sale can complete —
+    // otherwise the register would silently record a cash sale with
+    // nothing actually received. Mobile/Card have their own hard gates
+    // below (Paynow approval / Stripe charge); Cash needs this one.
+    if(payMethod === 'cash'){
+      const dueNow = tenderDueAmount(total);
+      if(!tenderedAmt || tenderedAmt <= 0){
+        aureumToast('Enter the amount of cash received before completing the sale.', 'danger');
+        return;
+      }
+      if(tenderedAmt < dueNow - 0.001){
+        aureumToast(`Cash received (${tenderSymbol()}${tenderedAmt.toFixed(2)}) is less than the amount due (${tenderSymbol()}${dueNow.toFixed(2)}).`, 'danger');
+        return;
+      }
+    }
+
     let paymentLabel = payMethod.charAt(0).toUpperCase()+payMethod.slice(1);
     if(payMethod === 'other'){
       const custom = document.getElementById('otherPayLabel').value.trim();

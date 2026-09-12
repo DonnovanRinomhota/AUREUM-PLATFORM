@@ -846,50 +846,23 @@
         <div id="alertsList"></div>
       </div>
 
-      <div class="panel-row">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="t">Sales Summary</div>
-              <div class="s" id="salesSummarySub">Gross sales vs. gross profit, last 7 days</div>
-            </div>
-            <div class="legend-row">
-              <div class="legend-item"><span class="legend-dot" style="background:var(--emerald-light)"></span>Gross sales</div>
-              <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>Gross profit</div>
-            </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="t">Sales Summary</div>
+            <div class="s" id="salesSummarySub">Gross sales vs. gross profit, last 7 days</div>
           </div>
-          <div class="bars-chart-wrap">
-            <div class="bars-yaxis" id="barsYAxis"></div>
-            <div class="bars-plot">
-              <div class="bars-grid" id="barsGrid"></div>
-              <div class="bars-wrap" id="barsWrap"></div>
-              <div class="bars-axis" id="barsAxis"></div>
-            </div>
+          <div class="legend-row">
+            <div class="legend-item"><span class="legend-dot" style="background:var(--emerald-light)"></span>Gross sales</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>Gross profit</div>
           </div>
         </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="t">Revenue Breakdown</div>
-              <div class="s" id="revBreakdownSub">By product · This month</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:8px; margin-bottom:14px; align-items:flex-end;">
-            <div class="p-search" style="flex:1; padding:7px 10px;">
-              <span class="ic">&#8981;</span>
-              <input type="text" id="revBreakdownSearch" placeholder="Search product…">
-            </div>
-            <div id="revBreakdownDateSlot"></div>
-          </div>
-          <div class="donut-wrap">
-            <div class="donut" id="donutEl">
-              <div class="donut-inner">
-                <div class="v" id="donutTotal">$43.2K</div>
-                <div class="l">Gross</div>
-              </div>
-            </div>
-            <div class="donut-legend" id="donutLegend"></div>
+        <div class="bars-chart-wrap">
+          <div class="bars-yaxis" id="barsYAxis"></div>
+          <div class="bars-plot">
+            <div class="bars-grid" id="barsGrid"></div>
+            <div class="bars-wrap" id="barsWrap"></div>
+            <div class="bars-axis" id="barsAxis"></div>
           </div>
         </div>
       </div>
@@ -2592,7 +2565,7 @@
     const grossSales = receipts.filter(r=>!r.refund).reduce((sum,r)=>sum+r.total,0);
     const refunds = receipts.filter(r=>r.refund).reduce((sum,r)=>sum+r.total,0);
     const netSales = grossSales - refunds;
-    const ratio = blendedCogsRatio();
+    const ratio = blendedCogsRatio(receipts);
     const costOfSales = Math.max(0,netSales) * ratio;
     const grossProfit = netSales - costOfSales;
     return { grossSales, netSales, costOfSales, grossProfit };
@@ -2669,67 +2642,16 @@
         : dashDateState.activePreset;
       sub.textContent = `Gross sales vs. gross profit, ${label}`;
     }
+    renderSalesByEmployee();
+    renderSalesByPayment();
   }
 
   /* ===== DONUT ===== */
   // Baseline: SALES_QTY reflects roughly a 30-day (one month) window, so any
   // custom range is scaled proportionally to its day count against that baseline.
-  const REV_BASELINE_DAYS = 30;
-  const REV_PALETTE = ['var(--gold-bright)','var(--emerald-light)','var(--blue)','var(--purple)','#e07a5f','var(--sage-dim)'];
-  let revBreakdownDateState = null;
-  function renderRevenueBreakdown(){
-    if(!revBreakdownDateState) return;
-    const donutEl = document.getElementById('donutEl');
-    const totalEl = document.getElementById('donutTotal');
-    const legendEl = document.getElementById('donutLegend');
-    const q = (document.getElementById('revBreakdownSearch').value || '').trim().toLowerCase();
-    const days = periodLengthDays(revBreakdownDateState);
-    const mult = days / REV_BASELINE_DAYS;
-
-    const sub = document.getElementById('revBreakdownSub');
-    if(sub){
-      const label = revBreakdownDateState.activePreset === 'Custom range'
-        ? `${fmtSlash(revBreakdownDateState.rangeStart)} – ${fmtSlash(revBreakdownDateState.rangeEnd)}`
-        : revBreakdownDateState.activePreset;
-      sub.textContent = `By product · ${label}`;
-    }
-
-    const matches = PRODUCTS.filter(p => q === '' || p.name.toLowerCase().includes(q))
-      .map(p => ({ name: p.name, net: computeProductSales(p).net * mult }))
-      .filter(r => r.net > 0)
-      .sort((a,b) => b.net - a.net);
-
-    const total = matches.reduce((s,r)=> s + r.net, 0);
-    totalEl.textContent = total >= 1000 ? '$' + (total/1000).toFixed(1) + 'K' : '$' + total.toFixed(0);
-
-    if(matches.length === 0){
-      donutEl.style.background = 'var(--panel-raised)';
-      legendEl.innerHTML = `<div style="color:var(--sage); font-size:12px; padding:8px 0;">No matching product sales for this selection.</div>`;
-      return;
-    }
-
-    const top = matches.slice(0,5);
-    const topSum = top.reduce((s,r)=>s+r.net,0);
-    const otherSum = total - topSum;
-    const slices = top.map((r,i)=>({ label:r.name, net:r.net, color:REV_PALETTE[i % REV_PALETTE.length] }));
-    if(otherSum > 0.005 * total) slices.push({ label:'Other products', net:otherSum, color:REV_PALETTE[5] });
-
-    let acc = 0;
-    const gradientParts = slices.map(d=>{
-      const pct = total>0 ? (d.net/total*100) : 0;
-      const start = acc; acc += pct;
-      return `${d.color} ${start}% ${acc}%`;
-    }).join(', ');
-    donutEl.style.background = `conic-gradient(${gradientParts})`;
-    legendEl.innerHTML = slices.map(d => {
-      const pct = total>0 ? (d.net/total*100) : 0;
-      return `
-      <div class="dl-row">
-        <div class="name"><span class="legend-dot" style="background:${d.color}"></span>${d.label}</div>
-        <div class="pct">$${d.net.toFixed(2)} · ${pct.toFixed(1)}%</div>
-      </div>`;
-    }).join('');
-  }
+  // Revenue Breakdown donut removed from the Dashboard (was showing a rough
+  // multi-day extrapolation rather than exact filtered totals, and duplicated
+  // what Sales by Products already covers precisely).
 
   /* Recent Transactions section removed from the Dashboard — Receipts page covers this. */
 
@@ -3746,7 +3668,7 @@
     }).join('');
   }
   document.getElementById('sbpSearch').addEventListener('input', renderSalesByProduct);
-  document.getElementById('sbpShopFilter').addEventListener('change', renderSalesByProduct);
+  document.getElementById('sbpShopFilter').addEventListener('change', ()=>{ renderSalesByProduct(); renderSalesCategoryChart(); });
   document.getElementById('sbpCatFilter').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpTimeFilter').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpChartType').addEventListener('change', renderSalesByProduct);
@@ -4948,7 +4870,20 @@
     tbody.querySelectorAll('.rcp-view').forEach(el=> el.addEventListener('click', ()=> viewReceipt(el.dataset.id)));
   }
 
+  function populateReceiptPeopleFilters(){
+    const empEl = document.getElementById('rcpEmployeeFilter');
+    const custEl = document.getElementById('rcpCustomerFilter');
+    const prevEmp = empEl.value || 'All employees';
+    const prevCust = custEl.value || 'All customers';
+    const employees = [...new Set(EMPLOYEES.map(e=>e.name).filter(Boolean))].sort();
+    const customers = [...new Set(CUSTOMERS.map(c=>c.name).filter(Boolean))].sort();
+    empEl.innerHTML = ['All employees', ...employees].map(e=>`<option>${e}</option>`).join('');
+    custEl.innerHTML = ['All customers', ...customers].map(c=>`<option>${c}</option>`).join('');
+    empEl.value = ['All employees', ...employees].includes(prevEmp) ? prevEmp : 'All employees';
+    custEl.value = ['All customers', ...customers].includes(prevCust) ? prevCust : 'All customers';
+  }
   function renderReceipts(){
+    populateReceiptPeopleFilters();
     renderReceiptsKpi();
     renderReceiptsChart();
     renderReceiptsTable();
@@ -5360,7 +5295,15 @@
       <tr><td>${p.name}</td><td>${p.cat||'Uncategorized'}</td><td class="mono" style="text-align:right; color:var(--danger);">${getStock(p,shopCtx)}</td><td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td><td class="mono" style="text-align:right;">$${(p.cost*20).toFixed(2)}</td></tr>`).join('');
   }
 
-  const SALES_CAT_PERIOD_MULT = { today: 0.045, week: 0.26, month: 1, all: 2.5 };
+  function salesCatPeriodRange(period){
+    const end = stripTime(TODAY);
+    let start = new Date(end);
+    if(period === 'today'){ /* start = end, i.e. today only */ }
+    else if(period === 'week'){ start.setDate(start.getDate()-6); }
+    else if(period === 'month'){ start.setDate(start.getDate()-29); }
+    else { start = new Date(2000,0,1); } // 'all'
+    return { start: start.getTime(), end: end.getTime() };
+  }
   function renderSalesCategoryChart(){
     const wrapEl = document.getElementById('salesCatWrap');
     const donutEl = document.getElementById('salesCatDonutEl');
@@ -5370,21 +5313,39 @@
     const catFilterRaw = document.getElementById('salesCatFilter').value.trim();
     const catFilter = (catFilterRaw === '' || catFilterRaw.toLowerCase() === 'all categories') ? 'All' : catFilterRaw;
     const period = document.getElementById('salesCatPeriod').value;
-    const mult = SALES_CAT_PERIOD_MULT[period] ?? 1;
-    const cats = getProductCategories().filter(c => catFilter === 'All' || c === catFilter);
-    const rows = cats.map(cat=>{
-      const inCat = PRODUCTS.filter(p=>p.cat===cat);
-      let qty=0, net=0;
-      inCat.forEach(p=>{ const s = computeProductSales(p); qty+=s.qty; net+=s.net*mult; });
-      return { cat, qty, net };
-    }).filter(r=>r.net>0).sort((a,b)=>b.net-a.net);
+    const { start, end } = salesCatPeriodRange(period);
+    const shopFilterEl = document.getElementById('sbpShopFilter');
+    const shop = shopFilterEl ? shopFilterEl.value : 'All Shops';
+    // Real receipts only — no estimation/extrapolation. Every line item in
+    // range is attributed to its product's category, exactly once.
+    const inRangeReceipts = RECEIPTS.filter(r=>{
+      const t = stripTime(new Date(r.dateTime)).getTime();
+      if(t < start || t > end) return false;
+      if(shop && shop !== 'All Shops' && r.shop !== shop) return false;
+      return true;
+    });
+    const catTotals = {};
+    inRangeReceipts.forEach(r=>{
+      if(!r.items) return;
+      const sign = r.refund ? -1 : 1;
+      r.items.forEach(it=>{
+        const p = PRODUCTS.find(x=>x.id===it.productId);
+        const cat = p ? (p.cat || 'Others') : 'Others';
+        if(!catTotals[cat]) catTotals[cat] = { qty:0, net:0 };
+        catTotals[cat].qty += sign * it.qty;
+        catTotals[cat].net += sign * it.qty * it.price;
+      });
+    });
+    const cats = Object.keys(catTotals).filter(c => catFilter === 'All' || c === catFilter);
+    const rows = cats.map(cat=>({ cat, qty: catTotals[cat].qty, net: catTotals[cat].net }))
+      .filter(r=>r.net > 0).sort((a,b)=>b.net-a.net);
 
     const totalNet = rows.reduce((s,r)=>s+r.net,0);
     totalEl.textContent = '$' + totalNet.toFixed(totalNet>=1000?0:2);
 
     if(rows.length === 0){
       donutEl.style.background = 'var(--panel-raised)';
-      legendEl.innerHTML = `<div class="dl-row"><div class="name" style="color:var(--sage);">No category sales recorded yet.</div></div>`;
+      legendEl.innerHTML = `<div class="dl-row"><div class="name" style="color:var(--sage);">No category sales in this period${shop && shop!=='All Shops' ? ' for '+shop : ''}.</div></div>`;
       return;
     }
 
@@ -6427,11 +6388,19 @@
     }
     return items;
   }
-  // Blended cost-of-revenue ratio, derived from product-level cost vs. price across everything sold —
-  // used to estimate cost of revenue for a period from receipt totals (receipts aren't itemized in this demo).
-  function blendedCogsRatio(){
+  // Blended cost-of-revenue ratio — computed from the REAL cost/price captured
+  // on each line item at the time of sale, for the exact receipts in view
+  // (same period + shop as the rest of the Accounting page), not a global
+  // demo-volume estimate. Falls back to a neutral default only when there's
+  // truly no real sales data yet to derive a ratio from.
+  function blendedCogsRatio(receiptsInView){
     let gross=0, cost=0;
-    PRODUCTS.forEach(p=>{ const qty = SALES_QTY[p.id]||0; gross += qty*p.price; cost += qty*p.cost; });
+    (receiptsInView||[]).filter(r=>!r.refund).forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        gross += it.qty * it.price;
+        cost += it.qty * (it.cost||0);
+      });
+    });
     return gross>0 ? (cost/gross) : 0.45;
   }
 
@@ -6441,7 +6410,7 @@
     const grossRevenue = rangeReceipts.filter(r=>!r.refund).reduce((s,r)=>s+r.total,0);
     const refunds = rangeReceipts.filter(r=>r.refund).reduce((s,r)=>s+r.total,0);
     const revenue = grossRevenue - refunds;
-    const cogs = Math.max(0, revenue) * blendedCogsRatio();
+    const cogs = Math.max(0, revenue) * blendedCogsRatio(rangeReceipts);
     const grossProfit = revenue - cogs;
     const rangeExpenses = expensesInRange(acctDateState);
     const totalOpex = rangeExpenses.reduce((s,e)=>s+e.amount,0);
@@ -6596,13 +6565,23 @@
   document.getElementById('addExpenseBtn').addEventListener('click', ()=> openExpenseModal(null));
 
   /* ===== DASHBOARD: SALES BY EMPLOYEE & PAYMENT TYPE ===== */
+  function receiptsForDashboardPeriod(){
+    if(!dashDateState) return RECEIPTS;
+    const s = stripTime(dashDateState.rangeStart).getTime(), e = stripTime(dashDateState.rangeEnd).getTime();
+    return RECEIPTS.filter(r=>{
+      const t = stripTime(new Date(r.dateTime)).getTime();
+      if(t<s || t>e) return false;
+      if(viewingShop && viewingShop !== 'All Shops' && r.shop !== viewingShop) return false;
+      return true;
+    });
+  }
   function renderSalesByEmployee(){
     const el = document.getElementById('salesByEmployeeList');
     const totals = {};
-    RECEIPTS.filter(r=>!r.refund).forEach(r=>{ totals[r.employee] = (totals[r.employee]||0) + r.total; });
+    receiptsForDashboardPeriod().filter(r=>!r.refund).forEach(r=>{ totals[r.employee] = (totals[r.employee]||0) + r.total; });
     const rows = Object.entries(totals).map(([name,total])=>({name,total})).sort((a,b)=>b.total-a.total);
     el.innerHTML = rows.length === 0
-      ? `<div style="color:var(--sage); font-size:13px; padding:8px 0;">No receipts recorded yet.</div>`
+      ? `<div style="color:var(--sage); font-size:13px; padding:8px 0;">No receipts in this period${viewingShop && viewingShop!=='All Shops' ? ' for '+viewingShop : ''}.</div>`
       : rows.map((r,i)=>`<div class="top-row"><span class="rank">${i+1}</span><span class="nm">${r.name}</span><span class="amt">$${r.total.toFixed(2)}</span></div>`).join('');
   }
 
@@ -6612,13 +6591,13 @@
     const legendEl = document.getElementById('salesByPaymentLegend');
     const palette = ['var(--gold-bright)','var(--emerald-light)','var(--blue)','var(--purple)','var(--sage-dim)'];
     const totals = {};
-    RECEIPTS.filter(r=>!r.refund).forEach(r=>{ totals[r.payment] = (totals[r.payment]||0) + r.total; });
+    receiptsForDashboardPeriod().filter(r=>!r.refund).forEach(r=>{ totals[r.payment] = (totals[r.payment]||0) + r.total; });
     const rows = Object.entries(totals).map(([label,total])=>({label,total})).sort((a,b)=>b.total-a.total);
     const grandTotal = rows.reduce((s,r)=>s+r.total,0);
     totalEl.textContent = '$' + grandTotal.toFixed(grandTotal>=1000?0:2);
     if(rows.length === 0){
       donutEl.style.background = 'var(--panel-raised)';
-      legendEl.innerHTML = `<div style="color:var(--sage); font-size:12px; padding:8px 0;">No receipts recorded yet.</div>`;
+      legendEl.innerHTML = `<div style="color:var(--sage); font-size:12px; padding:8px 0;">No receipts in this period${viewingShop && viewingShop!=='All Shops' ? ' for '+viewingShop : ''}.</div>`;
       return;
     }
     let acc = 0;
@@ -6650,7 +6629,6 @@
     renderActiveReport();
     renderSalesCategoryChart();
     renderAlerts();
-    renderRevenueBreakdown();
     renderSalesByEmployee();
     renderSalesByPayment();
     renderSuppliers();
@@ -6815,8 +6793,6 @@
     showReportPanel();
     document.getElementById('salesCatFilter').addEventListener('input', renderSalesCategoryChart);
     document.getElementById('salesCatPeriod').addEventListener('change', renderSalesCategoryChart);
-    revBreakdownDateState = mountDateFilterField('revBreakdownDateSlot', 'revBreakdownDate', renderRevenueBreakdown, true, 'This month');
-    document.getElementById('revBreakdownSearch').addEventListener('input', renderRevenueBreakdown);
   }
 
   /* ===== AUTH GATE =====

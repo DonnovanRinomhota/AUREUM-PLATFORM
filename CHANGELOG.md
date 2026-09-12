@@ -1,5 +1,37 @@
 # Changelog
 
+## Phase 3 — Report accuracy, cross-shop data integrity, checkout validation (2026-09)
+
+### Removed
+- **Revenue Breakdown donut removed** from the Dashboard (it displayed a
+  hardcoded placeholder `$43.2K` that was never real data, and duplicated
+  what Sales by Products already covers precisely).
+
+### Fixed — data accuracy / shop isolation
+- **Sales by Payment Type and Sales by Employee** (Dashboard) now filter by
+  the selected date range and shop, matching every other Dashboard number.
+  Previously they summed *all* receipts ever recorded, across every shop,
+  regardless of the date/shop filters shown right next to them.
+- **Sales by Category** (Sales by Products page) rewritten to compute
+  exact totals from real receipts in the selected period and shop.
+  Previously it multiplied a rough demo-volume baseline by an arbitrary
+  period factor, and ignored the shop filter entirely.
+- **Accounting's cost-of-revenue** is now computed from the real cost
+  captured on each line item at the time of sale, for the exact
+  receipts/period/shop in view. Previously it used a single global ratio
+  derived from demo sales-volume data, applied the same way regardless of
+  which period or shop was selected — this was very likely the source of
+  the "missing/wrong revenue" behavior reported.
+- **Receipts page Employee filter (and Customer filter) now actually
+  populate** with real employee/customer names. Previously they only ever
+  showed "All employees" / "All customers" with nothing else selectable.
+
+### Added
+- **Checkout now requires a cash amount before completing a Cash sale** —
+  blocks with a clear message if nothing (or not enough) was entered.
+  Mobile and Card already had their own hard gates (Paynow phone approval
+  / Stripe charge) and needed no change.
+
 ## Phase 2 — Dashboard date bug, POS employee selection, PDFs, UI cleanup (2026-09)
 
 ### Fixed
