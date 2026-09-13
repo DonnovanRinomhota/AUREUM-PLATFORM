@@ -2306,47 +2306,49 @@
           <div class="settings-panel" id="settings-billing">
             <div class="settings-panel-head">
               <div class="t">Billing &amp; Subscription</div>
-              <div class="s">Your current plan, payment method, and invoice history.</div>
+              <div class="s">Standard Plan — $5.00/month. Pay with card (Stripe) or EcoCash/OneMoney/ZimSwitch/InnBucks (Paynow). We never see or store your card number or CVV — payment is entered directly on Stripe's or Paynow's own page.</div>
             </div>
             <div class="form-section">
               <div class="create-form-grid" style="margin-bottom:0;">
-                <div class="detail-field"><div class="field-label">Current plan</div><div class="v" id="stPlanName" style="font-weight:700; color:var(--gold-bright);">Growth Plan</div></div>
-                <div class="detail-field"><div class="field-label">Billing cycle</div><div class="v" id="stPlanCycle">Monthly · $49.00/mo</div></div>
-                <div class="detail-field"><div class="field-label">Next billing date</div><div class="v" id="stNextBillDate">Aug 23, 2026</div></div>
-                <div class="detail-field"><div class="field-label">Status</div><div class="v"><span class="status-badge completed" id="stSubStatusBadge">Active</span></div></div>
+                <div class="detail-field"><div class="field-label">Current plan</div><div class="v" style="font-weight:700; color:var(--gold-bright);">Standard — $5.00/mo</div></div>
+                <div class="detail-field"><div class="field-label">Status</div><div class="v"><span class="status-badge" id="stSubStatusBadge">—</span></div></div>
+                <div class="detail-field"><div class="field-label">Current period ends</div><div class="v" id="stNextBillDate">—</div></div>
+                <div class="detail-field"><div class="field-label">Last paid via</div><div class="v" id="stBillingProcessor">—</div></div>
               </div>
+              <div id="stBillingBanner" style="display:none; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(201,162,39,0.12); border:1px solid var(--gold-bright); font-size:12.5px; color:var(--ivory-dim);"></div>
               <div class="settings-save-row" style="margin-top:16px;">
-                <div class="btn-gold" id="stChangePlanBtn">Change plan</div>
-                <div class="btn-outline" id="stCancelSubBtn">Cancel subscription</div>
+                <div class="btn-gold" id="stPayStripeBtn">Pay with Card (Stripe)</div>
+                <div class="btn-outline" id="stPayPaynowBtn">Pay with Paynow</div>
+                <div class="btn-outline" id="stManageStripeBtn" style="display:none;">Manage card on Stripe</div>
               </div>
-            </div>
-            <div class="form-section">
-              <div class="form-section-title" style="margin-bottom:10px;">Payment method</div>
-              <div class="create-form-grid" style="margin-bottom:0;">
-                <div class="detail-field"><div class="field-label">Card on file</div><div class="v" id="stCardOnFile">Visa •••• 4242 — exp 09/28</div></div>
-                <div></div>
-              </div>
-              <div class="settings-save-row" style="margin-top:16px;">
-                <div class="btn-outline" id="stUpdatePaymentBtn">Update payment method</div>
-              </div>
+              <div id="stBillingError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;"></div>
             </div>
             <div class="form-section">
               <div class="data-toolbar" style="padding:0 0 14px;">
-                <div class="form-section-title" style="margin:0;">Invoice history</div>
+                <div class="form-section-title" style="margin:0;">Payment history</div>
                 <div class="btn-ghost-sm popover-anchor" id="stInvoiceExportBtn" style="margin-left:auto;">Export <span class="car">&#9662;</span>
                   <div class="popover export-popover align-left">
-                    <div class="shop-opt export-opt" data-fmt="csv" data-source="stInvoiceTableBody" data-filename="invoices" data-title="Invoices">Export as CSV</div>
-                    <div class="shop-opt export-opt" data-fmt="pdf" data-source="stInvoiceTableBody" data-filename="invoices" data-title="Invoices">Export as PDF</div>
+                    <div class="shop-opt export-opt" data-fmt="csv" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as CSV</div>
+                    <div class="shop-opt export-opt" data-fmt="pdf" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as PDF</div>
                   </div>
                 </div>
               </div>
               <div class="table-panel">
                 <table>
-                  <thead><tr><th>Invoice</th><th>Date</th><th>Plan</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Method</th><th>Period</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead>
                   <tbody id="stInvoiceTableBody"></tbody>
                 </table>
               </div>
             </div>
+          </div>
+
+          <!-- Help & FAQ -->
+          <div class="settings-panel" id="settings-help">
+            <div class="settings-panel-head">
+              <div class="t">Help &amp; FAQ</div>
+              <div class="s">Quick answers to common questions about running AUREUM.</div>
+            </div>
+            <div id="helpFaqList"></div>
           </div>
 
         </div>
@@ -2473,17 +2475,27 @@
     return profile;
   }
   async function checkSubscriptionStatus(){
-    const { data: biz } = await sb.from('businesses').select('subscription_status, trial_ends_at').eq('id', currentBusinessId).maybeSingle();
+    const { data: biz } = await sb.from('businesses').select('subscription_status, trial_ends_at, current_period_end, billing_processor').eq('id', currentBusinessId).maybeSingle();
     if(!biz) return { ok:true };
     if(biz.subscription_status === 'suspended'){
       return { ok:false, message: 'This account is suspended. Contact support to reactivate.' };
+    }
+    if(biz.subscription_status === 'cancelled'){
+      return { ok:false, message: 'Your subscription has been cancelled. Resubscribe in Settings → Billing to continue.' };
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at && new Date(biz.trial_ends_at) < new Date()){
       return { ok:false, message: 'Your free trial has ended. Subscribe to keep using AUREUM.' };
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at){
       const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - new Date()) / 86400000);
-      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial.` };
+      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial. Subscribe in Settings → Billing.` };
+    }
+    if(biz.subscription_status === 'past_due'){
+      return { ok:true, warning: 'Your last payment failed — please update or retry payment in Settings → Billing.' };
+    }
+    if(biz.subscription_status === 'active' && biz.billing_processor === 'paynow' && biz.current_period_end){
+      const daysLeft = Math.ceil((new Date(biz.current_period_end) - new Date()) / 86400000);
+      if(daysLeft <= 3) return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — Paynow doesn't auto-renew, pay again in Settings → Billing.` : `Your Paynow period has ended — pay again in Settings → Billing.` };
     }
     return { ok:true };
   }
@@ -5665,6 +5677,7 @@
     { id:"notifications", label:"Notifications" },
     { id:"users", label:"Users &amp; Permissions" },
     { id:"billing", label:"Billing &amp; Subscription" },
+    { id:"help", label:"Help &amp; FAQ" },
   ];
   let activeSettingsTab = "general";
   function renderSettingsNav(){
@@ -5952,119 +5965,8 @@
   }
   document.getElementById('stAddPosBtn').addEventListener('click', ()=> openPosModal(null));
 
-  /* ===== SETTINGS: BILLING & SUBSCRIPTION ===== */
-  const PLANS = [
-    { id:"starter", name:"Starter Plan", price:19 },
-    { id:"growth", name:"Growth Plan", price:49 },
-    { id:"enterprise", name:"Enterprise Plan", price:129 },
-  ];
-  let currentPlanId = "growth";
-  let subActive = true;
-  const INVOICES = [
-    { id:"INV-1042", date:"2026-07-01", plan:"Growth Plan", amount:49.00, status:"Paid" },
-    { id:"INV-1027", date:"2026-06-01", plan:"Growth Plan", amount:49.00, status:"Paid" },
-    { id:"INV-1011", date:"2026-05-01", plan:"Growth Plan", amount:49.00, status:"Paid" },
-  ];
-
-  function renderBillingSummary(){
-    const plan = PLANS.find(p=>p.id===currentPlanId);
-    document.getElementById('stPlanName').textContent = plan.name;
-    document.getElementById('stPlanCycle').textContent = `Monthly · $${plan.price.toFixed(2)}/mo`;
-    const badge = document.getElementById('stSubStatusBadge');
-    badge.textContent = subActive ? 'Active' : 'Cancelled';
-    badge.className = `status-badge ${subActive ? 'completed' : 'refunded'}`;
-    document.getElementById('stCancelSubBtn').textContent = subActive ? 'Cancel subscription' : 'Reactivate subscription';
-  }
-  function renderInvoiceTable(){
-    document.getElementById('stInvoiceTableBody').innerHTML = INVOICES.map(inv=>`
-      <tr>
-        <td class="mono">${inv.id}</td>
-        <td>${fmtDisplay(inv.date)}</td>
-        <td>${inv.plan}</td>
-        <td class="mono" style="text-align:right;">$${inv.amount.toFixed(2)}</td>
-        <td><span class="status-badge completed">${inv.status}</span></td>
-      </tr>`).join('');
-  }
-
-  document.getElementById('stChangePlanBtn').addEventListener('click', ()=>{
-    const body = `
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        ${PLANS.map(p=>`
-          <label class="shop-opt" style="border:1px solid var(--line); border-radius:10px; padding:14px; cursor:pointer;">
-            <span style="display:flex; align-items:center; gap:10px;">
-              <input type="radio" name="planPick" class="cb" value="${p.id}" ${p.id===currentPlanId?'checked':''}>
-              <span>
-                <div style="font-weight:700; color:var(--ivory);">${p.name}</div>
-                <div style="font-size:11.5px; color:var(--sage);">$${p.price.toFixed(2)}/mo, billed monthly</div>
-              </span>
-            </span>
-          </label>`).join('')}
-      </div>
-    `;
-    const actions = `
-      <div class="modal-btn ghost" data-close="detailModal">Cancel</div>
-      <div class="modal-btn solid" id="planConfirmBtn">Confirm plan</div>
-    `;
-    openDetailModal('Change plan', body, actions);
-    document.getElementById('planConfirmBtn').addEventListener('click', ()=>{
-      const picked = document.querySelector('input[name="planPick"]:checked');
-      if(picked) currentPlanId = picked.value;
-      subActive = true;
-      renderBillingSummary();
-      closeModal('detailModal');
-    });
-  });
-
-  document.getElementById('stCancelSubBtn').addEventListener('click', ()=>{
-    if(subActive){
-      if(!confirm('Cancel your subscription? You will keep access until the end of the current billing period.')) return;
-      subActive = false;
-    } else {
-      subActive = true;
-    }
-    renderBillingSummary();
-  });
-
-  document.getElementById('stUpdatePaymentBtn').addEventListener('click', ()=>{
-    const body = `
-      <div class="create-form-grid">
-        <div style="grid-column:1/-1;">
-          <div class="field-label">Card number</div>
-          <input type="text" class="modal-field" id="pmCardNumber" placeholder="4242 4242 4242 4242" maxlength="19">
-          <div class="field-error" id="pmCardError">Enter a valid 16-digit card number</div>
-        </div>
-        <div>
-          <div class="field-label">Expiry (MM/YY)</div>
-          <input type="text" class="modal-field" id="pmExpiry" placeholder="MM/YY" maxlength="5">
-        </div>
-        <div>
-          <div class="field-label">CVV</div>
-          <input type="text" class="modal-field" id="pmCvv" placeholder="123" maxlength="4">
-        </div>
-      </div>
-    `;
-    const actions = `
-      <div class="modal-btn ghost" data-close="detailModal">Cancel</div>
-      <div class="modal-btn solid" id="pmSaveBtn">Save card</div>
-    `;
-    openDetailModal('Update payment method', body, actions);
-    document.getElementById('pmSaveBtn').addEventListener('click', ()=>{
-      const num = document.getElementById('pmCardNumber').value.replace(/\s+/g,'');
-      const errEl = document.getElementById('pmCardError');
-      const numEl = document.getElementById('pmCardNumber');
-      const valid = /^\d{16}$/.test(num);
-      errEl.classList.toggle('show', !valid);
-      numEl.classList.toggle('invalid', !valid);
-      if(!valid){ numEl.focus(); return; }
-      document.getElementById('stCardOnFile').textContent = `Card •••• ${num.slice(-4)} — exp ${document.getElementById('pmExpiry').value || '—'}`;
-      closeModal('detailModal');
-    });
-  });
-
   renderSettingsStores();
   renderSettingsPos();
-  renderBillingSummary();
-  renderInvoiceTable();
 
   /* ===== DASHBOARD: ALERTS ===== */
   function goToLowStockReport(){
@@ -6756,6 +6658,159 @@
     if(fxLabel) fxLabel.textContent = '1 ' + (POS_SETTINGS.currencyCode || 'USD') + ' =';
     restoreSettingsToggles();
     updateEnabledPaymentMethods();
+    renderBilling();
+    renderHelpFaq();
+  }
+
+  /* ===== BILLING & SUBSCRIPTION (the platform's own $5/mo charge to
+     this business — separate from anything the business charges ITS
+     customers at the till) ===== */
+  let currentBusinessRow = null;
+  async function renderBilling(){
+    const badge = document.getElementById('stSubStatusBadge');
+    const dateEl = document.getElementById('stNextBillDate');
+    const procEl = document.getElementById('stBillingProcessor');
+    const bannerEl = document.getElementById('stBillingBanner');
+    const manageBtn = document.getElementById('stManageStripeBtn');
+    if(!badge || !sb || !currentBusinessId) return;
+
+    const { data: business } = await sb.from('businesses')
+      .select('subscription_status, trial_ends_at, current_period_end, billing_processor, stripe_customer_id')
+      .eq('id', currentBusinessId).maybeSingle();
+    if(!business) return;
+    currentBusinessRow = business;
+
+    const status = business.subscription_status || 'trial';
+    badge.textContent = status.charAt(0).toUpperCase() + status.slice(1).replace('_',' ');
+    badge.className = 'status-badge ' + (status==='active' ? 'completed' : status==='trial' ? 'pending' : 'overdue');
+    procEl.textContent = business.billing_processor ? (business.billing_processor==='stripe'?'Stripe (card)':'Paynow') : '—';
+
+    const periodEnd = business.current_period_end ? new Date(business.current_period_end) : null;
+    const trialEnd = business.trial_ends_at ? new Date(business.trial_ends_at) : null;
+    const relevantDate = periodEnd || trialEnd;
+    dateEl.textContent = relevantDate ? relevantDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+
+    bannerEl.style.display = 'none';
+    if(status === 'trial' && trialEnd){
+      const daysLeft = Math.ceil((trialEnd - new Date()) / 86400000);
+      if(daysLeft <= 5){
+        bannerEl.style.display = 'block';
+        bannerEl.textContent = daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below to keep using AUREUM.` : `Your trial has ended — subscribe below to keep using AUREUM.`;
+      }
+    } else if(status === 'past_due'){
+      bannerEl.style.display = 'block';
+      bannerEl.textContent = 'Your last payment failed. Please pay below to avoid interruption.';
+    } else if(status === 'active' && periodEnd){
+      const daysLeft = Math.ceil((periodEnd - new Date()) / 86400000);
+      if(business.billing_processor === 'paynow' && daysLeft <= 3){
+        bannerEl.style.display = 'block';
+        bannerEl.textContent = daysLeft > 0 ? `Your Paynow period ends in ${daysLeft} day${daysLeft===1?'':'s'} — Paynow doesn't auto-renew, pay again below to continue.` : `Your Paynow period has ended — pay again below to continue.`;
+      }
+    }
+
+    manageBtn.style.display = business.stripe_customer_id ? '' : 'none';
+
+    const { data: payments } = await sb.from('subscription_payments')
+      .select('*').eq('business_id', currentBusinessId).order('created_at', { ascending:false }).limit(50);
+    const tbody = document.getElementById('stInvoiceTableBody');
+    if(!payments || payments.length === 0){
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--sage);">No payments yet.</td></tr>`;
+    } else {
+      tbody.innerHTML = payments.map(p=>`
+        <tr>
+          <td>${new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : 'Paynow'}</td>
+          <td>${p.period_start ? new Date(p.period_start).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + new Date(p.period_end).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}</td>
+          <td style="text-align:right;" class="mono">$${Number(p.amount).toFixed(2)}</td>
+          <td><span class="status-badge ${p.status==='paid'?'completed':p.status==='pending'?'pending':'overdue'}">${p.status}</span></td>
+        </tr>`).join('');
+    }
+  }
+
+  async function startBillingPayment(processor){
+    const errEl = document.getElementById('stBillingError');
+    errEl.textContent = '';
+    if(!sb) return;
+    const { data: { session } } = await sb.auth.getSession();
+    const fnName = processor === 'stripe' ? 'billing-stripe-checkout' : 'billing-paynow-initiate';
+    try{
+      const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/${fnName}`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ returnUrl: window.location.href.split('?')[0] })
+      });
+      const json = await resp.json();
+      if(json.error) throw new Error(json.error);
+      window.location.href = json.url;
+    }catch(err){
+      errEl.textContent = err.message;
+    }
+  }
+  document.getElementById('stPayStripeBtn').addEventListener('click', ()=> startBillingPayment('stripe'));
+  document.getElementById('stPayPaynowBtn').addEventListener('click', ()=> startBillingPayment('paynow'));
+  document.getElementById('stManageStripeBtn').addEventListener('click', async ()=>{
+    const errEl = document.getElementById('stBillingError');
+    errEl.textContent = '';
+    if(!sb) return;
+    const { data: { session } } = await sb.auth.getSession();
+    try{
+      const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/billing-stripe-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ returnUrl: window.location.href.split('?')[0] })
+      });
+      const json = await resp.json();
+      if(json.error) throw new Error(json.error);
+      window.location.href = json.url;
+    }catch(err){
+      errEl.textContent = err.message;
+    }
+  });
+  // If we've just come back from Stripe/Paynow, refresh billing data and
+  // clean the URL so a reload doesn't repeat the message.
+  (function checkBillingReturn(){
+    const params = new URLSearchParams(window.location.search);
+    if(params.has('billing')){
+      const result = params.get('billing');
+      setTimeout(()=>{
+        if(result === 'success') aureumToast('Payment successful — thank you!', 'ok');
+        else if(result === 'paynow_return') aureumToast('If you completed the Paynow payment, it\'ll reflect here shortly.', 'ok');
+        renderBilling();
+      }, 800);
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+  })();
+
+  /* ===== HELP & FAQ ===== */
+  const HELP_FAQ = [
+    { q: "How do I add a new shop?", a: "Back Office → Dashboard → click the \"All Shops\" dropdown (top right, or \"VIEWING\" in the sidebar) → type a name under \"Add a new shop…\". A new shop starts with no products or stock — add products to it explicitly (Products → edit each product's shop assignment, or receive stock via a GRN for that shop)." },
+    { q: "How do I add staff and let them use the till?", a: "Back Office → Staff → add their name, role, and a 4-digit PIN. At the POS, they select the shop, then their name, then enter their PIN to start a shift — no PIN means no till access." },
+    { q: "How do card and mobile money payments work at checkout now?", a: "Card and Mobile buttons at checkout just record which payment method the customer used — they don't process a real charge inside the app. Take payment on your own card terminal or mobile money handset, then tap the matching button here to log the sale." },
+    { q: "Why does a new shop show 0 stock for a product I sell elsewhere?", a: "Each shop has its own independent inventory. A product isn't available at a shop until you explicitly add it there — this is intentional, so stock counts and low-stock alerts are always accurate per shop rather than assuming every shop carries everything." },
+    { q: "Can I delete a Purchase Order, GRN, Stock Adjustment, or Transfer?", a: "No — these are kept as permanent history for accuracy and audit purposes. To correct a mistake, create a new adjustment or transfer that reverses it, rather than deleting the record." },
+    { q: "How does billing work?", a: "AUREUM is $5.00/month (Standard Plan), payable by card via Stripe or via Paynow (EcoCash, OneMoney, Visa/Mastercard, ZimSwitch, or InnBucks depending on what your Paynow account supports). Your card or mobile money details are entered directly on Stripe's or Paynow's own page — never stored by AUREUM." },
+    { q: "Does my subscription auto-renew?", a: "Card payments via Stripe renew automatically each month. Paynow payments don't auto-renew (mobile money and most Paynow methods require you to actively approve each payment) — you'll see a reminder in Settings → Billing a few days before your period ends." },
+  ];
+  function renderHelpFaq(){
+    const el = document.getElementById('helpFaqList');
+    if(!el) return;
+    el.innerHTML = HELP_FAQ.map((item, i) => `
+      <div class="faq-item" data-faq="${i}" style="border-bottom:1px solid var(--line); padding:14px 0; cursor:pointer;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:600; color:var(--ivory);">
+          <span>${item.q}</span><span class="faq-car" style="color:var(--sage-dim);">&#9662;</span>
+        </div>
+        <div class="faq-a" style="display:none; margin-top:8px; color:var(--sage); font-size:13px; line-height:1.6;">${item.a}</div>
+      </div>
+    `).join('');
+    el.querySelectorAll('.faq-item').forEach(item=>{
+      item.addEventListener('click', ()=>{
+        const answer = item.querySelector('.faq-a');
+        const isOpen = answer.style.display === 'block';
+        answer.style.display = isOpen ? 'none' : 'block';
+        item.querySelector('.faq-car').innerHTML = isOpen ? '&#9662;' : '&#9652;';
+      });
+    });
   }
   function applyLoadedData(shared){
     if(!shared) return;

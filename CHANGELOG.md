@@ -1,5 +1,60 @@
 # Changelog
 
+## Phase 6 — Real billing & subscriptions, Help/FAQ, fake-card-storage bug removed (2026-09)
+
+### Added
+- **Real subscription billing** for the AUREUM platform itself ($5.00/month
+  Standard Plan) — completely separate from the in-store POS checkout.
+  - Pay by card via **Stripe** (real recurring subscription, auto-renews,
+    webhook-driven) or via **Paynow** (EcoCash/OneMoney/Visa/Mastercard/
+    ZimSwitch/InnBucks depending on your Paynow account — renews by you
+    actively paying again each period, since Paynow doesn't support silent
+    auto-charge the way Stripe does; a reminder banner appears a few days
+    before the period ends).
+  - Card and mobile money details are entered directly on Stripe's or
+    Paynow's own hosted page — **never stored by AUREUM**, only the
+    resulting Stripe customer/subscription IDs are kept.
+  - Real payment history table, status badge, and current-period-end date,
+    all reflecting actual database state.
+  - "Manage card on Stripe" opens Stripe's own Customer Portal for
+    updating or removing a card.
+  - See `SETUP-BILLING.md` for creating the Stripe/Paynow accounts and
+    deploying the 5 new edge functions + schema.
+- **Help & FAQ** tab in Settings with answers covering shops, staff PINs,
+  checkout payment methods, per-shop inventory, and billing.
+
+### Fixed — a real, serious one
+- **Found and removed dead legacy "Change Plan" / "Update Payment Method"
+  code** that included a **client-side card-number/CVV entry form storing
+  the card directly in the app** — exactly the anti-pattern explicitly
+  asked to be avoided. This code was disconnected from any real payment
+  processor and never actually charged anything, but it needed to be gone
+  entirely, not just unused. Replaced by the real Stripe/Paynow billing
+  above.
+- Along the way, this old code also referenced Billing UI elements that
+  no longer exist after this rebuild — removed before it could throw a
+  script error.
+
+### Investigated — "Settings buttons not working"
+Went through the Taxes/Receipts/Payment Methods/Notifications/Users &
+Permissions save-and-restore logic in detail again. Found and removed a
+harmless leftover duplicate event listener, but couldn't find a further
+definite bug through code review alone — the save/restore logic itself
+looks structurally correct. If this **still** doesn't work after
+deploying this phase, I need specifics to keep debugging effectively:
+open the browser console (F12 → Console tab), click a toggle and Save,
+and send me any red error text that appears, plus which exact
+switch/section it is.
+
+### Investigated — "new shop still inheriting products"
+Re-confirmed the Phase 5 fix (products' shop assignment is now a fixed
+snapshot, not a live "all shops forever" rule) is in place and unchanged.
+If a newly created shop is still showing other shops' products, please
+confirm: was the product created/edited *after* deploying Phase 5, and
+is it possible the product was manually assigned to the new shop (e.g.
+via "All Shops" checked at creation time, which correctly includes every
+shop that existed *at that moment*)?
+
 ## Phase 5 — Expense saving bug, new-shop inventory isolation, dashboard cleanup (2026-09)
 
 ### Fixed
