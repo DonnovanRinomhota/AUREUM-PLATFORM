@@ -850,6 +850,21 @@
   </div>
 </div>
 
+<!-- Close Shift / Balance Settlement Modal -->
+<div class="modal-overlay" id="shiftCloseOverlay">
+  <div class="modal-panel" style="max-width:420px;">
+    <div class="modal-head">
+      <div class="title">Close Shift</div>
+      <div class="modal-close" data-close="shiftCloseOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body" id="shiftCloseBody"></div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" data-close="shiftCloseOverlay">Cancel</div>
+      <div class="modal-btn solid" id="shiftCloseConfirmBtn">Confirm &amp; End Shift</div>
+    </div>
+  </div>
+</div>
+
 <!-- Switch Cashier Modal -->
 <div class="modal-overlay" id="cashierOverlay">
   <div class="modal-panel" style="max-width:380px;">
@@ -1026,6 +1041,8 @@ async function aureumSignIn(email, password){
   let RECEIPTS = [];
   let nextCustomerId = CUSTOMERS.length + 1;
   let activeEmployee = null; // set only after a PIN is entered at the shift gate — see startShift()
+  let shiftStartTime = null;
+  let SHIFT_CLOSURES = []; // synced audit record of every shift close + cash reconciliation
   let activeShop = null;     // set only after a real shop is chosen at the shift gate — never "All Shops"
 
   let activeCat = "All";
@@ -1047,8 +1064,18 @@ async function aureumSignIn(email, password){
       discountAmount = Math.min(Math.max(discountAmount,0), subtotal);
     }
     const taxableBase = subtotal - discountAmount;
-    const tax = taxableBase * (taxPercent/100);
-    const total = taxableBase + tax;
+    // "Prices include tax" (set in Back Office → Settings → Taxes) changes
+    // how tax is derived: inclusive means the tax is already baked into
+    // the listed price (so the customer's total stays the same, tax is
+    // just broken out for reporting); exclusive means tax is added on top.
+    let tax, total;
+    if(POS_SETTINGS.taxInclusive){
+      total = taxableBase;
+      tax = taxableBase - (taxableBase / (1 + taxPercent/100));
+    } else {
+      tax = taxableBase * (taxPercent/100);
+      total = taxableBase + tax;
+    }
     return { ids, subtotal, discountAmount, tax, total };
   }
 
@@ -1531,14 +1558,16 @@ async function aureumSignIn(email, password){
     const rows = sale.items.map(i => `
       <div class="r-row"><span>${i.qty} × ${i.name}</span><span>${POS_SETTINGS.currency}${(i.qty*i.price).toFixed(2)}</span></div>
     `).join('');
+    const showLogo = POS_SETTINGS.toggles ? POS_SETTINGS.toggles.stReceiptLogo !== false : true;
     document.getElementById('receiptBody').innerHTML = `
       <div class="r-center">
+        ${showLogo && POS_SETTINGS.logoImage ? `<img src="${POS_SETTINGS.logoImage}" style="max-width:140px; max-height:60px; object-fit:contain; margin:0 auto 8px; display:block;">` : ''}
         <div class="r-brand">${POS_SETTINGS.businessName}</div>
         <div class="r-sub">Point of Sale</div>
       </div>
       <div class="r-dash"></div>
       <div class="r-row"><span>${sale.orderNo}</span><span>${sale.time}</span></div>
-      <div class="r-row"><span>Cashier</span><span>${activeEmployee ? activeEmployee.name : 'Cashier'}</span></div>
+      ${POS_SETTINGS.toggles && POS_SETTINGS.toggles.stReceiptCashier === false ? '' : `<div class="r-row"><span>Cashier</span><span>${activeEmployee ? activeEmployee.name : 'Cashier'}</span></div>`}
       ${activeShop && activeShop !== 'All Shops' ? `<div class="r-row"><span>Shop</span><span>${activeShop}</span></div>` : ''}
       ${sale.customer ? `<div class="r-row"><span>Customer</span><span>${sale.customer}</span></div>` : ''}
       <div class="r-dash"></div>
@@ -1887,7 +1916,7 @@ async function aureumSignIn(email, password){
   /* ===== CLOUD SYNC ===== */
   let _aureumSnapshot = '';
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, shiftClosures:SHIFT_CLOSURES, settings:POS_SETTINGS };
   }
   function persistAureum(){
     const str = JSON.stringify(aureumSnapshotData());
@@ -1903,6 +1932,7 @@ async function aureumSignIn(email, password){
     if(shared.customers && shared.customers.length) CUSTOMERS = shared.customers;
     if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
     if(shared.receipts && shared.receipts.length) RECEIPTS = shared.receipts;
+    if(shared.shiftClosures && shared.shiftClosures.length) SHIFT_CLOSURES = shared.shiftClosures;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // Don't clobber the cashier's active shift if data reloads mid-shift
     // (e.g. a live sync update from Back Office) — only set a default
@@ -2058,6 +2088,7 @@ async function aureumSignIn(email, password){
   function startShift(shopName, employee){
     activeShop = shopName;
     activeEmployee = employee;
+    shiftStartTime = new Date();
     document.getElementById('shiftGate').classList.remove('show');
     renderClerkUI();
     renderCategories();
@@ -2065,11 +2096,83 @@ async function aureumSignIn(email, password){
     renderTicket();
   }
   function endShift(){
+    // Managers/Admins get a real shift-close & cash reconciliation step;
+    // Cashiers/Inventory Clerks just end their shift simply.
+    if(activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role)){
+      openShiftCloseModal();
+      return;
+    }
     if(!confirm('End this shift? You\'ll need to enter a PIN again to start a new one.')) return;
     activeShop = null;
     activeEmployee = null;
+    shiftStartTime = null;
     openShiftGate();
   }
+  function shiftSalesSummary(){
+    const start = shiftStartTime ? shiftStartTime.getTime() : 0;
+    const mySales = RECEIPTS.filter(r => r.shop === activeShop && r.employee === activeEmployee.name && new Date(r.dateTime).getTime() >= start);
+    const totals = { cash:0, card:0, mobile:0, other:0, refunds:0, count:0 };
+    mySales.forEach(r=>{
+      const key = (r.payment||'').toLowerCase();
+      const bucket = ['cash','card','mobile'].includes(key) ? key : 'other';
+      if(r.refund){ totals.refunds += r.total; } else { totals[bucket] += r.total; totals.count++; }
+    });
+    const expectedCash = totals.cash - (mySales.filter(r=>r.refund && (r.payment||'').toLowerCase()==='cash').reduce((s,r)=>s+r.total,0));
+    return { ...totals, expectedCash, grandTotal: totals.cash+totals.card+totals.mobile+totals.other-totals.refunds };
+  }
+  function openShiftCloseModal(){
+    const s = shiftSalesSummary();
+    const body = document.getElementById('shiftCloseBody');
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--sage);margin-bottom:12px;">Shift started ${shiftStartTime ? shiftStartTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'} · ${s.count} sale(s)</div>
+      <div class="tender-row"><span>Cash sales</span><span class="mono">${POS_SETTINGS.currency}${s.cash.toFixed(2)}</span></div>
+      <div class="tender-row"><span>Card sales</span><span class="mono">${POS_SETTINGS.currency}${s.card.toFixed(2)}</span></div>
+      <div class="tender-row"><span>Mobile sales</span><span class="mono">${POS_SETTINGS.currency}${s.mobile.toFixed(2)}</span></div>
+      <div class="tender-row"><span>Other</span><span class="mono">${POS_SETTINGS.currency}${s.other.toFixed(2)}</span></div>
+      <div class="tender-row"><span>Refunds</span><span class="mono">-${POS_SETTINGS.currency}${s.refunds.toFixed(2)}</span></div>
+      <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;"><span>Total sales</span><span class="mono">${POS_SETTINGS.currency}${s.grandTotal.toFixed(2)}</span></div>
+      <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${POS_SETTINGS.currency}${s.expectedCash.toFixed(2)}</span></div>
+      <div class="field-label" style="margin-top:14px;">Counted cash (actual)</div>
+      <input type="number" min="0" step="0.01" id="shiftCountedCash" class="auth-field" placeholder="0.00" style="margin-bottom:0;">
+      <div id="shiftVarianceRow" style="font-size:12.5px;margin-top:8px;color:var(--sage);"></div>
+      <div class="field-label" style="margin-top:10px;">Notes (optional)</div>
+      <textarea id="shiftCloseNotes" class="modal-field" rows="2" placeholder="e.g. $2 short, likely a rounding error"></textarea>
+    `;
+    document.getElementById('shiftCountedCash').addEventListener('input', function(){
+      const counted = parseFloat(this.value);
+      const row = document.getElementById('shiftVarianceRow');
+      if(isNaN(counted)){ row.textContent = ''; return; }
+      const variance = counted - s.expectedCash;
+      row.style.color = Math.abs(variance) < 0.01 ? 'var(--gold-bright)' : 'var(--danger)';
+      row.textContent = Math.abs(variance) < 0.01 ? 'Balanced ✓' : `${variance>0?'Over':'Short'} by ${POS_SETTINGS.currency}${Math.abs(variance).toFixed(2)}`;
+    });
+    openModal('shiftCloseOverlay');
+  }
+  document.getElementById('shiftCloseConfirmBtn').addEventListener('click', ()=>{
+    const s = shiftSalesSummary();
+    const countedRaw = document.getElementById('shiftCountedCash').value;
+    const counted = parseFloat(countedRaw);
+    if(isNaN(counted)){ aureumToast('Enter the counted cash amount before closing.', 'danger'); return; }
+    SHIFT_CLOSURES.unshift({
+      id: 'SC-' + Date.now(),
+      shop: activeShop,
+      employee: activeEmployee.name,
+      role: activeEmployee.role,
+      shiftStart: shiftStartTime ? shiftStartTime.toISOString() : null,
+      shiftEnd: new Date().toISOString(),
+      cashSales: s.cash, cardSales: s.card, mobileSales: s.mobile, otherSales: s.other,
+      refunds: s.refunds, expectedCash: s.expectedCash, countedCash: counted,
+      variance: counted - s.expectedCash,
+      transactionCount: s.count,
+      notes: document.getElementById('shiftCloseNotes').value.trim()
+    });
+    persistAureum();
+    closeModal('shiftCloseOverlay');
+    activeShop = null;
+    activeEmployee = null;
+    shiftStartTime = null;
+    openShiftGate();
+  });
   document.getElementById('shiftSubmitBtn').addEventListener('click', ()=>{
     const shop = document.getElementById('shiftShopSelect').value;
     const employeeId = parseInt(document.getElementById('shiftEmployeeSelect').value);

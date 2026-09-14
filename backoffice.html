@@ -2173,6 +2173,16 @@
                 <div class="field-label">Receipt footer message</div>
                 <input type="text" class="modal-field" id="stReceiptFooter" placeholder="All sales are final unless stated otherwise.">
               </div>
+              <div style="margin-top:16px; max-width:220px;">
+                <div class="field-label">Business logo</div>
+                <div class="upload-zone" id="logoUploadZone" style="max-width:220px; aspect-ratio:2/1;">
+                  <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
+                  <div id="logoUploadPrompt">
+                    <div class="uz-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-4 4-2-2-6 6"/></svg></div>
+                    <div class="uz-text">Click to upload your logo<br>PNG or JPG, shown on printed/emailed receipts</div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="form-section">
               <div class="toggle-row">
@@ -3385,7 +3395,7 @@
       document.getElementById('pfStock').value = p.stock;
       document.getElementById('pfLowStockThreshold').value = p.lowStockThreshold !== undefined ? p.lowStockThreshold : '';
       document.getElementById('pfSafetyStock').value = p.safetyStock !== undefined ? p.safetyStock : '';
-      document.getElementById('pfAllShops').checked = p.shops === 'all';
+      document.getElementById('pfAllShops').checked = Array.isArray(p.shops) ? (SHOPS.length>0 && SHOPS.every(s=>p.shops.includes(s))) : p.shops === 'all';
       pendingImage = p.image || null;
     } else {
       document.getElementById('pfName').value = '';
@@ -4217,6 +4227,7 @@
     } else {
       PURCHASE_ORDERS.unshift({ id: "PO-" + (1042 + PURCHASE_ORDERS.length), status:"Pending", ...data });
     }
+    persistAureum();
     renderPOTable();
     switchToPOList();
   });
@@ -4475,6 +4486,7 @@
       costs: validCosts.map(c=>({...c})),
       total, status: "Completed"
     });
+    persistAureum();
     renderGRNTable();
     renderProducts();
     switchToGRNList();
@@ -4756,6 +4768,7 @@
       notes: document.getElementById('saNotes').value.trim(),
       items: savedItems
     });
+    persistAureum();
     renderStockAdjTable();
     renderProducts();
     switchToSAList();
@@ -5454,9 +5467,14 @@
   document.querySelectorAll('.export-opt').forEach(opt=>{
     opt.addEventListener('click', (e)=>{
       e.stopPropagation();
-      const { source, filename, fmt, title } = opt.dataset;
-      if(fmt === 'csv') exportTableToCSV(source, filename + '.csv');
-      else exportTableToPDF(source, filename, title || filename);
+      try{
+        const { source, filename, fmt, title } = opt.dataset;
+        if(fmt === 'csv') exportTableToCSV(source, filename + '.csv');
+        else exportTableToPDF(source, filename, title || filename);
+      }catch(err){
+        console.error('Export failed:', err);
+        alert('Export failed: ' + err.message + '\n\nPlease screenshot this and send it to support.');
+      }
       closeAllPopovers();
     });
   });
@@ -5755,7 +5773,9 @@
     rateEl.classList.toggle('invalid', !rateOk);
     if(!rateOk){ rateEl.focus(); return; }
     POS_SETTINGS.taxPercent = rate;
-    persistAureum();
+    POS_SETTINGS.taxInclusive = document.getElementById('stTaxInclusive').classList.contains('on');
+    POS_SETTINGS.taxDefaultOnNewProducts = document.getElementById('stTaxDefault').classList.contains('on');
+    saveSettingsPanel('settings-taxes');
     flashSaveConfirm('stSaveTaxesConfirm');
   });
 
@@ -5782,6 +5802,7 @@
     const ftr = document.getElementById('stReceiptFooter');
     if(hdr && POS_SETTINGS.receiptText.header !== undefined) hdr.value = POS_SETTINGS.receiptText.header;
     if(ftr && POS_SETTINGS.receiptText.footer !== undefined) ftr.value = POS_SETTINGS.receiptText.footer;
+    if(pendingLogo === undefined && document.getElementById('logoUploadZone')) renderLogoPreview(POS_SETTINGS.logoImage || null);
   }
   function updateEnabledPaymentMethods(){
     POS_SETTINGS.enabledPaymentMethods = ['cash','card','mobile','credit'].filter(m=>{
@@ -5791,9 +5812,46 @@
     });
   }
 
+  let pendingLogo = undefined; // undefined = untouched this session, null = explicitly removed, string = new upload
+  function renderLogoPreview(dataUrl){
+    const zone = document.getElementById('logoUploadZone');
+    const prompt = document.getElementById('logoUploadPrompt');
+    zone.querySelectorAll('img, .uz-remove').forEach(el=>el.remove());
+    if(dataUrl){
+      zone.classList.add('has-image');
+      prompt.style.display = 'none';
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = 'width:100%; height:100%; object-fit:contain; background:var(--panel);';
+      const removeBtn = document.createElement('div');
+      removeBtn.className = 'uz-remove';
+      removeBtn.innerHTML = '&#10005;';
+      removeBtn.title = 'Remove logo';
+      removeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); pendingLogo = null; renderLogoPreview(null); });
+      zone.appendChild(img);
+      zone.appendChild(removeBtn);
+    } else {
+      zone.classList.remove('has-image');
+      prompt.style.display = 'block';
+    }
+  }
+  document.getElementById('logoUploadZone').addEventListener('click', (e)=>{
+    if(e.target.classList.contains('uz-remove')) return;
+    document.getElementById('logoFileInput').click();
+  });
+  document.getElementById('logoFileInput').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){ pendingLogo = e.target.result; renderLogoPreview(pendingLogo); };
+    reader.readAsDataURL(file);
+    this.value = '';
+  });
+
   document.getElementById('stSaveReceipts').addEventListener('click', ()=>{
     POS_SETTINGS.receiptText.header = document.getElementById('stReceiptHeader').value.trim();
     POS_SETTINGS.receiptText.footer = document.getElementById('stReceiptFooter').value.trim();
+    if(pendingLogo !== undefined) POS_SETTINGS.logoImage = pendingLogo; // only overwrite if actually touched this session
     saveSettingsPanel('settings-receipts');
     flashSaveConfirm('stSaveReceiptsConfirm');
   });
@@ -6312,6 +6370,7 @@
       items: savedItems,
       status: 'Completed'
     });
+    persistAureum();
     renderTransfers();
     renderProducts();
     switchToTransferList();
@@ -6490,6 +6549,14 @@
     persistAureum();
     closeModal('detailModal');
     renderAccountingData();
+    // If the expense just saved falls outside the currently-viewed date
+    // range, it's correctly saved but won't show in the table right now —
+    // make that obvious instead of leaving it looking like it vanished.
+    if(acctDateState){
+      const d = stripTime(new Date(date + 'T00:00:00')).getTime();
+      const inRange = d >= stripTime(acctDateState.rangeStart).getTime() && d <= stripTime(acctDateState.rangeEnd).getTime();
+      if(!inRange) aureumToast(`Saved — but ${fmtDisplay(date)} is outside the period you're currently viewing, so it won't show in this table until you change the date filter.`, 'ok');
+    }
   }
 
   // Note: expenses can no longer be deleted — see the edit-only handler above.

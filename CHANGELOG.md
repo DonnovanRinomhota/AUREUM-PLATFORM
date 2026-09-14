@@ -1,5 +1,60 @@
 # Changelog
 
+## Phase 7 — Real fixes to Tax/Receipts toggles, shift close & cash reconciliation, export error visibility (2026-09)
+
+### Fixed
+- **A regression from Phase 5**: the "All shops" checkbox on the product
+  edit form stopped correctly reflecting a product's real shop assignment
+  after shop-assignment became a fixed snapshot array — found while
+  investigating the category-on-new-product report. Fixed.
+- **PO / GRN / Stock Adjustments / Transfers now save immediately** on
+  confirm, instead of relying solely on the ~1.2s background auto-save
+  timer — closes a real (narrow) window where a save-then-immediately-
+  navigate-away could theoretically lose data.
+- **"Prices include tax" and "Apply tax to all new products by default"**
+  (Settings → Taxes) were never actually saved — the Save button only
+  ever persisted the tax rate itself. Now both toggles save correctly,
+  and **"Prices include tax" is now functionally wired**: when on, tax is
+  calculated as already included in the listed price (customer's total
+  doesn't change); when off, tax is added on top as before.
+- **"Show business logo on receipts"** had no logo to show — there was no
+  upload field anywhere. Added a real logo uploader in Settings →
+  Receipts, and wired it into the actual printed/emailed receipt
+  template, gated by the toggle.
+- **"Show cashier name on receipts"** was also a cosmetic-only toggle
+  with no real effect — now actually hides/shows the cashier line on the
+  printed receipt.
+- **Expense saving**: re-confirmed the persistence fix from Phase 5 is in
+  place, and added a toast when a newly-saved expense falls outside the
+  currently-viewed date range in Accounting — it was very likely saving
+  correctly all along but appearing to "vanish" when it didn't match the
+  active filter.
+
+### Added
+- **Shift close & cash reconciliation** for Shop Manager / Administrator
+  roles at the POS — ending a shift as a manager/admin now shows a full
+  breakdown (cash/card/mobile/other sales, refunds, expected cash in
+  drawer), a field to enter the actual counted cash, and calculates the
+  over/short variance. Saved as a permanent, synced record. (Cashiers and
+  Inventory Clerks keep the simple end-shift flow, no reconciliation
+  step.)
+- **Export error visibility**: CSV/PDF export buttons across Purchases,
+  GRN, Stock Adjustments, Transfers, and Accounting now show a visible
+  error message if something goes wrong, instead of failing silently —
+  this is specifically so any remaining issue can actually be diagnosed
+  instead of guessed at.
+
+### Verified, no bug found
+- Ran a systematic scan of every `getElementById` call in both files
+  against every real element id in the HTML — the only "missing" one is
+  a toast element that's deliberately created on first use (not a bug).
+  This was the same class of bug behind the fake-billing-code crash found
+  last phase, so it was worth checking thoroughly — this phase is clean.
+- Category on new products was re-verified working (free-text field,
+  type any new name).
+- Purchase Orders/GRN/Stock Adjustments/Transfers already had CSV/PDF
+  export buttons in place structurally.
+
 ## Phase 6 — Real billing & subscriptions, Help/FAQ, fake-card-storage bug removed (2026-09)
 
 ### Added
