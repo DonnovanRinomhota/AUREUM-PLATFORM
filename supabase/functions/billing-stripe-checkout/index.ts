@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
 
     const form: Record<string, string> = {
       mode: "subscription",
+      "managed_payments[enabled]": "false",
       "line_items[0][price_data][currency]": "usd",
       "line_items[0][price_data][product_data][name]": "AUREUM Standard Plan",
       "line_items[0][price_data][recurring][interval]": "month",
