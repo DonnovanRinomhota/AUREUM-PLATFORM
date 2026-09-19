@@ -1,5 +1,37 @@
 # Changelog
 
+## Phase 8 — Forgot password, change password, email template guide (2026-09)
+
+### Added
+- **"Forgot password?" link** on the sign-in screen — sends a real
+  Supabase password-reset email. Clicking the link in that email brings
+  the user to a dedicated "Set a new password" screen (detected via the
+  recovery token Supabase puts in the URL) instead of the normal sign-in
+  gate.
+- **"Change Password"** section in Settings → Business Profile, for
+  already-signed-in users who just want to update their password
+  directly, with the account's email shown for confirmation.
+- **`SETUP-EMAIL-TEMPLATE.md`** — the confirmation email's content isn't
+  code, it's a Supabase dashboard template. This gives the exact HTML to
+  paste in so new sign-ups get a real welcome message with links to Back
+  Office and the POS, plus basic login instructions.
+
+### Investigating
+- **Stripe checkout tax-code error**: fixed (disabled Stripe's newer
+  "Managed Payments" default, which requires product tax codes).
+- **"Create Business" not working after deleting all businesses/profiles
+  in Supabase**: reviewed the sign-up code path and confirmed it's
+  unchanged and structurally correct (proper error handling throughout —
+  a real failure should show an on-screen message, not fail silently).
+  Re-ran a full systematic scan for broken element references (the same
+  class of bug found in Phase 6) — clean. Could not find a code-level
+  cause; most likely explanations are either the on-screen/console error
+  wasn't visible or reported, or something about the manual deletion in
+  Supabase (e.g. dropping tables entirely rather than deleting rows)
+  affected the sign-up trigger or its dependencies. See the diagnostic
+  steps requested in chat — once we have the exact error, this can be
+  fixed precisely.
+
 ## Phase 7 — Real fixes to Tax/Receipts toggles, shift close & cash reconciliation, export error visibility (2026-09)
 
 ### Fixed

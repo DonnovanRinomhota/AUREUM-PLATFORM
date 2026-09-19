@@ -670,7 +670,7 @@
     <div class="auth-seal">A</div>
     <div class="auth-title">AUREUM Back Office</div>
     <div class="auth-sub" id="authGateMsg">Sign in to manage your business.</div>
-    <div class="auth-tabs">
+    <div class="auth-tabs" id="authTabs">
       <div class="auth-tab active" data-mode="signin">Sign In</div>
       <div class="auth-tab" data-mode="signup">Create Business</div>
     </div>
@@ -678,10 +678,32 @@
       <input class="auth-field" id="authBizName" placeholder="Business name">
       <input class="auth-field" id="authFullName" placeholder="Your full name">
     </div>
+    <div id="authForgotFields" style="display:none;">
+      <div style="font-size:12px;color:var(--sage);margin-bottom:10px;">Enter the email on your account and we'll send you a link to reset your password.</div>
+    </div>
     <input class="auth-field" id="authEmail" type="email" placeholder="Email">
     <input class="auth-field" id="authPassword" type="password" placeholder="Password">
     <div class="auth-error" id="authError"></div>
     <div class="auth-btn" id="authSubmitBtn">Sign In</div>
+    <div id="authForgotLinkRow" style="text-align:center;margin-top:12px;">
+      <span id="authForgotLink" style="font-size:12px;color:var(--sage);cursor:pointer;text-decoration:underline;">Forgot password?</span>
+    </div>
+    <div id="authBackToSignInRow" style="display:none;text-align:center;margin-top:12px;">
+      <span id="authBackToSignIn" style="font-size:12px;color:var(--sage);cursor:pointer;text-decoration:underline;">&larr; Back to sign in</span>
+    </div>
+  </div>
+</div>
+
+<!-- Shown instead of the normal auth gate when arriving via a password-reset email link -->
+<div class="auth-gate" id="resetPasswordGate">
+  <div class="auth-card">
+    <div class="auth-seal">A</div>
+    <div class="auth-title">Set a new password</div>
+    <div class="auth-sub">Choose a new password for your account.</div>
+    <input class="auth-field" id="resetNewPassword" type="password" placeholder="New password">
+    <input class="auth-field" id="resetConfirmPassword" type="password" placeholder="Confirm new password">
+    <div class="auth-error" id="resetPasswordError"></div>
+    <div class="auth-btn" id="resetPasswordSubmitBtn">Set new password</div>
   </div>
 </div>
 <div id="trialBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:400;background:var(--gold-dim);color:#1B140A;text-align:center;font-size:12px;padding:8px;font-weight:600;"></div>
@@ -2083,6 +2105,17 @@
             <div class="settings-save-row">
               <div class="btn-gold" id="stSaveGeneral">Save changes</div>
               <div class="save-confirm" id="stSaveGeneralConfirm">Saved ✓</div>
+            </div>
+            <div class="form-section" style="margin-top:8px;">
+              <div class="form-section-title" style="margin-bottom:10px;">Account &amp; Password</div>
+              <div style="font-size:12px;color:var(--sage);margin-bottom:12px;" id="stAccountEmail">Signed in as —</div>
+              <input type="password" class="modal-field" id="stNewPassword" placeholder="New password">
+              <input type="password" class="modal-field" id="stConfirmPassword" placeholder="Confirm new password" style="margin-top:10px;">
+              <div class="field-error" id="stPasswordError" style="display:block;"></div>
+              <div class="settings-save-row" style="margin-top:12px;">
+                <div class="btn-outline" id="stChangePasswordBtn">Change Password</div>
+                <div class="save-confirm" id="stChangePasswordConfirm">Password updated ✓</div>
+              </div>
             </div>
           </div>
 
@@ -6706,6 +6739,8 @@
     if(supaReady && sb) aureumToast('Back online \u2014 syncing your changes\u2026', 'ok');
   });
   function applySettingsToForm(){
+    const acctEmailEl = document.getElementById('stAccountEmail');
+    if(acctEmailEl && currentUser) acctEmailEl.textContent = 'Signed in as ' + (currentUser.email || '—');
     const nameEl = document.getElementById('stBizName');
     if(nameEl && !nameEl.value) nameEl.value = POS_SETTINGS.businessName;
     const rateEl = document.getElementById('stTaxRate');
@@ -6859,6 +6894,25 @@
     { q: "How does billing work?", a: "AUREUM is $5.00/month (Standard Plan), payable by card via Stripe or via Paynow (EcoCash, OneMoney, Visa/Mastercard, ZimSwitch, or InnBucks depending on what your Paynow account supports). Your card or mobile money details are entered directly on Stripe's or Paynow's own page — never stored by AUREUM." },
     { q: "Does my subscription auto-renew?", a: "Card payments via Stripe renew automatically each month. Paynow payments don't auto-renew (mobile money and most Paynow methods require you to actively approve each payment) — you'll see a reminder in Settings → Billing a few days before your period ends." },
   ];
+  document.getElementById('stChangePasswordBtn').addEventListener('click', async ()=>{
+    const pw = document.getElementById('stNewPassword').value;
+    const pw2 = document.getElementById('stConfirmPassword').value;
+    const errEl = document.getElementById('stPasswordError');
+    errEl.textContent = ''; errEl.classList.remove('show');
+    if(!pw || pw.length < 6){ errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); return; }
+    if(pw !== pw2){ errEl.textContent = 'Passwords don\'t match.'; errEl.classList.add('show'); return; }
+    try{
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if(error) throw error;
+      document.getElementById('stNewPassword').value = '';
+      document.getElementById('stConfirmPassword').value = '';
+      flashSaveConfirm('stChangePasswordConfirm');
+    }catch(err){
+      errEl.textContent = err.message || 'Could not update password.';
+      errEl.classList.add('show');
+    }
+  });
+
   function renderHelpFaq(){
     const el = document.getElementById('helpFaqList');
     if(!el) return;
@@ -6963,6 +7017,7 @@
      later, fill in SUPABASE_CONFIG near the top of this <script> and
      restore the original boot() body (kept below, commented out). */
   async function boot(){
+    if(checkForPasswordRecovery()) return;
     if(!supaReady){
       document.getElementById('authGate').classList.add('show');
       document.getElementById('authGateMsg').textContent = 'Supabase isn\'t connected yet — open this file and fill in SUPABASE_CONFIG near the top of the <script>, then reload. See SETUP-INSTRUCTIONS.md.';
@@ -6997,23 +7052,44 @@
   }
   /* ===== AUTH GATE UI ===== */
   let authMode = 'signin';
+  function setAuthMode(mode){
+    authMode = mode;
+    document.querySelectorAll('.auth-tab').forEach(t=> t.classList.toggle('active', t.dataset.mode===mode));
+    document.getElementById('authTabs').style.display = mode==='forgot' ? 'none' : 'flex';
+    document.getElementById('authSignupFields').style.display = mode==='signup' ? 'block' : 'none';
+    document.getElementById('authForgotFields').style.display = mode==='forgot' ? 'block' : 'none';
+    document.getElementById('authPassword').style.display = mode==='forgot' ? 'none' : 'block';
+    document.getElementById('authForgotLinkRow').style.display = mode==='signin' ? 'block' : 'none';
+    document.getElementById('authBackToSignInRow').style.display = mode==='forgot' ? 'block' : 'none';
+    document.getElementById('authSubmitBtn').textContent = mode==='signup' ? 'Create Business' : mode==='forgot' ? 'Send reset link' : 'Sign In';
+    document.getElementById('authError').textContent = '';
+  }
   document.querySelectorAll('.auth-tab').forEach(tab=>{
-    tab.addEventListener('click', ()=>{
-      authMode = tab.dataset.mode;
-      document.querySelectorAll('.auth-tab').forEach(t=>t.classList.toggle('active', t===tab));
-      document.getElementById('authSignupFields').style.display = authMode==='signup' ? 'block' : 'none';
-      document.getElementById('authSubmitBtn').textContent = authMode==='signup' ? 'Create Business' : 'Sign In';
-      document.getElementById('authError').textContent = '';
-    });
+    tab.addEventListener('click', ()=> setAuthMode(tab.dataset.mode));
   });
-  document.getElementById('authSignupFields').style.display = 'none';
+  document.getElementById('authForgotLink').addEventListener('click', ()=> setAuthMode('forgot'));
+  document.getElementById('authBackToSignIn').addEventListener('click', ()=> setAuthMode('signin'));
+  setAuthMode('signin');
+
   document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     const errEl = document.getElementById('authError');
     errEl.textContent = '';
-    if(!email || !password){ errEl.textContent = 'Email and password are required.'; return; }
+    if(!email){ errEl.textContent = 'Email is required.'; return; }
+    const btn = document.getElementById('authSubmitBtn');
     try{
+      if(authMode === 'forgot'){
+        btn.textContent = 'Sending…';
+        const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+        btn.textContent = 'Send reset link';
+        if(error) throw error;
+        errEl.style.color = 'var(--gold-bright)';
+        errEl.textContent = 'Check your email for a password reset link.';
+        return;
+      }
+      errEl.style.color = '';
+      if(!password){ errEl.textContent = 'Password is required.'; return; }
       if(authMode === 'signup'){
         const bizName = document.getElementById('authBizName').value.trim();
         const fullName = document.getElementById('authFullName').value.trim();
@@ -7024,10 +7100,42 @@
       }
       boot();
     }catch(err){
+      btn.textContent = authMode==='signup' ? 'Create Business' : authMode==='forgot' ? 'Send reset link' : 'Sign In';
+      errEl.style.color = '';
       errEl.textContent = err.message || 'Something went wrong.';
     }
   });
   document.getElementById('logoutBtn').addEventListener('click', aureumSignOut);
+
+  // Arriving here via a password-reset email link — Supabase puts
+  // type=recovery in the URL hash. Show the "set new password" screen
+  // instead of the normal sign-in gate until they've set one.
+  function checkForPasswordRecovery(){
+    if(window.location.hash.includes('type=recovery')){
+      document.getElementById('authGate').classList.remove('show');
+      document.getElementById('resetPasswordGate').classList.add('show');
+      return true;
+    }
+    return false;
+  }
+  document.getElementById('resetPasswordSubmitBtn').addEventListener('click', async ()=>{
+    const pw = document.getElementById('resetNewPassword').value;
+    const pw2 = document.getElementById('resetConfirmPassword').value;
+    const errEl = document.getElementById('resetPasswordError');
+    errEl.textContent = '';
+    if(!pw || pw.length < 6){ errEl.textContent = 'Password must be at least 6 characters.'; return; }
+    if(pw !== pw2){ errEl.textContent = 'Passwords don\'t match.'; return; }
+    try{
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if(error) throw error;
+      window.history.replaceState({}, '', window.location.pathname);
+      document.getElementById('resetPasswordGate').classList.remove('show');
+      aureumToast('Password updated — signing you in…', 'ok');
+      boot();
+    }catch(err){
+      errEl.textContent = err.message || 'Could not update password.';
+    }
+  });
 
   boot();
 </script>
