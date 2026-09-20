@@ -2498,6 +2498,16 @@
     options: { data: { business_name: businessName, full_name: fullName } }
   });
   if(signUpErr) throw signUpErr;
+  // Supabase deliberately doesn't throw an error when the email is already
+  // registered (to avoid leaking which emails exist) — instead it returns
+  // a user object with an EMPTY identities array and no new account is
+  // actually created. Without this check, "Create Business" would look
+  // like it silently did nothing for an email used before (e.g. from
+  // earlier testing), even after deleting the profiles/businesses rows —
+  // the underlying auth.users row survives that deletion.
+  if(signUpData?.user && Array.isArray(signUpData.user.identities) && signUpData.user.identities.length === 0){
+    throw new Error('An account with this email already exists. Sign in instead, or delete the user in Supabase → Authentication → Users if you meant to start fresh, then try again.');
+  }
   return signUpData;
 }
   async function aureumSignIn(email, password){
