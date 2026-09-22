@@ -1,5 +1,27 @@
 # Changelog
 
+## Phase 9 — Purchase Orders, GRN, Stock Adjustments, Transfers actually sync now (2026-09)
+
+### Fixed — a real, significant one
+- **Purchase Orders, GRN, Stock Adjustments, and Transfers were never
+  included in the data that gets synced to Supabase at all.** The Phase 7
+  fix made sure `persistAureum()` was *called* right after saving one of
+  these, but the sync payload itself (`aureumSnapshotData()`) never
+  included these four arrays in the first place — so no matter how often
+  a save was triggered, this data only ever lived in that one browser's
+  memory for that session. Reloading, switching devices, or another
+  session syncing would silently lose it. All four are now included in
+  both what gets saved and what gets loaded back.
+- Same root cause meant a genuinely **fresh business would incorrectly
+  inherit the developer's demo Purchase Orders/GRN/Stock
+  Adjustments/Transfers** the first time it synced — same class of bug
+  fixed for receipts/expenses back in Phase 1.1, now extended to these
+  four as well. A new business now starts with all of them empty.
+- Re-confirmed Expenses were already correctly wired (both save and
+  load) — if Accounting still looks like it's not saving, it's more
+  likely the date-range-filter behavior described in Phase 7's fix
+  (a save outside the currently-viewed period won't show in that view).
+
 ## Phase 8 — Forgot password, change password, email template guide (2026-09)
 
 ### Added

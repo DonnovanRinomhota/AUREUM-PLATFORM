@@ -6689,7 +6689,7 @@
      live-in-sync across any device signed into the same business. */
   let _aureumSnapshot = '';
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, settings:POS_SETTINGS };
   }
   function persistAureum(){
     const str = JSON.stringify(aureumSnapshotData());
@@ -6951,6 +6951,10 @@
     if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
     if(shared.receipts) RECEIPTS = shared.receipts; // empty array is a valid, meaningful state — don't fall back to demo seed
     if(shared.expenses) EXPENSES = shared.expenses;
+    if(shared.purchaseOrders) PURCHASE_ORDERS = shared.purchaseOrders;
+    if(shared.grnRecords) GRN_RECORDS = shared.grnRecords;
+    if(shared.stockAdjustments) STOCK_ADJUSTMENTS = shared.stockAdjustments;
+    if(shared.transfers) TRANSFERS = shared.transfers;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
@@ -6977,6 +6981,10 @@
       // live business's Dashboard/Accounting.
       RECEIPTS = [];
       EXPENSES = [];
+      PURCHASE_ORDERS = [];
+      GRN_RECORDS = [];
+      STOCK_ADJUSTMENTS = [];
+      TRANSFERS = [];
       nextExpenseId = 1;
       persistAureum();
     }
