@@ -1,5 +1,40 @@
 # Changelog
 
+## Phase 10 — Pagination, real CSV/Excel import-export, refunds, settings-clobbering bug (2026-09)
+
+### Fixed — likely the real cause of the recurring "settings buttons not working" reports
+- Found a genuine, plausible root cause: any background sync (e.g. a sale
+  made at the POS in another tab, or any other device syncing anything)
+  triggered a full re-render in Back Office that unconditionally reset
+  every Settings toggle back to its last-*saved* state — silently
+  reverting a switch the owner had just clicked but not yet saved. If
+  Back Office and the POS were open at the same time (a very normal way
+  to test), a toggle click could get wiped out within a second or two,
+  looking exactly like "the button doesn't work." Settings now only
+  re-pull saved state when the page is first opened, not on every
+  background sync while already sitting on it.
+
+### Added
+- **Pagination** on Products and Receipts (the two longest-growing
+  lists) — page controls with a 10/20/30/50 rows-per-page selector,
+  instead of one continuous scroll. Built as a reusable component, so
+  extending it to other lists (Customers, Employees, Suppliers, PO/GRN/
+  Stock Adjustments/Transfers) is straightforward if wanted next.
+- **Product CSV/Excel import now matches the system's real column names**
+  ("Product name", "Product code", "In stock", etc. — the exact headers
+  the export produces) instead of different short aliases, so an
+  exported file can be re-imported without renaming anything. Also
+  expanded to support Barcode and Description columns, not just the
+  handful before. Excel (.xlsx) import added alongside CSV.
+- **Excel export** added next to CSV everywhere export already existed
+  (Products, Receipts, Purchases, GRN, Stock Adjustments, Transfers,
+  Accounting, Billing payment history — 12 places in total).
+- **Refunds, restricted to Shop Manager / Administrator roles** — the POS
+  had no way to refund a sale at all before this. Recent Sales now shows
+  a Refund option (managers/admins only) that reverses the sale, restores
+  stock, and records it as a linked refund receipt. Full-sale refund for
+  now, not partial/line-item.
+
 ## Phase 9 — Purchase Orders, GRN, Stock Adjustments, Transfers actually sync now (2026-09)
 
 ### Fixed — a real, significant one

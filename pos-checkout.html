@@ -1531,22 +1531,66 @@ async function aureumSignIn(email, password){
   const recentSales = [];
   function renderRecentSales(){
     const body = document.getElementById('recentSalesBody');
-    if(recentSales.length === 0){
-      body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales recorded yet this shift.</p></div>`;
+    const canRefund = activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role);
+    const shopSales = RECEIPTS.filter(r => r.shop === activeShop && !r.refund).sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime)).slice(0, 50);
+    if(shopSales.length === 0){
+      body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales recorded yet at this shop.</p></div>`;
       return;
     }
-    body.innerHTML = recentSales.map(s => `
-      <div class="sale-row">
+    body.innerHTML = shopSales.map(s => `
+      <div class="sale-row" data-order="${s.orderNo}">
         <div class="info">
           <div class="no">${s.orderNo}</div>
-          <div class="meta">${s.time} · ${s.itemCount} item${s.itemCount===1?'':'s'}</div>
+          <div class="meta">${s.time} · ${s.itemCount} item${s.itemCount===1?'':'s'}${s.refunded ? ' · <span style="color:var(--danger)">Refunded</span>' : ''}</div>
         </div>
         <div class="amt">
           <div class="val">${POS_SETTINGS.currency}${s.total.toFixed(2)}</div>
           <div class="method">${s.payment}</div>
         </div>
+        ${canRefund && !s.refunded ? `<div class="btn-outline refund-btn" data-order="${s.orderNo}" style="margin-left:10px;padding:6px 12px;font-size:11.5px;">Refund</div>` : ''}
       </div>
     `).join('');
+    body.querySelectorAll('.refund-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        refundSale(btn.dataset.order);
+      });
+    });
+  }
+  // Refunds are restricted to Shop Manager / Administrator roles — same
+  // permission level as Back Office access — since a refund reverses
+  // real money and stock. Full-sale refund only (not partial/line-item)
+  // for now.
+  function refundSale(orderNo){
+    const sale = RECEIPTS.find(r => r.orderNo === orderNo && r.shop === activeShop && !r.refund);
+    if(!sale){ aureumToast('Sale not found.', 'danger'); return; }
+    if(sale.refunded){ aureumToast('This sale has already been refunded.', 'danger'); return; }
+    if(!confirm(`Refund ${orderNo} for ${POS_SETTINGS.currency}${sale.total.toFixed(2)}? This restores stock and cannot be undone.`)) return;
+
+    (sale.items||[]).forEach(it=>{
+      const p = PRODUCTS.find(x=>x.id===it.productId);
+      if(p && p.stockControl !== false) addStock(p, activeShop, it.qty);
+    });
+
+    sale.refunded = true;
+    RECEIPTS.unshift({
+      orderNo: sale.orderNo,
+      time: new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true}),
+      dateTime: new Date().toISOString(),
+      items: sale.items,
+      itemCount: sale.itemCount,
+      subtotal: sale.subtotal, discountAmount: sale.discountAmount, tax: sale.tax,
+      total: sale.total,
+      payment: sale.payment,
+      shop: activeShop,
+      employee: activeEmployee.name,
+      customer: sale.customer,
+      refund: true,
+      refundOf: sale.orderNo
+    });
+    persistAureum();
+    renderRecentSales();
+    aureumToast(`${orderNo} refunded — stock restored.`, 'ok');
   }
   document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
     renderRecentSales();

@@ -205,6 +205,21 @@
     background: linear-gradient(160deg, var(--panel-alt), var(--panel));
     border:1px solid var(--line); border-radius:14px; overflow:hidden;
   }
+  .pagination-row{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:12px 18px; border-top:1px solid var(--line); flex-wrap:wrap;
+  }
+  .pagination-info{ font-size:12px; color:var(--sage); }
+  .pagination-size{ font-size:12px; color:var(--sage); display:flex; align-items:center; gap:8px; }
+  .pagination-nav{ display:flex; align-items:center; gap:10px; }
+  .pg-btn{
+    width:26px; height:26px; border-radius:7px; border:1px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    color:var(--ivory-dim); font-size:14px; user-select:none;
+  }
+  .pg-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .pg-btn[data-disabled]{ opacity:0.3; cursor:not-allowed; pointer-events:none; }
+  .pg-page-label{ font-size:12px; color:var(--sage); white-space:nowrap; }
   table{ width:100%; border-collapse:collapse; }
   thead th{
     text-align:left; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase;
@@ -962,6 +977,7 @@
           <div class="btn-ghost-sm popover-anchor" id="rcpExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="rcpTableBody" data-filename="receipts" data-title="Receipts">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="rcpTableBody" data-filename="receipts" data-title="Receipts">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="rcpTableBody" data-filename="receipts" data-title="Receipts">Export as PDF</div>
             </div>
           </div>
@@ -978,6 +994,7 @@
           </thead>
           <tbody id="rcpTableBody"></tbody>
         </table>
+        <div id="receiptsPagination"></div>
       </div>
     </div>
 
@@ -1007,11 +1024,12 @@
           <div class="btn-ghost-sm popover-anchor" id="productExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="productTableBody" data-filename="products" data-title="Products">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="productTableBody" data-filename="products" data-title="Products">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="productTableBody" data-filename="products" data-title="Products">Export as PDF</div>
             </div>
           </div>
           <div class="btn-ghost-sm" id="productImportBtn">Import</div>
-          <input type="file" id="productImportInput" accept=".csv" style="display:none;">
+          <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls" style="display:none;">
           <div class="icon-btn-sm" title="More">&#8942;</div>
           <div class="icon-btn-row">
             <div class="icon-btn-sm" title="Search" id="productSearchIconBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
@@ -1067,6 +1085,7 @@
             </thead>
             <tbody id="productTableBody"></tbody>
           </table>
+          <div id="productPagination"></div>
         </div>
       </div>
 
@@ -1281,6 +1300,7 @@
           <div class="btn-ghost-sm popover-anchor" id="sbpExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="sbpBody" data-filename="sales-by-product" data-title="Sales by Product">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="sbpBody" data-filename="sales-by-product" data-title="Sales by Product">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="sbpBody" data-filename="sales-by-product" data-title="Sales by Product">Export as PDF</div>
             </div>
           </div>
@@ -1319,6 +1339,7 @@
           <div class="btn-ghost-sm popover-anchor" id="poExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="poTableBody" data-filename="purchase-orders" data-title="Purchase Orders">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="poTableBody" data-filename="purchase-orders" data-title="Purchase Orders">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="poTableBody" data-filename="purchase-orders" data-title="Purchase Orders">Export as PDF</div>
             </div>
           </div>
@@ -1413,6 +1434,7 @@
           <div class="btn-ghost-sm popover-anchor" id="grnExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="grnTableBody" data-filename="goods-received" data-title="Goods Received">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="grnTableBody" data-filename="goods-received" data-title="Goods Received">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="grnTableBody" data-filename="goods-received" data-title="Goods Received">Export as PDF</div>
             </div>
           </div>
@@ -1521,6 +1543,7 @@
           <div class="btn-ghost-sm popover-anchor" id="saExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="stockAdjTableBody" data-filename="stock-adjustments" data-title="Stock Adjustments">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="stockAdjTableBody" data-filename="stock-adjustments" data-title="Stock Adjustments">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="stockAdjTableBody" data-filename="stock-adjustments" data-title="Stock Adjustments">Export as PDF</div>
             </div>
           </div>
@@ -1625,6 +1648,7 @@
           <div class="btn-ghost-sm popover-anchor" id="customerExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="customerTableBody" data-filename="customers" data-title="Customers">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="customerTableBody" data-filename="customers" data-title="Customers">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="customerTableBody" data-filename="customers" data-title="Customers">Export as PDF</div>
             </div>
           </div>
@@ -1703,6 +1727,7 @@
           <div class="btn-ghost-sm popover-anchor" id="employeeExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="employeeTableBody" data-filename="employees" data-title="Employees">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="employeeTableBody" data-filename="employees" data-title="Employees">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="employeeTableBody" data-filename="employees" data-title="Employees">Export as PDF</div>
             </div>
           </div>
@@ -1786,6 +1811,7 @@
           <div class="btn-ghost-sm popover-anchor" id="supplierExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="supplierTableBody" data-filename="suppliers" data-title="Suppliers">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="supplierTableBody" data-filename="suppliers" data-title="Suppliers">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="supplierTableBody" data-filename="suppliers" data-title="Suppliers">Export as PDF</div>
             </div>
           </div>
@@ -1856,6 +1882,7 @@
           <div class="btn-ghost-sm popover-anchor" id="transferExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="transferTableBody" data-filename="stock-transfers" data-title="Transfer of Goods">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="transferTableBody" data-filename="stock-transfers" data-title="Transfer of Goods">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="transferTableBody" data-filename="stock-transfers" data-title="Transfer of Goods">Export as PDF</div>
             </div>
           </div>
@@ -1936,6 +1963,7 @@
           <div class="btn-ghost-sm popover-anchor" id="expenseExportBtn">Export <span class="car">&#9662;</span>
             <div class="popover export-popover align-left">
               <div class="shop-opt export-opt" data-fmt="csv" data-source="expenseTableBody" data-filename="operating-expenses" data-title="Operating Expenses">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="expenseTableBody" data-filename="operating-expenses" data-title="Operating Expenses">Export as Excel</div>
               <div class="shop-opt export-opt" data-fmt="pdf" data-source="expenseTableBody" data-filename="operating-expenses" data-title="Operating Expenses">Export as PDF</div>
             </div>
           </div>
@@ -2372,6 +2400,7 @@
                 <div class="btn-ghost-sm popover-anchor" id="stInvoiceExportBtn" style="margin-left:auto;">Export <span class="car">&#9662;</span>
                   <div class="popover export-popover align-left">
                     <div class="shop-opt export-opt" data-fmt="csv" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as Excel</div>
                     <div class="shop-opt export-opt" data-fmt="pdf" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as PDF</div>
                   </div>
                 </div>
@@ -2414,6 +2443,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
   /* ===== AUREUM CLOUD BACKEND (Supabase: Postgres + Auth) =====
      Fill in your own project's URL + public anon key below (Project
@@ -2556,6 +2586,7 @@
   let POS_SETTINGS = { businessName:'AUREUM', currency:'$', currencyCode:'USD', taxPercent:0, taxLabel:'Tax', receiptFooter:'Thank you for shopping with us', dualCurrency:false, currencyCode2:'ZWG', currencySymbol2:'ZWG ', fxRate:0 };
 
   let currentPage = 'dashboard';
+  let _settingsFormEverLoaded = false;
   /* ===== NAVIGATION ===== */
   document.querySelectorAll('.nav-item').forEach(item=>{
     item.addEventListener('click', ()=>{
@@ -2568,6 +2599,12 @@
       });
       const mainEl = document.querySelector('.main');
       if(mainEl) mainEl.scrollTo({ top: 0, behavior: 'auto' });
+      // Settings needs a fresh pull of saved state every time it's opened —
+      // but NOT on every background sync while already sitting on the page
+      // (see the guard inside renderAllData below) — otherwise a sale made
+      // at the POS in another tab could silently revert a toggle the owner
+      // just clicked here before they'd had a chance to hit Save.
+      if(target === 'settings') applySettingsToForm();
     });
   });
 
@@ -3183,6 +3220,55 @@
   let productSelectionMode = false;
   let selectedProductIds = new Set();
 
+  /* ===== GENERIC PAGINATION (reusable across any long list) ===== */
+  function paginateSlice(items, state){
+    const start = (state.page-1)*state.pageSize;
+    return items.slice(start, start+state.pageSize);
+  }
+  function renderPaginationControls(containerId, totalItems, state, onChange){
+    const el = document.getElementById(containerId);
+    if(!el) return;
+    if(totalItems === 0){ el.innerHTML = ''; return; }
+    const totalPages = Math.max(1, Math.ceil(totalItems/state.pageSize));
+    if(state.page > totalPages) state.page = totalPages;
+    if(state.page < 1) state.page = 1;
+    const start = (state.page-1)*state.pageSize + 1;
+    const end = Math.min(totalItems, state.page*state.pageSize);
+    el.innerHTML = `
+      <div class="pagination-row">
+        <div class="pagination-info">Showing ${start}–${end} of ${totalItems}</div>
+        <div class="pagination-size">
+          Rows per page
+          <select class="pg-size-select cat-select" style="padding:4px 8px;">
+            ${[10,20,30,50].map(n=>`<option value="${n}" ${n===state.pageSize?'selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pagination-nav">
+          <div class="pg-btn" data-pg="first" ${state.page<=1?'data-disabled="1"':''}>&laquo;</div>
+          <div class="pg-btn" data-pg="prev" ${state.page<=1?'data-disabled="1"':''}>&lsaquo;</div>
+          <span class="pg-page-label">Page ${state.page} of ${totalPages}</span>
+          <div class="pg-btn" data-pg="next" ${state.page>=totalPages?'data-disabled="1"':''}>&rsaquo;</div>
+          <div class="pg-btn" data-pg="last" ${state.page>=totalPages?'data-disabled="1"':''}>&raquo;</div>
+        </div>
+      </div>`;
+    el.querySelector('.pg-size-select').addEventListener('change', function(){
+      state.pageSize = parseInt(this.value);
+      state.page = 1;
+      onChange();
+    });
+    el.querySelectorAll('.pg-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(btn.dataset.disabled) return;
+        if(btn.dataset.pg==='first') state.page = 1;
+        else if(btn.dataset.pg==='prev') state.page = Math.max(1, state.page-1);
+        else if(btn.dataset.pg==='next') state.page = Math.min(totalPages, state.page+1);
+        else if(btn.dataset.pg==='last') state.page = totalPages;
+        onChange();
+      });
+    });
+  }
+  let productPageState = { page:1, pageSize:20 };
+
   function renderProducts(){
     const tbody = document.getElementById('productTableBody');
     const q = document.getElementById('productSearch').value.trim().toLowerCase();
@@ -3201,8 +3287,12 @@
 
     if(items.length === 0){
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No products match. Try a different search, category, or shop — or add a new product.</td></tr>`;
+      document.getElementById('productPagination').innerHTML = '';
       return;
     }
+
+    const totalFiltered = items.length;
+    items = paginateSlice(items, productPageState);
 
     tbody.innerHTML = items.map(p => `
       <tr data-id="${p.id}" style="cursor:pointer; ${selectedProductIds.has(p.id)?'background:rgba(201,162,39,0.08);':''}">
@@ -3308,6 +3398,7 @@
     });
 
     applyProductColumnVisibility();
+    renderPaginationControls('productPagination', totalFiltered, productPageState, renderProducts);
   }
 
   function enterProductSelectionMode(){
@@ -3839,7 +3930,7 @@
     if(field.length || row.length){ row.push(field); rows.push(row); }
     return rows.filter(r=> !(r.length===1 && r[0]===''));
   }
-  function exportTableToCSV(tbodyId, filename){
+  function gatherTableRows(tbodyId){
     const tbody = document.getElementById(tbodyId);
     const table = tbody.closest('table');
     const headerCells = Array.from(table.querySelectorAll('thead th')).filter(th=> th.style.display !== 'none');
@@ -3849,8 +3940,20 @@
       if(cells.length === 1 && cells[0].hasAttribute('colspan')) return; // empty-state placeholder row
       rows.push(cells.map(td=> td.textContent.trim()));
     });
+    return rows;
+  }
+  function exportTableToCSV(tbodyId, filename){
+    const rows = gatherTableRows(tbodyId);
     if(rows.length <= 1){ alert('There is no data to export.'); return; }
     downloadCSV(filename, rows);
+  }
+  function exportTableToExcel(tbodyId, filename, sheetName){
+    const rows = gatherTableRows(tbodyId);
+    if(rows.length <= 1){ alert('There is no data to export.'); return; }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, (sheetName || 'Sheet1').slice(0,31));
+    XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : filename + '.xlsx');
   }
   /* ===== SELF-CONTAINED PDF WRITER (no external libraries/CDN — works fully offline) ===== */
   function pdfSanitizeAscii(s){
@@ -4945,14 +5048,18 @@
     });
   }
 
+  let receiptsPageState = { page:1, pageSize:20 };
   function renderReceiptsTable(){
     const tbody = document.getElementById('rcpTableBody');
     if(!tbody) return;
     let items = filteredReceiptsForPage().sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
     if(items.length === 0){
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No receipts for this selection.</td></tr>`;
+      const pgEl = document.getElementById('receiptsPagination'); if(pgEl) pgEl.innerHTML = '';
       return;
     }
+    const totalFiltered = items.length;
+    items = paginateSlice(items, receiptsPageState);
     tbody.innerHTML = items.map(r=>`
       <tr>
         <td class="mono">${r.id}</td>
@@ -4965,6 +5072,7 @@
         <td><span class="rcp-view" data-id="${r.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">VIEW</span></td>
       </tr>`).join('');
     tbody.querySelectorAll('.rcp-view').forEach(el=> el.addEventListener('click', ()=> viewReceipt(el.dataset.id)));
+    renderPaginationControls('receiptsPagination', totalFiltered, receiptsPageState, renderReceiptsTable);
   }
 
   function populateReceiptPeopleFilters(){
@@ -5513,6 +5621,7 @@
       try{
         const { source, filename, fmt, title } = opt.dataset;
         if(fmt === 'csv') exportTableToCSV(source, filename + '.csv');
+        else if(fmt === 'excel') exportTableToExcel(source, filename, title || filename);
         else exportTableToPDF(source, filename, title || filename);
       }catch(err){
         console.error('Export failed:', err);
@@ -5522,58 +5631,93 @@
     });
   });
 
-  // Products import: parse a CSV (columns: Name, Category, Price, Cost, Stock, Code),
-  // validate each row, skip duplicates (by name, case-insensitive), report results.
+  // Products import: matches the EXACT column headers the system itself
+  // exports (Product name, Product code, Category, Price, Cost, In stock,
+  // Shops, Barcode, Description) so an exported file can be re-imported
+  // without renaming anything. Common short aliases are still accepted as
+  // a fallback for files from elsewhere.
   document.getElementById('productImportBtn').addEventListener('click', ()=> document.getElementById('productImportInput').click());
   document.getElementById('productImportInput').addEventListener('change', function(){
     const file = this.files[0];
     if(!file) return;
-    if(!file.name.toLowerCase().endsWith('.csv')){
-      alert('Please choose a .csv file.');
+    const lname = file.name.toLowerCase();
+    if(!lname.endsWith('.csv') && !lname.endsWith('.xlsx') && !lname.endsWith('.xls')){
+      alert('Please choose a .csv or .xlsx file.');
       this.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = function(e){
-      let rows;
-      try { rows = parseCSV(e.target.result); }
-      catch(err){ alert('Could not read this file — it does not look like valid CSV.'); return; }
+    const findCol = (header, ...names) => {
+      for(const n of names){ const idx = header.indexOf(n); if(idx>-1) return idx; }
+      return -1;
+    };
+    const processRows = (rows) => {
       if(rows.length < 2){ alert('This file has no data rows to import.'); return; }
-      const header = rows[0].map(h=>h.trim().toLowerCase());
-      const nameIdx = header.indexOf('name');
-      const catIdx = header.indexOf('category');
-      const priceIdx = header.indexOf('price');
-      const costIdx = header.indexOf('cost');
-      const stockIdx = header.indexOf('stock');
-      const codeIdx = header.indexOf('code');
+      const header = rows[0].map(h=>String(h).trim().toLowerCase());
+      const nameIdx = findCol(header, 'product name', 'name');
+      const codeIdx = findCol(header, 'product code', 'code');
+      const catIdx = findCol(header, 'category');
+      const priceIdx = findCol(header, 'price');
+      const costIdx = findCol(header, 'cost');
+      const stockIdx = findCol(header, 'in stock', 'stock');
+      const shopsIdx = findCol(header, 'shops', 'shop');
+      const barcodeIdx = findCol(header, 'barcode');
+      const descIdx = findCol(header, 'description');
       if(nameIdx === -1 || priceIdx === -1){
-        alert('This CSV needs at least "Name" and "Price" columns. Found columns: ' + rows[0].join(', '));
+        alert('This file needs at least a "Product name" and "Price" column. Found columns: ' + rows[0].join(', '));
         return;
       }
       let added = 0, skippedDup = 0, skippedInvalid = 0;
       const existingNames = new Set(PRODUCTS.map(p=>p.name.toLowerCase()));
       for(let i=1;i<rows.length;i++){
         const r = rows[i];
-        const name = (r[nameIdx]||'').trim();
+        const name = String(r[nameIdx]||'').trim();
         const price = parseFloat(r[priceIdx]);
         if(!name || isNaN(price) || price < 0){ skippedInvalid++; continue; }
         if(existingNames.has(name.toLowerCase())){ skippedDup++; continue; }
         const cost = costIdx>-1 ? (parseFloat(r[costIdx])||0) : 0;
         const stock = stockIdx>-1 ? (parseInt(r[stockIdx])||0) : 0;
-        const cat = catIdx>-1 ? (r[catIdx]||'').trim() : '';
-        const code = codeIdx>-1 ? (r[codeIdx]||'').trim() : '';
-        PRODUCTS.push({ id: nextProductId++, name, price, cost, cat, stock, image:null, code, barcode:'', soldBy:'each', description:'', shops:[...SHOPS], stockControl:true });
+        const cat = catIdx>-1 ? String(r[catIdx]||'').trim() : '';
+        const code = codeIdx>-1 ? String(r[codeIdx]||'').trim() : '';
+        const barcode = barcodeIdx>-1 ? String(r[barcodeIdx]||'').trim() : '';
+        const description = descIdx>-1 ? String(r[descIdx]||'').trim() : '';
+        const shopsCell = shopsIdx>-1 ? String(r[shopsIdx]||'').trim() : '';
+        const shops = shopsCell && shopsCell.toLowerCase() !== 'all shops'
+          ? shopsCell.split(/[,;]/).map(s=>s.trim()).filter(s=>SHOPS.includes(s))
+          : [...SHOPS];
+        PRODUCTS.push({ id: nextProductId++, name, price, cost, cat, stock, image:null, code, barcode, soldBy:'each', description, shops, stockControl:true });
         existingNames.add(name.toLowerCase());
         added++;
       }
+      persistAureum();
       renderCategoryFilter();
       renderCategoryDatalist();
       renderProducts();
       alert(`Import finished: ${added} product(s) added, ${skippedDup} duplicate(s) skipped, ${skippedInvalid} invalid row(s) skipped.`);
-      document.getElementById('productImportInput').value = '';
     };
-    reader.onerror = function(){ alert('There was a problem reading that file. Please try again.'); };
-    reader.readAsText(file);
+    const lnameLower = file.name.toLowerCase();
+    if(lnameLower.endsWith('.xlsx') || lnameLower.endsWith('.xls')){
+      const reader = new FileReader();
+      reader.onload = function(e){
+        try{
+          const wb = XLSX.read(e.target.result, { type:'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:'' });
+          processRows(rows);
+        }catch(err){ alert('Could not read this Excel file: ' + err.message); }
+        document.getElementById('productImportInput').value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = function(e){
+        let rows;
+        try { rows = parseCSV(e.target.result); }
+        catch(err){ alert('Could not read this file — it does not look like valid CSV.'); document.getElementById('productImportInput').value=''; return; }
+        processRows(rows);
+        document.getElementById('productImportInput').value = '';
+      };
+      reader.readAsText(file);
+    }
   });
 
   // GRN import: parse a CSV of line items (columns: Product, Quantity, UnitCost) and
@@ -6679,7 +6823,16 @@
     renderAccounting();
     renderDashboardSales();
     renderSettingsStores();
-    applySettingsToForm();
+    // Only re-pull saved Settings state into the form on the very first
+    // render (page load) — once the user has actually navigated onto the
+    // Settings page, a background sync (e.g. a POS sale coming in from
+    // another tab/device) must NOT silently overwrite a toggle they just
+    // clicked but haven't saved yet. Navigating to Settings itself still
+    // refreshes correctly (see the nav click handler).
+    if(currentPage !== 'settings' || !_settingsFormEverLoaded){
+      applySettingsToForm();
+      _settingsFormEverLoaded = true;
+    }
   }
 
   /* ===== CLOUD SYNC =====
