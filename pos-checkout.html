@@ -518,7 +518,15 @@
   ::-webkit-scrollbar-thumb{ background: var(--panel-raised); border-radius:8px; }
   ::-webkit-scrollbar-track{ background:transparent; }
 
-  @media (max-width: 900px){
+  /* Tablets (including portrait iPad-size) keep the product list and
+     ticket side by side — just narrower — rather than stacking. Only
+     genuinely phone-width screens stack vertically, below. */
+  @media (max-width: 900px) and (min-width: 641px){
+    .app{ grid-template-columns: 1fr minmax(300px, 38%); }
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap:10px; }
+    .catalog{ padding:16px 16px 18px; }
+  }
+  @media (max-width: 640px){
     .app{ grid-template-columns: 1fr; grid-template-rows:auto auto 1fr; }
     .ticket-wrap{ border-left:none; border-top:1px solid var(--line); max-height:46vh; }
   }
@@ -1537,19 +1545,26 @@ async function aureumSignIn(email, password){
       body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales recorded yet at this shop.</p></div>`;
       return;
     }
-    body.innerHTML = shopSales.map(s => `
-      <div class="sale-row" data-order="${s.orderNo}">
+    body.innerHTML = shopSales.map(s => {
+      const orderNo = s.orderNo || '—';
+      const time = s.time || '—';
+      const itemCount = s.itemCount ?? (Array.isArray(s.items) ? s.items.length : 0);
+      const total = typeof s.total === 'number' ? s.total : 0;
+      const payment = s.payment || '—';
+      return `
+      <div class="sale-row" data-order="${orderNo}">
         <div class="info">
-          <div class="no">${s.orderNo}</div>
-          <div class="meta">${s.time} · ${s.itemCount} item${s.itemCount===1?'':'s'}${s.refunded ? ' · <span style="color:var(--danger)">Refunded</span>' : ''}</div>
+          <div class="no">${orderNo}</div>
+          <div class="meta">${time} · ${itemCount} item${itemCount===1?'':'s'}${s.refunded ? ' · <span style="color:var(--danger)">Refunded</span>' : ''}</div>
         </div>
         <div class="amt">
-          <div class="val">${POS_SETTINGS.currency}${s.total.toFixed(2)}</div>
-          <div class="method">${s.payment}</div>
+          <div class="val">${POS_SETTINGS.currency}${total.toFixed(2)}</div>
+          <div class="method">${payment}</div>
         </div>
-        ${canRefund && !s.refunded ? `<div class="btn-outline refund-btn" data-order="${s.orderNo}" style="margin-left:10px;padding:6px 12px;font-size:11.5px;">Refund</div>` : ''}
+        ${canRefund && !s.refunded ? `<div class="btn-outline refund-btn" data-order="${orderNo}" style="margin-left:10px;padding:6px 12px;font-size:11.5px;">Refund</div>` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
     body.querySelectorAll('.refund-btn').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();

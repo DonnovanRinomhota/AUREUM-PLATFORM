@@ -55,7 +55,7 @@
     border-right:1px solid var(--line);
     display:flex; flex-direction:column;
     padding:22px 0;
-    height:100vh; overflow-y:auto; scroll-behavior:smooth; overscroll-behavior:contain;
+    height:100vh; min-height:0; overflow-y:auto; scroll-behavior:smooth; overscroll-behavior:contain;
   }
   .side-brand{ display:flex; align-items:center; gap:12px; padding:0 22px 24px; }
   .side-seal{
@@ -114,7 +114,7 @@
   .sf-info .role{ font-size:10.5px; color:var(--sage); }
 
   /* ===== MAIN ===== */
-  .main{ padding:26px 34px 40px; overflow-y:auto; height:100vh; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
+  .main{ padding:26px 34px 40px; overflow-y:auto; height:100vh; min-height:0; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
   .main-top{
     display:flex; align-items:center; justify-content:space-between;
     margin-bottom:22px; flex-wrap:wrap; gap:14px;
@@ -203,8 +203,10 @@
   /* Table */
   .table-panel{
     background: linear-gradient(160deg, var(--panel-alt), var(--panel));
-    border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    border:1px solid var(--line); border-radius:14px;
+    overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
   }
+  @media (max-width: 760px){ .table-panel table{ min-width:640px; } }
   .pagination-row{
     display:flex; align-items:center; justify-content:space-between; gap:16px;
     padding:12px 18px; border-top:1px solid var(--line); flex-wrap:wrap;
@@ -220,6 +222,22 @@
   .pg-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
   .pg-btn[data-disabled]{ opacity:0.3; cursor:not-allowed; pointer-events:none; }
   .pg-page-label{ font-size:12px; color:var(--sage); white-space:nowrap; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .cal-dow{ text-align:center; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--sage-dim); padding-bottom:6px; }
+  .cal-day{
+    background: var(--panel-raised); border:1px solid var(--line); border-radius:9px;
+    min-height:78px; padding:8px; cursor:pointer; display:flex; flex-direction:column; gap:4px;
+  }
+  .cal-day:hover{ border-color:var(--gold-bright); }
+  .cal-day.empty{ background:transparent; border-color:transparent; cursor:default; }
+  .cal-day.today{ border-color:var(--gold-bright); }
+  .cal-day .dnum{ font-size:12px; font-weight:700; color:var(--ivory-dim); }
+  .cal-day .dentry{ font-size:10px; color:var(--gold-bright); background:rgba(201,162,39,0.12); border-radius:5px; padding:2px 5px; }
+  @media (max-width: 600px){
+    .cal-day{ min-height:54px; padding:5px; }
+    .cal-day .dentry{ display:none; }
+    .cal-day .dcount{ font-size:9.5px; color:var(--gold-bright); }
+  }
   table{ width:100%; border-collapse:collapse; }
   thead th{
     text-align:left; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase;
@@ -643,6 +661,17 @@
     .main{ padding-top:78px; }
     .kpi-row{ grid-template-columns: repeat(2,1fr); }
     .panel-row{ grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px){
+    .main{ padding:18px 14px 30px; padding-top:72px; }
+    .kpi-row{ grid-template-columns: 1fr; gap:10px; }
+    .create-form-grid{ grid-template-columns: 1fr; }
+    .filters-bar{ gap:10px; }
+    .filter-field{ min-width:0; flex:1 1 140px; }
+    .data-toolbar{ flex-wrap:wrap; gap:8px; }
+    .settings-save-row{ flex-wrap:wrap; }
+    .pagination-row{ flex-direction:column; align-items:flex-start; gap:10px; }
+    h1, .page-title{ font-size:20px; }
   }
   /* ===== AUTH GATE ===== */
   .auth-gate{
@@ -1322,6 +1351,7 @@
             </thead>
             <tbody id="sbpBody"></tbody>
           </table>
+          <div id="sbpPagination"></div>
         </div>
       </div>
     </div>
@@ -1351,6 +1381,7 @@
             </thead>
             <tbody id="poTableBody"></tbody>
           </table>
+          <div id="poPagination"></div>
         </div>
       </div>
 
@@ -1466,6 +1497,7 @@
             </thead>
             <tbody id="grnTableBody"></tbody>
           </table>
+          <div id="grnPagination"></div>
         </div>
       </div>
 
@@ -1573,6 +1605,7 @@
             </thead>
             <tbody id="stockAdjTableBody"></tbody>
           </table>
+          <div id="saPagination"></div>
         </div>
       </div>
 
@@ -1717,8 +1750,14 @@
     <div class="page" data-page="employees">
       <div class="list-view active" id="employeesListView">
         <div class="main-top">
-          <div><div class="page-title">Employees</div><div class="page-sub">Staff, access rights, and shop assignments.</div></div>
+          <div><div class="page-title">Employees</div><div class="page-sub">Staff, access rights, shop assignments, and working hours.</div></div>
         </div>
+        <div class="auth-tabs" id="employeeTabs" style="max-width:320px; margin-bottom:18px;">
+          <div class="auth-tab active" data-etab="list">Employee List</div>
+          <div class="auth-tab" data-etab="calendar">Calendar</div>
+        </div>
+
+        <div id="employeeListTab">
         <div class="data-toolbar">
           <div class="btn-gold" id="addEmployeeBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
@@ -1747,6 +1786,28 @@
             </thead>
             <tbody id="employeeTableBody"></tbody>
           </table>
+        </div>
+        </div>
+
+        <div id="employeeCalendarTab" style="display:none;">
+          <div class="data-toolbar">
+            <div class="icon-btn-sm" id="calPrevMonth" title="Previous month">&#8249;</div>
+            <div style="font-weight:700; font-size:15px; min-width:150px;" id="calMonthLabel"></div>
+            <div class="icon-btn-sm" id="calNextMonth" title="Next month">&#8250;</div>
+            <div class="filter-field" style="margin-left:auto; min-width:180px;">
+              <select class="cat-select" id="calEmployeeFilter"><option value="">All employees</option></select>
+            </div>
+          </div>
+          <div id="calGrid" class="cal-grid"></div>
+          <div class="form-section" style="margin-top:20px;">
+            <div class="form-section-title" style="margin-bottom:10px;">Hours this month</div>
+            <div class="table-panel">
+              <table>
+                <thead><tr><th>Employee</th><th style="text-align:right;">Days worked</th><th style="text-align:right;">Total hours</th></tr></thead>
+                <tbody id="calSummaryBody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1894,6 +1955,7 @@
             </thead>
             <tbody id="transferTableBody"></tbody>
           </table>
+          <div id="transferPagination"></div>
         </div>
       </div>
 
@@ -3752,6 +3814,7 @@
   const PIE_COLORS = ["var(--gold-bright)","var(--emerald-light)","var(--blue)","var(--purple)","var(--sage-dim)","var(--danger)"];
 
   let sbpTopNValue = 5;
+  let sbpPageState = { page:1, pageSize:20 };
   function renderSalesByProduct(){
     const tbody = document.getElementById('sbpBody');
     if(!tbody) return;
@@ -3832,9 +3895,12 @@
 
     if(sorted.length === 0){
       tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:48px 20px;color:var(--sage);">No sales data for this selection. Try widening the date range, time, shop, or category filters.</td></tr>`;
+      const pg=document.getElementById('sbpPagination'); if(pg) pg.innerHTML='';
       return;
     }
-    tbody.innerHTML = sorted.map(p=>{
+    const totalFiltered = sorted.length;
+    const pageItems = paginateSlice(sorted, sbpPageState);
+    tbody.innerHTML = pageItems.map(p=>{
       const s = salesByProduct.get(p.id);
       return `<tr>
         <td><div class="name-cell"><div class="row-thumb">${productThumb(p)}</div><div class="nm">${p.name}</div></div></td>
@@ -3851,6 +3917,7 @@
         <td class="mono" style="text-align:right;">${s.margin.toFixed(1)}%</td>
       </tr>`;
     }).join('');
+    renderPaginationControls('sbpPagination', totalFiltered, sbpPageState, renderSalesByProduct);
   }
   document.getElementById('sbpSearch').addEventListener('input', renderSalesByProduct);
   document.getElementById('sbpShopFilter').addEventListener('change', ()=>{ renderSalesByProduct(); renderSalesCategoryChart(); });
@@ -4180,10 +4247,13 @@
     document.getElementById('detailEditPOBtn').addEventListener('click', ()=>{ closeModal('detailModal'); switchToPOCreate(id); });
   }
 
+  let poPageState = { page:1, pageSize:20 };
   function renderPOTable(){
     const tbody = document.getElementById('poTableBody');
-    if(PURCHASE_ORDERS.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No purchase orders yet. Create one to start tracking incoming stock.</td></tr>`; return; }
-    tbody.innerHTML = PURCHASE_ORDERS.map(po=>`
+    if(PURCHASE_ORDERS.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No purchase orders yet. Create one to start tracking incoming stock.</td></tr>`; const pg=document.getElementById('poPagination'); if(pg) pg.innerHTML=''; return; }
+    const totalFiltered = PURCHASE_ORDERS.length;
+    const pageItems = paginateSlice(PURCHASE_ORDERS, poPageState);
+    tbody.innerHTML = pageItems.map(po=>`
       <tr data-id="${po.id}" style="cursor:pointer;">
         <td class="mono">${po.id}</td>
         <td>${fmtDisplay(po.date)}</td>
@@ -4211,6 +4281,7 @@
       });
     });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewPO(tr.dataset.id)));
+    renderPaginationControls('poPagination', totalFiltered, poPageState, renderPOTable);
   }
   function poPdf(po){
     const rows = (po.items||[]).map(it=>{
@@ -4441,6 +4512,7 @@
     });
     downloadPdfBytes(bytes, `${g.id}.pdf`);
   }
+  let grnPageState = { page:1, pageSize:20 };
   function renderGRNTable(){
     const tbody = document.getElementById('grnTableBody');
     populateSupplierFilter('grnSupplierFilter', GRN_RECORDS);
@@ -4460,9 +4532,12 @@
     if(items.length === 0){
       const msg = GRN_RECORDS.length === 0 ? 'No goods received notes yet.' : 'No goods received notes match your filters.';
       tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:48px 20px;color:var(--sage);">${msg}</td></tr>`;
+      const pg=document.getElementById('grnPagination'); if(pg) pg.innerHTML='';
       return;
     }
-    tbody.innerHTML = items.map(g=>`
+    const totalFiltered = items.length;
+    const pageItems = paginateSlice(items, grnPageState);
+    tbody.innerHTML = pageItems.map(g=>`
       <tr data-id="${g.id}" style="cursor:pointer;">
         <td class="mono">${g.id}</td>
         <td>${fmtDisplay(g.date)}</td>
@@ -4483,6 +4558,7 @@
       });
     });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewGRN(tr.dataset.id)));
+    renderPaginationControls('grnPagination', totalFiltered, grnPageState, renderGRNTable);
   }
 
   function switchToGRNList(){ document.getElementById('grnListView').classList.add('active'); document.getElementById('grnCreateView').classList.remove('active'); }
@@ -4684,6 +4760,7 @@
   // opposite adjustment instead so both are visible in the audit trail.
 
   let saDateRangeFilter = null;
+  let saPageState = { page:1, pageSize:20 };
   function renderStockAdjTable(){
     const tbody = document.getElementById('stockAdjTableBody');
     populateSupplierFilter('saSupplierFilter', STOCK_ADJUSTMENTS);
@@ -4703,9 +4780,12 @@
     if(items.length === 0){
       const msg = STOCK_ADJUSTMENTS.length === 0 ? 'No stock adjustments yet.' : 'No stock adjustments match your filters.';
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px 20px;color:var(--sage);">${msg}</td></tr>`;
+      const pg=document.getElementById('saPagination'); if(pg) pg.innerHTML='';
       return;
     }
-    tbody.innerHTML = items.map(a=>`
+    const totalFiltered = items.length;
+    const pageItems = paginateSlice(items, saPageState);
+    tbody.innerHTML = pageItems.map(a=>`
       <tr data-id="${a.id}" style="cursor:pointer;">
         <td class="mono">${a.id}</td>
         <td>${fmtDisplay(a.date)}</td>
@@ -4723,6 +4803,7 @@
       });
     });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewSA(tr.dataset.id)));
+    renderPaginationControls('saPagination', totalFiltered, saPageState, renderStockAdjTable);
   }
   function saPdf(a){
     const rows = (a.items||[]).map(it=>{
@@ -4961,8 +5042,13 @@
         <div class="detail-field"><div class="field-label">Refund</div><div class="v">${r.refund ? 'Yes' : 'No'}</div></div>
       </div>
       ${r.items && r.items.length ? `
-      <div style="margin-bottom:10px;">
-        ${r.items.map(it=>`<div class="grand-total-row" style="font-size:12.5px;padding:6px 0;"><span class="gt-label" style="font-weight:500;color:var(--ivory-dim);">${it.qty} × ${it.name}</span><span class="gt-val" style="font-size:12.5px;">$${(it.qty*it.price).toFixed(2)}</span></div>`).join('')}
+      <div class="table-panel" style="margin-bottom:14px;">
+        <table>
+          <thead><tr><th>Product name</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Total</th></tr></thead>
+          <tbody>
+            ${r.items.map(it=>`<tr><td>${it.name}</td><td class="mono" style="text-align:right;">${it.qty}</td><td class="mono" style="text-align:right;">$${(it.price||0).toFixed(2)}</td><td class="mono" style="text-align:right;">$${(it.qty*it.price).toFixed(2)}</td></tr>`).join('')}
+          </tbody>
+        </table>
       </div>` : ''}
       <div class="grand-total-row"><span class="gt-label">Grand total</span><span class="gt-val">$${r.total.toFixed(2)}</span></div>
       ${r.shop ? `<div style="margin-top:10px; font-size:11.5px; color:var(--sage);">Shop: ${r.shop}</div>` : ''}
@@ -5272,6 +5358,125 @@
 
   function switchToEmployeeList(){ document.getElementById('employeesListView').classList.add('active'); document.getElementById('employeeCreateView').classList.remove('active'); }
   function switchToEmployeeCreate(){ document.getElementById('employeesListView').classList.remove('active'); document.getElementById('employeeCreateView').classList.add('active'); }
+
+  /* ===== EMPLOYEE CALENDAR (tracks working days & hours) ===== */
+  let EMPLOYEE_HOURS = []; // { id, employeeId, date:'YYYY-MM-DD', hours, notes }
+  let nextHoursId = 1;
+  let calMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+
+  document.querySelectorAll('#employeeTabs .auth-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('#employeeTabs .auth-tab').forEach(t=>t.classList.toggle('active', t===tab));
+      const isCal = tab.dataset.etab === 'calendar';
+      document.getElementById('employeeListTab').style.display = isCal ? 'none' : 'block';
+      document.getElementById('employeeCalendarTab').style.display = isCal ? 'block' : 'none';
+      if(isCal) renderEmployeeCalendar();
+    });
+  });
+
+  function populateCalEmployeeFilter(){
+    const el = document.getElementById('calEmployeeFilter');
+    const prev = el.value;
+    el.innerHTML = '<option value="">All employees</option>' + EMPLOYEES.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    el.value = EMPLOYEES.some(e=>String(e.id)===prev) ? prev : '';
+  }
+  document.getElementById('calPrevMonth').addEventListener('click', ()=>{ calMonth.setMonth(calMonth.getMonth()-1); renderEmployeeCalendar(); });
+  document.getElementById('calNextMonth').addEventListener('click', ()=>{ calMonth.setMonth(calMonth.getMonth()+1); renderEmployeeCalendar(); });
+  document.getElementById('calEmployeeFilter').addEventListener('change', renderEmployeeCalendar);
+
+  function renderEmployeeCalendar(){
+    populateCalEmployeeFilter();
+    const label = document.getElementById('calMonthLabel');
+    label.textContent = `${MONTH_NAMES[calMonth.getMonth()]} ${calMonth.getFullYear()}`;
+    const empFilter = document.getElementById('calEmployeeFilter').value;
+
+    const year = calMonth.getFullYear(), month = calMonth.getMonth();
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const todayStr2 = todayStr();
+
+    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+    let cells = '';
+    for(let i=0;i<firstDow;i++) cells += `<div class="cal-day empty"></div>`;
+    for(let d=1; d<=daysInMonth; d++){
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dayEntries = EMPLOYEE_HOURS.filter(h=> h.date===dateStr && (!empFilter || String(h.employeeId)===empFilter));
+      const totalHrs = dayEntries.reduce((s,h)=>s+h.hours,0);
+      cells += `
+        <div class="cal-day ${dateStr===todayStr2?'today':''}" data-date="${dateStr}">
+          <div class="dnum">${d}</div>
+          ${dayEntries.length ? `<div class="dentry">${dayEntries.length} logged · ${totalHrs}h</div><div class="dcount">${dayEntries.length}·${totalHrs}h</div>` : ''}
+        </div>`;
+    }
+    document.getElementById('calGrid').innerHTML = dowLabels + cells;
+    document.querySelectorAll('.cal-day[data-date]').forEach(el=>{
+      el.addEventListener('click', ()=> openCalDayModal(el.dataset.date));
+    });
+
+    // Monthly summary per employee
+    const monthPrefix = `${year}-${String(month+1).padStart(2,'0')}`;
+    const monthEntries = EMPLOYEE_HOURS.filter(h=> h.date.startsWith(monthPrefix));
+    const byEmp = {};
+    monthEntries.forEach(h=>{
+      if(!byEmp[h.employeeId]) byEmp[h.employeeId] = { days:new Set(), hours:0 };
+      byEmp[h.employeeId].days.add(h.date);
+      byEmp[h.employeeId].hours += h.hours;
+    });
+    const summaryBody = document.getElementById('calSummaryBody');
+    const rows = Object.entries(byEmp).map(([empId, v])=>{
+      const emp = EMPLOYEES.find(e=>String(e.id)===String(empId));
+      return { name: emp ? emp.name : 'Unknown', days: v.days.size, hours: v.hours };
+    }).sort((a,b)=> b.hours-a.hours);
+    summaryBody.innerHTML = rows.length === 0
+      ? `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--sage);">No hours logged this month yet.</td></tr>`
+      : rows.map(r=>`<tr><td>${r.name}</td><td class="mono" style="text-align:right;">${r.days}</td><td class="mono" style="text-align:right;">${r.hours}</td></tr>`).join('');
+  }
+
+  function openCalDayModal(dateStr){
+    const entries = EMPLOYEE_HOURS.filter(h=>h.date===dateStr);
+    const renderList = () => entries.map(h=>{
+      const emp = EMPLOYEES.find(e=>String(e.id)===String(h.employeeId));
+      return `<div class="dl-row" data-hid="${h.id}"><div class="name">${emp?emp.name:'Unknown'} — ${h.hours}h${h.notes?' · '+h.notes:''}</div><span class="cal-del-entry" data-hid="${h.id}" style="color:var(--danger);cursor:pointer;font-size:11px;">Remove</span></div>`;
+    }).join('') || `<div style="color:var(--sage);font-size:12.5px;padding:6px 0;">No hours logged for this day yet.</div>`;
+
+    const body = `
+      <div id="calDayEntries">${renderList()}</div>
+      <div class="form-section" style="margin-top:14px;">
+        <div class="field-label">Employee</div>
+        <select class="modal-select" id="calAddEmployee">${EMPLOYEES.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</select>
+        <div class="field-label" style="margin-top:10px;">Hours worked</div>
+        <input type="number" min="0" max="24" step="0.5" class="modal-field" id="calAddHours" placeholder="8">
+        <div class="field-label" style="margin-top:10px;">Notes (optional)</div>
+        <input type="text" class="modal-field" id="calAddNotes" placeholder="e.g. covered morning shift">
+      </div>
+    `;
+    const actions = `
+      <div class="modal-btn ghost" data-close="detailModal">Close</div>
+      <div class="modal-btn solid" id="calAddEntryBtn">Add hours</div>
+    `;
+    openDetailModal(`Hours — ${fmtDisplay(dateStr)}`, body, actions);
+
+    document.getElementById('calAddEntryBtn').addEventListener('click', ()=>{
+      const employeeId = parseInt(document.getElementById('calAddEmployee').value);
+      const hours = parseFloat(document.getElementById('calAddHours').value);
+      if(!employeeId || isNaN(hours) || hours<=0){ alert('Select an employee and enter hours greater than 0.'); return; }
+      const notes = document.getElementById('calAddNotes').value.trim();
+      EMPLOYEE_HOURS.push({ id: nextHoursId++, employeeId, date: dateStr, hours, notes });
+      persistAureum();
+      closeModal('detailModal');
+      renderEmployeeCalendar();
+    });
+    document.querySelectorAll('.cal-del-entry').forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const hid = parseInt(el.dataset.hid);
+        EMPLOYEE_HOURS = EMPLOYEE_HOURS.filter(h=>h.id!==hid);
+        persistAureum();
+        closeModal('detailModal');
+        renderEmployeeCalendar();
+      });
+    });
+  }
 
   function renderEmployees(){
     const tbody = document.getElementById('employeeTableBody');
@@ -5646,27 +5851,40 @@
       this.value = '';
       return;
     }
-    const findCol = (header, ...names) => {
-      for(const n of names){ const idx = header.indexOf(n); if(idx>-1) return idx; }
+    // Smart column matching: strips things like "(USD)" and punctuation so
+    // "Price(USD)" matches "price", "In hand stock" matches our stock
+    // field, etc. — files exported from other systems don't need their
+    // headers renamed to match ours exactly.
+    const normalizeHeader = h => String(h).toLowerCase().replace(/\(.*?\)/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
+    const findCol = (normHeaders, keywords) => {
+      for(const kw of keywords){ const idx = normHeaders.indexOf(kw); if(idx>-1) return idx; } // exact match first
+      for(let i=0;i<normHeaders.length;i++){ if(keywords.some(kw=> normHeaders[i].includes(kw))) return i; } // then partial
       return -1;
     };
+    let importCodeCounter = 1;
+    function generateProductCode(){
+      const existingCodes = new Set(PRODUCTS.map(p=>p.code).filter(Boolean));
+      let code;
+      do { code = 'AUR-' + String(importCodeCounter++).padStart(6,'0'); } while(existingCodes.has(code));
+      return code;
+    }
     const processRows = (rows) => {
       if(rows.length < 2){ alert('This file has no data rows to import.'); return; }
-      const header = rows[0].map(h=>String(h).trim().toLowerCase());
-      const nameIdx = findCol(header, 'product name', 'name');
-      const codeIdx = findCol(header, 'product code', 'code');
-      const catIdx = findCol(header, 'category');
-      const priceIdx = findCol(header, 'price');
-      const costIdx = findCol(header, 'cost');
-      const stockIdx = findCol(header, 'in stock', 'stock');
-      const shopsIdx = findCol(header, 'shops', 'shop');
-      const barcodeIdx = findCol(header, 'barcode');
-      const descIdx = findCol(header, 'description');
+      const header = rows[0].map(normalizeHeader);
+      const nameIdx = findCol(header, ['product name','item name','name']);
+      const codeIdx = findCol(header, ['product code','item code','sku','code']);
+      const catIdx = findCol(header, ['category','sub category','subcategory']);
+      const priceIdx = findCol(header, ['price','selling price','retail price','unit price']);
+      const costIdx = findCol(header, ['cost','cost price','unit cost']);
+      const stockIdx = findCol(header, ['in stock','in hand stock','stock on hand','current stock','quantity','qty','stock']);
+      const shopsIdx = findCol(header, ['shops','shop']);
+      const barcodeIdx = findCol(header, ['barcode','upc','ean']);
+      const descIdx = findCol(header, ['description','notes']);
       if(nameIdx === -1 || priceIdx === -1){
         alert('This file needs at least a "Product name" and "Price" column. Found columns: ' + rows[0].join(', '));
         return;
       }
-      let added = 0, skippedDup = 0, skippedInvalid = 0;
+      let added = 0, skippedDup = 0, skippedInvalid = 0, autoCoded = 0;
       const existingNames = new Set(PRODUCTS.map(p=>p.name.toLowerCase()));
       for(let i=1;i<rows.length;i++){
         const r = rows[i];
@@ -5677,7 +5895,8 @@
         const cost = costIdx>-1 ? (parseFloat(r[costIdx])||0) : 0;
         const stock = stockIdx>-1 ? (parseInt(r[stockIdx])||0) : 0;
         const cat = catIdx>-1 ? String(r[catIdx]||'').trim() : '';
-        const code = codeIdx>-1 ? String(r[codeIdx]||'').trim() : '';
+        let code = codeIdx>-1 ? String(r[codeIdx]||'').trim() : '';
+        if(!code){ code = generateProductCode(); autoCoded++; }
         const barcode = barcodeIdx>-1 ? String(r[barcodeIdx]||'').trim() : '';
         const description = descIdx>-1 ? String(r[descIdx]||'').trim() : '';
         const shopsCell = shopsIdx>-1 ? String(r[shopsIdx]||'').trim() : '';
@@ -5692,7 +5911,7 @@
       renderCategoryFilter();
       renderCategoryDatalist();
       renderProducts();
-      alert(`Import finished: ${added} product(s) added, ${skippedDup} duplicate(s) skipped, ${skippedInvalid} invalid row(s) skipped.`);
+      alert(`Import finished: ${added} product(s) added (${autoCoded} auto-generated a product code), ${skippedDup} duplicate(s) skipped, ${skippedInvalid} invalid row(s) skipped.`);
     };
     const lnameLower = file.name.toLowerCase();
     if(lnameLower.endsWith('.xlsx') || lnameLower.endsWith('.xls')){
@@ -6492,13 +6711,17 @@
     downloadPdfBytes(bytes, `${t.id}.pdf`);
   }
 
+  let transferPageState = { page:1, pageSize:20 };
   function renderTransfers(){
     const tbody = document.getElementById('transferTableBody');
     if(TRANSFERS.length === 0){
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px 20px;color:var(--sage);">No stock transfers yet.</td></tr>`;
+      const pg=document.getElementById('transferPagination'); if(pg) pg.innerHTML='';
       return;
     }
-    tbody.innerHTML = TRANSFERS.map(t=>`
+    const totalFiltered = TRANSFERS.length;
+    const pageItems = paginateSlice(TRANSFERS, transferPageState);
+    tbody.innerHTML = pageItems.map(t=>`
       <tr>
         <td class="mono">${t.id}</td>
         <td>${fmtDisplay(t.date)}</td>
@@ -6514,6 +6737,7 @@
         if(t) transferPdf(t);
       });
     });
+    renderPaginationControls('transferPagination', totalFiltered, transferPageState, renderTransfers);
   }
 
   document.getElementById('addTransferBtn').addEventListener('click', switchToTransferCreate);
@@ -6842,7 +7066,7 @@
      live-in-sync across any device signed into the same business. */
   let _aureumSnapshot = '';
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, settings:POS_SETTINGS };
   }
   function persistAureum(){
     const str = JSON.stringify(aureumSnapshotData());
@@ -7108,6 +7332,7 @@
     if(shared.grnRecords) GRN_RECORDS = shared.grnRecords;
     if(shared.stockAdjustments) STOCK_ADJUSTMENTS = shared.stockAdjustments;
     if(shared.transfers) TRANSFERS = shared.transfers;
+    if(shared.employeeHours) EMPLOYEE_HOURS = shared.employeeHours;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
@@ -7118,6 +7343,7 @@
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
     nextEmployeeId = Math.max(0, ...EMPLOYEES.map(e=>e.id)) + 1;
     nextExpenseId = Math.max(0, ...EXPENSES.map(e=>e.id)) + 1;
+    nextHoursId = Math.max(0, ...EMPLOYEE_HOURS.map(h=>h.id)) + 1;
     _aureumSnapshot = JSON.stringify(aureumSnapshotData());
   }
 

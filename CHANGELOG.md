@@ -1,5 +1,60 @@
 # Changelog
 
+## Phase 11 — Smart import, responsive layouts, more pagination, employee calendar (2026-09)
+
+### Fixed
+- **Product import now uses real smart column matching** — strips things
+  like "(USD)" and punctuation, and recognizes many real-world header
+  variants ("In hand stock", "Sub category", "Unit cost", etc.), so files
+  exported from other POS systems can be imported without renaming every
+  column to match ours exactly. Missing product codes are now
+  auto-generated instead of left blank.
+- **Recent Sales "undefined" values** — the function was already
+  rewritten in Phase 10 to pull from real synced data and the field
+  names check out correctly; added defensive fallbacks for any
+  older/malformed records just in case, so a missing field now shows a
+  safe default instead of the word "undefined".
+- **Sidebar cut off at the bottom** (email/sign out/switch to POS not
+  reachable) — a CSS Grid default was preventing the sidebar's own
+  scroll from ever engaging even though it was configured correctly.
+  Fixed (`min-height:0` on the grid item).
+- **Receipt detail view** (Overview → Receipts → View) now shows a real
+  line-item table: Product name, Quantity, Cost, Total — instead of a
+  single condensed line per item.
+
+### Added
+- **Responsive layout pass** for both Back Office and the POS:
+  - Back Office: every data table now scrolls horizontally on narrow
+    screens instead of clipping or squishing columns; added a proper
+    phone-sized breakpoint (≤600px) tightening KPI cards, forms, and
+    toolbars to one column.
+  - POS: tablets (641–900px) now keep the product list and ticket side
+    by side as requested, just narrower — only genuinely phone-width
+    screens (≤640px) stack vertically. Previously anything ≤900px
+    (including iPad portrait) was stacking.
+- **Pagination extended** to Sales by Products, Purchase Orders, GRN,
+  Stock Adjustments, and Transfers (Products and Receipts already had it
+  from Phase 10) — same reusable 10/20/30/50-per-page control throughout.
+- **Employee Calendar** — Employees page now has two tabs: **Employee
+  List** (unchanged) and **Calendar**, a real month view where clicking
+  any day lets you log which employees worked and how many hours, with
+  a running monthly hours/days-worked summary per employee below it.
+
+### Confirmed already working (no change needed)
+- **Owner/Administrator POS → Back Office access + shift close**: this
+  was already built (Phase 4 and Phase 7) — any employee with the
+  "Administrator" or "Shop Manager" role can open Back Office from the
+  till and gets the full shift-close/cash-reconciliation flow when
+  ending a shift. If the business owner wants this personally, add
+  themselves in Back Office → Staff with the Administrator role and a
+  PIN — there's no separate "Owner" role at the POS level since the
+  underlying login is already the owner's own account.
+- **Barcode scanning**: already fully implemented. Any USB or Bluetooth
+  barcode scanner works automatically with zero setup (standard
+  "keyboard wedge" mode, the same approach Square/Shopify POS use) — it
+  matches against a product's Barcode field *or* its Product code. See
+  the chat reply for how to actually assign a barcode to a product.
+
 ## Phase 10 — Pagination, real CSV/Excel import-export, refunds, settings-clobbering bug (2026-09)
 
 ### Fixed — likely the real cause of the recurring "settings buttons not working" reports
