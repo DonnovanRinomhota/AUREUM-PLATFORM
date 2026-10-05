@@ -728,6 +728,12 @@
     <input class="auth-field" id="authEmail" type="email" placeholder="Email">
     <input class="auth-field" id="authPassword" type="password" placeholder="Password">
     <div class="auth-error" id="authError"></div>
+    <div id="authPayBlock" style="display:none; margin-bottom:10px;">
+      <div class="auth-btn" id="authPayStripeBtn">Pay with Card (Stripe)</div>
+      <div class="auth-btn" id="authPayPaynowBtn" style="margin-top:8px; background:transparent; border:1px solid var(--gold-bright); color:var(--gold-bright);">Pay with Paynow</div>
+      <div id="authPayError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;text-align:center;"></div>
+      <div style="font-size:11px;color:var(--sage);text-align:center;margin:4px 0 6px;">After paying, wait a few seconds and refresh this page.</div>
+    </div>
     <div class="auth-btn" id="authSubmitBtn">Sign In</div>
     <div id="authForgotLinkRow" style="text-align:center;margin-top:12px;">
       <span id="authForgotLink" style="font-size:12px;color:var(--sage);cursor:pointer;text-decoration:underline;">Forgot password?</span>
@@ -2619,28 +2625,52 @@
     currentRole = profile.role;
     return profile;
   }
+  // Reads the billing fields, tolerating a database that hasn't had
+  // admin-schema.sql run yet (no is_exempt column) so deploy order never
+  // locks anyone out or blanks the Billing screen.
+  async function fetchBusinessBilling(){
+    const base = 'subscription_status, trial_ends_at, current_period_end, billing_processor, stripe_customer_id';
+    let { data, error } = await sb.from('businesses').select(base + ', is_exempt').eq('id', currentBusinessId).maybeSingle();
+    if(error){ ({ data } = await sb.from('businesses').select(base).eq('id', currentBusinessId).maybeSingle()); }
+    return data;
+  }
+  const SUBSCRIPTION_GRACE_DAYS = 3; // keep in sync with GRACE_DAYS in admin.html
   async function checkSubscriptionStatus(){
-    const { data: biz } = await sb.from('businesses').select('subscription_status, trial_ends_at, current_period_end, billing_processor').eq('id', currentBusinessId).maybeSingle();
+    const biz = await fetchBusinessBilling();
     if(!biz) return { ok:true };
+    // Suspension is a hard block that nothing else overrides.
     if(biz.subscription_status === 'suspended'){
       return { ok:false, message: 'This account is suspended. Contact support to reactivate.' };
     }
+    // Complimentary access granted from the platform Control Panel.
+    if(biz.is_exempt) return { ok:true };
+
+    const now = new Date();
+    const DAY = 86400000;
     if(biz.subscription_status === 'cancelled'){
-      return { ok:false, message: 'Your subscription has been cancelled. Resubscribe in Settings → Billing to continue.' };
+      return { ok:false, billingLock:true, message: 'Your subscription has been cancelled. Resubscribe below to continue.' };
     }
-    if(biz.subscription_status === 'trial' && biz.trial_ends_at && new Date(biz.trial_ends_at) < new Date()){
-      return { ok:false, message: 'Your free trial has ended. Subscribe to keep using AUREUM.' };
+    if(biz.subscription_status === 'trial' && biz.trial_ends_at && new Date(biz.trial_ends_at) < now){
+      return { ok:false, billingLock:true, message: 'Your free trial has ended. Subscribe below to keep using AUREUM.' };
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at){
-      const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - new Date()) / 86400000);
+      const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - now) / DAY);
       if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial. Subscribe in Settings → Billing.` };
     }
     if(biz.subscription_status === 'past_due'){
       return { ok:true, warning: 'Your last payment failed — please update or retry payment in Settings → Billing.' };
     }
-    if(biz.subscription_status === 'active' && biz.billing_processor === 'paynow' && biz.current_period_end){
-      const daysLeft = Math.ceil((new Date(biz.current_period_end) - new Date()) / 86400000);
-      if(daysLeft <= 3) return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — Paynow doesn't auto-renew, pay again in Settings → Billing.` : `Your Paynow period has ended — pay again in Settings → Billing.` };
+    if(biz.subscription_status === 'active' && biz.current_period_end){
+      const end = new Date(biz.current_period_end);
+      // A paid period that ended more than the grace window ago is a lock-out.
+      if(now > new Date(end.getTime() + SUBSCRIPTION_GRACE_DAYS * DAY)){
+        return { ok:false, billingLock:true, message: 'Your subscription period has ended. Renew below to continue.' };
+      }
+      const daysLeft = Math.ceil((end - now) / DAY);
+      if(daysLeft <= 3){
+        const who = biz.billing_processor === 'paynow' ? "Paynow doesn't auto-renew, pay again" : 'renew';
+        return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — ${who} in Settings → Billing.` : 'Your subscription period has ended — renew in Settings → Billing to avoid being locked out.' };
+      }
     }
     return { ok:true };
   }
@@ -7163,16 +7193,16 @@
     const manageBtn = document.getElementById('stManageStripeBtn');
     if(!badge || !sb || !currentBusinessId) return;
 
-    const { data: business } = await sb.from('businesses')
-      .select('subscription_status, trial_ends_at, current_period_end, billing_processor, stripe_customer_id')
-      .eq('id', currentBusinessId).maybeSingle();
+    const business = await fetchBusinessBilling();
     if(!business) return;
     currentBusinessRow = business;
 
     const status = business.subscription_status || 'trial';
     badge.textContent = status.charAt(0).toUpperCase() + status.slice(1).replace('_',' ');
-    badge.className = 'status-badge ' + (status==='active' ? 'completed' : status==='trial' ? 'pending' : 'overdue');
+    badge.className = 'status-badge ' + (status==='active' ? 'completed' : status==='trial' ? 'pending' : 'refunded');
     procEl.textContent = business.billing_processor ? (business.billing_processor==='stripe'?'Stripe (card)':'Paynow') : '—';
+    const payStripe = document.getElementById('stPayStripeBtn'), payPaynow = document.getElementById('stPayPaynowBtn');
+    payStripe.style.display = ''; payPaynow.style.display = '';
 
     const periodEnd = business.current_period_end ? new Date(business.current_period_end) : null;
     const trialEnd = business.trial_ends_at ? new Date(business.trial_ends_at) : null;
@@ -7180,7 +7210,16 @@
     dateEl.textContent = relevantDate ? relevantDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
 
     bannerEl.style.display = 'none';
-    if(status === 'trial' && trialEnd){
+    if(status === 'suspended'){
+      // suspension beats everything, including complimentary access
+    } else if(business.is_exempt){
+      badge.textContent = 'Complimentary';
+      badge.className = 'status-badge completed';
+      dateEl.textContent = 'No expiry';
+      bannerEl.style.display = 'block';
+      bannerEl.textContent = 'Your account has complimentary access — no payment is needed.';
+      payStripe.style.display = 'none'; payPaynow.style.display = 'none';
+    } else if(status === 'trial' && trialEnd){
       const daysLeft = Math.ceil((trialEnd - new Date()) / 86400000);
       if(daysLeft <= 5){
         bannerEl.style.display = 'block';
@@ -7208,16 +7247,16 @@
       tbody.innerHTML = payments.map(p=>`
         <tr>
           <td>${new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
-          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : 'Paynow'}</td>
+          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : p.processor === 'manual' ? 'Complimentary (admin)' : 'Paynow'}</td>
           <td>${p.period_start ? new Date(p.period_start).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + new Date(p.period_end).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}</td>
           <td style="text-align:right;" class="mono">$${Number(p.amount).toFixed(2)}</td>
-          <td><span class="status-badge ${p.status==='paid'?'completed':p.status==='pending'?'pending':'overdue'}">${p.status}</span></td>
+          <td><span class="status-badge ${p.status==='paid'?'completed':p.status==='pending'?'pending':'refunded'}">${p.status}</span></td>
         </tr>`).join('');
     }
   }
 
-  async function startBillingPayment(processor){
-    const errEl = document.getElementById('stBillingError');
+  async function startBillingPayment(processor, errElId = 'stBillingError'){
+    const errEl = document.getElementById(errElId);
     errEl.textContent = '';
     if(!sb) return;
     const { data: { session } } = await sb.auth.getSession();
@@ -7429,10 +7468,17 @@
     if(!subCheck.ok){
       document.getElementById('authGate').classList.add('show');
       document.getElementById('authGateMsg').textContent = subCheck.message;
-      document.querySelector('.auth-tabs').style.display = 'none';
-      document.getElementById('authSignupFields').style.display = 'none';
-      document.getElementById('authEmail').style.display = 'none';
-      document.getElementById('authPassword').style.display = 'none';
+      ['authTabs','authSignupFields','authForgotFields','authEmail','authPassword','authForgotLinkRow','authBackToSignInRow']
+        .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+      // A lapsed account used to hit a dead end here (message + Sign Out
+      // only). Billing lock-outs now get the pay buttons right on this
+      // screen; a suspension (no billingLock) does not — that needs support.
+      const payBlock = document.getElementById('authPayBlock');
+      if(subCheck.billingLock){
+        payBlock.style.display = 'block';
+        document.getElementById('authPayStripeBtn').onclick = () => startBillingPayment('stripe', 'authPayError');
+        document.getElementById('authPayPaynowBtn').onclick = () => startBillingPayment('paynow', 'authPayError');
+      } else { payBlock.style.display = 'none'; }
       document.getElementById('authSubmitBtn').textContent = 'Sign Out';
       document.getElementById('authSubmitBtn').onclick = aureumSignOut;
       return;

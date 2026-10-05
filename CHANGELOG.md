@@ -1,5 +1,65 @@
 # Changelog
 
+## Phase 12 — Platform Control Panel, real subscription enforcement (2026-10)
+
+### Added
+- **Control Panel at `/admin`** (`admin.html`) for managing every business's
+  account and subscription: search and filter all accounts, see exactly what
+  each one can currently do (free trial, active, locked out, suspended…),
+  and for any account: **extend the free trial**, **extend the paid
+  subscription** (recorded as a $0 manual entry in their payment history),
+  grant or remove **complimentary (exempt) access**, or override the status
+  (active / past due / cancelled / suspended).
+- **Admin access list.** Choose which emails can use the panel. Super admins
+  can add/remove admins from inside the panel; regular admins can use it but
+  not change who has access. Only confirmed-email accounts on the list get in.
+- **Activity log** of every change: who did it, to which business, and what.
+- Dashboard cards (Total / Trial / Active / Past due / Cancelled / Suspended /
+  Complimentary) that double as one-click filters; server-side search and
+  pagination so it stays fast with thousands of accounts.
+- `SETUP-ADMIN.md` with the setup steps.
+
+### Security
+- Every control-panel action is checked **on the server** (valid session →
+  confirmed email → on the allowlist) by the new `admin-manage` edge function.
+  Hiding buttons in the browser is not what protects it; the database tables
+  behind it have no client access at all.
+- All business-supplied text (names, owner emails) is escaped in the panel, so
+  a malicious sign-up name can't run code in an admin's browser.
+- **Hardening:** removed two leftover client-side INSERT policies
+  (`businesses`, `profiles`). Sign-up creates those rows through the
+  `on_auth_user_created` trigger, so the policies weren't needed — but they
+  would have let a signed-in user insert their own business row with
+  `is_exempt = true` or a far-future trial date.
+
+### Fixed — found while building this
+- **Expired trials were a dead end.** A business whose trial ended (or whose
+  subscription was cancelled) saw a message and a Sign Out button — no way to
+  pay. The lock-out screen now shows **Pay with Card (Stripe)** and **Pay with
+  Paynow** buttons. (Suspended accounts don't get them, since paying wouldn't
+  fix that.)
+- **Paid subscriptions never expired.** Nothing locked out an account whose
+  paid period had ended, so one Paynow payment (or a manual extension) lasted
+  forever. Active accounts are now locked out **3 days** after their period
+  end date (grace period for late renewal webhooks). Stripe renewals update
+  the end date automatically, so card subscribers are unaffected.
+- Billing screen showed an unstyled badge for past-due/cancelled accounts.
+
+### Changed
+- Month-based extensions clamp to the end of the month (Jan 31 + 1 month =
+  Feb 28/29, not Mar 3).
+- `backoffice.html` tolerates the new `is_exempt` column not existing yet, so
+  deploy order doesn't matter.
+
+### Worth knowing
+- **Behaviour change for existing accounts:** any account currently marked
+  *Active* whose period end date has already passed (e.g. an old Paynow
+  payment) will be locked out 3 days after deploy. Check the Accounts tab
+  filtered to *Active* first and extend anyone you want to keep.
+- The **POS does not check subscription status** — a locked-out business can
+  still ring up sales at the till. This was already the case; it's a business
+  decision whether the till should lock too, so it's unchanged.
+
 ## Phase 11 — Smart import, responsive layouts, more pagination, employee calendar (2026-09)
 
 ### Fixed

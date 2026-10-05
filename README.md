@@ -8,9 +8,12 @@ with Stripe (card) and Paynow (EcoCash/OneMoney) payments.
 ```
 pos-checkout.html      → the till (cashier-facing checkout screen)
 backoffice.html         → management dashboard (products, stock, staff, reports, settings)
+admin.html              → platform Control Panel (manage every account's subscription) — /admin
 supabase/schema.sql     → database schema + security rules — run once in Supabase
-supabase/functions/     → 3 edge functions (Stripe + Paynow payment processing)
+supabase/billing-schema.sql, supabase/admin-schema.sql → billing + control panel tables
+supabase/functions/     → edge functions (billing, payments, and admin-manage for the Control Panel)
 SETUP-INSTRUCTIONS.md   → full step-by-step setup guide — start here
+SETUP-ADMIN.md          → setting up the Control Panel and giving other emails access
 ```
 
 ## Quick start

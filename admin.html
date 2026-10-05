@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>AUREUM — Control Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0A1B16; --bg-deep-2:#0D211A; --panel:#11291F; --panel-alt:#153426; --panel-raised:#173A2A;
+    --emerald:#1F4D3E; --emerald-light:#2F6B54;
+    --gold:#C9A227; --gold-bright:#E7C766; --gold-dim:#8A712A;
+    --ivory:#F4EFDF; --ivory-dim:#D8D1BC; --sage:#8FA79A; --sage-dim:#5F7469;
+    --line: rgba(231,199,102,0.14); --line-strong: rgba(231,199,102,0.28);
+    --danger:#C1584A; --green-bright:#4ADE80; --blue:#6FA8D8; --purple:#B08AD1; --orange:#E39A4B;
+    color-scheme: dark;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; }
+  body{
+    background:
+      radial-gradient(1100px 560px at 90% -8%, rgba(47,107,84,0.32), transparent 60%),
+      radial-gradient(800px 460px at -8% 105%, rgba(201,162,39,0.09), transparent 55%),
+      var(--bg-deep);
+    background-attachment: fixed;
+    color:var(--ivory); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; font-size:14px;
+  }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+  .muted{ color:var(--sage); }
+  [hidden]{ display:none !important; }
+
+  /* ---- centered cards (sign-in / denied / loading) ---- */
+  .center-view{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .card{
+    width:100%; max-width:380px; background:linear-gradient(160deg,var(--panel-alt),var(--panel));
+    border:1px solid var(--line-strong); border-radius:16px; padding:30px 28px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
+  }
+  .seal{
+    width:44px; height:44px; border-radius:50%; margin:0 auto 14px; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:18px; color:#1B140A;
+    background: radial-gradient(circle at 35% 30%, var(--gold-bright), var(--gold) 55%, var(--gold-dim) 100%);
+  }
+  .card h1{ font-size:19px; margin:0 0 4px; }
+  .card p{ color:var(--sage); font-size:12.5px; margin:0 0 18px; line-height:1.5; }
+  .field{
+    width:100%; padding:11px 13px; margin-bottom:10px; border-radius:9px; font:inherit;
+    background:var(--panel-raised); border:1px solid var(--line-strong); color:var(--ivory); outline:none;
+  }
+  .field:focus{ border-color:var(--gold-dim); }
+  .err{ color:var(--danger); font-size:12px; min-height:16px; margin:2px 0 10px; text-align:left; }
+
+  /* ---- buttons ---- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; user-select:none;
+    padding:10px 16px; border-radius:9px; font:inherit; font-weight:700; font-size:13px; border:1px solid transparent;
+    background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1B140A;
+  }
+  .btn:hover{ filter:brightness(1.07); }
+  .btn.ghost{ background:transparent; border-color:var(--line-strong); color:var(--ivory-dim); }
+  .btn.ghost:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .btn.danger{ background:transparent; border-color:var(--danger); color:var(--danger); }
+  .btn.small{ padding:6px 11px; font-size:12px; }
+  .btn.block{ width:100%; }
+  .btn[disabled], .btn.busy{ opacity:0.5; pointer-events:none; }
+
+  /* ---- app shell ---- */
+  .topbar{
+    position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 24px;
+    background:rgba(10,27,22,0.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+  }
+  .topbar .seal{ margin:0; width:34px; height:34px; font-size:14px; }
+  .topbar .title{ font-weight:800; letter-spacing:0.12em; font-size:13px; }
+  .topbar .sub{ font-size:10.5px; letter-spacing:0.14em; color:var(--sage-dim); }
+  .topbar .who{ margin-left:auto; text-align:right; font-size:12px; color:var(--sage); line-height:1.4; }
+  .topbar .who b{ color:var(--ivory); font-weight:600; }
+  .pill{ display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:0.08em; padding:2px 7px; border-radius:999px; background:rgba(201,162,39,0.16); color:var(--gold-bright); margin-left:6px; text-transform:uppercase; }
+  .content{ max-width:1280px; margin:0 auto; padding:22px 24px 60px; }
+
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:10px; margin-bottom:22px; }
+  .kpi{
+    background:linear-gradient(160deg,var(--panel-alt),var(--panel)); border:1px solid var(--line); border-radius:12px;
+    padding:13px 14px; cursor:pointer; text-align:left; font:inherit; color:inherit;
+  }
+  .kpi:hover, .kpi.active{ border-color:var(--gold-bright); }
+  .kpi .lbl{ font-size:10.5px; letter-spacing:0.07em; text-transform:uppercase; color:var(--sage); }
+  .kpi .val{ font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; margin-top:4px; }
+
+  .tabs{ display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--line); }
+  .tab{ padding:10px 16px; cursor:pointer; color:var(--sage); font-weight:600; font-size:13px; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab:hover{ color:var(--ivory); }
+  .tab.active{ color:var(--gold-bright); border-bottom-color:var(--gold-bright); }
+
+  .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
+  .toolbar .field{ margin:0; width:auto; }
+  .toolbar .search{ flex:1 1 240px; min-width:200px; }
+
+  .table-wrap{ background:linear-gradient(160deg,var(--panel-alt),var(--panel)); border:1px solid var(--line); border-radius:14px; overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; min-width:860px; }
+  th{ text-align:left; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--sage); padding:12px 14px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td{ padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:13px; }
+  tr:last-child td{ border-bottom:none; }
+  tbody tr.clickable{ cursor:pointer; }
+  tbody tr.clickable:hover{ background:rgba(231,199,102,0.04); }
+  td .name{ font-weight:600; }
+  td .sub{ color:var(--sage); font-size:11.5px; margin-top:2px; word-break:break-all; }
+  .empty{ text-align:center; padding:40px 16px; color:var(--sage); }
+
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:capitalize; white-space:nowrap; }
+  .b-trial{ background:rgba(201,162,39,0.16); color:var(--gold-bright); }
+  .b-active{ background:rgba(74,222,128,0.13); color:var(--green-bright); }
+  .b-past_due{ background:rgba(227,154,75,0.16); color:var(--orange); }
+  .b-cancelled{ background:rgba(143,167,154,0.16); color:var(--sage); }
+  .b-suspended{ background:rgba(193,88,74,0.18); color:var(--danger); }
+  .b-exempt{ background:rgba(176,138,209,0.18); color:var(--purple); margin-left:4px; }
+
+  .pager{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-top:1px solid var(--line); font-size:12px; color:var(--sage); }
+  .pager .nav{ display:flex; gap:8px; align-items:center; }
+  .pager select{ padding:5px 8px; margin:0 0 0 6px; }
+
+  /* ---- modal ---- */
+  .overlay{ position:fixed; inset:0; z-index:50; background:rgba(4,12,9,0.72); display:flex; align-items:flex-start; justify-content:center; padding:4vh 14px; overflow-y:auto; }
+  .modal{
+    width:100%; max-width:600px; background:linear-gradient(160deg,var(--panel-alt),var(--panel));
+    border:1px solid var(--line-strong); border-radius:16px; box-shadow:0 24px 70px rgba(0,0,0,0.55);
+  }
+  .modal-head{ display:flex; justify-content:space-between; gap:12px; padding:20px 22px 12px; }
+  .modal-head h2{ margin:0; font-size:18px; word-break:break-word; }
+  .x{ cursor:pointer; color:var(--sage); font-size:18px; line-height:1; padding:4px 8px; border-radius:7px; }
+  .x:hover{ color:var(--ivory); background:var(--panel-raised); }
+  .modal-body{ padding:0 22px 22px; }
+  .access{ border-radius:10px; padding:11px 13px; font-size:13px; font-weight:600; margin:6px 0 16px; border:1px solid; }
+  .access.good{ background:rgba(74,222,128,0.08); border-color:rgba(74,222,128,0.35); color:var(--green-bright); }
+  .access.warn{ background:rgba(227,154,75,0.09); border-color:rgba(227,154,75,0.4); color:var(--orange); }
+  .access.bad{ background:rgba(193,88,74,0.1); border-color:rgba(193,88,74,0.45); color:var(--danger); }
+  .facts{ display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-bottom:18px; }
+  .fact .k{ font-size:10.5px; letter-spacing:0.07em; text-transform:uppercase; color:var(--sage-dim); }
+  .fact .v{ margin-top:2px; font-size:13px; word-break:break-word; }
+  .section{ border-top:1px solid var(--line); padding-top:14px; margin-top:14px; }
+  .section h3{ margin:0 0 3px; font-size:13.5px; }
+  .section .hint{ color:var(--sage); font-size:11.8px; margin-bottom:10px; line-height:1.5; }
+  .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .row .field{ margin:0; width:auto; flex:0 1 120px; }
+  .row .field.wide{ flex:1 1 200px; }
+  .chip{ cursor:pointer; padding:5px 10px; font-size:11.5px; border-radius:999px; border:1px solid var(--line-strong); color:var(--ivory-dim); background:transparent; font:inherit; }
+  .chip:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:100; max-width:min(92vw,520px);
+    padding:11px 16px; border-radius:10px; font-size:13px; font-weight:500; text-align:center;
+    background:var(--panel-raised); border:1px solid var(--line-strong); box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  }
+  .toast.ok{ border-color:rgba(74,222,128,0.5); }
+  .toast.warn{ border-color:rgba(227,154,75,0.6); }
+  .toast.error{ border-color:rgba(193,88,74,0.7); color:#ffd9d3; }
+
+  @media (max-width:640px){
+    .topbar{ padding:10px 14px; } .content{ padding:16px 12px 50px; }
+    .topbar .who .email{ display:none; }
+    .facts{ grid-template-columns:1fr; }
+    .modal-body, .modal-head{ padding-left:16px; padding-right:16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loadingView" class="center-view"><div class="muted">Loading…</div></div>
+
+<!-- ===== SIGN IN ===== -->
+<div id="signinView" class="center-view" hidden>
+  <div class="card">
+    <div class="seal">A</div>
+    <h1>Control Panel</h1>
+    <p>Sign in with your AUREUM account. Only approved administrators can continue.</p>
+    <input class="field" id="siEmail" type="email" placeholder="Email" autocomplete="username">
+    <input class="field" id="siPassword" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="err" id="siError"></div>
+    <div class="btn block" id="siBtn">Sign in</div>
+  </div>
+</div>
+
+<!-- ===== NO ACCESS ===== -->
+<div id="deniedView" class="center-view" hidden>
+  <div class="card">
+    <div class="seal">!</div>
+    <h1>No access</h1>
+    <p id="deniedMsg">This account doesn't have control panel access.</p>
+    <div class="btn ghost block" id="deniedSignOut">Sign out</div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="appView" hidden>
+  <div class="topbar">
+    <div class="seal">A</div>
+    <div><div class="title">AUREUM</div><div class="sub">CONTROL PANEL</div></div>
+    <div class="who">
+      <div class="email"><b id="whoEmail">—</b><span class="pill" id="whoRole" hidden>Super admin</span></div>
+      <div><span id="signOutLink" style="cursor:pointer; text-decoration:underline;">Sign out</span></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="accounts">Accounts</div>
+      <div class="tab" data-tab="admins">Admin access</div>
+      <div class="tab" data-tab="activity">Activity log</div>
+    </div>
+
+    <!-- Accounts -->
+    <section id="tab-accounts">
+      <div class="toolbar">
+        <input class="field search" id="search" type="search" placeholder="Search business, owner name or email…">
+        <select class="field" id="statusFilter">
+          <option value="">All statuses</option>
+          <option value="trial">Free trial</option>
+          <option value="active">Active</option>
+          <option value="past_due">Past due</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="suspended">Suspended</option>
+          <option value="exempt">Complimentary (exempt)</option>
+        </select>
+        <div class="btn ghost small" id="refreshBtn">Refresh</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Business</th><th>Owner</th><th>Status</th><th>Trial ends</th><th>Subscription ends</th><th>Joined</th><th></th>
+          </tr></thead>
+          <tbody id="accountsBody"></tbody>
+        </table>
+        <div class="pager" id="pager"></div>
+      </div>
+    </section>
+
+    <!-- Admin access -->
+    <section id="tab-admins" hidden>
+      <div class="muted" style="margin-bottom:12px; font-size:12.5px; line-height:1.6;" id="adminsHint"></div>
+      <div id="addAdminBox" class="toolbar" hidden>
+        <input class="field search" id="newAdminEmail" type="email" placeholder="Email address to give access">
+        <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" id="newAdminSuper"> Super admin (can manage access)</label>
+        <div class="btn" id="addAdminBtn">Add</div>
+      </div>
+      <div class="table-wrap">
+        <table style="min-width:560px;">
+          <thead><tr><th>Email</th><th>Role</th><th>Added by</th><th>Added</th><th></th></tr></thead>
+          <tbody id="adminsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Activity -->
+    <section id="tab-activity" hidden>
+      <div class="table-wrap">
+        <table style="min-width:760px;">
+          <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Business</th><th>Details</th></tr></thead>
+          <tbody id="activityBody"></tbody>
+        </table>
+        <div class="pager" id="activityPager"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ===== MANAGE MODAL ===== -->
+<div class="overlay" id="manageOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div><h2 id="mTitle"></h2><div class="muted" id="mSub" style="font-size:12px;margin-top:3px;word-break:break-all;"></div></div>
+      <div class="x" id="mClose" title="Close">&#10005;</div>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const CFG = {
+    url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA'
+  };
+  const sb = supabase.createClient(CFG.url, CFG.anonKey);
+  const DAY = 86400000;
+  const GRACE_DAYS = 3; // must match the grace period in backoffice.html's checkSubscriptionStatus
+
+  /* ---------- helpers ---------- */
+  // Business names, owner names and emails are typed by the public at sign-up,
+  // so EVERYTHING dynamic is escaped before it touches innerHTML.
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const $ = id => document.getElementById(id);
+  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+  const fmtDateTime = iso => iso ? new Date(iso).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
+  const STATUS_LABEL = { trial:'Free trial', active:'Active', past_due:'Past due', cancelled:'Cancelled', suspended:'Suspended' };
+
+  function relative(iso){
+    if(!iso) return '';
+    const d = Math.ceil((new Date(iso) - Date.now()) / DAY);
+    if(d > 1) return `in ${d} days`;
+    if(d === 1) return 'tomorrow';
+    if(d === 0) return 'today';
+    return `${-d} day${d === -1 ? '' : 's'} ago`;
+  }
+  function dateCell(iso){
+    if(!iso) return '<span class="muted">—</span>';
+    return `${esc(fmtDate(iso))}<div class="sub">${esc(relative(iso))}</div>`;
+  }
+
+  let toastTimer = null;
+  function toast(msg, kind = 'ok'){
+    const t = $('toast'); t.textContent = msg; t.className = 'toast ' + kind; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(()=> t.hidden = true, kind === 'ok' ? 3200 : 7000);
+  }
+
+  async function api(action, payload = {}){
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session){ const e = new Error('Not signed in.'); e.status = 401; throw e; }
+    let resp, json;
+    try{
+      resp = await fetch(`${CFG.url}/functions/v1/admin-manage`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}`, 'apikey': CFG.anonKey },
+        body: JSON.stringify({ action, ...payload })
+      });
+      json = await resp.json();
+    }catch(_){ throw new Error('Could not reach the server. Check your connection and that the admin-manage function is deployed.'); }
+    if(!resp.ok || json.error){ const e = new Error(json.error || 'Request failed.'); e.status = resp.status; throw e; }
+    return json;
+  }
+
+  /* what a business can actually do right now — mirrors checkSubscriptionStatus() in backoffice.html */
+  function effectiveAccess(b){
+    const now = Date.now();
+    if(b.subscription_status === 'suspended') return { tone:'bad', text:'Blocked — account is suspended' };
+    if(b.is_exempt) return { tone:'good', text:'Full access — complimentary' + (b.exempt_note ? ` (${b.exempt_note})` : '') };
+    if(b.subscription_status === 'cancelled') return { tone:'bad', text:'Locked out — subscription cancelled' };
+    if(b.subscription_status === 'past_due') return { tone:'warn', text:'Access continues — but the last payment failed' };
+    if(b.subscription_status === 'trial'){
+      if(!b.trial_ends_at) return { tone:'good', text:'Free trial — no end date set' };
+      const end = new Date(b.trial_ends_at).getTime();
+      if(end > now) return { tone:'good', text:`Free trial — ${Math.ceil((end-now)/DAY)} day(s) left (ends ${fmtDate(b.trial_ends_at)})` };
+      return { tone:'bad', text:`Locked out — free trial ended ${fmtDate(b.trial_ends_at)}` };
+    }
+    if(b.subscription_status === 'active'){
+      if(!b.current_period_end) return { tone:'good', text:'Active — no end date set' };
+      const end = new Date(b.current_period_end).getTime();
+      if(end > now) return { tone:'good', text:`Active until ${fmtDate(b.current_period_end)} (${Math.ceil((end-now)/DAY)} day(s))` };
+      if(now <= end + GRACE_DAYS*DAY) return { tone:'warn', text:`Period ended ${fmtDate(b.current_period_end)} — in the ${GRACE_DAYS}-day grace period` };
+      return { tone:'bad', text:`Locked out — subscription ended ${fmtDate(b.current_period_end)}` };
+    }
+    return { tone:'warn', text: b.subscription_status };
+  }
+
+  function statusBadges(b){
+    return `<span class="badge b-${esc(b.subscription_status)}">${esc(STATUS_LABEL[b.subscription_status] || b.subscription_status)}</span>` +
+      (b.is_exempt ? `<span class="badge b-exempt">Complimentary</span>` : '');
+  }
+
+  /* ---------- views ---------- */
+  function showView(name){
+    ['loadingView','signinView','deniedView','appView'].forEach(v => $(v).hidden = (v !== name + 'View'));
+  }
+
+  async function verifyAndEnter(){
+    try{
+      const who = await api('whoami');
+      state.me = who;
+      $('whoEmail').textContent = who.email;
+      $('whoRole').hidden = !who.isSuper;
+      showView('app');
+      await Promise.all([ loadSummary(), loadAccounts() ]);
+    }catch(err){
+      if(err.status === 403){ $('deniedMsg').textContent = err.message; showView('denied'); }
+      else if(err.status === 401){ showView('signin'); }
+      else { showView('signin'); $('siError').textContent = err.message; }
+    }
+  }
+
+  $('siBtn').addEventListener('click', async ()=>{
+    const email = $('siEmail').value.trim(), password = $('siPassword').value;
+    $('siError').textContent = '';
+    if(!email || !password){ $('siError').textContent = 'Enter your email and password.'; return; }
+    const btn = $('siBtn'); btn.classList.add('busy'); btn.textContent = 'Signing in…';
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    btn.classList.remove('busy'); btn.textContent = 'Sign in';
+    if(error){ $('siError').textContent = error.message; return; }
+    $('siPassword').value = '';
+    showView('loading'); verifyAndEnter();
+  });
+  $('siPassword').addEventListener('keydown', e => { if(e.key === 'Enter') $('siBtn').click(); });
+  async function signOut(){ await sb.auth.signOut(); closeManage(); showView('signin'); }
+  $('signOutLink').addEventListener('click', signOut);
+  $('deniedSignOut').addEventListener('click', signOut);
+
+  /* ---------- state ---------- */
+  const state = { me:null, page:1, pageSize:20, search:'', status:'', total:0, rows:[], current:null,
+                  act:{ offset:0, rows:[], total:0 } };
+
+  /* ---------- summary cards ---------- */
+  const KPI_DEFS = [
+    ['total','Total',''], ['trial','Free trial','trial'], ['active','Active','active'],
+    ['past_due','Past due','past_due'], ['cancelled','Cancelled','cancelled'],
+    ['suspended','Suspended','suspended'], ['exempt','Complimentary','exempt']
+  ];
+  async function loadSummary(){
+    try{
+      const { summary } = await api('summary');
+      $('kpis').innerHTML = KPI_DEFS.map(([key,label,filter]) =>
+        `<button class="kpi ${state.status===filter && (filter||state.status==='')?'active':''}" data-filter="${filter}">
+           <div class="lbl">${esc(label)}</div><div class="val">${Number(summary[key]||0).toLocaleString()}</div>
+         </button>`).join('');
+      $('kpis').querySelectorAll('.kpi').forEach(k => k.addEventListener('click', ()=>{
+        setTab('accounts'); $('statusFilter').value = k.dataset.filter; state.status = k.dataset.filter; state.page = 1;
+        loadAccounts(); loadSummary();
+      }));
+    }catch(err){ toast(err.message, 'error'); }
+  }
+
+  /* ---------- accounts ---------- */
+  async function loadAccounts(){
+    $('accountsBody').innerHTML = `<tr><td colspan="7" class="empty">Loading…</td></tr>`;
+    try{
+      const { rows, total } = await api('list', {
+        search: state.search, status: state.status, limit: state.pageSize, offset: (state.page-1)*state.pageSize
+      });
+      state.rows = rows; state.total = total;
+      // landed past the last page (e.g. after a filter change) → step back
+      if(rows.length === 0 && total > 0 && state.page > 1){ state.page = Math.max(1, Math.ceil(total/state.pageSize)); return loadAccounts(); }
+      renderAccounts();
+    }catch(err){
+      if(err.status === 401){ showView('signin'); return; }
+      $('accountsBody').innerHTML = `<tr><td colspan="7" class="empty">${esc(err.message)}</td></tr>`;
+    }
+  }
+
+  function renderAccounts(){
+    const body = $('accountsBody');
+    if(state.rows.length === 0){
+      body.innerHTML = `<tr><td colspan="7" class="empty">No accounts match.</td></tr>`;
+      $('pager').innerHTML = ''; return;
+    }
+    body.innerHTML = state.rows.map(b => `
+      <tr class="clickable" data-id="${esc(b.id)}">
+        <td><div class="name">${esc(b.name)}</div></td>
+        <td><div>${esc(b.owner_name || '—')}</div><div class="sub">${esc(b.owner_email || 'no owner found')}</div></td>
+        <td>${statusBadges(b)}</td>
+        <td>${b.subscription_status === 'trial' ? dateCell(b.trial_ends_at) : '<span class="muted">—</span>'}</td>
+        <td>${dateCell(b.current_period_end)}</td>
+        <td>${esc(fmtDate(b.created_at))}</td>
+        <td style="text-align:right;"><span class="btn ghost small" data-manage="${esc(b.id)}">Manage</span></td>
+      </tr>`).join('');
+    body.querySelectorAll('tr.clickable').forEach(tr => tr.addEventListener('click', ()=> openManage(tr.dataset.id)));
+
+    const from = (state.page-1)*state.pageSize + 1, to = Math.min(state.total, state.page*state.pageSize);
+    const pages = Math.max(1, Math.ceil(state.total/state.pageSize));
+    $('pager').innerHTML = `
+      <div>Showing ${from}–${to} of ${state.total.toLocaleString()}
+        <select class="field" id="pageSizeSel">${[20,50,100].map(n=>`<option value="${n}" ${n===state.pageSize?'selected':''}>${n} / page</option>`).join('')}</select></div>
+      <div class="nav">
+        <span class="btn ghost small ${state.page<=1?'busy':''}" id="pgPrev">&lsaquo; Prev</span>
+        <span>Page ${state.page} of ${pages}</span>
+        <span class="btn ghost small ${state.page>=pages?'busy':''}" id="pgNext">Next &rsaquo;</span>
+      </div>`;
+    $('pgPrev').addEventListener('click', ()=>{ state.page--; loadAccounts(); });
+    $('pgNext').addEventListener('click', ()=>{ state.page++; loadAccounts(); });
+    $('pageSizeSel').addEventListener('change', e => { state.pageSize = parseInt(e.target.value); state.page = 1; loadAccounts(); });
+  }
+
+  let searchTimer = null;
+  $('search').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(()=>{ state.search = e.target.value.trim(); state.page = 1; loadAccounts(); }, 350);
+  });
+  $('statusFilter').addEventListener('change', e => { state.status = e.target.value; state.page = 1; loadAccounts(); loadSummary(); });
+  $('refreshBtn').addEventListener('click', ()=>{ loadAccounts(); loadSummary(); });
+
+  /* ---------- manage modal ---------- */
+  function openManage(id){
+    const row = state.rows.find(r => r.id === id); if(!row) return;
+    state.current = { ...row };
+    renderManage();
+    $('manageOverlay').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeManage(){ $('manageOverlay').hidden = true; document.body.style.overflow = ''; state.current = null; }
+  $('mClose').addEventListener('click', closeManage);
+  $('manageOverlay').addEventListener('click', e => { if(e.target === $('manageOverlay')) closeManage(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('manageOverlay').hidden) closeManage(); });
+
+  function renderManage(){
+    const b = state.current; if(!b) return;
+    const acc = effectiveAccess(b);
+    $('mTitle').textContent = b.name;
+    $('mSub').textContent = `${b.owner_name || 'Owner'} · ${b.owner_email || 'no owner email'}`;
+    $('mBody').innerHTML = `
+      <div class="access ${acc.tone}">${esc(acc.text)}</div>
+      <div class="facts">
+        <div class="fact"><div class="k">Status</div><div class="v">${statusBadges(b)}</div></div>
+        <div class="fact"><div class="k">Joined</div><div class="v">${esc(fmtDate(b.created_at))}</div></div>
+        <div class="fact"><div class="k">Trial ends</div><div class="v">${esc(fmtDate(b.trial_ends_at))} <span class="muted">${esc(relative(b.trial_ends_at))}</span></div></div>
+        <div class="fact"><div class="k">Subscription ends</div><div class="v">${esc(fmtDate(b.current_period_end))} <span class="muted">${esc(relative(b.current_period_end))}</span></div></div>
+        <div class="fact"><div class="k">Last paid via</div><div class="v">${esc(b.billing_processor || '—')}</div></div>
+        <div class="fact"><div class="k">Business ID</div><div class="v mono" style="font-size:11px;">${esc(b.id)}</div></div>
+      </div>
+
+      <div class="section">
+        <h3>Extend free trial</h3>
+        <div class="hint">Adds days to the trial end date. A trial that has already ended restarts from today.</div>
+        <div class="row">
+          <input class="field" id="mTrialDays" type="number" min="1" max="730" value="14">
+          <span class="muted">days</span>
+          ${[7,14,30].map(n=>`<button class="chip" data-fill="mTrialDays" data-val="${n}">+${n}</button>`).join('')}
+          <span class="btn small" data-act="extend_trial">Extend trial</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Extend subscription</h3>
+        <div class="hint">Adds time to the paid period without a payment (recorded as a $0 manual entry in their payment history). Extends from the current end date if it's still running, otherwise from today.</div>
+        <div class="row">
+          <input class="field" id="mSubAmount" type="number" min="1" value="1">
+          <select class="field" id="mSubUnit"><option value="months">months</option><option value="days">days</option></select>
+          <button class="chip" data-fill-sub="1:months">+1 month</button>
+          <button class="chip" data-fill-sub="3:months">+3 months</button>
+          <button class="chip" data-fill-sub="12:months">+12 months</button>
+          <span class="btn small" data-act="extend_subscription">Extend subscription</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Complimentary access</h3>
+        ${b.is_exempt ? `
+          <div class="hint">This account has free, unlimited access${b.exempt_note ? ` — “${esc(b.exempt_note)}”` : ''}. Removing it puts them back on their normal trial/subscription rules, which may lock them out straight away.</div>
+          <span class="btn danger small" data-act="remove_exempt">Remove complimentary access</span>
+        ` : `
+          <div class="hint">Gives free, unlimited access with no payment or trial limit (e.g. partners, friends, staff). Doesn't override a suspension.</div>
+          <div class="row">
+            <input class="field wide" id="mExemptNote" type="text" maxlength="200" placeholder="Reason / note (optional)">
+            <span class="btn small" data-act="grant_exempt">Grant complimentary access</span>
+          </div>
+        `}
+      </div>
+
+      <div class="section">
+        <h3>Account status</h3>
+        <div class="hint">Manual override. <b>Suspended</b> blocks the account completely, even if complimentary. Setting <b>Active</b> doesn't add an end date — use “Extend subscription” for that.</div>
+        <div class="row">
+          <select class="field wide" id="mStatus">
+            ${Object.entries(STATUS_LABEL).map(([k,v])=>`<option value="${k}" ${b.subscription_status===k?'selected':''}>${esc(v)}</option>`).join('')}
+          </select>
+          <span class="btn ghost small" data-act="set_status">Apply status</span>
+        </div>
+      </div>`;
+  }
+
+  // one delegated handler for every button/chip inside the modal
+  $('mBody').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if(chip){
+      if(chip.dataset.fill){ $(chip.dataset.fill).value = chip.dataset.val; }
+      if(chip.dataset.fillSub){ const [n,u] = chip.dataset.fillSub.split(':'); $('mSubAmount').value = n; $('mSubUnit').value = u; }
+      return;
+    }
+    const btn = e.target.closest('[data-act]');
+    if(btn) runAction(btn);
+  });
+
+  async function runAction(btn){
+    const b = state.current; if(!b || btn.classList.contains('busy')) return;
+    const act = btn.dataset.act;
+    let action = act, payload = { businessId: b.id }, confirmMsg = null;
+
+    if(act === 'extend_trial'){
+      const days = parseInt($('mTrialDays').value);
+      if(!(days >= 1)){ toast('Enter a number of days (1 or more).', 'error'); return; }
+      payload.days = days;
+    } else if(act === 'extend_subscription'){
+      const amount = parseInt($('mSubAmount').value), unit = $('mSubUnit').value;
+      if(!(amount >= 1)){ toast('Enter an amount (1 or more).', 'error'); return; }
+      payload.amount = amount; payload.unit = unit;
+      confirmMsg = `Give "${b.name}" ${amount} ${unit} of free subscription time?`;
+    } else if(act === 'grant_exempt'){
+      action = 'set_exempt'; payload.exempt = true; payload.note = ($('mExemptNote').value || '').trim();
+      confirmMsg = `Give "${b.name}" free, unlimited access?`;
+    } else if(act === 'remove_exempt'){
+      action = 'set_exempt'; payload.exempt = false;
+      confirmMsg = `Remove complimentary access from "${b.name}"? They go back to normal trial/subscription rules and may be locked out immediately.`;
+    } else if(act === 'set_status'){
+      payload.status = $('mStatus').value;
+      if(payload.status === b.subscription_status){ toast('That is already the current status.', 'warn'); return; }
+      if(payload.status === 'suspended') confirmMsg = `Suspend "${b.name}"? They will be blocked from signing in.`;
+      if(payload.status === 'cancelled') confirmMsg = `Mark "${b.name}" as cancelled? They will be locked out until they resubscribe.`;
+    }
+    if(confirmMsg && !confirm(confirmMsg)) return;
+
+    // Disable every action while a request is in flight — extensions are
+    // ADDITIVE, so an accidental double-click must not apply them twice.
+    const allBtns = $('mBody').querySelectorAll('[data-act]');
+    allBtns.forEach(x => x.classList.add('busy'));
+    const original = btn.textContent; btn.textContent = 'Working…';
+    try{
+      const res = await api(action, payload);
+      // modal may have been closed or switched to another account meanwhile
+      if(state.current && state.current.id === b.id){
+        state.current = { ...state.current, ...res.business };
+        renderManage();
+      }
+      const idx = state.rows.findIndex(r => r.id === b.id);
+      if(idx > -1){ state.rows[idx] = { ...state.rows[idx], ...res.business }; renderAccounts(); }
+      loadSummary();
+      toast(res.note ? 'Saved. ' + res.note : 'Saved.', res.note ? 'warn' : 'ok');
+    }catch(err){
+      if(err.status === 401){ closeManage(); showView('signin'); return; }
+      toast(err.message, 'error');
+      allBtns.forEach(x => x.classList.remove('busy')); btn.textContent = original;
+    }
+  }
+
+  /* ---------- tabs ---------- */
+  function setTab(name){
+    document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    ['accounts','admins','activity'].forEach(n => $('tab-' + n).hidden = (n !== name));
+    if(name === 'admins') loadAdmins();
+    if(name === 'activity') loadActivity(true);
+  }
+  document.querySelectorAll('#tabs .tab').forEach(t => t.addEventListener('click', ()=> setTab(t.dataset.tab)));
+
+  /* ---------- admin access ---------- */
+  async function loadAdmins(){
+    $('adminsBody').innerHTML = `<tr><td colspan="5" class="empty">Loading…</td></tr>`;
+    try{
+      const { admins, me, isSuper } = await api('list_admins');
+      $('addAdminBox').hidden = !isSuper;
+      $('adminsHint').textContent = isSuper
+        ? 'These emails can use the control panel. They must have an AUREUM account with a confirmed email. Super admins can also add and remove access.'
+        : 'These emails can use the control panel. Only a super admin can change this list.';
+      $('adminsBody').innerHTML = admins.map(a => `
+        <tr>
+          <td>${esc(a.email)}${a.email === me ? ' <span class="muted">(you)</span>' : ''}</td>
+          <td>${a.is_super ? '<span class="pill" style="margin:0;">Super admin</span>' : 'Admin'}</td>
+          <td class="muted">${esc(a.added_by || '—')}</td>
+          <td class="muted">${esc(fmtDate(a.created_at))}</td>
+          <td style="text-align:right;">${isSuper && a.email !== me ? `<span class="btn danger small" data-remove="${esc(a.email)}">Remove</span>` : ''}</td>
+        </tr>`).join('');
+      $('adminsBody').querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', async ()=>{
+        const target = btn.dataset.remove;
+        if(!confirm(`Remove control panel access for ${target}?`)) return;
+        btn.classList.add('busy');
+        try{ await api('remove_admin', { email: target }); toast('Access removed.'); loadAdmins(); }
+        catch(err){ toast(err.message, 'error'); btn.classList.remove('busy'); }
+      }));
+    }catch(err){ $('adminsBody').innerHTML = `<tr><td colspan="5" class="empty">${esc(err.message)}</td></tr>`; }
+  }
+  $('addAdminBtn').addEventListener('click', async ()=>{
+    const email = $('newAdminEmail').value.trim();
+    if(!email){ toast('Enter an email address.', 'error'); return; }
+    const btn = $('addAdminBtn'); btn.classList.add('busy');
+    try{
+      await api('add_admin', { email, isSuper: $('newAdminSuper').checked });
+      $('newAdminEmail').value = ''; $('newAdminSuper').checked = false;
+      toast('Access granted.'); loadAdmins();
+    }catch(err){ toast(err.message, 'error'); }
+    btn.classList.remove('busy');
+  });
+
+  /* ---------- activity log ---------- */
+  const ACTION_LABEL = {
+    extend_trial:'Extended free trial', extend_subscription:'Extended subscription', grant_exempt:'Granted complimentary access',
+    remove_exempt:'Removed complimentary access', set_status:'Changed status', add_admin:'Added admin', remove_admin:'Removed admin'
+  };
+  function detailText(a){
+    const d = a.details || {};
+    switch(a.action){
+      case 'extend_trial': return `+${d.days} day(s) → ends ${fmtDate(d.to)}`;
+      case 'extend_subscription': return `+${d.amount} ${d.unit} → ends ${fmtDate(d.to)}`;
+      case 'grant_exempt': return d.note || '';
+      case 'set_status': return `${STATUS_LABEL[d.from] || d.from} → ${STATUS_LABEL[d.to] || d.to}`;
+      case 'add_admin': return `${d.email}${d.isSuper ? ' (super admin)' : ''}`;
+      case 'remove_admin': return d.email || '';
+      default: return '';
+    }
+  }
+  async function loadActivity(reset){
+    if(reset){ state.act = { offset:0, rows:[], total:0 }; $('activityBody').innerHTML = `<tr><td colspan="5" class="empty">Loading…</td></tr>`; }
+    try{
+      const { rows, total } = await api('audit', { limit:25, offset: state.act.offset });
+      state.act.rows = state.act.rows.concat(rows); state.act.total = total; state.act.offset = state.act.rows.length;
+      $('activityBody').innerHTML = state.act.rows.length === 0
+        ? `<tr><td colspan="5" class="empty">No activity yet.</td></tr>`
+        : state.act.rows.map(a => `
+          <tr>
+            <td class="muted" style="white-space:nowrap;">${esc(fmtDateTime(a.created_at))}</td>
+            <td>${esc(a.admin_email)}</td>
+            <td>${esc(ACTION_LABEL[a.action] || a.action)}</td>
+            <td>${esc(a.business_name || '—')}</td>
+            <td class="muted">${esc(detailText(a))}</td>
+          </tr>`).join('');
+      $('activityPager').innerHTML = state.act.rows.length < state.act.total
+        ? `<div>Showing ${state.act.rows.length} of ${state.act.total}</div><span class="btn ghost small" id="moreAct">Load more</span>`
+        : `<div>${state.act.total} event${state.act.total===1?'':'s'}</div>`;
+      const more = $('moreAct'); if(more) more.addEventListener('click', ()=> loadActivity(false));
+    }catch(err){ $('activityBody').innerHTML = `<tr><td colspan="5" class="empty">${esc(err.message)}</td></tr>`; }
+  }
+
+  /* ---------- boot ---------- */
+  (async function init(){
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session){ showView('signin'); return; }
+    verifyAndEnter();
+  })();
+</script>
+</body>
+</html>
