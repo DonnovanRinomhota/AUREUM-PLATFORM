@@ -1023,7 +1023,7 @@
         <table>
           <thead>
             <tr>
-              <th>Receipt number</th><th>Receipt date/time</th><th style="text-align:right;">Grand total</th>
+              <th>Receipt number</th><th>Receipt date/time</th><th>Items</th><th style="text-align:right;">Grand total</th>
               <th>Payment type</th><th>Customer</th><th>Employee</th><th>Refund</th><th></th>
             </tr>
           </thead>
@@ -3203,7 +3203,10 @@
       return;
     }
     ensureShopStock(p);
-    p.shopStock[shopName] = Math.max(0, value);
+    // NOT clamped at zero: a sale made at zero stock must still be deducted
+    // (stock goes negative and the dashboard flags it) — clamping silently
+    // threw the deduction away and let inventory drift from reality.
+    p.shopStock[shopName] = value;
     p.stock = Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
   }
   function addStock(p, shopName, delta){
@@ -3360,6 +3363,8 @@
     });
   }
   let productPageState = { page:1, pageSize:20 };
+  // Negative stock (more sold than recorded) is shown in red wherever stock is listed.
+  function fmtStockVal(v){ return v < 0 ? `<span style="color:var(--danger);font-weight:700;" title="Negative stock — more was sold than recorded">${v}</span>` : String(v); }
 
   function renderProducts(){
     const tbody = document.getElementById('productTableBody');
@@ -3403,8 +3408,8 @@
         <td class="mono" data-col="cost" style="text-align:right;">${p.cost.toFixed(2)}</td>
         <td class="mono" data-col="stock" style="text-align:right;" ${p.stockControl!==false && shopFilter!=='All Shops' ? `onclick="event.stopPropagation()"` : ''}>
           ${p.stockControl===false ? '—' : (shopFilter==='All Shops'
-            ? getStock(p, shopFilter)
-            : `<span class="stock-editable" data-id="${p.id}" title="Click to edit stock at ${shopFilter}" style="cursor:pointer; border-bottom:1px dashed var(--sage-dim);">${getStock(p, shopFilter)}</span>`)}
+            ? fmtStockVal(getStock(p, shopFilter))
+            : `<span class="stock-editable" data-id="${p.id}" title="Click to edit stock at ${shopFilter}" style="cursor:pointer; border-bottom:1px dashed var(--sage-dim);">${fmtStockVal(getStock(p, shopFilter))}</span>`)}
         </td>
         <td data-col="shops" style="text-align:right;">${productShopLabel(p)}</td>
         <td onclick="event.stopPropagation()">
@@ -4759,7 +4764,7 @@
       const before = it.beforeStock||0;
       let delta, after;
       if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
-      else if(a.type === 'Reduce'){ delta = -it.counted; after = Math.max(0, before - it.counted); }
+      else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
       else { delta = it.counted - before; after = it.counted; } // Override
       return `<tr><td>${p?p.name:'Deleted product'}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
@@ -4841,7 +4846,7 @@
       const before = it.beforeStock||0;
       let delta, after;
       if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
-      else if(a.type === 'Reduce'){ delta = -it.counted; after = Math.max(0, before - it.counted); }
+      else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
       else { delta = it.counted - before; after = it.counted; }
       return [p ? p.name : 'Deleted product', String(before), String(it.counted), String(after), (delta>=0?'+':'')+delta];
     });
@@ -5033,6 +5038,12 @@
 
   /* ===== RECEIPTS ===== */
   let RECEIPTS = [];
+  function escHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  // Receipts are identified by `uid`. Older ones predate it (and the old POS
+  // numbered sales at random, so numbers could repeat) — derive a stable key
+  // from other fields so every receipt still opens ITS OWN contents.
+  function receiptKey(r){ return r.uid || ('L:' + r.dateTime + '|' + r.id + '|' + r.total); }
+  function receiptQty(r){ return (r.items || []).reduce((s,i)=> s + (i.qty || 0), 0); }
   (function seedReceipts(){
     const employees = ["Employee2","Employee4"];
     const hours =    [7, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 6];
@@ -5059,45 +5070,61 @@
     return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   }
 
-  function viewReceipt(id){
-    const r = RECEIPTS.find(x=>x.id===id);
+  function viewReceipt(key){
+    const r = RECEIPTS.find(x => receiptKey(x) === key);
     if(!r) return;
+    const money = n => '$' + Number(n || 0).toFixed(2);
+    const items = r.items || [];
+    const subtotal = typeof r.subtotal === 'number' ? r.subtotal : items.reduce((s,i)=> s + i.qty*i.price, 0);
+    const disc = r.discountAmount || 0, tax = r.tax || 0;
+    const sign = r.refund ? '-' : '';
+    const kind = r.refund ? `Refund${r.refundOf ? ' of No. ' + escHtml(r.refundOf) : ''}` : (r.refunded ? 'Sale (later refunded)' : 'Sale');
+    const line = (label, val, bold) => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:${bold?'14':'12.5'}px;${bold?'font-weight:700;':'color:var(--sage);'}"><span>${label}</span><span class="mono">${val}</span></div>`;
     const body = `
       <div class="create-form-grid" style="margin-bottom:18px;">
-        <div class="detail-field"><div class="field-label">Receipt number</div><div class="v mono">${r.id}</div></div>
+        <div class="detail-field"><div class="field-label">Receipt number</div><div class="v mono">${escHtml(r.id)}</div></div>
         <div class="detail-field"><div class="field-label">Date / time</div><div class="v">${fmtReceiptTime(r.dateTime)}</div></div>
-        <div class="detail-field"><div class="field-label">Payment type</div><div class="v">${r.payment}</div></div>
-        <div class="detail-field"><div class="field-label">Employee</div><div class="v">${r.employee}</div></div>
-        <div class="detail-field"><div class="field-label">Customer</div><div class="v">${r.customer}</div></div>
-        <div class="detail-field"><div class="field-label">Refund</div><div class="v">${r.refund ? 'Yes' : 'No'}</div></div>
+        <div class="detail-field"><div class="field-label">Type</div><div class="v">${kind}</div></div>
+        <div class="detail-field"><div class="field-label">Shop</div><div class="v">${escHtml(r.shop || '—')}</div></div>
+        <div class="detail-field"><div class="field-label">Payment type</div><div class="v">${escHtml(r.payment)}</div></div>
+        <div class="detail-field"><div class="field-label">Employee</div><div class="v">${escHtml(r.employee)}</div></div>
+        <div class="detail-field"><div class="field-label">Customer</div><div class="v">${escHtml(r.customer)}</div></div>
+        <div class="detail-field"><div class="field-label">Items</div><div class="v">${receiptQty(r)}</div></div>
       </div>
-      ${r.items && r.items.length ? `
+      ${items.length ? `
       <div class="table-panel" style="margin-bottom:14px;">
         <table>
           <thead><tr><th>Product name</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Total</th></tr></thead>
           <tbody>
-            ${r.items.map(it=>`<tr><td>${it.name}</td><td class="mono" style="text-align:right;">${it.qty}</td><td class="mono" style="text-align:right;">$${(it.price||0).toFixed(2)}</td><td class="mono" style="text-align:right;">$${(it.qty*it.price).toFixed(2)}</td></tr>`).join('')}
+            ${items.map(it=>`<tr><td>${escHtml(it.name)}</td><td class="mono" style="text-align:right;">${it.qty}</td><td class="mono" style="text-align:right;">${money(it.price)}</td><td class="mono" style="text-align:right;">${money(it.qty*it.price)}</td></tr>`).join('')}
           </tbody>
         </table>
       </div>` : ''}
-      <div class="grand-total-row"><span class="gt-label">Grand total</span><span class="gt-val">$${r.total.toFixed(2)}</span></div>
-      ${r.shop ? `<div style="margin-top:10px; font-size:11.5px; color:var(--sage);">Shop: ${r.shop}</div>` : ''}
-      ${!r.items || !r.items.length ? `<div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Itemized line-level detail isn't available for this legacy demo receipt.</div>` : ''}
+      ${items.length ? line('Subtotal', money(subtotal)) : ''}
+      ${disc > 0 ? line('Discount', '-' + money(disc)) : ''}
+      ${items.length ? line('Tax' + (r.taxInclusive ? ' (included in prices)' : ''), money(tax)) : ''}
+      <div class="grand-total-row"><span class="gt-label">${r.refund ? 'Total refunded' : 'Grand total'}</span><span class="gt-val">${sign}${money(r.total)}</span></div>
+      ${r.tendered > 0 ? line('Tendered', money(r.tendered)) : ''}
+      ${r.change > 0 ? line('Change given', money(r.change)) : ''}
+      ${r.note ? `<div style="margin-top:10px;font-size:12px;color:var(--sage);">Note: ${escHtml(r.note)}</div>` : ''}
+      ${!items.length ? `<div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Itemized line-level detail isn't available for this legacy demo receipt.</div>` : ''}
     `;
     openDetailModal(`Receipt ${r.id}`, body);
   }
 
   function renderReceiptsKpi(){
     const items = filteredReceiptsForPage();
-    const total = items.length;
+    const total = items.filter(r=>!r.refund).length;
     const refunds = items.filter(r=>r.refund).length;
-    const uniqueCustomers = new Set(items.map(r=>r.customer).filter(c=>c && c!=='N/A')).size;
-    const amount = items.reduce((s,r)=>s+r.total,0);
+    const uniqueCustomers = new Set(items.filter(r=>!r.refund).map(r=>r.customer).filter(c=>c && c!=='N/A')).size;
+    // net of refunds: refund receipts are stored with a positive total, so they
+    // must be SUBTRACTED, not added (they used to inflate this figure)
+    const amount = items.reduce((s,r)=> s + (r.refund ? -r.total : r.total), 0);
     document.getElementById('rcpKpiRow').innerHTML = `
       <div class="kpi-card"><div class="lbl"><span>Total number of receipts</span></div><div class="val">${total}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Total number of refunds</span></div><div class="val">${refunds}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Total unique customers</span></div><div class="val">${uniqueCustomers}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total amount</span></div><div class="val gold">$${amount.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total amount (net of refunds)</span></div><div class="val gold">${amount < 0 ? '-' : ''}$${Math.abs(amount).toFixed(2)}</div></div>
     `;
   }
 
@@ -5170,7 +5197,7 @@
     if(!tbody) return;
     let items = filteredReceiptsForPage().sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
     if(items.length === 0){
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No receipts for this selection.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px 20px;color:var(--sage);">No receipts for this selection.</td></tr>`;
       const pgEl = document.getElementById('receiptsPagination'); if(pgEl) pgEl.innerHTML = '';
       return;
     }
@@ -5178,16 +5205,17 @@
     items = paginateSlice(items, receiptsPageState);
     tbody.innerHTML = items.map(r=>`
       <tr>
-        <td class="mono">${r.id}</td>
+        <td class="mono">${escHtml(r.id)}</td>
         <td>${fmtReceiptTime(r.dateTime)}</td>
-        <td class="gold" style="text-align:right;">${r.total.toFixed(2)}</td>
-        <td>${r.payment}</td>
-        <td>${r.customer}</td>
-        <td>${r.employee}</td>
-        <td>${r.refund ? 'Yes' : 'No'}</td>
-        <td><span class="rcp-view" data-id="${r.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">VIEW</span></td>
+        <td><div title="${escHtml((r.items||[]).map(i=>i.qty+' × '+i.name).join(', '))}" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${receiptQty(r)} item${receiptQty(r)===1?'':'s'}${(r.items||[]).length ? ': ' + escHtml((r.items||[]).map(i=>i.qty+' × '+i.name).join(', ')) : ''}</div></td>
+        <td class="gold" style="text-align:right;${r.refund ? 'color:var(--danger);' : ''}">${r.refund ? '-' : ''}${r.total.toFixed(2)}</td>
+        <td>${escHtml(r.payment)}</td>
+        <td>${escHtml(r.customer)}</td>
+        <td>${escHtml(r.employee)}</td>
+        <td>${r.refund ? 'Yes' : (r.refunded ? 'No (later refunded)' : 'No')}</td>
+        <td><span class="rcp-view" data-key="${escHtml(receiptKey(r))}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">VIEW</span></td>
       </tr>`).join('');
-    tbody.querySelectorAll('.rcp-view').forEach(el=> el.addEventListener('click', ()=> viewReceipt(el.dataset.id)));
+    tbody.querySelectorAll('.rcp-view').forEach(el=> el.addEventListener('click', ()=> viewReceipt(el.dataset.key)));
     renderPaginationControls('receiptsPagination', totalFiltered, receiptsPageState, renderReceiptsTable);
   }
 
@@ -5683,7 +5711,10 @@
     let totCostVal=0, totRetailVal=0;
     const rows = PRODUCTS.map(p=>{
       const stock = p.stockControl===false ? 0 : getStock(p, shopCtx);
-      const costVal = stock * p.cost, retailVal = stock * p.price;
+      // value only stock that physically exists — oversold (negative) units aren't an asset
+      // and must not drag down the value of everything else; the true count still shows
+      const valued = Math.max(0, stock);
+      const costVal = valued * p.cost, retailVal = valued * p.price;
       totCostVal += costVal; totRetailVal += retailVal;
       return { p, stock, costVal, retailVal };
     });
@@ -6481,12 +6512,20 @@
     // just not stocked at this location. Skipping the productInShop check
     // was flagging every other shop's products as false low-stock alerts.
     const stockControlled = PRODUCTS.filter(p => p.stockControl !== false && productInShop(p, shopCtx));
-    const negativeStock = stockControlled.filter(p => getStock(p, shopCtx) < 0);
+    // Negative stock is checked SHOP BY SHOP: in the "All Shops" view a product's
+    // total can look healthy while one shop has sold more than it ever received.
+    const shopsToCheck = shopCtx !== 'All Shops' ? [shopCtx] : (SHOPS.length ? SHOPS : ['All Shops']);
+    const negativeStock = [];
+    PRODUCTS.filter(p => p.stockControl !== false).forEach(p => {
+      shopsToCheck.forEach(sh => { if(productInShop(p, sh)){ const q = getStock(p, sh); if(q < 0) negativeStock.push({ p, shop: sh, qty: q }); } });
+    });
+    const negIds = new Set(negativeStock.map(e => e.p.id));
     // A product only lands in one bucket — safety stock (if set) takes
     // priority over the general low-stock threshold so the same product
     // doesn't show up twice with two different warnings.
-    const belowSafety = stockControlled.filter(p => getStock(p, shopCtx) >= 0 && p.safetyStock !== undefined && getStock(p, shopCtx) <= p.safetyStock);
+    const belowSafety = stockControlled.filter(p => !negIds.has(p.id) && getStock(p, shopCtx) >= 0 && p.safetyStock !== undefined && getStock(p, shopCtx) <= p.safetyStock);
     const lowStock = stockControlled.filter(p =>
+      !negIds.has(p.id) &&
       getStock(p, shopCtx) >= 0 &&
       !(p.safetyStock !== undefined && getStock(p, shopCtx) <= p.safetyStock) &&
       getStock(p, shopCtx) <= (p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD)
@@ -6497,12 +6536,12 @@
       cards.push(`<div class="alert-card ok"><div class="dot"></div><div class="txt">All good — no products are below their low-stock threshold or safety stock, and nothing shows a negative count.</div></div>`);
     } else {
       if(negativeStock.length > 0){
-        const shownNeg = negativeStock.slice(0, 4);
-        shownNeg.forEach(p=>{
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> has negative stock — ${getStock(p, shopCtx)} units. This usually means a sale or adjustment went through before stock was corrected; worth checking.</div><div class="go">View report &#8250;</div></div>`);
+        const shownNeg = negativeStock.slice(0, 6);
+        shownNeg.forEach(e=>{
+          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>NEGATIVE STOCK — ${e.p.name}</b> is at <b>${e.qty}</b> at <b>${e.shop}</b>. More was sold than the system had in stock. Receive stock (Goods Received) or correct it with a Stock Adjustment.</div><div class="go">View report &#8250;</div></div>`);
         });
         if(negativeStock.length > shownNeg.length){
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt">${negativeStock.length - shownNeg.length} more product(s) also show negative stock.</div><div class="go">View all &#8250;</div></div>`);
+          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt">${negativeStock.length - shownNeg.length} more product/shop combination(s) also show negative stock.</div><div class="go">View all &#8250;</div></div>`);
         }
       }
       if(belowSafety.length > 0){

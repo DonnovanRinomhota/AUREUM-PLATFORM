@@ -1,5 +1,72 @@
 # Changelog
 
+## Phase 13 — Receipt accuracy, negative stock, sales history, phone layout (2026-10)
+
+### Fixed — receipts & sales history (root causes found)
+- **Receipt numbers were random.** The next sale's number was picked at random
+  between 512 and 551, so numbers repeated within a handful of sales. The Back
+  Office opened a receipt by looking up its number, so clicking a repeated
+  number showed a **different sale's** products and totals. Numbers are now
+  strictly sequential, and every receipt also carries a hidden unique key that
+  all lookups use, so two receipts can never be confused again.
+- **Old receipts that share a number now each open their own contents** (the
+  hidden key is derived for receipts created before this fix). Their printed
+  numbers are left as they were.
+- **Sales history (POS) was broken by my Phase 10 work.** It read fields
+  (`orderNo`, `time`, `itemCount`) that saved receipts don't have, so every row
+  was blank, and refunds looked the sale up by the same missing field, so a
+  refund could never find its sale. In Phase 11 I checked the wrong object and
+  wrongly concluded this was already fixed — it wasn't. Rewritten around one
+  receipt record shape used by sales, history, refunds and printing.
+- **Sales history rows now show** receipt number, date/time, item count, value
+  and payment type; **tap a row for the full receipt** — time, cashier, shop,
+  every product with quantity and unit price, subtotal, discount, tax, total,
+  tendered and change. Refunds appear as red negative entries linked to the
+  sale they reverse.
+- **Old receipts printed the *current* cashier and shop** rather than their own.
+  Fixed on screen and on the thermal printer.
+- **Refunds** now work, restore stock to the shop the item was sold from, get
+  their own number (R0575), reverse the customer's order count/spend, and
+  can't be done twice.
+- **Back Office receipt detail** shows Subtotal, Discount, Tax and Grand total
+  (it used to show only the grand total, so receipts with a discount or tax
+  didn't appear to add up), labels tax-inclusive sales, and shows refunds as
+  negatives. The receipts list gains an **Items** column (quantity × product).
+- **"Total amount" on the Receipts page added refunds instead of subtracting
+  them.** It is now net of refunds, and "Total number of receipts" no longer
+  counts a refund as an extra sale.
+
+### Fixed — stock
+- **A sale at zero stock was never deducted.** Stock was clamped at 0 in both
+  apps, so selling something the system thought was out of stock silently
+  discarded the deduction and inventory drifted from reality. Stock can now go
+  **negative**, as requested.
+- **Negative stock is flagged on the Back Office dashboard**, shop by shop (the
+  "All Shops" total could hide one shop being negative behind another's surplus),
+  naming the product, the shop and the exact count. It is shown in red in the
+  POS catalogue and the Products list.
+- Stock Adjustment screens showed `max(0, …)` for "Reduce"; they now show the
+  real resulting figure. Inventory valuation counts only stock that physically
+  exists (oversold units aren't a negative asset).
+
+### Fixed — POS on phones and small screens
+- On a phone the page was wider than the screen (a product column and the top-bar
+  buttons were cut off) and the ticket + **Complete Sale** were pushed below the
+  bottom of the screen and unreachable. New phone layout (≤700px): the catalogue
+  fills the screen, a bottom bar shows the live item count and total, and tapping
+  it opens the ticket full-screen with the selected items, payment options and a
+  pinned Complete Sale button; "Back to products" returns.
+- **Tablets keep the product list and ticket side by side.** Landscape phones too.
+- **Pinch-zoom in/out is enabled**, and a very narrow screen zooms out or scrolls
+  sideways rather than clipping.
+
+### Worth knowing
+- **Your existing stock figures may be too high.** Any sale made while a product
+  showed 0 was never deducted under the old behaviour. Do a stock count and
+  correct with Stock Adjustments (Override). From now on deductions are exact.
+- Hard-refresh (Ctrl+Shift+R) the apps after deploying so devices don't run
+  cached older code.
+
 ## Phase 12 — Platform Control Panel, real subscription enforcement (2026-10)
 
 ### Added

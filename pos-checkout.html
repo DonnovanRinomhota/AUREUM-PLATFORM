@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>AUREUM — Point of Sale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -518,17 +518,87 @@
   ::-webkit-scrollbar-thumb{ background: var(--panel-raised); border-radius:8px; }
   ::-webkit-scrollbar-track{ background:transparent; }
 
-  /* Tablets (including portrait iPad-size) keep the product list and
-     ticket side by side — just narrower — rather than stacking. Only
-     genuinely phone-width screens stack vertically, below. */
-  @media (max-width: 900px) and (min-width: 641px){
+  /* ---- history rows / negative stock ---- */
+  .sale-row.clickable{ cursor:pointer; }
+  .sale-row .refund-btn{ border:1px solid var(--line-strong); border-radius:8px; color:var(--gold-bright); font-weight:600; cursor:pointer; white-space:nowrap; }
+  .sale-row .refund-btn:hover{ border-color:var(--gold-bright); background:rgba(231,199,102,0.08); }
+  .sale-row.clickable:hover{ background:rgba(231,199,102,0.05); }
+  .sale-row .amt .val.neg{ color:var(--danger); }
+  .pstock.neg{ color:var(--danger); }
+  .r-row.r-unit{ font-size:10.5px; opacity:.75; }
+
+  /* phone-only controls: hidden everywhere else */
+  .ticket-back{ display:none; }
+  .cart-bar{ display:none; }
+
+  /* Tablets keep the product list and ticket side by side — just narrower. */
+  @media (max-width: 900px) and (min-width: 701px){
     .app{ grid-template-columns: 1fr minmax(300px, 38%); }
     .grid{ grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap:10px; }
     .catalog{ padding:16px 16px 18px; }
   }
-  @media (max-width: 640px){
-    .app{ grid-template-columns: 1fr; grid-template-rows:auto auto 1fr; }
-    .ticket-wrap{ border-left:none; border-top:1px solid var(--line); max-height:46vh; }
+  /* Short landscape screens (phones turned sideways): tighten the chrome so
+     the ticket and Complete Sale button keep room. */
+  @media (max-height: 520px) and (min-width: 701px){
+    .topbar{ padding:8px 20px; }
+    .ticket-head{ padding:10px 18px 8px; }
+    .ticket-items{ padding:10px 18px; gap:10px; }
+    .charge-btn{ margin:10px 18px 12px; padding:12px; }
+  }
+
+  /* ===== PHONE ===== catalog fills the screen; a bottom bar opens the ticket as
+     a full-screen panel, so selected items and "Complete Sale" are always
+     reachable. Below ~340px wide the page scrolls sideways instead of cramming,
+     and pinch-zoom is enabled in the viewport tag. */
+  @media (max-width: 700px){
+    body{ overflow-x:auto; }
+    .app{ display:flex; flex-direction:column; height:100vh; height:100dvh; max-height:none; min-width:340px; }
+    .topbar{ flex:0 0 auto; padding:10px 12px; gap:8px; min-width:0; overflow-x:auto; scrollbar-width:none; }
+    .topbar::-webkit-scrollbar{ display:none; }
+    .brand{ gap:8px; flex:0 0 auto; }
+    .brand-text{ display:none; }
+    .topbar-right{ gap:6px; flex:0 0 auto; margin-left:auto; }
+    .clerk .when, .clerk .who{ display:none; }   /* avatar initials identify the cashier; tap it to end the shift */
+    #helpBtn{ display:none; }                    /* keyboard-shortcut help is a desktop thing */
+    .topbar-icon-btn:not([style*="width:auto"]){ width:36px; height:36px; }
+    #syncStatus, #shopSwitchBtn{ padding:0 9px !important; }
+    .catalog{ flex:1 1 auto; min-height:0; padding:14px 12px 100px; gap:14px; }
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap:10px; }
+
+    .ticket-wrap{
+      position:fixed; inset:0; z-index:40; border-left:none;
+      transform:translateY(102%); visibility:hidden;
+      transition:transform .24s ease, visibility 0s linear .24s;
+    }
+    body.ticket-open .ticket-wrap{ transform:none; visibility:visible; transition:transform .24s ease, visibility 0s; }
+    .ticket-back{
+      display:flex; align-items:center; gap:6px; flex:0 0 auto; cursor:pointer;
+      padding:14px 16px; border-bottom:1px solid var(--line);
+      color:var(--gold-bright); font-weight:600; font-size:14px;
+    }
+    .ticket-head{ padding:14px 16px 12px; }
+    .ticket-items{ padding:12px 16px; }
+    .ticket-totals{ padding:14px 16px 6px; }
+    .pay-methods{ padding:14px 16px 0; }
+    .other-pay-input{ margin:12px 16px 0; }
+    .tender-panel{ margin:14px 16px 0; }
+    .charge-btn{ margin:12px 16px calc(14px + env(safe-area-inset-bottom)); }
+
+    .cart-bar{
+      display:flex; position:fixed; left:0; right:0; bottom:0; z-index:30;
+      align-items:center; justify-content:space-between; gap:12px; cursor:pointer;
+      padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: linear-gradient(135deg, var(--gold-bright), var(--gold) 55%, var(--gold-dim));
+      color:#20160A; box-shadow:0 -8px 24px rgba(0,0,0,0.45);
+    }
+    .cart-bar .cb-info{ display:flex; flex-direction:column; line-height:1.2; }
+    .cart-bar .cb-count{ font-size:12px; font-weight:600; opacity:.8; }
+    .cart-bar .cb-total{ font-family:'Fraunces',serif; font-size:19px; font-weight:700; }
+    .cart-bar .cb-go{ font-size:14px; font-weight:700; }
+    .cart-bar.empty{ filter:saturate(.45) brightness(.9); }
+    body.ticket-open .cart-bar{ display:none; }
+    .modal-overlay{ padding:12px; }
+    .modal-panel{ max-height:88vh; }
   }
 
   @media print{
@@ -639,6 +709,7 @@
   </div>
 
   <div class="ticket-wrap">
+    <div class="ticket-back" id="ticketBackBtn">&#8249; Back to products</div>
     <div class="ticket-head">
       <div class="ticket-head-top">
         <div>
@@ -720,6 +791,12 @@
     <div class="charge-btn disabled" id="chargeBtn">Complete Sale</div>
   </div>
 
+</div>
+
+<!-- Phone only: always-visible bar that opens the ticket -->
+<div class="cart-bar empty" id="cartBar">
+  <div class="cb-info"><span class="cb-count" id="cartBarCount">Ticket is empty</span><span class="cb-total" id="cartBarTotal">$0.00</span></div>
+  <div class="cb-go">View ticket &#8250;</div>
 </div>
 
 <!-- Recent Sales Modal -->
@@ -1031,7 +1108,10 @@ async function aureumSignIn(email, password){
   function setStock(p, shopName, value){
     if(!p || !shopName || shopName === 'All Shops') return;
     ensureShopStock(p);
-    p.shopStock[shopName] = Math.max(0, value);
+    // NOT clamped at zero: a sale made when the system thinks stock is 0 must
+    // still be deducted (stock goes negative and the Back Office flags it),
+    // otherwise inventory silently drifts away from reality.
+    p.shopStock[shopName] = value;
     p.stock = Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
   }
   function addStock(p, shopName, delta){
@@ -1147,7 +1227,7 @@ async function aureumSignIn(email, password){
         <div class="pname">${p.name}</div>
         <div class="pmeta">
           <span class="pprice">${POS_SETTINGS.currency}${p.price.toFixed(2)}</span>
-          <span class="pstock">In Stock : ${getStock(p, activeShop)}</span>
+          <span class="pstock ${getStock(p, activeShop) < 0 ? 'neg' : ''}">In Stock : ${getStock(p, activeShop)}</span>
         </div>
       </div>
     `).join('') || `<div style="color:var(--sage-dim);font-size:13px;padding:20px;">No products match your search.</div>`;
@@ -1224,8 +1304,19 @@ async function aureumSignIn(email, password){
     if(ids.length===0){ chargeBtn.classList.add('disabled'); }
     else { chargeBtn.classList.remove('disabled'); }
 
+    updateCartBar();
     renderTender(total);
   }
+  // Phone: the bottom bar mirrors the ticket (item count + total) and opens it.
+  function updateCartBar(){
+    const bar = document.getElementById('cartBar'); if(!bar) return;
+    const qty = Object.values(cart).reduce((n,q)=> n + q, 0);
+    document.getElementById('cartBarCount').textContent = qty === 0 ? 'Ticket is empty' : `${qty} item${qty===1?'':'s'} in ticket`;
+    document.getElementById('cartBarTotal').textContent = `${POS_SETTINGS.currency}${currentTotal.toFixed(2)}`;
+    bar.classList.toggle('empty', qty === 0);
+  }
+  document.getElementById('cartBar').addEventListener('click', ()=> document.body.classList.add('ticket-open'));
+  document.getElementById('ticketBackBtn').addEventListener('click', ()=> document.body.classList.remove('ticket-open'));
 
   let currentTotal = 0;
   let tenderedAmt = 0;
@@ -1540,72 +1631,88 @@ async function aureumSignIn(email, password){
   function renderRecentSales(){
     const body = document.getElementById('recentSalesBody');
     const canRefund = activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role);
-    const shopSales = RECEIPTS.filter(r => r.shop === activeShop && !r.refund).sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime)).slice(0, 50);
-    if(shopSales.length === 0){
+    const cur = POS_SETTINGS.currency;
+    const list = RECEIPTS.filter(r => r.shop === activeShop)
+      .sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime)).slice(0, 100);
+    if(list.length === 0){
       body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales recorded yet at this shop.</p></div>`;
       return;
     }
-    body.innerHTML = shopSales.map(s => {
-      const orderNo = s.orderNo || '—';
-      const time = s.time || '—';
-      const itemCount = s.itemCount ?? (Array.isArray(s.items) ? s.items.length : 0);
-      const total = typeof s.total === 'number' ? s.total : 0;
-      const payment = s.payment || '—';
+    body.innerHTML = list.map(r => {
+      const key = receiptKey(r);
+      const d = new Date(r.dateTime);
+      const when = d.toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',hour12:true});
+      const qty = receiptQty(r);
       return `
-      <div class="sale-row" data-order="${orderNo}">
+      <div class="sale-row clickable" data-key="${escHtml(key)}" title="Tap to view the full receipt">
         <div class="info">
-          <div class="no">${orderNo}</div>
-          <div class="meta">${time} · ${itemCount} item${itemCount===1?'':'s'}${s.refunded ? ' · <span style="color:var(--danger)">Refunded</span>' : ''}</div>
+          <div class="no">${r.refund ? 'Refund ' : 'No. '}${escHtml(r.id)}</div>
+          <div class="meta">${when} · ${qty} item${qty===1?'':'s'}${r.refund && r.refundOf ? ' · of No. ' + escHtml(r.refundOf) : ''}${r.refunded ? ' · <span style="color:var(--danger)">Refunded</span>' : ''}</div>
         </div>
         <div class="amt">
-          <div class="val">${POS_SETTINGS.currency}${total.toFixed(2)}</div>
-          <div class="method">${payment}</div>
+          <div class="val ${r.refund ? 'neg' : ''}">${r.refund ? '-' : ''}${cur}${Number(r.total).toFixed(2)}</div>
+          <div class="method">${escHtml(r.payment || '')}</div>
         </div>
-        ${canRefund && !s.refunded ? `<div class="btn-outline refund-btn" data-order="${orderNo}" style="margin-left:10px;padding:6px 12px;font-size:11.5px;">Refund</div>` : ''}
-      </div>
-    `;
+        ${canRefund && !r.refund && !r.refunded ? `<div class="btn-outline refund-btn" data-key="${escHtml(key)}" style="margin-left:10px;padding:6px 12px;font-size:11.5px;">Refund</div>` : ''}
+      </div>`;
     }).join('');
-    body.querySelectorAll('.refund-btn').forEach(btn=>{
-      btn.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        refundSale(btn.dataset.order);
-      });
-    });
+    body.querySelectorAll('.sale-row').forEach(row => row.addEventListener('click', ()=> openReceiptByKey(row.dataset.key)));
+    body.querySelectorAll('.refund-btn').forEach(btn => btn.addEventListener('click', (e)=>{ e.stopPropagation(); refundSale(btn.dataset.key); }));
   }
-  // Refunds are restricted to Shop Manager / Administrator roles — same
-  // permission level as Back Office access — since a refund reverses
-  // real money and stock. Full-sale refund only (not partial/line-item)
-  // for now.
-  function refundSale(orderNo){
-    const sale = RECEIPTS.find(r => r.orderNo === orderNo && r.shop === activeShop && !r.refund);
+  // Same pop-up serves two moments: "sale just completed" and "looking back at an old receipt".
+  function setReceiptChrome(fromHistory, sale){
+    const title = document.querySelector('#receiptOverlay .modal-head .title');
+    if(title) title.textContent = fromHistory ? (sale.refund ? 'Refund receipt' : 'Receipt') : 'Sale Complete';
+    document.getElementById('receiptCloseBtn').textContent = fromHistory ? 'Close' : 'New Sale';
+  }
+  function openReceiptByKey(key){
+    const r = RECEIPTS.find(x => receiptKey(x) === key);
+    if(!r){ aureumToast('Receipt not found.', 'danger'); return; }
+    lastSale = receiptToSale(r);     // so Print / thermal print output THIS receipt
+    buildReceipt(lastSale);
+    setReceiptChrome(true, lastSale);
+    openModal('receiptOverlay');
+  }
+  // Refunds are restricted to Shop Manager / Administrator roles — same permission
+  // level as Back Office access — since a refund reverses real money and stock.
+  // Full-sale refund only (not partial/line-item).
+  function refundSale(key){
+    if(!(activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role))){ aureumToast('Refunds are restricted to Shop Managers and Administrators.', 'danger'); return; }
+    const sale = RECEIPTS.find(r => receiptKey(r) === key && !r.refund);
     if(!sale){ aureumToast('Sale not found.', 'danger'); return; }
     if(sale.refunded){ aureumToast('This sale has already been refunded.', 'danger'); return; }
-    if(!confirm(`Refund ${orderNo} for ${POS_SETTINGS.currency}${sale.total.toFixed(2)}? This restores stock and cannot be undone.`)) return;
+    const cur = POS_SETTINGS.currency;
+    if(!confirm(`Refund No. ${sale.id} for ${cur}${Number(sale.total).toFixed(2)}? This restores stock and cannot be undone.`)) return;
 
-    (sale.items||[]).forEach(it=>{
-      const p = PRODUCTS.find(x=>x.id===it.productId);
-      if(p && p.stockControl !== false) addStock(p, activeShop, it.qty);
+    (sale.items || []).forEach(it => {
+      const p = PRODUCTS.find(x => x.id === it.productId);
+      if(p && p.stockControl !== false) addStock(p, sale.shop, it.qty);   // back into the shop it was sold from
     });
-
+    if(sale.customer && sale.customer !== 'N/A'){
+      const rec = CUSTOMERS.find(c => c.name === sale.customer);
+      if(rec){ rec.orders = Math.max(0, (rec.orders||0) - 1); rec.spent = Math.max(0, (rec.spent||0) - sale.total); }
+    }
     sale.refunded = true;
-    RECEIPTS.unshift({
-      orderNo: sale.orderNo,
-      time: new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true}),
+    const refundNumber = nextReceiptNumber();
+    RECEIPTS.push({
+      uid: newReceiptUid(),
+      id: 'R' + padReceiptNo(refundNumber),
       dateTime: new Date().toISOString(),
-      items: sale.items,
-      itemCount: sale.itemCount,
-      subtotal: sale.subtotal, discountAmount: sale.discountAmount, tax: sale.tax,
-      total: sale.total,
-      payment: sale.payment,
-      shop: activeShop,
+      total: sale.total, payment: sale.payment,
+      customer: sale.customer || 'N/A',
       employee: activeEmployee.name,
-      customer: sale.customer,
+      shop: sale.shop,
       refund: true,
-      refundOf: sale.orderNo
+      refundOf: sale.id, refundOfKey: receiptKey(sale),
+      items: (sale.items || []).map(i => ({ ...i })), itemCount: receiptQty(sale),
+      subtotal: sale.subtotal, discountAmount: sale.discountAmount, tax: sale.tax,
+      taxInclusive: !!sale.taxInclusive
     });
     persistAureum();
+    renderCatalog();
     renderRecentSales();
-    aureumToast(`${orderNo} refunded — stock restored.`, 'ok');
+    refreshOrderNo();   // the refund used a number from the sequence
+    aureumToast(`No. ${sale.id} refunded — stock restored.`, 'ok');
   }
   document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
     renderRecentSales();
@@ -1613,9 +1720,72 @@ async function aureumSignIn(email, password){
   });
 
   /* ===== RECEIPT ===== */
+  /* ===== RECEIPT RECORDS — one shape, one numbering scheme =====
+     Every receipt (sale or refund) is a RECEIPTS record with:
+       uid       unique key (used for every lookup)
+       id        human receipt number, sequential: "0552"  (refunds: "R0553")
+       dateTime, total, payment, customer, employee, shop, refund,
+       items[{productId,name,qty,price,cost}], itemCount, subtotal,
+       discountAmount, tax, taxInclusive, tendered, change, note
+     Receipt numbers used to be RANDOM (512–551), so they collided after a few
+     sales and looking one up showed a different transaction. */
+  function escHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function newReceiptUid(){
+    return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+  }
+  // Older receipts predate `uid`; derive a stable key from fields they do have.
+  function receiptKey(r){ return r.uid || ('L:' + r.dateTime + '|' + r.id + '|' + r.total); }
+  function padReceiptNo(n){ return String(n).padStart(4,'0'); }
+  function nextReceiptNumber(){
+    let max = 511; // the numbering has always started at 0512
+    RECEIPTS.forEach(r => {
+      const n = parseInt(String(r.id ?? '').replace(/\D/g,''), 10);
+      if(!isNaN(n) && n > max && n < 100000000) max = n;
+    });
+    return max + 1;
+  }
+  function refreshOrderNo(){
+    const el = document.getElementById('orderNo');
+    if(el) el.textContent = 'No. ' + padReceiptNo(nextReceiptNumber());
+  }
+  function receiptQty(r){ return (r.items || []).reduce((s,i)=> s + (i.qty || 0), 0); }
+  // Turns a stored receipt into the shape buildReceipt()/the printers expect,
+  // using the receipt's OWN cashier, shop and time — never the current session's.
+  function receiptToSale(r){
+    const d = new Date(r.dateTime);
+    const items = (r.items || []).map(i => ({ ...i }));
+    return {
+      uid: r.uid,
+      orderNo: (r.refund ? 'Refund ' : 'No. ') + r.id,
+      date: d.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}),
+      time: d.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true}),
+      items,
+      itemCount: receiptQty(r),
+      subtotal: typeof r.subtotal === 'number' ? r.subtotal : items.reduce((s,i)=> s + i.qty*i.price, 0),
+      discountAmount: r.discountAmount || 0,
+      tax: r.tax || 0,
+      total: r.total,
+      payment: r.payment,
+      tendered: r.tendered || null,
+      change: r.change || 0,
+      changeCurrencySymbol: r.changeCurrencySymbol,
+      customer: r.customer && r.customer !== 'N/A' ? r.customer : null,
+      note: r.note || null,
+      employee: r.employee,
+      shop: r.shop,
+      refund: !!r.refund,
+      refundOf: r.refundOf || null,
+      taxInclusive: !!r.taxInclusive
+    };
+  }
+
   function buildReceipt(sale){
+    const cur = POS_SETTINGS.currency;
+    const cashier = sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier');
+    const shop = sale.shop || activeShop;
     const rows = sale.items.map(i => `
-      <div class="r-row"><span>${i.qty} × ${i.name}</span><span>${POS_SETTINGS.currency}${(i.qty*i.price).toFixed(2)}</span></div>
+      <div class="r-row"><span>${i.qty} × ${i.name}</span><span>${cur}${(i.qty*i.price).toFixed(2)}</span></div>
+      ${i.qty > 1 ? `<div class="r-row r-unit"><span>&nbsp;&nbsp;@ ${cur}${i.price.toFixed(2)} each</span><span></span></div>` : ''}
     `).join('');
     const showLogo = POS_SETTINGS.toggles ? POS_SETTINGS.toggles.stReceiptLogo !== false : true;
     document.getElementById('receiptBody').innerHTML = `
@@ -1623,22 +1793,25 @@ async function aureumSignIn(email, password){
         ${showLogo && POS_SETTINGS.logoImage ? `<img src="${POS_SETTINGS.logoImage}" style="max-width:140px; max-height:60px; object-fit:contain; margin:0 auto 8px; display:block;">` : ''}
         <div class="r-brand">${POS_SETTINGS.businessName}</div>
         <div class="r-sub">Point of Sale</div>
+        ${sale.refund ? `<div class="r-brand" style="margin-top:8px;">REFUND${sale.refundOf ? ' of No. ' + sale.refundOf : ''}</div>` : ''}
       </div>
       <div class="r-dash"></div>
       <div class="r-row"><span>${sale.orderNo}</span><span>${sale.time}</span></div>
-      ${POS_SETTINGS.toggles && POS_SETTINGS.toggles.stReceiptCashier === false ? '' : `<div class="r-row"><span>Cashier</span><span>${activeEmployee ? activeEmployee.name : 'Cashier'}</span></div>`}
-      ${activeShop && activeShop !== 'All Shops' ? `<div class="r-row"><span>Shop</span><span>${activeShop}</span></div>` : ''}
+      ${sale.date ? `<div class="r-row"><span>Date</span><span>${sale.date}</span></div>` : ''}
+      ${POS_SETTINGS.toggles && POS_SETTINGS.toggles.stReceiptCashier === false ? '' : `<div class="r-row"><span>Cashier</span><span>${cashier}</span></div>`}
+      ${shop && shop !== 'All Shops' ? `<div class="r-row"><span>Shop</span><span>${shop}</span></div>` : ''}
       ${sale.customer ? `<div class="r-row"><span>Customer</span><span>${sale.customer}</span></div>` : ''}
       <div class="r-dash"></div>
       ${rows}
       <div class="r-dash"></div>
-      <div class="r-row"><span>Subtotal</span><span>${POS_SETTINGS.currency}${sale.subtotal.toFixed(2)}</span></div>
-      ${sale.discountAmount > 0 ? `<div class="r-row"><span>Discount</span><span>-${POS_SETTINGS.currency}${sale.discountAmount.toFixed(2)}</span></div>` : ''}
-      <div class="r-row"><span>Tax</span><span>${POS_SETTINGS.currency}${sale.tax.toFixed(2)}</span></div>
-      <div class="r-row total"><span>Total</span><span>${POS_SETTINGS.currency}${sale.total.toFixed(2)}</span></div>
+      <div class="r-row"><span>Subtotal</span><span>${cur}${sale.subtotal.toFixed(2)}</span></div>
+      ${sale.discountAmount > 0 ? `<div class="r-row"><span>Discount</span><span>-${cur}${sale.discountAmount.toFixed(2)}</span></div>` : ''}
+      <div class="r-row"><span>Tax${sale.taxInclusive ? ' (included in prices)' : ''}</span><span>${cur}${sale.tax.toFixed(2)}</span></div>
+      <div class="r-row total"><span>${sale.refund ? 'Total refunded' : 'Total'}</span><span>${sale.refund ? '-' : ''}${cur}${sale.total.toFixed(2)}</span></div>
       <div class="r-dash"></div>
-      <div class="r-row"><span>Paid via</span><span>${sale.payment}</span></div>
-      ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||POS_SETTINGS.currency}${sale.change.toFixed(2)}</span></div>` : ''}
+      <div class="r-row"><span>${sale.refund ? 'Refunded to' : 'Paid via'}</span><span>${sale.payment}</span></div>
+      ${sale.tendered > 0 ? `<div class="r-row"><span>Tendered</span><span>${sale.changeCurrencySymbol||cur}${Number(sale.tendered).toFixed(2)}</span></div>` : ''}
+      ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||cur}${sale.change.toFixed(2)}</span></div>` : ''}
       ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${sale.note}</span></div>` : ''}
       <div class="receipt-thanks">${POS_SETTINGS.receiptFooter}</div>
     `;
@@ -1668,8 +1841,8 @@ async function aureumSignIn(email, password){
     text('--------------------------------\n');
     push(ESC, 0x61, 0x00); // left
     text(`${sale.orderNo}   ${sale.time}\n`);
-    text(`Cashier: ${activeEmployee ? activeEmployee.name : 'Cashier'}\n`);
-    if(activeShop && activeShop !== 'All Shops') text(`Shop: ${activeShop}\n`);
+    text(`Cashier: ${sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier')}\n`);
+    { const shopName = sale.shop || activeShop; if(shopName && shopName !== 'All Shops') text(`Shop: ${shopName}\n`); }
     if(sale.customer) text(`Customer: ${sale.customer}\n`);
     text('--------------------------------\n');
     (sale.items||[]).forEach(it=>{
@@ -1843,9 +2016,20 @@ async function aureumSignIn(email, password){
       return { productId: p.id, name:p.name, qty:cart[id], price:p.price, cost:p.cost||0 };
     });
 
+    // Receipt number: next in sequence, computed from the synced receipts at the
+    // moment of sale (never trust the number shown on screen — another till may
+    // have sold since). `uid` is the true unique key, immune to any clash.
+    const receiptNumber = nextReceiptNumber();
+    const receiptUid = newReceiptUid();
     const sale = {
-      orderNo: document.getElementById('orderNo').textContent,
+      uid: receiptUid,
+      orderNo: 'No. ' + padReceiptNo(receiptNumber),
+      date: now.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}),
       time: now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true}),
+      employee: activeEmployee ? activeEmployee.name : 'Cashier',
+      shop: activeShop,
+      taxInclusive: !!POS_SETTINGS.taxInclusive,
+      tendered: payMethod === 'cash' ? tenderedAmt : null,
       items: lineItems,
       itemCount, subtotal, discountAmount, tax, total, payment: paymentLabel, change, changeCurrencySymbol,
       customer: customer ? customer.name : null,
@@ -1873,14 +2057,18 @@ async function aureumSignIn(email, password){
 
     // Push the receipt into the shared store immediately (sales are critical — don't wait for the autosave tick)
     RECEIPTS.push({
-      id: sale.orderNo.replace('No. ',''),
+      uid: receiptUid,
+      id: padReceiptNo(receiptNumber),
       dateTime: now.toISOString(),
       total, payment: paymentLabel,
       customer: sale.customer || 'N/A',
-      employee: activeEmployee ? activeEmployee.name : 'Cashier',
+      employee: sale.employee,
       shop: activeShop,
       refund: false,
-      items: lineItems, subtotal, discountAmount, tax,
+      items: lineItems, itemCount, subtotal, discountAmount, tax,
+      taxInclusive: sale.taxInclusive,
+      tendered: sale.tendered, change, changeCurrencySymbol,
+      note: note || null,
       stripePaymentIntentId, paynowReference
     });
     persistAureum();
@@ -1895,11 +2083,12 @@ async function aureumSignIn(email, password){
     document.getElementById('otherPayLabel').value = '';
     resetQuickChips();
     renderTicket();
-    const num = 512 + Math.floor(Math.random()*40);
-    document.getElementById('orderNo').textContent = `No. ${String(num).padStart(4,'0')}`;
+    refreshOrderNo();
+    document.body.classList.remove('ticket-open'); // phone: return to the catalog behind the receipt
 
     lastSale = sale;
     buildReceipt(sale);
+    setReceiptChrome(false, sale);
     openModal('receiptOverlay');
   });
 
@@ -2019,7 +2208,7 @@ async function aureumSignIn(email, password){
       const str = JSON.stringify(shared);
       if(str === _aureumSnapshot) return;
       applyLoadedData(shared);
-      try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); }catch(e){}
+      try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){}
     });
 
     renderSyncStatus();
@@ -2148,6 +2337,7 @@ async function aureumSignIn(email, password){
     activeShop = shopName;
     activeEmployee = employee;
     shiftStartTime = new Date();
+    refreshOrderNo();
     document.getElementById('shiftGate').classList.remove('show');
     renderClerkUI();
     renderCategories();
