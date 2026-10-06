@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AUREUM — Back Office</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
 <style>
   :root{
     --bg-deep:#0A1B16;
@@ -419,7 +418,7 @@
     cursor:pointer; font-size:13px;
   }
   .modal-close:hover{ color:var(--ivory); border-color:var(--line-strong); }
-  .modal-body{ padding:20px 24px; overflow-y:auto; }
+  .modal-body{ padding:20px 24px; overflow-y:auto; overflow-x:auto; }
   .modal-actions{ display:flex; gap:10px; padding:16px 24px 22px; border-top:1px dashed var(--line-strong); }
   .modal-btn{
     flex:1; text-align:center; padding:12px; border-radius:10px; cursor:pointer;
@@ -554,6 +553,54 @@
   .seg-btn:hover{ color:var(--gold-bright); }
   .seg-btn.active{ background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1B140A; }
   .seg-n{ font-family:'JetBrains Mono',monospace; font-size:11px; opacity:.85; margin-left:4px; }
+  /* store-app mode: no way to pay is shown anywhere inside the app */
+  .store-app #stPayStripeBtn, .store-app #stPayPaynowBtn, .store-app #stManageStripeBtn, .store-app #authPayBlock, .store-app .web-only{ display:none !important; }
+  .store-only{ display:none; }
+  .store-app .store-only{ display:block; }
+  /* ----- product import dialog ----- */
+  .imp-help p{ margin:0 0 10px; font-size:13px; line-height:1.55; color:var(--ivory-dim); }
+  .imp-help b{ color:var(--ivory); }
+  .imp-tpl{ margin-top:6px; font-size:12.5px; color:var(--sage); }
+  .imp-tpl a, .imp-file a{ color:var(--gold-bright); font-weight:600; text-decoration:none; }
+  .imp-tpl a:hover, .imp-file a:hover{ text-decoration:underline; }
+  .imp-error{ margin:10px 0; padding:10px 12px; border-radius:9px; background:rgba(224,102,102,.1); border:1px solid rgba(224,102,102,.35); color:var(--danger); font-size:12.5px; }
+  .imp-file{ font-size:12.5px; color:var(--ivory-dim); display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .imp-file a{ margin-left:auto; }
+  .imp-check{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12.5px; color:var(--ivory-dim); cursor:pointer; }
+  .imp-map{ width:100%; border-collapse:collapse; }
+  .imp-map td{ padding:5px 0; vertical-align:middle; }
+  .imp-map td.l{ width:34%; font-size:12.5px; color:var(--ivory); font-weight:600; padding-right:10px; }
+  .imp-map td.s{ width:84px; text-align:right; font-size:11.5px; white-space:nowrap; }
+  .imp-map select{ width:100%; padding:8px 10px; }
+  .imp-ok{ color:#6FCF97; } .imp-need{ color:var(--danger); font-weight:700; } .imp-opt{ color:var(--sage-dim); }
+  .imp-extras{ margin-top:8px; font-size:12px; color:var(--sage); }
+  .imp-stockshop{ margin-top:12px; font-size:12.5px; color:var(--ivory-dim); } .imp-stockshop select{ margin-left:8px; width:auto; padding:7px 10px; }
+  .imp-sum{ margin-top:14px; padding:11px 14px; border-radius:10px; font-size:13px; }
+  .imp-sum.good{ background:rgba(111,207,151,.09); border:1px solid rgba(111,207,151,.3); color:var(--ivory); }
+  .imp-sum.none{ background:rgba(255,255,255,.03); border:1px solid var(--line-strong); color:var(--ivory-dim); }
+  .imp-warn{ margin:10px 0 0; padding-left:18px; font-size:12px; color:#E3B04B; line-height:1.6; }
+  .imp-prev{ margin-top:14px; overflow-x:auto; } .imp-more{ font-size:11.5px; color:var(--sage); padding-top:6px; }
+  .imp-done .big{ font-size:20px; font-weight:700; color:var(--gold-bright); margin-bottom:8px; } .imp-done p{ font-size:13px; color:var(--ivory-dim); margin:6px 0; } .imp-done .muted{ color:var(--sage); }
+  .modal-btn.disabled{ opacity:.45; cursor:not-allowed; pointer-events:none; }
+  /* ----- product picture finder ----- */
+  .img-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; max-width:340px; }
+  .img-credit{ font-size:11px; color:var(--sage); margin-top:8px; max-width:340px; line-height:1.45; }
+  .img-credit:empty{ display:none; }
+  .imgf-bar{ display:flex; gap:8px; align-items:center; } .imgf-bar .modal-field{ flex:1; } .imgf-bar .modal-btn{ flex:0 0 auto; padding:10px 18px; }
+  .imgf-note{ font-size:11.5px; color:var(--sage); line-height:1.5; margin-top:8px; }
+  .imgf-status{ margin-top:12px; font-size:12.5px; color:var(--ivory-dim); min-height:18px; } .imgf-status.warn{ color:#E3B04B; }
+  .imgf-notes{ margin-top:4px; font-size:11.5px; color:var(--sage); }
+  .imgf-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:10px; margin-top:12px; }
+  .imgf-tile{ position:relative; aspect-ratio:1; padding:0; border:2px solid var(--line-strong); border-radius:11px; overflow:hidden; background:#fff; cursor:pointer; }
+  .imgf-tile img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .imgf-tile.sel{ border-color:var(--gold-bright); box-shadow:0 0 0 3px rgba(231,199,102,.25); }
+  .imgf-tile.broken{ display:none; }
+  .imgf-tile:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px; }
+  .imgf-src{ position:absolute; left:0; right:0; bottom:0; font-size:9.5px; font-weight:700; padding:3px 5px; background:rgba(10,27,22,.82); color:#F4EFDF; text-align:center; }
+  .imgf-sel{ margin-top:14px; } .imgf-selrow{ display:flex; gap:12px; align-items:center; padding:10px; border:1px solid var(--line-strong); border-radius:11px; }
+  .imgf-selrow img{ width:64px; height:64px; object-fit:contain; background:#fff; border-radius:8px; flex:0 0 auto; }
+  .imgf-selrow .t{ font-size:13px; font-weight:600; color:var(--ivory); } .imgf-selrow .m{ font-size:11.5px; color:var(--sage); margin:2px 0; } .imgf-selrow a{ font-size:11.5px; color:var(--gold-bright); }
+  .imgf-more{ margin-top:14px; }
   .alerts-more{ font-size:12px; color:var(--gold-bright); cursor:pointer; padding:4px 2px; display:inline-block; }
   .alerts-more:hover{ text-decoration:underline; }
   @media (max-width:760px){
@@ -658,8 +705,14 @@
   .line-table-wrap{ background: linear-gradient(160deg, var(--panel-alt), var(--panel)); border:1px solid var(--line); border-radius:14px; padding:20px 22px; }
   .line-table{ width:100%; border-collapse:collapse; }
   .detail-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
-  .detail-table th{ text-align:left; padding:8px 0; border-bottom:1px solid var(--line); font-size:10px; color:var(--sage); text-transform:uppercase; letter-spacing:0.05em; }
-  .detail-table td{ padding:9px 0; border-bottom:1px solid var(--line); color:var(--ivory-dim); }
+  .detail-table th{ text-align:left; padding:8px 14px; border-bottom:1px solid var(--line); font-size:10px; color:var(--sage); text-transform:uppercase; letter-spacing:0.05em; }
+  .detail-table td{ padding:9px 14px; border-bottom:1px solid var(--line); color:var(--ivory-dim); }
+  /* columns have breathing room between them (they used to touch, so a right-aligned quantity ran into the next column's text);
+     the outer edges stay flush with the rest of the pop-up */
+  .detail-table th:first-child, .detail-table td:first-child{ padding-left:0; }
+  .detail-table th:last-child, .detail-table td:last-child{ padding-right:0; }
+  .detail-table .num{ white-space:nowrap; text-align:right; }
+  .detail-table .exp{ white-space:nowrap; text-align:left; padding-left:34px; }   /* clear space between Quantity and Expiry */
   .detail-field .v{ color:var(--ivory); font-size:13.5px; }
   .line-table th{ text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--sage); padding:8px 8px; border-bottom:1px solid var(--line); }
   .line-table td{ padding:8px 8px; font-size:12.5px; color:var(--ivory-dim); }
@@ -751,6 +804,17 @@
     color:#1B140A; font-weight:700; padding:11px; border-radius:9px; cursor:pointer; font-size:13px;
   }
 </style>
+<meta name="description" content="AUREUM Back Office — manage products, stock, staff, purchases and reports for your shops.">
+<meta name="theme-color" content="#0A1B16">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AUREUM">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
 <div class="auth-gate" id="authGate">
@@ -1113,7 +1177,7 @@
             </div>
           </div>
           <div class="btn-ghost-sm" id="productImportBtn">Import</div>
-          <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls" style="display:none;">
+          <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls,.xlsm,.txt,.tsv,text/csv" style="display:none;">
           <div class="icon-btn-sm" title="More">&#8942;</div>
           <div class="icon-btn-row">
             <div class="icon-btn-sm" title="Search" id="productSearchIconBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
@@ -1205,6 +1269,7 @@
             <div>
               <div class="field-label">Product code</div>
               <input type="text" id="pfCode" class="modal-field" placeholder="Auto-generated">
+              <div class="field-error" id="pfCodeError"></div>
             </div>
             <div>
               <div class="field-label">Barcode (Optional)</div>
@@ -1279,6 +1344,11 @@
               <div class="uz-text">Click to upload a product photo<br>PNG or JPG · falls back to a category icon if left empty</div>
             </div>
           </div>
+          <div class="img-actions">
+            <div class="btn-ghost-sm" id="pfFindImageBtn" role="button" tabindex="0">&#128269; Find a picture online</div>
+            <div class="btn-ghost-sm" id="pfGoogleImgBtn" role="button" tabindex="0">Search Google Images &#8599;</div>
+          </div>
+          <div class="img-credit" id="pfImageCredit"></div>
         </div>
 
         <div class="form-actions-bottom">
@@ -2527,7 +2597,8 @@
           <div class="settings-panel" id="settings-billing">
             <div class="settings-panel-head">
               <div class="t">Billing &amp; Subscription</div>
-              <div class="s">Standard Plan — $5.00/month. Pay with card (Stripe) or EcoCash/OneMoney/ZimSwitch/InnBucks (Paynow). We never see or store your card number or CVV — payment is entered directly on Stripe's or Paynow's own page.</div>
+              <div class="s web-only">Standard Plan — $5.00/month. Pay with card (Stripe) or EcoCash/OneMoney/ZimSwitch/InnBucks (Paynow). We never see or store your card number or CVV — payment is entered directly on Stripe's or Paynow's own page.</div>
+              <div class="s store-only">Your AUREUM subscription is managed from your account on the web. This screen shows its current status.</div>
             </div>
             <div class="form-section">
               <div class="create-form-grid" style="margin-bottom:0;">
@@ -2592,8 +2663,8 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/vendor/xlsx.full.min.js"></script>
 <script>
   /* ===== AUREUM CLOUD BACKEND (Supabase: Postgres + Auth) =====
      Fill in your own project's URL + public anon key below (Project
@@ -2602,6 +2673,22 @@
      own isolated row (enforced by Row Level Security), and both the
      Back Office and POS Checkout read/write that same row in real
      time — across any device, not just tabs on one browser. */
+  /* ===== STORE-APP MODE =====
+     Apple and Google require their own billing for paid access sold inside a store app, and don't allow an
+     app to send people to another way of paying. So when AUREUM runs as a store app, it shows subscription
+     STATUS only — no payment buttons, no "pay" wording, no payment links; subscriptions are managed from the
+     customer's account on the web. Switched on by opening the app with ?store=1 (the store builds do this),
+     by the Android app's launch referrer, or by a Capacitor wrapper. ?store=0 switches it off again. */
+  const AUREUM_STORE_MODE = (() => {
+    try{
+      const q = new URLSearchParams(location.search).get('store');
+      if(q === '1') localStorage.setItem('aureum_store_app', '1');
+      if(q === '0') localStorage.removeItem('aureum_store_app');
+      return localStorage.getItem('aureum_store_app') === '1' || /^android-app:\/\//.test(document.referrer || '') || !!window.Capacitor;
+    }catch(e){ return false; }
+  })();
+  if(AUREUM_STORE_MODE) document.documentElement.classList.add('store-app');
+  const MANAGE_ON_WEB = ' Please manage your subscription from your account on the web, then reopen the app.';
   const SUPABASE_CONFIG = {
     url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA'
@@ -3101,7 +3188,7 @@ const AureumSync = (function(){
     app: 'bo',
     getSnapshot: () => aureumSnapshotData(),
     applyData: (d) => applyLoadedData(d),
-    onApplied: () => { try{ renderAllData(); }catch(e){} },
+    onApplied: () => { try{ if(ensureProductCodes()) persistAureum(); }catch(e){} try{ renderAllData(); }catch(e){} },
     onStatus: (state) => {
       try{ renderSyncStatus(); }catch(e){}
       if(state === 'synced-compat' && !window.__aureumCompatWarned){
@@ -3175,27 +3262,28 @@ const AureumSync = (function(){
     const now = new Date();
     const DAY = 86400000;
     if(biz.subscription_status === 'cancelled'){
-      return { ok:false, billingLock:true, message: 'Your subscription has been cancelled. Resubscribe below to continue.' };
+      return { ok:false, billingLock:true, message: AUREUM_STORE_MODE ? 'Your subscription has been cancelled.' + MANAGE_ON_WEB : 'Your subscription has been cancelled. Resubscribe below to continue.' };
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at && new Date(biz.trial_ends_at) < now){
-      return { ok:false, billingLock:true, message: 'Your free trial has ended. Subscribe below to keep using AUREUM.' };
+      return { ok:false, billingLock:true, message: AUREUM_STORE_MODE ? 'Your free trial has ended.' + MANAGE_ON_WEB : 'Your free trial has ended. Subscribe below to keep using AUREUM.' };
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at){
       const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - now) / DAY);
-      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial. Subscribe in Settings → Billing.` };
+      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial.` + (AUREUM_STORE_MODE ? ' Manage your subscription from your account on the web.' : ' Subscribe in Settings → Billing.') };
     }
     if(biz.subscription_status === 'past_due'){
-      return { ok:true, warning: 'Your last payment failed — please update or retry payment in Settings → Billing.' };
+      return { ok:true, warning: AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed — please update or retry payment in Settings → Billing.' };
     }
     if(biz.subscription_status === 'active' && biz.current_period_end){
       const end = new Date(biz.current_period_end);
       // A paid period that ended more than the grace window ago is a lock-out.
       if(now > new Date(end.getTime() + SUBSCRIPTION_GRACE_DAYS * DAY)){
-        return { ok:false, billingLock:true, message: 'Your subscription period has ended. Renew below to continue.' };
+        return { ok:false, billingLock:true, message: AUREUM_STORE_MODE ? 'Your subscription period has ended.' + MANAGE_ON_WEB : 'Your subscription period has ended. Renew below to continue.' };
       }
       const daysLeft = Math.ceil((end - now) / DAY);
       if(daysLeft <= 3){
         const who = biz.billing_processor === 'paynow' ? "Paynow doesn't auto-renew, pay again" : 'renew';
+        if(AUREUM_STORE_MODE) return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period. Manage your subscription from your account on the web.` : 'Your subscription period has ended. Manage your subscription from your account on the web to avoid being locked out.' };
         return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — ${who} in Settings → Billing.` : 'Your subscription period has ended — renew in Settings → Billing to avoid being locked out.' };
       }
     }
@@ -3494,30 +3582,46 @@ const AureumSync = (function(){
     if(document.getElementById('productCreateView')) renderProductShopTable(editingProductId ? PRODUCTS.find(p=>p.id===editingProductId) : null);
   }
 
-  // Keeps any popover (date range, columns, export, filter, shop switcher…) fully
-  // on screen regardless of where its trigger sits, instead of letting it run
-  // off the left/right edge or bottom of the viewport.
+  // Keeps any popover (date range, columns, export, filter, shop switcher…) fully on screen wherever its
+  // trigger sits. Rules, in order:
+  //   1. Sideways: slide it into view (never off the left/right edge).
+  //   2. Open BELOW the trigger whenever it fits there (this is the normal, expected place).
+  //   3. If it doesn't fit below, open ABOVE only if it fits fully above (e.g. a trigger at the bottom of the
+  //      sidebar). It must never flip to a side with even less room — that pushed the date picker off the top
+  //      of the screen on tablets / foldables.
+  //   4. If it fits neither side, stay below, nudge the page up a little so there is more room, and let the
+  //      popover scroll inside itself so every date and the Apply button can be reached.
+  function scrollParentOf(el){
+    for(let p = el.parentElement; p && p !== document.body; p = p.parentElement){
+      const oy = getComputedStyle(p).overflowY;
+      if((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
   function keepPopoverOnScreen(pop){
-    pop.style.left = ''; pop.style.right = ''; pop.style.top = ''; pop.style.bottom = '';
-    const margin = 12;
-    const rect = pop.getBoundingClientRect();
-    if(rect.right > window.innerWidth - margin){
-      const overflowRight = rect.right - (window.innerWidth - margin);
-      pop.style.left = (-overflowRight) + 'px';
-      pop.style.right = 'auto';
+    const anchor = pop.closest('.popover-anchor') || pop.parentElement;
+    ['left','right','top','bottom','marginTop','marginBottom','maxHeight','overflowY'].forEach(k => { pop.style[k] = ''; });
+    const margin = 12, gap = 8, vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    // 1. sideways
+    let pr = pop.getBoundingClientRect(), ar = anchor.getBoundingClientRect(), dx = 0;
+    if(pr.right > vw - margin) dx = (vw - margin) - pr.right;
+    if(pr.left + dx < margin) dx = margin - pr.left;
+    if(dx){ pop.style.right = 'auto'; pop.style.left = (pr.left - ar.left + dx) + 'px'; }
+    // 2–4. vertical
+    const h = pop.scrollHeight;
+    const below = () => vh - anchor.getBoundingClientRect().bottom - gap - margin;
+    const above = () => anchor.getBoundingClientRect().top - gap - margin;
+    if(h <= below()) return;
+    if(h <= above()){
+      pop.style.top = 'auto'; pop.style.bottom = '100%'; pop.style.marginTop = '0'; pop.style.marginBottom = gap + 'px';
+      return;
     }
-    const rect2 = pop.getBoundingClientRect();
-    if(rect2.left < margin){
-      const overflowLeft = margin - rect2.left;
-      pop.style.left = (parseFloat(pop.style.left)||0) + overflowLeft + 'px';
-    }
-    const rect3 = pop.getBoundingClientRect();
-    if(rect3.bottom > window.innerHeight - margin){
-      pop.style.top = 'auto';
-      pop.style.bottom = '100%';
-      pop.style.marginTop = '0';
-      pop.style.marginBottom = '8px';
-    }
+    const sp = scrollParentOf(anchor), need = h - below();
+    const room = Math.max(0, anchor.getBoundingClientRect().top - margin - 72);      // keep the trigger visible under any fixed top bar
+    const want = Math.min(need, room);
+    if(want > 0){ if(sp === document.scrollingElement || sp === document.documentElement) window.scrollBy(0, want); else sp.scrollTop += want; }
+    const room2 = below();
+    if(h > room2){ pop.style.maxHeight = Math.max(200, room2) + 'px'; pop.style.overflowY = 'auto'; }
   }
 
   // Delegated so it also works for popovers injected later (Sales by Product / Receipts date pickers)
@@ -3699,7 +3803,7 @@ const AureumSync = (function(){
   const SALES_QTY = {1:340, 2:210, 3:180, 4:95, 5:40, 6:60};
   let nextProductId = PRODUCTS.length + 1;
   let editingProductId = null;
-  let pendingImage = null;
+  let pendingImage = null, pendingImageCredit = '';
   let productCatFilterValue = "All";
 
   /* ===== PER-SHOP STOCK (each shop is its own inventory unit) =====
@@ -3722,6 +3826,25 @@ const AureumSync = (function(){
       }
     }
     return p.shopStock;
+  }
+  /* ===== PRODUCT CODES =====
+     Every product always has a code. New codes continue after the HIGHEST numeric code in use (100007, 100008…)
+     — never from the list length, which repeated codes after any deletion — and skip any code already taken. */
+  function nextProductCode(){
+    const used = new Set(PRODUCTS.map(p => String(p.code || '').trim().toLowerCase()).filter(Boolean));
+    let max = 100000;
+    PRODUCTS.forEach(p => { const c = String(p.code || '').trim(); if(/^\d{6,}$/.test(c)){ const n = parseInt(c, 10); if(n > max) max = n; } });
+    let n = max + 1;
+    while(used.has(String(n))) n++;
+    return String(n);
+  }
+  // Gives a code to every product that has none (new, imported or old). Returns how many were fixed.
+  function ensureProductCodes(){
+    let fixed = 0;
+    PRODUCTS.slice().sort((a, b) => a.id - b.id).forEach(p => {
+      if(!String(p.code || '').trim()){ p.code = nextProductCode(); fixed++; }
+    });
+    return fixed;
   }
   function getStock(p, shopName){
     if(!p) return 0;
@@ -4139,7 +4262,7 @@ const AureumSync = (function(){
 
   function openProductForm(id){
     editingProductId = id || null;
-    pendingImage = null;
+    pendingImage = null; pendingImageCredit = '';
     shopStockTouched = false;
     renderCategoryDatalist();
     document.getElementById('productFormTitle').textContent = id ? 'Edit products' : 'Add products';
@@ -4149,13 +4272,15 @@ const AureumSync = (function(){
     document.getElementById('pfPrice').classList.remove('invalid');
     document.getElementById('pfCostError').classList.remove('show');
     document.getElementById('pfCost').classList.remove('invalid');
+    document.getElementById('pfCodeError').classList.remove('show');
+    document.getElementById('pfCode').classList.remove('invalid');
 
     if(id){
       const p = PRODUCTS.find(x=>x.id===id);
       document.getElementById('pfName').value = p.name;
       document.getElementById('pfSoldBy').value = p.soldBy || 'each';
       document.getElementById('pfCategory').value = p.cat || '';
-      document.getElementById('pfCode').value = p.code || '';
+      document.getElementById('pfCode').value = p.code || nextProductCode();
       document.getElementById('pfBarcode').value = p.barcode || '';
       document.getElementById('pfDescription').value = p.description || '';
       document.getElementById('pfPrice').value = p.price;
@@ -4166,12 +4291,12 @@ const AureumSync = (function(){
       document.getElementById('pfLowStockThreshold').value = p.lowStockThreshold !== undefined ? p.lowStockThreshold : '';
       document.getElementById('pfSafetyStock').value = p.safetyStock !== undefined ? p.safetyStock : '';
       document.getElementById('pfAllShops').checked = Array.isArray(p.shops) ? (SHOPS.length>0 && SHOPS.every(s=>p.shops.includes(s))) : p.shops === 'all';
-      pendingImage = p.image || null;
+      pendingImage = p.image || null; pendingImageCredit = p.imageCredit || '';
     } else {
       document.getElementById('pfName').value = '';
       document.getElementById('pfSoldBy').value = 'each';
       document.getElementById('pfCategory').value = '';
-      document.getElementById('pfCode').value = String(100000 + PRODUCTS.length + 1);
+      document.getElementById('pfCode').value = nextProductCode();
       document.getElementById('pfBarcode').value = '';
       document.getElementById('pfDescription').value = '';
       document.getElementById('pfPrice').value = '';
@@ -4191,6 +4316,7 @@ const AureumSync = (function(){
   }
 
   function setUploadPreview(dataUrl, zone, prompt){
+    const cr = document.getElementById('pfImageCredit'); if(cr) cr.textContent = (dataUrl && pendingImageCredit) ? pendingImageCredit : '';
     zone.querySelectorAll('img, .uz-remove').forEach(el=>el.remove());
     if(dataUrl){
       zone.classList.add('has-image');
@@ -4203,7 +4329,7 @@ const AureumSync = (function(){
       removeBtn.title = 'Remove image';
       removeBtn.addEventListener('click', (e)=>{
         e.stopPropagation();
-        pendingImage = null;
+        pendingImage = null; pendingImageCredit = '';
         setUploadPreview(null, zone, prompt);
       });
       zone.appendChild(img);
@@ -4218,17 +4344,183 @@ const AureumSync = (function(){
     if(e.target.classList.contains('uz-remove')) return;
     document.getElementById('imageFileInput').click();
   });
-  document.getElementById('imageFileInput').addEventListener('change', function(){
-    const file = this.files[0];
+  /* ===== PRODUCT PICTURES =====
+     Pictures are saved INSIDE the business record, so every one is shrunk first (max 480px, JPEG): a straight phone
+     photo is several MB and a few dozen of them would make saving and syncing slow or fail. */
+  function aureumCompressImage(blob, maxSide, quality){
+    maxSide = maxSide || 480; quality = quality || 0.82;
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob), img = new Image();
+      img.onload = () => {
+        try{
+          const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+          const w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);   // white behind transparent PNGs
+          resolve(c.toDataURL('image/jpeg', quality));
+        }catch(e){ reject(e); } finally { URL.revokeObjectURL(url); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That file isn't a picture this browser can read.")); };
+      img.src = url;
+    });
+  }
+  document.getElementById('imageFileInput').addEventListener('change', async function(){
+    const file = this.files[0]; this.value = '';
     if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e){
-      pendingImage = e.target.result;
+    try{
+      pendingImage = await aureumCompressImage(file); pendingImageCredit = '';
       setUploadPreview(pendingImage, document.getElementById('uploadZone'), document.getElementById('uploadPrompt'));
-    };
-    reader.readAsDataURL(file);
-    this.value = '';
+    }catch(err){ aureumToast(err.message, 'danger'); }
   });
+
+  /* ----- "Find a picture online" -----
+     Searches only free-to-reuse picture libraries — Open Food Facts (packaged goods), Wikimedia Commons, and (on
+     request) Openverse — and never anything that isn't licensed for reuse. Google Images can't be read by an app (its
+     search API is closed to new customers), so a button opens Google in a new tab instead. Only the product name is
+     sent, and only when Search is pressed. The chosen picture is downloaded, shrunk and saved WITH its credit. */
+  const imgfEnc = encodeURIComponent;
+  async function imgfJson(url, ms){
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms || 9000);
+    try{
+      const r = await fetch(url, { signal: ctl.signal, headers: { Accept:'application/json' } });
+      if(r.status === 429) throw Object.assign(new Error('rate limited'), { rateLimited:true });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(t); }
+  }
+  const imgfText = html => { try{ return (new DOMParser().parseFromString(String(html || ''), 'text/html').body.textContent || '').replace(/\s+/g, ' ').trim(); }catch(e){ return ''; } };
+  async function imgfOpenFoodFacts(q){
+    const map = p => {
+      const full = p.image_front_url || p.image_url || '', thumb = p.image_front_small_url || p.image_small_url || p.image_front_url || p.image_url || '';
+      if(!/^https:/.test(full)) return null;
+      return { source:'Open Food Facts', thumb, full, title: [p.product_name, p.brands].filter(Boolean).join(' — ') || 'Product photo', license:'CC BY-SA', credit:'Open Food Facts contributors (CC BY-SA)', page: p.code ? 'https://world.openfoodfacts.org/product/' + p.code : '' };
+    };
+    try{   // the current full-text search service…
+      const r = await imgfJson(`https://search.openfoodfacts.org/search?q=${imgfEnc(q)}&page_size=14&fields=code,product_name,brands,image_url,image_front_url,image_small_url`);
+      const hits = (r.hits || r.products || []).map(map).filter(Boolean);
+      if(hits.length) return hits;
+    }catch(e){ if(e.rateLimited) throw e; }
+    // …and the older one as a fallback
+    const r2 = await imgfJson(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${imgfEnc(q)}&search_simple=1&action=process&json=1&page_size=14&fields=code,product_name,brands,image_front_url,image_front_small_url`);
+    return (r2.products || []).map(map).filter(Boolean);
+  }
+  async function imgfCommons(q){
+    const r = await imgfJson(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=14&gsrsearch=${imgfEnc(q + ' filetype:bitmap')}&prop=imageinfo&iiprop=url|extmetadata|mime&iiurlwidth=640&iiextmetadatafilter=LicenseShortName|Artist|UsageTerms`);
+    const pages = Object.values((r.query && r.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
+    const out = [];
+    for(const pg of pages){
+      const ii = pg.imageinfo && pg.imageinfo[0]; if(!ii || !/^image\/(jpeg|png|webp)/.test(ii.mime || '')) continue;
+      const md = ii.extmetadata || {}, lic = imgfText(md.LicenseShortName && md.LicenseShortName.value);
+      // only licences that allow reuse in a shop: public domain, CC0, CC BY, CC BY-SA (never NonCommercial / NoDerivatives)
+      if(!/^(CC0|CC BY(-SA)?\b|Public domain|PD\b)/i.test(lic) || /\b(NC|ND)\b/i.test(lic)) continue;
+      const artist = imgfText(md.Artist && md.Artist.value), title = (pg.title || '').replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ');
+      out.push({ source:'Wikimedia Commons', thumb: ii.thumburl || ii.url, full: ii.thumburl || ii.url, title, license: lic, credit: `${title}${artist ? ' — ' + artist : ''} (${lic}), via Wikimedia Commons`, page: ii.descriptionurl || '' });
+    }
+    return out;
+  }
+  async function imgfOpenverse(q){
+    const r = await imgfJson(`https://api.openverse.org/v1/images/?q=${imgfEnc(q)}&license_type=commercial&page_size=14&mature=false`);
+    return (r.results || []).filter(x => x.thumbnail || x.url).map(x => ({
+      source:'Openverse', thumb: x.thumbnail || x.url, full: x.thumbnail || x.url, title: x.title || 'Picture',
+      license: ((x.license || '').toUpperCase().replace(/-/g, ' ') + ' ' + (x.license_version || '')).trim(),
+      credit: x.attribution ? imgfText(x.attribution) : `${x.title || 'Picture'} by ${x.creator || 'unknown'} (${(x.license || '').toUpperCase()}), via Openverse`, page: x.foreign_landing_url || '' }));
+  }
+
+  let imgf = null;
+  function openImageFinder(){
+    const nameEl = document.getElementById('pfName'), name = nameEl.value.trim();
+    if(!name){
+      nameEl.classList.add('invalid'); document.getElementById('pfNameError').classList.add('show'); nameEl.focus();
+      aureumToast('Type the product name first — then we can look for its picture.', 'danger'); return;
+    }
+    imgf = { q: name, results: [], selected: -1, busy:false, openverseTried:false, notes: [] };
+    openDetailModal('Find a picture online', `
+      <div class="imgf-bar"><input type="text" id="imgfQuery" class="modal-field" value="${escHtml(name)}" aria-label="What to search for" placeholder="Product name, e.g. Coca-Cola 500ml"><div class="modal-btn solid" id="imgfSearch" role="button" tabindex="0">Search</div></div>
+      <div class="imgf-note">Searches free-to-use pictures only (Open Food Facts and Wikimedia Commons). Only the product name is sent. Check that the picture really shows <b>your</b> product before using it.</div>
+      <div id="imgfStatus" class="imgf-status" role="status" aria-live="polite"></div>
+      <div class="imgf-grid" id="imgfGrid"></div>
+      <div id="imgfSel" class="imgf-sel"></div>
+      <div id="imgfMore" class="imgf-more"></div>`,
+      `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid disabled" id="imgfUse" role="button" tabindex="0">Use this picture</div>`);
+    const q = document.getElementById('imgfQuery');
+    document.getElementById('imgfSearch').addEventListener('click', () => imgfRun(false));
+    q.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); imgfRun(false); } });
+    document.getElementById('imgfUse').addEventListener('click', imgfUse);
+    imgfRun(false);
+  }
+  async function imgfRun(withOpenverse){
+    if(!imgf || imgf.busy) return;
+    const q = document.getElementById('imgfQuery').value.trim();
+    if(!q){ document.getElementById('imgfStatus').textContent = 'Type what to search for.'; return; }
+    if(!withOpenverse){ imgf.results = []; imgf.selected = -1; imgf.openverseTried = false; imgf.notes = []; imgfSelect(-1); }
+    imgf.q = q; imgf.busy = true;
+    const status = document.getElementById('imgfStatus'); status.className = 'imgf-status'; status.textContent = 'Searching…';
+    document.getElementById('imgfMore').innerHTML = '';
+    if(!navigator.onLine){ status.textContent = "You're offline — connect to the internet to search for pictures."; status.className = 'imgf-status warn'; imgf.busy = false; return; }
+    const jobs = withOpenverse ? [['Openverse', imgfOpenverse]] : [['Open Food Facts', imgfOpenFoodFacts], ['Wikimedia Commons', imgfCommons]];
+    if(withOpenverse) imgf.openverseTried = true;
+    const settled = await Promise.allSettled(jobs.map(([, fn]) => fn(q)));
+    const seen = new Set(imgf.results.map(r => r.thumb));
+    settled.forEach((r, i) => {
+      if(r.status === 'fulfilled') r.value.forEach(x => { if(!seen.has(x.thumb)){ seen.add(x.thumb); imgf.results.push(x); } });
+      else imgf.notes.push(r.reason && r.reason.rateLimited ? `${jobs[i][0]}'s free limit was reached just now — try again in a while.` : `${jobs[i][0]} couldn't be reached.`);
+    });
+    imgf.busy = false;
+    imgfRenderResults();
+  }
+  function imgfRenderResults(){
+    const status = document.getElementById('imgfStatus'), grid = document.getElementById('imgfGrid'), more = document.getElementById('imgfMore');
+    if(!status) return;
+    grid.innerHTML = imgf.results.map((r, i) => `<button type="button" class="imgf-tile" data-i="${i}" aria-label="${escHtml(r.title)} — ${escHtml(r.source)}, ${escHtml(r.license)}"><img src="${escHtml(r.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="imgf-src">${escHtml(r.source)}</span></button>`).join('');
+    grid.querySelectorAll('.imgf-tile').forEach(t => {
+      t.addEventListener('click', () => imgfSelect(parseInt(t.dataset.i, 10)));
+      t.querySelector('img').addEventListener('error', () => t.classList.add('broken'));
+    });
+    status.className = 'imgf-status' + (imgf.results.length ? '' : ' warn');
+    status.innerHTML = (imgf.results.length ? `${imgf.results.length} picture${imgf.results.length === 1 ? '' : 's'} found — tap one to choose it.` : 'No free pictures found for that. Try the brand + product (for example “Coca-Cola 500ml”), or fewer words.')
+      + (imgf.notes.length ? `<div class="imgf-notes">${imgf.notes.map(n => escHtml(n)).join('<br>')}</div>` : '');
+    more.innerHTML = imgf.openverseTried ? '' : `<div class="btn-ghost-sm" id="imgfOpenverse" role="button" tabindex="0">Search more pictures (Openverse)</div><div class="imgf-note" style="margin-top:6px;">Openverse allows only a few free searches an hour, so it runs only when you ask.</div>`;
+    const om = document.getElementById('imgfOpenverse'); if(om) om.addEventListener('click', () => imgfRun(true));
+  }
+  function imgfSelect(i){
+    if(!imgf) return;
+    imgf.selected = i;
+    document.querySelectorAll('#imgfGrid .imgf-tile').forEach(t => t.classList.toggle('sel', parseInt(t.dataset.i, 10) === i));
+    const sel = document.getElementById('imgfSel'), use = document.getElementById('imgfUse'), r = imgf.results[i];
+    if(use) use.classList.toggle('disabled', !r);
+    if(!sel) return;
+    sel.innerHTML = r ? `<div class="imgf-selrow"><img src="${escHtml(r.thumb)}" alt="" referrerpolicy="no-referrer"><div><div class="t">${escHtml(r.title)}</div><div class="m">${escHtml(r.source)} · ${escHtml(r.license)}</div>${r.page ? `<a href="${escHtml(r.page)}" target="_blank" rel="noopener noreferrer">View original page ↗</a>` : ''}</div></div>` : '';
+  }
+  async function imgfUse(){
+    const r = imgf && imgf.results[imgf.selected]; if(!r) return;
+    const btn = document.getElementById('imgfUse'), status = document.getElementById('imgfStatus');
+    if(btn.classList.contains('busy')) return;
+    btn.classList.add('busy', 'disabled'); btn.textContent = 'Downloading…';
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
+    try{
+      const resp = await fetch(r.full, { mode:'cors', signal: ctl.signal, referrerPolicy:'no-referrer' });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+      if(!/^image\//.test(blob.type)) throw new Error('not a picture');
+      pendingImage = await aureumCompressImage(blob);
+      pendingImageCredit = `Photo: ${r.credit}`;
+      setUploadPreview(pendingImage, document.getElementById('uploadZone'), document.getElementById('uploadPrompt'));
+      closeModal('detailModal');
+      aureumToast('Picture added. Press Save product to keep it.', 'ok');
+    }catch(err){
+      btn.classList.remove('busy', 'disabled'); btn.textContent = 'Use this picture';
+      status.className = 'imgf-status warn';
+      status.innerHTML = `That picture couldn't be downloaded automatically (the site doesn't allow it). Choose another one, or open it with “View original page”, save it, and use <b>Upload</b> instead.`;
+    } finally { clearTimeout(t); }
+  }
+  document.getElementById('pfFindImageBtn').addEventListener('click', openImageFinder);
+  document.getElementById('pfGoogleImgBtn').addEventListener('click', () => {
+    const name = document.getElementById('pfName').value.trim();
+    if(!name){ document.getElementById('pfName').focus(); aureumToast('Type the product name first.', 'danger'); return; }
+    window.open('https://www.google.com/search?tbm=isch&tbs=sur:fmc&q=' + imgfEnc(name), '_blank', 'noopener,noreferrer');
+    aureumToast('In Google, check Tools → Usage rights → Creative Commons licences, then save the picture and use Upload.', 'ok');
+  });
+  document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#pfFindImageBtn, #pfGoogleImgBtn, #imgfSearch, #imgfUse, #imgfOpenverse')){ e.preventDefault(); e.target.click(); } });
 
   document.getElementById('addProductBtn').addEventListener('click', ()=> openProductForm(null));
   document.getElementById('productBackLink').addEventListener('click', switchToProductList);
@@ -4286,10 +4578,24 @@ const AureumSync = (function(){
     // for it, which is exactly what was causing false low-stock alerts at
     // new shops for products the owner never actually stocked there.
     const shops = allShops ? [...SHOPS] : [...document.querySelectorAll('.pf-shop-cb')].filter(cb=>cb.checked).map(cb=>cb.value);
+    // the code: blank is never saved (one is generated); a code another product already has is refused
+    const codeEl = document.getElementById('pfCode'), codeErr = document.getElementById('pfCodeError');
+    codeErr.classList.remove('show'); codeEl.classList.remove('invalid');
+    let code = codeEl.value.trim();
+    if(!code){
+      code = nextProductCode();
+    } else if(!existing || code.toLowerCase() !== String(existing.code || '').trim().toLowerCase()){
+      const clash = PRODUCTS.find(x => x.id !== editingProductId && String(x.code || '').trim().toLowerCase() === code.toLowerCase());
+      if(clash){
+        codeErr.textContent = `The code ${code} is already used by "${clash.name}". Use a different code, or clear the box and one is generated for you.`;
+        codeErr.classList.add('show'); codeEl.classList.add('invalid'); codeEl.focus();
+        return;
+      }
+    }
     const data = {
-      name, cat: cat || 'Others', price: isNaN(price)?0:price, cost: isNaN(cost)?0:cost, stock, image: pendingImage,
+      name, cat: cat || 'Others', price: isNaN(price)?0:price, cost: isNaN(cost)?0:cost, stock, image: pendingImage, imageCredit: pendingImage ? pendingImageCredit : '',
       soldBy: document.getElementById('pfSoldBy').value,
-      code: document.getElementById('pfCode').value.trim(),
+      code,
       barcode: document.getElementById('pfBarcode').value.trim(),
       description: document.getElementById('pfDescription').value.trim(),
       stockControl, shops, lowStockThreshold, safetyStock,
@@ -5046,7 +5352,7 @@ const AureumSync = (function(){
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${itemLabel(it,p)}</td><td style="text-align:right;">${it.qty}</td><td>${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+      return `<tr><td>${itemLabel(it,p)}</td><td class="num">${it.qty}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -5058,11 +5364,11 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Additional info</div><div class="v">${g.additional||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th>Expiry</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
+        <thead><tr><th>Product</th><th class="num">Quantity</th><th class="exp">Expiry</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
-      <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Completed GRNs already added their quantities to stock, so they're locked from editing — delete and re-receive if something needs correcting.</div>
+      <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Completed GRNs have already added their quantities to stock, so they are locked. To correct a mistake, record a Stock Adjustment.</div>
     `;
   }
 
@@ -6569,106 +6875,252 @@ const AureumSync = (function(){
     });
   });
 
-  // Products import: matches the EXACT column headers the system itself
-  // exports (Product name, Product code, Category, Price, Cost, In stock,
-  // Shops, Barcode, Description) so an exported file can be re-imported
-  // without renaming anything. Common short aliases are still accepted as
-  // a fallback for files from elsewhere.
-  document.getElementById('productImportBtn').addEventListener('click', ()=> document.getElementById('productImportInput').click());
+  /* ===== PRODUCT IMPORT =====
+     Any Excel (.xlsx/.xls) or CSV file. Only a Product Name is needed — Category, Price, Cost and Stock are
+     optional (blank = Others / 0 / 0 / 0). Columns are matched by name automatically and can be changed by hand,
+     so any heading works. A product code is generated for every product (or the file's own code is kept if it
+     has one). Rows with the same name as an existing product are skipped, never overwritten. */
+  const IMP_FIELDS = [
+    { key:'name',     label:'Product Name', required:true },
+    { key:'category', label:'Category' },
+    { key:'price',    label:'Price' },
+    { key:'cost',     label:'Cost' },
+    { key:'stock',    label:'Stock' }
+  ];
+  // exact = the whole heading; partial = the heading contains this phrase as whole words
+  const IMP_MATCH = {
+    name:        { exact:['product name','item name','name','product','item','title','product title','item description','goods','article'], partial:['product name','item name','product title'] },
+    code:        { exact:['product code','item code','code','sku','item no','product no','product id','plu'], partial:['product code','item code','sku'] },
+    barcode:     { exact:['barcode','bar code','upc','ean','gtin'], partial:['barcode','upc','ean'] },
+    cost:        { exact:['cost','cost price','unit cost','buying price','purchase price','buy price','cp'], partial:['cost','buying price','purchase price'] },
+    price:       { exact:['price','selling price','retail price','unit price','sale price','sell price','sp','rrp'], partial:['price','rrp'] },
+    stock:       { exact:['stock','in stock','in hand stock','stock on hand','current stock','quantity','qty','on hand','opening stock','balance','units'], partial:['stock','quantity','qty','on hand'] },
+    category:    { exact:['category','sub category','subcategory','department','group','type','class'], partial:['category','department'] },
+    description: { exact:['description','notes','note','details'], partial:[] },
+    shops:       { exact:['shops','shop','store','stores','branch'], partial:[] }
+  };
+  const IMP_ORDER = ['name','code','barcode','cost','price','stock','category','description','shops'];   // cost before price, so "Cost Price" is never read as the selling price
+  const impNorm = h => String(h == null ? '' : h).toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  function impAutoMap(headers){
+    const norm = headers.map(impNorm), taken = new Set(), map = {};
+    IMP_ORDER.forEach(key => {
+      let idx = -1;
+      for(const kw of IMP_MATCH[key].exact){ const i = norm.findIndex((h, c) => !taken.has(c) && h === kw); if(i > -1){ idx = i; break; } }
+      if(idx < 0) for(const kw of IMP_MATCH[key].partial){ const i = norm.findIndex((h, c) => !taken.has(c) && (' ' + h + ' ').includes(' ' + kw + ' ')); if(i > -1){ idx = i; break; } }
+      map[key] = idx; if(idx > -1) taken.add(idx);
+    });
+    return map;
+  }
+  // 1,200.50 · $1 200,50 · 12,50 · 1.234,5 · "R 45" → a number; blank → empty; anything else → bad
+  function impNumber(v){
+    const raw = String(v == null ? '' : v).trim();
+    if(raw === '') return { empty:true };
+    let t = raw.replace(/[\s\u00a0]/g, '').replace(/[^\d.,\-]/g, '');
+    if(!/\d/.test(t)) return { bad:true };
+    const neg = t.startsWith('-'); t = t.replace(/-/g, '');
+    const d = t.lastIndexOf('.'), c = t.lastIndexOf(',');
+    if(d > -1 && c > -1) t = c > d ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+    else if(c > -1) t = /^\d{1,3}(,\d{3})+$/.test(t) ? t.replace(/,/g, '') : t.replace(',', '.');
+    else if(d > -1 && /^\d{1,3}(\.\d{3}){2,}$/.test(t)) t = t.replace(/\./g, '');
+    const n = parseFloat(t);
+    return isNaN(n) ? { bad:true } : { value: neg ? -n : n };
+  }
+  function impParseDelimited(text){
+    text = text.replace(/^\uFEFF/, '');
+    const first = text.split(/\r?\n/).find(l => l.trim()) || '';
+    const counts = { ',': 0, ';': 0, '\t': 0, '|': 0 }; let q = false;
+    for(const ch of first){ if(ch === '"') q = !q; else if(!q && ch in counts) counts[ch]++; }
+    const delim = Object.keys(counts).sort((x, y) => counts[y] - counts[x])[0];
+    const rows = []; let row = [], cell = '', inQ = false;
+    for(let i = 0; i < text.length; i++){
+      const ch = text[i];
+      if(inQ){ if(ch === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else inQ = false; } else cell += ch; }
+      else if(ch === '"') inQ = true;
+      else if(ch === delim){ row.push(cell); cell = ''; }
+      else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && text[i+1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if(cell !== '' || row.length){ row.push(cell); rows.push(row); }
+    return rows;
+  }
+  const impColName = i => { let n = '', k = i; do { n = String.fromCharCode(65 + (k % 26)) + n; k = Math.floor(k / 26) - 1; } while(k >= 0); return 'Column ' + n; };
+  const impClean = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  const impNameKey = v => impClean(v).toLowerCase();
+
+  let imp = null;   // the file being imported + the choices made about it
+  function impLoadRows(rows, fileName, sheetName){
+    rows = rows.map(r => r.map(c => c == null ? '' : String(c)));
+    const width = Math.max(0, ...rows.map(r => r.length));
+    rows = rows.map(r => r.concat(Array(width - r.length).fill('')));
+    const nonEmpty = rows.map((r, i) => r.some(c => c.trim() !== '') ? i : -1).filter(i => i > -1);
+    if(!nonEmpty.length) return { error:'This file is empty — there is nothing to import.' };
+    // the heading row isn't always the first one (reports often have a title above it)
+    let headerRow = nonEmpty[0];
+    // a heading row has a name column, or at least two recognised columns — one stray matching word (a title like
+    // "Stock take — Main store") isn't enough
+    for(const i of nonEmpty.slice(0, 15)){ const m = impAutoMap(rows[i]); if(m.name > -1 || IMP_ORDER.filter(k => m[k] > -1).length >= 2){ headerRow = i; break; } }
+    imp = { fileName, sheetName, rows, width, firstRow: nonEmpty[0], headerRow, hasHeader: true, map:{}, stockShop: (viewingShop && viewingShop !== 'All Shops' && SHOPS.includes(viewingShop)) ? viewingShop : (SHOPS[0] || ''), result:null };
+    impRemap();
+    return {};
+  }
+  function impHeaders(){ return imp.hasHeader ? imp.rows[imp.headerRow].map((h, i) => impClean(h) || impColName(i)) : Array.from({ length: imp.width }, (_, i) => impColName(i)); }
+  function impRemap(){ imp.map = imp.hasHeader ? impAutoMap(imp.rows[imp.headerRow]) : Object.fromEntries(IMP_ORDER.map(k => [k, -1])); }
+  function impDataRows(){ const start = imp.hasHeader ? imp.headerRow + 1 : imp.firstRow; return imp.rows.slice(start).filter(r => r.some(c => c.trim() !== '')); }
+
+  // work out exactly what would happen — shown to the person BEFORE anything is saved
+  function impPlan(){
+    const m = imp.map, plan = { ready:[], dups:[], noName:0, badPrice:0, badCost:0, badStock:0, codeClash:0 };
+    const existing = new Set(PRODUCTS.map(p => impNameKey(p.name))), seen = new Set(), usedCodes = new Set(PRODUCTS.map(p => String(p.code || '').trim().toLowerCase()).filter(Boolean));
+    let maxCode = 100000; PRODUCTS.forEach(p => { const c = String(p.code || '').trim(); if(/^\d{6,}$/.test(c)) maxCode = Math.max(maxCode, parseInt(c, 10)); });
+    const num = (r, idx, kind, int) => {
+      if(idx < 0) return 0;
+      const v = impNumber(r[idx]);
+      if(v.empty) return 0;
+      if(v.bad || v.value < 0){ plan['bad' + kind]++; return 0; }
+      return int ? Math.round(v.value) : Math.round((v.value + Number.EPSILON) * 100) / 100;
+    };
+    if(m.name < 0) return plan;
+    for(const r of impDataRows()){
+      const name = impClean(r[m.name]);
+      if(!name){ plan.noName++; continue; }
+      const key = impNameKey(name);
+      if(existing.has(key) || seen.has(key)){ plan.dups.push(name); continue; }
+      seen.add(key);
+      let code = m.code > -1 ? impClean(r[m.code]) : '';
+      if(code && usedCodes.has(code.toLowerCase())){ plan.codeClash++; code = ''; }
+      if(!code){ let n = maxCode + 1; while(usedCodes.has(String(n))) n++; code = String(n); maxCode = n; }
+      usedCodes.add(code.toLowerCase());
+      const shopsCell = m.shops > -1 ? impClean(r[m.shops]) : '';
+      plan.ready.push({
+        name, code,
+        category: m.category > -1 ? (impClean(r[m.category]) || 'Others') : 'Others',
+        price: num(r, m.price, 'Price', false), cost: num(r, m.cost, 'Cost', false), stock: num(r, m.stock, 'Stock', true),
+        barcode: m.barcode > -1 ? impClean(r[m.barcode]) : '', description: m.description > -1 ? impClean(r[m.description]) : '',
+        shops: shopsCell && shopsCell.toLowerCase() !== 'all shops' ? shopsCell.split(/[,;]/).map(x => x.trim()).filter(x => SHOPS.includes(x)) : []
+      });
+    }
+    return plan;
+  }
+
+  function impTemplateRows(){ return [['Product Name','Category','Price','Cost','Stock'], ['Sparkling Water 500ml','Beverages',1.25,0.6,120], ['Sea Salt Crackers','Snacks',2.1,1.05,90]]; }
+  function impDownloadTemplate(kind){
+    const rows = impTemplateRows();
+    if(kind === 'xlsx'){
+      const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch:28 }, { wch:16 }, { wch:10 }, { wch:10 }, { wch:10 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'Products');
+      XLSX.writeFile(wb, 'AUREUM-product-import-template.xlsx');
+    } else {
+      const csv = '\uFEFF' + rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\r\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); a.download = 'AUREUM-product-import-template.csv';
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    }
+  }
+
+  const IMP_HELP = `<div class="imp-help">
+      <p>Choose an <b>Excel</b> or <b>CSV</b> file. The only thing every row needs is a <b>Product Name</b>.</p>
+      <p>These columns are optional: <b>Category</b>, <b>Price</b>, <b>Cost</b> and <b>Stock</b>. Leave out any you don't have.</p>
+      <p>A <b>product code is created automatically</b> for every product. Your column headings can be anything — you can match them yourself on the next step.</p>
+    </div>`;
+  function impShow(title, bodyHtml, actionsHtml){
+    const body = document.getElementById('detailModalBody'), keep = body ? body.scrollTop : 0;
+    openDetailModal(title, bodyHtml, actionsHtml);
+    document.getElementById('detailModalBody').scrollTop = keep;
+  }
+  function impRenderStart(message){
+    imp = null;
+    impShow('Import products', `${IMP_HELP}
+      ${message ? `<div class="imp-error" id="impError">${escHtml(message)}</div>` : ''}
+      <div class="imp-tpl">Need a starting point? <a href="#" id="impTplX">Download the Excel template</a> · <a href="#" id="impTplC">CSV template</a></div>`,
+      `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid" id="impChoose">Choose file…</div>`);
+    document.getElementById('impChoose').addEventListener('click', () => document.getElementById('productImportInput').click());
+    document.getElementById('impTplX').addEventListener('click', e => { e.preventDefault(); impDownloadTemplate('xlsx'); });
+    document.getElementById('impTplC').addEventListener('click', e => { e.preventDefault(); impDownloadTemplate('csv'); });
+  }
+  function impRenderPreview(){
+    const headers = impHeaders(), plan = impPlan(), m = imp.map, ready = plan.ready;
+    const opts = sel => `<option value="-1">— none —</option>` + headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${escHtml(h)}</option>`).join('');
+    const status = f => m[f.key] > -1 ? `<span class="imp-ok">✓ found</span>` : (f.required ? `<span class="imp-need">needed</span>` : `<span class="imp-opt">optional</span>`);
+    const extras = ['code','barcode','description','shops'].filter(k => m[k] > -1).map(k => ({ code:'Product code', barcode:'Barcode', description:'Description', shops:'Shops' }[k]));
+    const hasStock = ready.some(r => r.stock > 0);
+    const multi = SHOPS.length > 1;
+    const warn = [];
+    if(plan.dups.length) warn.push(`${plan.dups.length} already exist (same name) — skipped${plan.dups.length ? `: ${escHtml(plan.dups.slice(0, 3).join(', '))}${plan.dups.length > 3 ? '…' : ''}` : ''}`);
+    if(plan.noName) warn.push(`${plan.noName} row${plan.noName === 1 ? '' : 's'} with no product name — skipped`);
+    if(plan.badPrice) warn.push(`${plan.badPrice} price${plan.badPrice === 1 ? '' : 's'} couldn't be read — set to 0`);
+    if(plan.badCost) warn.push(`${plan.badCost} cost${plan.badCost === 1 ? '' : 's'} couldn't be read — set to 0`);
+    if(plan.badStock) warn.push(`${plan.badStock} stock value${plan.badStock === 1 ? '' : 's'} couldn't be read — set to 0`);
+    if(plan.codeClash) warn.push(`${plan.codeClash} code${plan.codeClash === 1 ? '' : 's'} in the file were already used — new ones generated`);
+    const sample = ready.slice(0, 5);
+    impShow('Import products', `
+      <div class="imp-file"><b>${escHtml(imp.fileName)}</b>${imp.sheetName ? ` · sheet “${escHtml(imp.sheetName)}”` : ''} · ${impDataRows().length} row${impDataRows().length === 1 ? '' : 's'} <a href="#" id="impAnother">Choose another file</a></div>
+      <label class="imp-check"><input type="checkbox" id="impHasHeader" ${imp.hasHeader ? 'checked' : ''}> The first row contains column headings</label>
+      <div class="form-section-title" style="margin-top:14px;">Match your columns</div>
+      <table class="imp-map">${IMP_FIELDS.map(f => `<tr><td class="l">${f.label}${f.required ? ' *' : ''}</td><td><select class="modal-field imp-sel" data-key="${f.key}" aria-label="Column for ${f.label}">${opts(m[f.key])}</select></td><td class="s">${status(f)}</td></tr>`).join('')}</table>
+      ${extras.length ? `<div class="imp-extras">Also found and imported: ${extras.join(', ')}.</div>` : ''}
+      ${hasStock && SHOPS.length ? `<div class="imp-stockshop"><label>Add the stock to <select class="modal-field" id="impStockShop" ${multi ? '' : 'disabled'}>${SHOPS.map(sh => `<option ${sh === imp.stockShop ? 'selected' : ''}>${escHtml(sh)}</option>`).join('')}</select></label></div>` : ''}
+      <div class="imp-sum ${ready.length ? 'good' : 'none'}">${m.name < 0 ? 'Choose which column holds the <b>Product Name</b> to continue.' : ready.length ? `✓ <b>${ready.length}</b> product${ready.length === 1 ? '' : 's'} ready to import — a product code will be created for each` : 'Nothing new to import from this file.'}</div>
+      ${warn.length ? `<ul class="imp-warn">${warn.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}
+      ${sample.length ? `<div class="imp-prev"><table class="detail-table"><thead><tr><th>Product Name</th><th>Category</th><th class="num">Price</th><th class="num">Cost</th><th class="num">Stock</th><th>Code</th></tr></thead><tbody>${sample.map(r => `<tr><td>${escHtml(r.name)}</td><td>${escHtml(r.category)}</td><td class="num">${r.price.toFixed(2)}</td><td class="num">${r.cost.toFixed(2)}</td><td class="num">${r.stock}</td><td class="mono">${escHtml(r.code)}</td></tr>`).join('')}</tbody></table>${ready.length > sample.length ? `<div class="imp-more">…and ${ready.length - sample.length} more</div>` : ''}</div>` : ''}`,
+      `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid ${ready.length ? '' : 'disabled'}" id="impGo" ${ready.length ? '' : 'aria-disabled="true"'}>${ready.length ? `Import ${ready.length} product${ready.length === 1 ? '' : 's'}` : 'Import'}</div>`);
+    const modal = document.getElementById('detailModal');
+    modal.querySelector('#impAnother').addEventListener('click', e => { e.preventDefault(); document.getElementById('productImportInput').click(); });
+    modal.querySelector('#impHasHeader').addEventListener('change', e => { imp.hasHeader = e.target.checked; impRemap(); impRenderPreview(); });
+    modal.querySelectorAll('.imp-sel').forEach(sel => sel.addEventListener('change', () => { imp.map[sel.dataset.key] = parseInt(sel.value, 10); impRenderPreview(); }));
+    const ss = modal.querySelector('#impStockShop'); if(ss) ss.addEventListener('change', () => { imp.stockShop = ss.value; });
+    modal.querySelector('#impGo').addEventListener('click', () => { if(ready.length) impRun(); });
+  }
+  function impRun(){
+    const plan = impPlan(), shopFor = imp.stockShop;     // codes are worked out again from the live product list, so they can't clash
+    let added = 0;
+    plan.ready.forEach(r => {
+      const shops = r.shops.length ? r.shops : [...SHOPS];
+      const prod = { id: nextProductId++, name: r.name, price: r.price, cost: r.cost, cat: r.category, stock: r.stock, image:null, code: r.code, barcode: r.barcode, soldBy:'each', description: r.description, shops, stockControl:true };
+      if(shops.length){                                   // stock belongs to ONE shop — the one chosen — not shared across them
+        const ss = {}; shops.forEach(sh => { ss[sh] = 0; });
+        const dest = shops.includes(shopFor) ? shopFor : shops[0];
+        if(r.stock > 0) ss[dest] = r.stock;
+        prod.shopStock = ss;
+      }
+      PRODUCTS.push(prod); added++;
+    });
+    ensureProductCodes();
+    persistAureum();
+    renderCategoryFilter(); renderCategoryDatalist(); renderProducts(); renderSalesByProduct(); renderAlerts();
+    const skipped = plan.dups.length + plan.noName;
+    aureumToast(`${added} product${added === 1 ? '' : 's'} imported.`, 'ok');
+    impShow('Import finished', `<div class="imp-done"><div class="big">✓ ${added} product${added === 1 ? '' : 's'} added</div>
+      <p>A product code was created for each one${plan.ready.some(r => r.stock > 0) && SHOPS.length ? `, and the stock was added to <b>${escHtml(shopFor)}</b>` : ''}.</p>
+      ${skipped ? `<p class="muted">${skipped} row${skipped === 1 ? ' was' : 's were'} skipped (${plan.dups.length} already existed, ${plan.noName} had no name).</p>` : ''}</div>`,
+      `<div class="modal-btn solid" data-close="detailModal">Done</div>`);
+    imp = null;
+  }
+
+  document.getElementById('productImportBtn').addEventListener('click', () => impRenderStart());
   document.getElementById('productImportInput').addEventListener('change', function(){
-    const file = this.files[0];
+    const file = this.files[0]; this.value = '';
     if(!file) return;
-    const lname = file.name.toLowerCase();
-    if(!lname.endsWith('.csv') && !lname.endsWith('.xlsx') && !lname.endsWith('.xls')){
-      alert('Please choose a .csv or .xlsx file.');
-      this.value = '';
-      return;
-    }
-    // Smart column matching: strips things like "(USD)" and punctuation so
-    // "Price(USD)" matches "price", "In hand stock" matches our stock
-    // field, etc. — files exported from other systems don't need their
-    // headers renamed to match ours exactly.
-    const normalizeHeader = h => String(h).toLowerCase().replace(/\(.*?\)/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
-    const findCol = (normHeaders, keywords) => {
-      for(const kw of keywords){ const idx = normHeaders.indexOf(kw); if(idx>-1) return idx; } // exact match first
-      for(let i=0;i<normHeaders.length;i++){ if(keywords.some(kw=> normHeaders[i].includes(kw))) return i; } // then partial
-      return -1;
-    };
-    let importCodeCounter = 1;
-    function generateProductCode(){
-      const existingCodes = new Set(PRODUCTS.map(p=>p.code).filter(Boolean));
-      let code;
-      do { code = 'AUR-' + String(importCodeCounter++).padStart(6,'0'); } while(existingCodes.has(code));
-      return code;
-    }
-    const processRows = (rows) => {
-      if(rows.length < 2){ alert('This file has no data rows to import.'); return; }
-      const header = rows[0].map(normalizeHeader);
-      const nameIdx = findCol(header, ['product name','item name','name']);
-      const codeIdx = findCol(header, ['product code','item code','sku','code']);
-      const catIdx = findCol(header, ['category','sub category','subcategory']);
-      const priceIdx = findCol(header, ['price','selling price','retail price','unit price']);
-      const costIdx = findCol(header, ['cost','cost price','unit cost']);
-      const stockIdx = findCol(header, ['in stock','in hand stock','stock on hand','current stock','quantity','qty','stock']);
-      const shopsIdx = findCol(header, ['shops','shop']);
-      const barcodeIdx = findCol(header, ['barcode','upc','ean']);
-      const descIdx = findCol(header, ['description','notes']);
-      if(nameIdx === -1 || priceIdx === -1){
-        alert('This file needs at least a "Product name" and "Price" column. Found columns: ' + rows[0].join(', '));
-        return;
-      }
-      let added = 0, skippedDup = 0, skippedInvalid = 0, autoCoded = 0;
-      const existingNames = new Set(PRODUCTS.map(p=>p.name.toLowerCase()));
-      for(let i=1;i<rows.length;i++){
-        const r = rows[i];
-        const name = String(r[nameIdx]||'').trim();
-        const price = parseFloat(r[priceIdx]);
-        if(!name || isNaN(price) || price < 0){ skippedInvalid++; continue; }
-        if(existingNames.has(name.toLowerCase())){ skippedDup++; continue; }
-        const cost = costIdx>-1 ? (parseFloat(r[costIdx])||0) : 0;
-        const stock = stockIdx>-1 ? (parseInt(r[stockIdx])||0) : 0;
-        const cat = catIdx>-1 ? String(r[catIdx]||'').trim() : '';
-        let code = codeIdx>-1 ? String(r[codeIdx]||'').trim() : '';
-        if(!code){ code = generateProductCode(); autoCoded++; }
-        const barcode = barcodeIdx>-1 ? String(r[barcodeIdx]||'').trim() : '';
-        const description = descIdx>-1 ? String(r[descIdx]||'').trim() : '';
-        const shopsCell = shopsIdx>-1 ? String(r[shopsIdx]||'').trim() : '';
-        const shops = shopsCell && shopsCell.toLowerCase() !== 'all shops'
-          ? shopsCell.split(/[,;]/).map(s=>s.trim()).filter(s=>SHOPS.includes(s))
-          : [...SHOPS];
-        PRODUCTS.push({ id: nextProductId++, name, price, cost, cat, stock, image:null, code, barcode, soldBy:'each', description, shops, stockControl:true });
-        existingNames.add(name.toLowerCase());
-        added++;
-      }
-      persistAureum();
-      renderCategoryFilter();
-      renderCategoryDatalist();
-      renderProducts();
-      alert(`Import finished: ${added} product(s) added (${autoCoded} auto-generated a product code), ${skippedDup} duplicate(s) skipped, ${skippedInvalid} invalid row(s) skipped.`);
-    };
-    const lnameLower = file.name.toLowerCase();
-    if(lnameLower.endsWith('.xlsx') || lnameLower.endsWith('.xls')){
-      const reader = new FileReader();
-      reader.onload = function(e){
+    if(!document.getElementById('detailModal').classList.contains('open')) impRenderStart();
+    const name = file.name, lname = name.toLowerCase();
+    if(file.size > 15 * 1024 * 1024){ impRenderStart('That file is too large (over 15 MB). Split it into smaller files and import them one at a time.'); return; }
+    const done = (rows, sheetName) => { const r = impLoadRows(rows, name, sheetName); if(r.error) impRenderStart(r.error); else impRenderPreview(); };
+    const reader = new FileReader();
+    if(/\.(xlsx|xls|xlsm)$/.test(lname)){
+      reader.onload = e => {
         try{
           const wb = XLSX.read(e.target.result, { type:'array' });
-          const sheet = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:'' });
-          processRows(rows);
-        }catch(err){ alert('Could not read this Excel file: ' + err.message); }
-        document.getElementById('productImportInput').value = '';
+          let rows = null, sheetName = '';
+          for(const sn of wb.SheetNames){ const r = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header:1, raw:true, defval:'' }); if(r.some(x => x.some(c => String(c).trim() !== ''))){ rows = r; sheetName = sn; break; } }
+          if(!rows){ impRenderStart('This Excel file has no data in it.'); return; }
+          done(rows, wb.SheetNames.length > 1 ? sheetName : '');
+        }catch(err){ impRenderStart('Could not read this Excel file. Is it a real .xlsx or .xls file? (' + err.message + ')'); }
       };
       reader.readAsArrayBuffer(file);
-    } else {
-      const reader = new FileReader();
-      reader.onload = function(e){
-        let rows;
-        try { rows = parseCSV(e.target.result); }
-        catch(err){ alert('Could not read this file — it does not look like valid CSV.'); document.getElementById('productImportInput').value=''; return; }
-        processRows(rows);
-        document.getElementById('productImportInput').value = '';
-      };
+    } else if(/\.(csv|txt|tsv)$/.test(lname) || file.type.startsWith('text/')){
+      reader.onload = e => { try{ done(impParseDelimited(String(e.target.result))); }catch(err){ impRenderStart('Could not read this file as a table: ' + err.message); } };
       reader.readAsText(file);
+    } else {
+      impRenderStart('Please choose an Excel (.xlsx, .xls) or CSV (.csv) file.');
     }
   });
 
@@ -7953,14 +8405,16 @@ const AureumSync = (function(){
       const daysLeft = Math.ceil((trialEnd - new Date()) / 86400000);
       if(daysLeft <= 5){
         bannerEl.style.display = 'block';
-        bannerEl.textContent = daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below to keep using AUREUM.` : `Your trial has ended — subscribe below to keep using AUREUM.`;
+        bannerEl.textContent = AUREUM_STORE_MODE
+          ? (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'}. Manage your subscription from your account on the web.` : 'Your trial has ended. Manage your subscription from your account on the web.')
+          : (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below to keep using AUREUM.` : `Your trial has ended — subscribe below to keep using AUREUM.`);
       }
     } else if(status === 'past_due'){
       bannerEl.style.display = 'block';
-      bannerEl.textContent = 'Your last payment failed. Please pay below to avoid interruption.';
+      bannerEl.textContent = AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed. Please pay below to avoid interruption.';
     } else if(status === 'active' && periodEnd){
       const daysLeft = Math.ceil((periodEnd - new Date()) / 86400000);
-      if(business.billing_processor === 'paynow' && daysLeft <= 3){
+      if(business.billing_processor === 'paynow' && daysLeft <= 3 && !AUREUM_STORE_MODE){
         bannerEl.style.display = 'block';
         bannerEl.textContent = daysLeft > 0 ? `Your Paynow period ends in ${daysLeft} day${daysLeft===1?'':'s'} — Paynow doesn't auto-renew, pay again below to continue.` : `Your Paynow period has ended — pay again below to continue.`;
       }
@@ -8098,7 +8552,7 @@ const AureumSync = (function(){
   function renderHelpFaq(){
     const el = document.getElementById('helpFaqList');
     if(!el) return;
-    el.innerHTML = HELP_FAQ.map((item, i) => `
+    el.innerHTML = HELP_FAQ.filter(f => !(AUREUM_STORE_MODE && /^(How does billing work|Does my subscription auto-renew)/i.test(f.q))).map((item, i) => `
       <div class="faq-item" data-faq="${i}" style="border-bottom:1px solid var(--line); padding:14px 0; cursor:pointer;">
         <div style="display:flex; justify-content:space-between; align-items:center; font-weight:600; color:var(--ivory);">
           <span>${item.q}</span><span class="faq-car" style="color:var(--sage-dim);">&#9662;</span>
@@ -8152,6 +8606,7 @@ const AureumSync = (function(){
     // apply, and start background saving. NOTHING is ever written before a successful load — a failed load
     // used to be mistaken for "new business" and saved an empty copy over the real data.
     await AureumSync.start();
+    try{ if(ensureProductCodes()) persistAureum(); }catch(e){}      // old products with no code get one now, and it is saved
     renderAllData();
     window.addEventListener('beforeunload', persistAureum);
     renderSyncStatus();
@@ -8208,7 +8663,7 @@ const AureumSync = (function(){
       // only). Billing lock-outs now get the pay buttons right on this
       // screen; a suspension (no billingLock) does not — that needs support.
       const payBlock = document.getElementById('authPayBlock');
-      if(subCheck.billingLock){
+      if(subCheck.billingLock && !AUREUM_STORE_MODE){
         payBlock.style.display = 'block';
         document.getElementById('authPayStripeBtn').onclick = () => startBillingPayment('stripe', 'authPayError');
         document.getElementById('authPayPaynowBtn').onclick = () => startBillingPayment('paynow', 'authPayError');
@@ -8364,6 +8819,12 @@ const AureumSync = (function(){
   window.AureumPw = { attach: attach };
 })();
 /* ==== END SHOW / HIDE PASSWORD ==== */
+</script>
+<script>
+/* Offline support: installs /sw.js (https only). The app works the same without it. */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+}
 </script>
 </body>
 </html>

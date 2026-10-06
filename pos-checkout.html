@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>AUREUM — Point of Sale</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
+<link rel="stylesheet" href="/vendor/fonts/fonts-serif.css">
 <style>
   :root{
     --bg-deep:#0A1B16;
@@ -722,6 +722,17 @@
     color:#1B140A; font-weight:700; padding:11px; border-radius:9px; cursor:pointer; font-size:13px;
   }
 </style>
+<meta name="description" content="AUREUM POS — point-of-sale checkout that keeps working offline.">
+<meta name="theme-color" content="#0A1B16">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="/manifest-pos.webmanifest">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AUREUM POS">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
 <div class="auth-gate" id="authGate">
@@ -1114,7 +1125,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/vendor/supabase.js"></script>
 <script>
   // Card and Mobile payment methods at checkout only record which method
   // was used — they don't process real charges in-app. Use your own card
@@ -3536,6 +3547,12 @@ async function aureumSignIn(email, password){
   window.AureumPw = { attach: attach };
 })();
 /* ==== END SHOW / HIDE PASSWORD ==== */
+</script>
+<script>
+/* Offline support: installs /sw.js (https only). The app works the same without it. */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+}
 </script>
 </body>
 </html>

@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>AUREUM — Control Panel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
 <style>
   :root{
     --bg-deep:#0A1B16; --bg-deep-2:#0D211A; --panel:#11291F; --panel-alt:#153426; --panel-raised:#173A2A;
@@ -163,6 +162,9 @@
     .modal-body, .modal-head{ padding-left:16px; padding-right:16px; }
   }
 </style>
+<meta name="theme-color" content="#0A1B16">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 </head>
 <body>
 
@@ -279,7 +281,7 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/vendor/supabase.js"></script>
 <script>
   const CFG = {
     url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',

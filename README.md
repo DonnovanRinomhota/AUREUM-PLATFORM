@@ -1,44 +1,30 @@
 # AUREUM Platform
 
-A point-of-sale + back-office web app, backed by Supabase (database + auth),
-with Stripe (card) and Paynow (EcoCash/OneMoney) payments.
+A multi-shop point-of-sale + back-office web app, backed by Supabase (database + sign-in) and hosted on Vercel.
+Customers subscribe with Stripe (card) or Paynow (EcoCash/OneMoney, etc.).
 
 ## Structure
 
 ```
-pos-checkout.html      → the till (cashier-facing checkout screen)
-backoffice.html         → management dashboard (products, stock, staff, reports, settings)
-admin.html              → platform Control Panel (manage every account's subscription) — /admin
-supabase/schema.sql     → database schema + security rules — run once in Supabase
-supabase/billing-schema.sql, admin-schema.sql, data-safety.sql → billing, control panel, and safe-saving tables/functions
-supabase/functions/     → edge functions (billing, payments, and admin-manage for the Control Panel)
-SETUP-INSTRUCTIONS.md   → full step-by-step setup guide — start here
-SETUP-ADMIN.md          → setting up the Control Panel and giving other emails access
-SETUP-DATA-SAFETY.md    → safe saving: deploy order, sync indicator, recovering missing records
-SHIFTS-GUIDE.md         → shifts, closing and printing, closed shifts, item-by-item refunds
+backoffice.html        → management dashboard (products, stock, staff, purchasing, reports, settings)
+pos-checkout.html      → the till (cashier checkout, shifts, refunds, receipts)
+admin.html             → platform control panel at /admin (accounts, trials, subscriptions)
+sw.js, offline.html    → offline support (apps open with no internet once loaded)
+manifest*.webmanifest  → makes the Back Office and POS installable as apps
+icons/, vendor/        → app icons; fonts and libraries hosted by AUREUM (see vendor/LICENSES.md)
+supabase/              → database SQL files + edge functions
+vercel.json            → redirects, /admin route, headers
 ```
 
-## Quick start
+## SQL to run in Supabase (SQL Editor), once each, in this order
+`schema.sql` → `billing-schema.sql` → `admin-schema.sql` → `data-safety.sql`
 
-See [SETUP-INSTRUCTIONS.md](./SETUP-INSTRUCTIONS.md) for the full walkthrough
-(create Supabase project → run schema → deploy functions → connect Stripe/Paynow → host it).
-
-Once set up:
-- Host `pos-checkout.html` and `backoffice.html` anywhere static (Netlify,
-  Vercel, GitHub Pages — see below for GitHub Pages).
-- Open `backoffice.html` first to create your business account.
-- Staff sign into `pos-checkout.html` with accounts created in Back Office → Staff.
-
-## Deploying this repo with GitHub Pages (free, alternative to Netlify)
-
-1. Push this repo to GitHub (see below).
-2. In the repo: **Settings → Pages → Source → Deploy from a branch → `main` / `(root)`**.
-3. Your site will be live at `https://<your-username>.github.io/AUREUM-PLATFORM/backoffice.html`
-   (and `/pos-checkout.html` for the till).
+## Guides
+- `SETUP-INSTRUCTIONS.md` — first-time setup
+- `SETUP-BILLING.md`, `SETUP-ADMIN.md`, `SETUP-DATA-SAFETY.md`, `SETUP-EMAIL-TEMPLATE.md`
+- `SHIFTS-GUIDE.md` — how shifts, closing and refunds work
+- `IMPORT-AND-IMAGES.md` — importing products from Excel/CSV, and product pictures
+- `CHANGELOG.md` — what changed in each phase
 
 ## Security note
-
-Never commit real Stripe or Paynow **secret** keys into this repo — those
-belong only in the Back Office's Settings screen (stored in Supabase, used
-server-side by the edge functions). Only the Stripe *publishable* key and
-the Supabase project URL/anon key are safe to have in these HTML files.
+Never commit Stripe or Paynow **secret** keys. They belong only in Supabase secrets, used by the edge functions.

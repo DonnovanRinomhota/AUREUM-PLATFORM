@@ -1,5 +1,63 @@
 # Changelog
 
+## Phase 17 — Product codes, any-spreadsheet import, picture finder, GRN spacing, Z Fold dropdowns (2026-10)
+
+### Product codes — every product always has one
+- Two causes of missing/repeated codes fixed: a new product's suggested code was `100000 + list length + 1`
+  (repeated after any deletion), and clearing the box saved the product with **no code**.
+- New codes continue after the **highest** numeric code in use (100007, 100008…), skipping any taken.
+- **Products already in the system without a code get one automatically** when the Back Office opens, and it is
+  saved to the account. Existing codes are never changed.
+- A code another product already has is refused (the message names that product); blank is never saved.
+  Only the Back Office assigns codes, so the till and Back Office can never invent different codes.
+
+### Product import — any Excel or CSV file
+- **Only Product Name is needed.** Category, Price, Cost and Stock are optional (blank → Others / 0 / 0 / 0).
+  The old import refused any file without a Price column and skipped rows without a valid price.
+- Columns are matched by name automatically (many spellings: ITEM, Selling Price (USD), Qty, Department…) and
+  can be matched **by hand** for any heading. Report titles above the headings are skipped; a list with no
+  headings works ("first row contains headings" switch). Excel (.xlsx/.xls) and CSV (comma, semicolon, tab).
+- Numbers are read the way people write them: `$1,200.50`, `1.234,50`, `12,50`, `R 45`; unreadable values become 0
+  and are reported. 13-digit barcodes stored as numbers in Excel stay exact.
+- **A preview before anything is saved:** what was matched, how many are ready, what will be skipped and why, and
+  the product code each one will get. Downloadable Excel/CSV template.
+- Stock goes to **one shop — the one you choose** (it used to land on the first shop silently).
+  Same-name products are skipped and listed, never overwritten. Handles thousands of rows (3,000 in ~0.5 s).
+
+### Product pictures
+- **Find a picture online**: searches free-to-reuse libraries only — Open Food Facts, Wikimedia Commons and (on
+  request) Openverse. NonCommercial/NoDerivatives pictures are excluded; each saved picture keeps its credit.
+  Only the product name is sent, only when you press Search.
+- **Search Google Images** button opens Google in a new tab (Google's image-search API is closed to new customers
+  and ends 1 Jan 2027, so an app can't read Google's results).
+- **Pictures are now shrunk** (max 480px JPEG) when added — including normal uploads. Previously a raw phone photo
+  (several MB) was stored inside the business record.
+
+### Saved Goods Received / detail tables
+- Quantity and Expiry no longer run together: the detail tables had zero horizontal padding. There is now a clear
+  gap between columns (48px between Quantity and Expiry), checked on desktop, Z Fold and phone.
+- The saved-GRN footnote wrongly said to "delete and re-receive"; GRNs can't be deleted — it now says to record a
+  Stock Adjustment.
+
+### Dropdowns / date filters (Z Fold, tablets, short screens)
+- Root cause: any dropdown that didn't fit below its button was always flipped above it — even when there was less
+  room above. The ~640px date picker landed at −474px (off the top of the screen) on a Z Fold and on short laptops;
+  on phones one dropdown also landed 257px off the right edge.
+- Now: opens below when it fits, above only if it fully fits there, otherwise stays below, nudges the page and
+  scrolls inside itself so every date and the Apply button are reachable. Verified for 210 dropdown openings
+  across 10 screen sizes (both Z Fold shapes, tablets, phones, short laptops).
+
+### Groundwork for app stores (inactive until used; fully tested)
+- **Installable and works offline**: web app manifests (Back Office and POS install as separate apps), icons, and a
+  service worker that keeps the apps, fonts and libraries on the device. It always asks the network first for the
+  app screens (so updates arrive on the next open) and never touches data requests.
+- Fonts, the Supabase client and the Excel library are now **hosted by AUREUM** (`/vendor`) instead of Google
+  Fonts / a CDN: nothing is sent to third parties on opening the app, and the till opens with no internet.
+- **Store-app mode** (`?store=1`, remembered; `?store=0` turns off): shows subscription status only — no payment
+  buttons, wording or links — because Apple and Google require their own billing for paid access sold in a store app.
+- vercel.json: headers for the service worker, manifests, static files and `nosniff`.
+- Not included yet: in-app account deletion and privacy/terms pages (required by both stores) — still to do.
+
 ## Phase 16 — Swipe paging, receipt table, per-cashier shifts, alert views, GRN/transfers, password eye (2026-10)
 
 ### Product list (POS)

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0A1B16">
+<title>AUREUM — You're offline</title>
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
+<style>
+  :root{ color-scheme:dark; }
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box;
+        background:radial-gradient(900px 500px at 80% -10%, rgba(47,107,84,.35), transparent 60%), #0A1B16; color:#F4EFDF; font-family:'Inter',system-ui,sans-serif; }
+  main{ max-width:420px; text-align:center; }
+  .seal{ width:56px; height:56px; border-radius:50%; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:24px; color:#1B140A; background:radial-gradient(circle at 35% 30%,#F3D883,#C9A227 55%,#8A712A); }
+  h1{ font-size:22px; margin:0 0 10px; } p{ color:#A9BDB2; line-height:1.6; font-size:14px; margin:0 0 14px; }
+  a, button{ display:inline-block; margin:6px 4px 0; padding:12px 20px; border-radius:10px; font:inherit; font-weight:700; font-size:14px; text-decoration:none; cursor:pointer; min-height:44px; box-sizing:border-box; }
+  button{ border:0; background:linear-gradient(135deg,#E7C766,#C9A227); color:#1B140A; }
+  a{ border:1px solid rgba(231,199,102,.4); color:#E7C766; }
+  a:focus-visible, button:focus-visible{ outline:2px solid #E7C766; outline-offset:2px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="seal" aria-hidden="true">A</div>
+  <h1>You're offline</h1>
+  <p>AUREUM couldn't reach the internet, and this screen hasn't been saved on this device yet. Connect to Wi-Fi or mobile data and try again.</p>
+  <p>Once the Back Office or POS has been opened online at least once, it opens without a connection — sales made offline are kept on this device and sync automatically when you're back online.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+  <a href="/pos-checkout.html">Open POS</a>
+  <a href="/backoffice.html">Open Back Office</a>
+</main>
+</body>
+</html>
