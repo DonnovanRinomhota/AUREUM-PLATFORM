@@ -518,6 +518,27 @@
   ::-webkit-scrollbar-thumb{ background: var(--panel-raised); border-radius:8px; }
   ::-webkit-scrollbar-track{ background:transparent; }
 
+  /* ---- catalogue sort + pages ---- */
+  .catalog-toolbar{ display:flex; align-items:center; gap:14px; }
+  .catalog-toolbar .section-label{ flex:1 1 auto; min-width:0; }
+  .sort-wrap{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+  .sort-lbl{ font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sage-dim); }
+  .sort-wrap select, .pager-size select{
+    background:var(--panel); color:var(--ivory); border:1px solid var(--line-strong); border-radius:9px;
+    padding:8px 10px; font:inherit; font-size:12.5px; outline:none; cursor:pointer;
+  }
+  .catalog-pager{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding-top:6px; }
+  .pager-info{ font-size:12px; color:var(--sage); }
+  .pager-size{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--sage); }
+  .pager-nav{ display:flex; align-items:center; gap:10px; }
+  .pager-btn{
+    min-width:44px; height:40px; padding:0 14px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line-strong); border-radius:10px; color:var(--ivory-dim); font-weight:600; font-size:13px;
+    cursor:pointer; user-select:none; background:var(--panel);
+  }
+  .pager-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .pager-btn.disabled{ opacity:.35; pointer-events:none; }
+  .pager-page{ font-size:12.5px; color:var(--ivory-dim); white-space:nowrap; }
   /* ---- history rows / negative stock ---- */
   .sale-row.clickable{ cursor:pointer; }
   .sale-row .refund-btn{ border:1px solid var(--line-strong); border-radius:8px; color:var(--gold-bright); font-weight:600; cursor:pointer; white-space:nowrap; }
@@ -704,8 +725,20 @@
       <div class="scan-btn" id="scanBtn"><span class="dot"></span>Scan barcode</div>
     </div>
     <div class="categories" id="categories"></div>
-    <div class="section-label" id="sectionLabel">All Products</div>
+    <div class="catalog-toolbar">
+      <div class="section-label" id="sectionLabel">All Products</div>
+      <label class="sort-wrap"><span class="sort-lbl">Sort</span>
+        <select id="catalogSort" title="Sort products">
+          <option value="az">A – Z</option>
+          <option value="za">Z – A</option>
+          <option value="cat">Category</option>
+          <option value="qtyhi">Quantity: high → low</option>
+          <option value="qtylo">Quantity: low → high</option>
+        </select>
+      </label>
+    </div>
     <div class="grid" id="productGrid"></div>
+    <div class="catalog-pager" id="catalogPager"></div>
   </div>
 
   <div class="ticket-wrap">
@@ -986,69 +1019,498 @@
     url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA'
   };
-  const AUREUM_KEY = 'aureum_pos_cache_v1'; // local cache only, for instant load + offline fallback
+
   const supaReady = SUPABASE_CONFIG.url.startsWith('http');
   const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
   let currentUser = null, currentBusinessId = null, currentRole = null;
 
-  const AUREUM_PENDING_KEY = 'aureum_pending_v1';
-  const AureumDB = (function(){
-    let channel = null;
-    return {
-      cacheRead(){
-        try{ const raw = localStorage.getItem(AUREUM_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
-      },
-      cacheWrite(data){
-        try{ localStorage.setItem(AUREUM_KEY, JSON.stringify(data)); }catch(e){}
-      },
-      async loadRemote(){
-        if(!sb || !currentBusinessId) return null;
-        try{
-          const { data, error } = await sb.from('business_data').select('data').eq('business_id', currentBusinessId).maybeSingle();
-          if(error){ console.error('Aureum load error', error); return null; }
-          return data ? data.data : null;
-        }catch(networkErr){ return null; } // offline on first load — cache already applied by caller
-      },
-      async writeRemote(data){
-        // No cloud backend connected at all (local/static mode) — the local
-        // cache write already covers persistence, there's nothing to sync.
-        if(!sb || !currentBusinessId) return;
-        // Backend exists but the browser has no network right now — queue
-        // it instead of even attempting the request, and pick it back up
-        // the moment 'online' fires (see window 'online' listener below).
-        if(!navigator.onLine){ this.queuePending(data); return; }
-        try{
-          const { error } = await sb.from('business_data').upsert({ business_id: currentBusinessId, data, updated_at: new Date().toISOString() });
-          if(error){ this.queuePending(data); } else { this.clearPending(); }
-        }catch(networkErr){ this.queuePending(data); }
-      },
-      queuePending(data){
-        try{ localStorage.setItem(AUREUM_PENDING_KEY, JSON.stringify({ data, queuedAt: Date.now() })); }catch(e){}
-      },
-      clearPending(){
-        try{ localStorage.removeItem(AUREUM_PENDING_KEY); }catch(e){}
-      },
-      getPending(){
-        try{ const raw = localStorage.getItem(AUREUM_PENDING_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
-      },
-      async flushPending(){
-        const pending = this.getPending();
-        if(!pending || !sb || !currentBusinessId || !navigator.onLine) return;
-        try{
-          const { error } = await sb.from('business_data').upsert({ business_id: currentBusinessId, data: pending.data, updated_at: new Date().toISOString() });
-          if(!error){ this.clearPending(); return true; }
-        }catch(networkErr){ /* still offline, try again later */ }
-        return false;
-      },
-      subscribeRemote(cb){
-        if(!sb || !currentBusinessId) return;
-        channel = sb.channel('business_data_' + currentBusinessId)
-          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'business_data', filter:`business_id=eq.${currentBusinessId}` },
-            payload => cb(payload.new.data))
-          .subscribe();
-      }
+/* ==== AUREUM SYNC CORE (identical in backoffice.html and pos-checkout.html) ====
+   WHY THIS EXISTS: the Back Office and the POS used to save by REPLACING the
+   whole business document with whatever that one app held. The POS doesn't know
+   about expenses / purchase orders / goods received / adjustments / transfers,
+   so every sale deleted them; the Back Office doesn't know shift closures, so
+   every save deleted those. A failed load was also treated as "new business"
+   and saved an empty document over the real one.
+
+   NOW: every save (1) re-reads the server's latest copy, (2) 3-way merges this
+   app's changes into it using the last-synced copy as the common ancestor, so
+   nothing it doesn't know about is dropped and records added elsewhere survive,
+   and (3) writes with compare-and-swap so a concurrent save is never silently
+   overwritten. Nothing is ever written before a successful load. */
+const AureumSync = (function(){
+  'use strict';
+
+  /* ---------------------------------------------------------------- merge --- */
+  const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const isPrim = v => v === null || typeof v !== 'object';
+  function sortKeys(v){
+    if(Array.isArray(v)) return v.map(sortKeys);
+    if(isObj(v)){ const o = {}; Object.keys(v).sort().forEach(k => { o[k] = sortKeys(v[k]); }); return o; }
+    return v;
+  }
+  const stable = v => JSON.stringify(sortKeys(v));
+  const same = (a, b) => a === b || stable(a) === stable(b);
+  const clone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+
+  // Next free number for ids like "PO-1042" (never derived from list length).
+  function nextDocNumber(list, prefix, floor){
+    const re = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$');
+    let max = floor - 1;
+    (list || []).forEach(r => { const m = String(r && r.id != null ? r.id : '').match(re); if(m && +m[1] > max) max = +m[1]; });
+    return max + 1;
+  }
+
+  // Two records can end up with the same display number if two devices create
+  // one at the same moment. Keep both (they have different uids) but renumber
+  // the one THIS device just added so numbers stay unique.
+  function dedupeStringIds(prefix, floor){
+    return function(out, added){
+      const addedSet = new Set(added); let max = nextDocNumber(out, prefix, floor) - 1;
+      const taken = new Set(out.filter(r => !addedSet.has(r)).map(r => String(r.id)));
+      return out.map(r => {
+        if(!addedSet.has(r)) return r;
+        const id = String(r.id);
+        if(!taken.has(id)){ taken.add(id); return r; }
+        max += 1; const n = { ...r, id: prefix + max }; taken.add(n.id); return n;
+      });
     };
-  })();
+  }
+  function dedupeNumericIds(out, added){
+    const addedSet = new Set(added); let max = 0;
+    out.forEach(r => { if(typeof r.id === 'number' && r.id > max) max = r.id; });
+    const taken = new Set(out.filter(r => !addedSet.has(r) && typeof r.id === 'number').map(r => r.id));
+    return out.map(r => {
+      if(!addedSet.has(r) || typeof r.id !== 'number') return r;
+      if(!taken.has(r.id)){ taken.add(r.id); return r; }
+      max += 1; const n = { ...r, id: max }; taken.add(n.id); return n;
+    });
+  }
+  // stock = sum of per-shop stock, recomputed after a merge so the mirror can't drift
+  function recomputeStock(out){
+    return out.map(p => (isObj(p.shopStock) ? { ...p, stock: Object.values(p.shopStock).reduce((s, v) => s + (+v || 0), 0) } : p));
+  }
+
+  // Which top-level lists hold records with an identity, and how they behave.
+  //  key       → what identifies a record (uid when it has one)
+  //  newFirst  → this list is added to at the FRONT (unshift)
+  const byUid = (pfx) => r => r.uid ? 'u:' + r.uid : pfx + r.id;
+  const COLLECTIONS = {
+    products:         { key: p => 'p:' + p.id, fix: recomputeStock },
+    customers:        { key: byUid('c:'), fix: dedupeNumericIds },
+    employees:        { key: byUid('e:'), fix: dedupeNumericIds },
+    receipts:         { key: r => r.uid ? 'u:' + r.uid : 'L:' + r.dateTime + '|' + r.id + '|' + r.total },
+    expenses:         { key: byUid('x:'), fix: dedupeNumericIds },
+    employeeHours:    { key: byUid('h:'), fix: dedupeNumericIds },
+    purchaseOrders:   { key: byUid('PO:'), newFirst: true, fix: dedupeStringIds('PO-', 1042) },
+    grnRecords:       { key: byUid('GRN:'), newFirst: true, fix: dedupeStringIds('GRN-', 11223) },
+    stockAdjustments: { key: byUid('SA:'), newFirst: true, fix: dedupeStringIds('SA-', 10956) },
+    transfers:        { key: byUid('TR:'), newFirst: true, fix: dedupeStringIds('TR-', 1001) },
+    shiftClosures:    { key: byUid('SC:'), newFirst: true },
+  };
+  // Numbers that are COUNTERS (changed by deltas from several devices at once),
+  // so concurrent changes add up instead of one overwriting the other.
+  function isCounterChild(rec, key, parentIsCounter){
+    return parentIsCounter || (rec === 'products' && key === 'shopStock') || (rec === 'customers' && (key === 'orders' || key === 'spent'));
+  }
+
+  function mergeSet(base, remote, local){
+    const l = new Set(local), b = new Set(base);
+    const removedByMe = new Set(base.filter(x => !l.has(x)));
+    const out = remote.filter(x => !removedByMe.has(x));
+    local.forEach(x => { if(!b.has(x) && !out.includes(x)) out.push(x); });
+    return out;
+  }
+
+  function mergeRecords(base, remote, local, spec, name){
+    const keyOf = r => { let k; try{ k = spec.key(r); }catch(e){ k = undefined; } return (k === undefined || k === null || /undefined$/.test(String(k))) ? 'j:' + stable(r) : String(k); };
+    const index = arr => { const m = new Map(); arr.forEach(r => { if(isObj(r)) m.set(keyOf(r), r); }); return m; };
+    const B = index(base), R = index(remote), L = index(local);
+    const kept = [];
+    remote.forEach(r => {
+      if(!isObj(r)){ kept.push(r); return; }
+      const k = keyOf(r);
+      if(L.has(k)) kept.push(merge3(B.get(k), r, L.get(k), name, { top:false, rec:name, counter:false }));
+      else if(B.has(k)){ if(!same(r, B.get(k))) kept.push(r); }   // I deleted it — but if someone edited it meanwhile, the edit wins
+      else kept.push(r);                                           // someone else added it
+    });
+    const added = [];
+    local.forEach(l => {
+      if(!isObj(l)) return;
+      const k = keyOf(l);
+      if(R.has(k)) return;
+      if(!B.has(k)) added.push(l);                                 // I added it
+      else if(!same(l, B.get(k))) added.push(l);                   // they deleted it but I edited it — keep mine
+    });
+    let out = spec.newFirst ? added.concat(kept) : kept.concat(added);
+    if(spec.fix) out = spec.fix(out, added);
+    return out;
+  }
+
+  // base = what the server had when we last synced; remote = what it has now;
+  // local = what this device has now. Returns the combined result.
+  // 'delta' normally. 'remote' only right after we detect that our own previous
+  // save already reached the server (reply lost) — then our deltas are already in it.
+  let COUNTER_MODE = 'delta';
+  function merge3(base, remote, local, path, ctx){
+    if(local === undefined) return remote;            // this app doesn't know this part — keep the server's
+    if(same(local, base)) return remote;              // I didn't change it — take theirs
+    if(remote === undefined) return local;            // I changed it and it's gone remotely — mine
+    if(same(remote, base)) return local;              // they didn't change it — take mine
+    // Counters: BOTH sides' changes count, even if they happen to land on the same number
+    // (two tills each selling one item both move stock by -1 → total -2).
+    if(ctx.counter && typeof local === 'number' && typeof remote === 'number' && typeof base === 'number')
+      return COUNTER_MODE === 'remote' ? remote : remote + (local - base);
+    if(same(local, remote)) return local;
+    // both sides changed it, differently
+    if(Array.isArray(local) && Array.isArray(remote)){
+      const spec = ctx.top ? COLLECTIONS[path] : null;
+      const b = Array.isArray(base) ? base : [];
+      if(spec) return mergeRecords(b, remote, local, spec, path);
+      if(local.every(isPrim) && remote.every(isPrim)) return mergeSet(b, remote, local);
+      return local;
+    }
+    if(isObj(local) && isObj(remote)){
+      const b = isObj(base) ? base : {}, out = {};
+      new Set([...Object.keys(b), ...Object.keys(remote), ...Object.keys(local)]).forEach(k => {
+        const v = merge3(b[k], remote[k], local[k], path, { top:false, rec:ctx.rec, counter: isCounterChild(ctx.rec, k, ctx.counter) });
+        if(v !== undefined) out[k] = v;
+      });
+      return out;
+    }
+    return local;                                     // a genuine clash on one value: this device's change wins
+  }
+
+  function mergeDocs(base, remote, local){
+    base = base || {}; remote = remote || {}; local = local || {};
+    const out = {};
+    new Set([...Object.keys(base), ...Object.keys(remote), ...Object.keys(local)]).forEach(k => {
+      const v = merge3(base[k], remote[k], local[k], k, { top:true, rec:k, counter:false });
+      if(v !== undefined) out[k] = v;
+    });
+    return out;
+  }
+
+  /* --------------------------------------------------------------- engine --- */
+  let cfg = null, base = null, version = null, loaded = false, saving = false, pulling = false;
+  let failures = 0, nextAttemptAt = 0, state = 'loading', lastStr = null, started = false, compat = false;
+  let noVersion = false, noRpc = false, channel = null, blockEl = null, retryTimer = null;
+  let deviceId = null, lastAttempt = null;   // lastAttempt = { id, sent } of a save whose outcome we never saw
+  function getDeviceId(){
+    if(deviceId) return deviceId;
+    try{ deviceId = localStorage.getItem('aureum_device_id'); if(!deviceId){ deviceId = uid(); localStorage.setItem('aureum_device_id', deviceId); } }catch(e){ deviceId = uid(); }
+    return deviceId;
+  }
+  const stripMeta = d => { const o = { ...d }; delete o._saves; return o; };
+
+  const KEY_V2 = 'aureum_cache_v2:';
+  const LEGACY_KEYS = ['aureum_pos_cache_v1'];
+  const LEGACY_BACKUP = 'aureum_legacy_backup_v1';
+  const cacheKey = () => KEY_V2 + cfg.getBusinessId() + ':' + (cfg.app || 'app');
+  const localKey = () => KEY_V2 + 'local:' + (cfg.app || 'app');
+  const knownKeys = () => Object.keys(cfg.getSnapshot());
+  const pick = (doc, keys) => { const o = {}; keys.forEach(k => { if(doc && doc[k] !== undefined) o[k] = doc[k]; }); return o; };
+
+  function setState(s, detail){ state = s; try{ cfg.onStatus && cfg.onStatus(s, detail); }catch(e){} }
+  function configure(c){ cfg = c; }
+  function uid(){ return (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+
+  // Keep the old shared cache aside (once) before this version stops using it:
+  // it isn't tied to a business, and it may hold records the server lost.
+  function backupLegacyOnce(){
+    try{
+      if(localStorage.getItem(LEGACY_BACKUP)) return;
+      for(const k of LEGACY_KEYS){ const v = localStorage.getItem(k); if(v){ localStorage.setItem(LEGACY_BACKUP, v); return; } }
+    }catch(e){}
+  }
+
+  function readCache(){
+    try{ const c = JSON.parse(localStorage.getItem(cacheKey()) || 'null'); return c && c.v === 2 && c.base ? c : null; }catch(e){ return null; }
+  }
+  function cacheToLocal(c){
+    const local = {};
+    Object.keys(c.base).forEach(k => { local[k] = c.base[k]; });
+    Object.keys(c.changed || {}).forEach(k => { local[k] = c.changed[k]; });
+    return local;
+  }
+  // Only worth caching once we know what the server had (base) — otherwise a
+  // cache of unsynced guesses could later overwrite real data.
+  function writeCache(local){
+    if(!base) return;
+    try{
+      const changed = {};
+      Object.keys(local).forEach(k => { if(!same(local[k], base[k])) changed[k] = local[k]; });
+      localStorage.setItem(cacheKey(), JSON.stringify({ v:2, base, changed, version, attempt: lastAttempt ? lastAttempt.id : null, savedAt: Date.now() }));
+    }catch(e){ /* storage full: keep working, just without offline durability */ }
+  }
+
+  async function loadRemote(versionOnly){
+    const sb = cfg.getClient(), bid = cfg.getBusinessId();
+    try{
+      const wantVersion = !noVersion;
+      const verOnly = versionOnly && wantVersion;       // without a version column there is nothing cheaper than a full read
+      const cols = verOnly ? 'version' : (wantVersion ? 'data, version' : 'data');
+      let { data, error } = await sb.from('business_data').select(cols).eq('business_id', bid).maybeSingle();
+      if(error && wantVersion && /version/i.test(error.message || '')){
+        noVersion = true; compat = true;
+        ({ data, error } = await sb.from('business_data').select('data').eq('business_id', bid).maybeSingle());
+      }
+      if(error) return { ok:false, error };
+      if(!data) return { ok:true, exists:false, data:{}, version:0 };
+      return { ok:true, exists:true, data: verOnly ? undefined : (data.data || {}), version: noVersion ? null : Number(data.version || 0) };
+    }catch(e){ return { ok:false, error:e }; }
+  }
+
+  async function rpcSave(doc, expectedVersion){
+    const sb = cfg.getClient(), bid = cfg.getBusinessId();
+    if(!noRpc){
+      try{
+        const { data, error } = await sb.rpc('save_business_data', { p_data: doc, p_expected_version: expectedVersion });
+        if(!error) return { data };
+        if(/could not find the function|PGRST202|does not exist/i.test((error.message || '') + (error.code || ''))){ noRpc = true; compat = true; }
+        else return { error };
+      }catch(e){ return { error:e }; }
+    }
+    // Database not updated yet (data-safety.sql not run): still merged, just not atomic.
+    try{
+      const { error } = await sb.from('business_data').upsert({ business_id: bid, data: doc, updated_at: new Date().toISOString() });
+      if(error) return { error };
+      return { data:{ ok:true, version: noVersion ? null : (expectedVersion || 0) + 1 } };
+    }catch(e){ return { error:e }; }
+  }
+
+  function applyMerged(doc){
+    cfg.applyData(pick(doc, knownKeys()));
+  }
+  function nowDirtyLocal(){
+    const local = cfg.getSnapshot();
+    return same(local, pick(base, Object.keys(local))) ? null : local;
+  }
+
+  async function saveOnce(){
+    for(let i = 0; i < 6; i++){
+      const sentLocal = cfg.getSnapshot();
+      const r = await loadRemote(false);
+      if(!r.ok){ fail(r.error); return false; }
+      let ancestor = base;
+      if(lastAttempt){
+        // Did our previous save actually land even though we never got the reply?
+        const landed = r.data._saves && r.data._saves[getDeviceId()] === lastAttempt.id;
+        if(landed) ancestor = lastAttempt.sent;         // it's already part of the server's copy — don't apply it twice
+        lastAttempt = null;
+      }
+      const merged = mergeDocs(ancestor, r.data, sentLocal);
+      if(same(stripMeta(merged), stripMeta(r.data))){   // nothing to write: the server already has everything
+        base = clone(r.data); version = r.version; failures = 0; nextAttemptAt = 0;
+        const cur0 = cfg.getSnapshot();
+        if(!same(pick(merged, Object.keys(cur0)), cur0)){ applyMerged(merged); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+        setState(compat ? 'synced-compat' : 'synced'); writeCache(cfg.getSnapshot());
+        return true;
+      }
+      const attemptId = uid();
+      merged._saves = Object.assign({}, isObj(merged._saves) ? merged._saves : {}, { [getDeviceId()]: attemptId });
+      lastAttempt = { id: attemptId, sent: clone(merged) };   // remembered BEFORE sending, in case the reply is lost
+      writeCache(sentLocal);
+      const res = await rpcSave(merged, r.version);
+      if(res.error){ fail(res.error); return false; }         // outcome unknown → lastAttempt stays set
+      if(res.data && res.data.ok){
+        lastAttempt = null;
+        base = clone(merged); version = res.data.version; failures = 0; nextAttemptAt = 0;
+        // Pull in what others changed, keeping anything edited while we were saving.
+        const cur = cfg.getSnapshot();
+        const toApply = mergeDocs(sentLocal, merged, cur);
+        if(!same(pick(toApply, Object.keys(cur)), cur)){ applyMerged(toApply); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+        setState(compat ? 'synced-compat' : 'synced');
+        writeCache(cfg.getSnapshot());
+        return true;
+      }
+      lastAttempt = null;   // definitively rejected (someone saved first) → read, merge, retry
+    }
+    fail({ message:'Several people are saving at once — will retry' });
+    return false;
+  }
+
+  function fail(err){
+    failures += 1; nextAttemptAt = Date.now() + Math.min(30000, 1000 * Math.pow(2, failures));
+    console.error('Aureum sync problem:', err && err.message ? err.message : err);
+    setState(navigator.onLine === false ? 'offline' : 'error', err && err.message);
+  }
+
+  async function requestSave(){
+    if(!loaded || saving || !cfg.isCloud()) return;
+    if(Date.now() < nextAttemptAt) return;
+    saving = true; setState('saving');
+    try{
+      let rounds = 0;
+      while(rounds++ < 5){
+        const ok = await saveOnce();
+        if(!ok || !nowDirtyLocal()) break;     // keep going only if more edits arrived meanwhile
+      }
+    } finally { saving = false; }
+  }
+
+  // Called after every change, and on a timer. Keeps this device's cache current
+  // and saves if anything differs from what the server last had.
+  function touch(){
+    if(!cfg) return;
+    const local = cfg.getSnapshot();
+    const s = stable(local);
+    if(!cfg.isCloud()){                       // demo / no cloud backend: this device is the only store
+      if(s !== lastStr){ lastStr = s; try{ localStorage.setItem(localKey(), JSON.stringify(local)); }catch(e){} }
+      return;
+    }
+    if(s !== lastStr){ lastStr = s; writeCache(local); }
+    if(!loaded) return;
+    if(nowDirtyLocal()) requestSave();
+  }
+
+  async function receive(r){
+    const local = cfg.getSnapshot();
+    const merged = mergeDocs(base, r.data, local);
+    base = clone(r.data); version = r.version;
+    if(!same(pick(merged, Object.keys(local)), local)){ applyMerged(merged); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+    writeCache(cfg.getSnapshot());
+  }
+  async function pull(){
+    if(!loaded || saving || pulling || !cfg.isCloud()) return;
+    pulling = true;
+    try{
+      const head = await loadRemote(true);
+      if(!head.ok || (version !== null && head.version === version)) return;
+      const r = await loadRemote(false);
+      if(r.ok) await receive(r);
+    } finally { pulling = false; }
+  }
+
+  function showBlock(msg){
+    if(!blockEl){
+      blockEl = document.createElement('div');
+      blockEl.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(6,14,11,0.94);color:#F4EFDF;font-family:Inter,sans-serif;text-align:center;padding:24px;';
+      blockEl.innerHTML = '<div style="max-width:380px"><div style="font-size:18px;font-weight:700;margin-bottom:8px">Can\u2019t load your data</div><div id="aureumBlockMsg" style="font-size:13px;color:#8FA79A;line-height:1.6;margin-bottom:16px"></div><div id="aureumBlockRetry" style="display:inline-block;cursor:pointer;padding:10px 20px;border-radius:9px;background:#E7C766;color:#1B140A;font-weight:700;font-size:13px">Try again now</div></div>';
+      document.body.appendChild(blockEl);
+      blockEl.querySelector('#aureumBlockRetry').onclick = () => retryNow();
+    }
+    blockEl.querySelector('#aureumBlockMsg').textContent = msg;
+    blockEl.style.display = 'flex';
+  }
+  function hideBlock(){ if(blockEl) blockEl.style.display = 'none'; }
+
+  function finishLoad(r, cache){
+    const remoteDoc = r.data || {};
+    let merged = remoteDoc;
+    if(cache){
+      // If the last save before the page closed DID reach the server, the cache's stock/order deltas are
+      // already in it — merging them again would count them twice.
+      const landed = cache.attempt && remoteDoc._saves && remoteDoc._saves[getDeviceId()] === cache.attempt;
+      COUNTER_MODE = landed ? 'remote' : 'delta';
+      try{ merged = mergeDocs(cache.base, remoteDoc, cacheToLocal(cache)); } finally { COUNTER_MODE = 'delta'; }
+    }
+    base = clone(remoteDoc); version = r.version; loaded = true; failures = 0; nextAttemptAt = 0;
+    applyMerged(merged);
+    try{ cfg.onApplied && cfg.onApplied(); }catch(e){}
+    hideBlock();
+    setState(compat ? 'synced-compat' : 'synced');
+    if(!started){ started = true; startBackground(); }
+    touch();
+  }
+
+  function startBackground(){
+    setInterval(touch, 1200);
+    setInterval(pull, 20000);
+    try{
+      channel = cfg.getClient().channel('business_data_' + cfg.getBusinessId())
+        .on('postgres_changes', { event:'*', schema:'public', table:'business_data', filter:'business_id=eq.' + cfg.getBusinessId() },
+          payload => { const v = payload && payload.new ? payload.new.version : undefined; if(v !== undefined && v === version) return; pull(); })
+        .subscribe();
+    }catch(e){}
+    window.addEventListener('online', () => retryNow());
+  }
+
+  let startResolve = null;
+  async function attemptLoad(){
+    const cache = readCache();
+    const r = await loadRemote(false);
+    if(r.ok){ finishLoad(r, cache); if(startResolve){ startResolve({ ok:true }); startResolve = null; } return true; }
+    fail(r.error);
+    setState(navigator.onLine === false ? 'offline' : 'load-failed', r.error && r.error.message);
+    if(cache){
+      // Offline start: show what this device last had, keep retrying, and never save until a load succeeds.
+      if(startResolve){ startResolve({ ok:false, offline:true }); startResolve = null; }
+    } else {
+      showBlock(navigator.onLine === false ? 'You appear to be offline and nothing is stored on this device yet. Connect to the internet and it will load.' : 'The server didn\u2019t respond. Your data is safe — nothing has been changed. Retrying automatically…');
+    }
+    clearTimeout(retryTimer); retryTimer = setTimeout(attemptLoad, Math.min(15000, 2000 * failures));
+    return false;
+  }
+  function retryNow(){
+    nextAttemptAt = 0;
+    if(!loaded){ clearTimeout(retryTimer); return attemptLoad(); }
+    return requestSave().then(pull);
+  }
+
+  function startLocal(){
+    try{ const raw = localStorage.getItem(localKey()); if(raw){ cfg.applyData(JSON.parse(raw)); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} } }catch(e){}
+    setState('local');
+    if(!started){ started = true; setInterval(touch, 1200); }
+    return Promise.resolve({ ok:true, local:true });
+  }
+  function start(){
+    if(!cfg.isCloud()) return startLocal();
+    backupLegacyOnce();
+    const cache = readCache();
+    if(cache){ cfg.applyData(pick(cacheToLocal(cache), knownKeys())); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+    setState('loading');
+    return new Promise(res => { startResolve = res; attemptLoad(); });
+  }
+
+  /* ------------------------------------------------------------- recovery --- */
+  // Older versions kept one SHARED copy of the data in this browser. It isn't tied to a
+  // business, but it may still hold records the server lost. These helpers find what is
+  // on this device but missing from the account — never demo data, never duplicates.
+  const SEED = { purchaseOrders:/^PO-104[12]$/, grnRecords:/^(GRN-1122[23]|TGRN-11983)$/, stockAdjustments:/^SA-109(5[256])$/ };
+  const fingerprint = r => [r.id, r.date || r.dateTime || '', r.total != null ? r.total : (r.amount != null ? r.amount : '')].join('|');
+  const RECOVERABLE = ['purchaseOrders','grnRecords','stockAdjustments','transfers','expenses','employeeHours','receipts'];
+  function findRecoverable(){
+    const out = {}; let total = 0;
+    const docs = [];
+    try{ ['aureum_legacy_backup_v1', 'aureum_pos_cache_v1'].forEach(k => { const v = localStorage.getItem(k); if(v) docs.push(JSON.parse(v)); }); }catch(e){}
+    const local = cfg.getSnapshot();
+    RECOVERABLE.forEach(name => {
+      if(!(name in local)) return;                        // this app doesn't hold that kind of record
+      const have = new Set((local[name] || []).map(fingerprint)), seenHere = new Set(), found = [];
+      docs.forEach(d => (d[name] || []).forEach(r => {
+        if(!isObj(r) || (SEED[name] && SEED[name].test(String(r.id)))) return;
+        if(name === 'receipts' && !Array.isArray(r.items)) return;
+        const f = fingerprint(r);
+        if(have.has(f) || seenHere.has(f)) return;
+        seenHere.add(f); found.push(r);
+      }));
+      if(found.length){ out[name] = found; total += found.length; }
+    });
+    return { byCollection: out, total };
+  }
+
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same,
+           findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
+})();
+/* ==== END AUREUM SYNC CORE ==== */
+
+  AureumSync.configure({
+    app: 'pos',
+    getSnapshot: () => aureumSnapshotData(),
+    applyData: (d) => applyLoadedData(d),
+    onApplied: () => { try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} },
+    onStatus: (state) => {
+      try{ renderSyncStatus(); }catch(e){}
+      if(state === 'synced-compat' && !window.__aureumCompatWarned){
+        window.__aureumCompatWarned = true;
+        console.warn('Aureum: run supabase/data-safety.sql in Supabase to enable fully safe saving.');
+        try{ aureumToast('Database update needed: run data-safety.sql in Supabase (see SETUP-DATA-SAFETY.md).', 'danger'); }catch(e){}
+      }
+    },
+    getClient: () => sb,
+    getBusinessId: () => currentBusinessId,
+    isCloud: () => !!(supaReady && sb && currentBusinessId)
+  });
 
 /* ===== AUTH ===== */
 async function aureumSignIn(email, password){
@@ -1214,14 +1676,33 @@ async function aureumSignIn(email, password){
     if(p.shops === 'all') return true;
     return Array.isArray(p.shops) && p.shops.includes(shop);
   }
+  /* Catalogue: sorted and paged (no endless scroll). The page resets whenever the search,
+     category, sort or shop changes; a stock change or a sale keeps you on the same page. */
+  let catalogPage = 1, catalogSort = 'az', _catalogKey = '';
+  let catalogPageSize = (() => { try{ const n = parseInt(localStorage.getItem('aureum_pos_pagesize')); return [12,24,48].includes(n) ? n : 12; }catch(e){ return 12; } })();
+  const byName = (a,b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base', numeric:true });
+  const CATALOG_SORTS = {
+    az:    (a,b) => byName(a,b),
+    za:    (a,b) => byName(b,a),
+    cat:   (a,b) => (a.cat||'').localeCompare(b.cat||'', undefined, { sensitivity:'base' }) || byName(a,b),
+    qtyhi: (a,b) => getStock(b, activeShop) - getStock(a, activeShop) || byName(a,b),
+    qtylo: (a,b) => getStock(a, activeShop) - getStock(b, activeShop) || byName(a,b),
+  };
   function renderCatalog(){
     const q = searchInput.value.trim().toLowerCase();
     const items = PRODUCTS.filter(p =>
       (activeCat==="All" || p.cat===activeCat) &&
-      (q==="" || p.name.toLowerCase().includes(q)) &&
+      (q==="" || p.name.toLowerCase().includes(q) || String(p.code||'').toLowerCase().includes(q) || String(p.barcode||'').toLowerCase().includes(q)) &&
       productInShop(p, activeShop)
-    );
-    catalogEl.innerHTML = items.map(p => `
+    ).sort(CATALOG_SORTS[catalogSort] || CATALOG_SORTS.az);
+
+    const key = [q, activeCat, catalogSort, activeShop].join('|');
+    if(key !== _catalogKey){ _catalogKey = key; catalogPage = 1; }
+    const totalPages = Math.max(1, Math.ceil(items.length / catalogPageSize));
+    if(catalogPage > totalPages) catalogPage = totalPages;
+    const pageItems = items.slice((catalogPage-1)*catalogPageSize, catalogPage*catalogPageSize);
+
+    catalogEl.innerHTML = pageItems.map(p => `
       <div class="card" data-id="${p.id}">
         <div class="glyph">${productArt(p)}</div>
         <div class="pname">${p.name}</div>
@@ -1235,7 +1716,31 @@ async function aureumSignIn(email, password){
     catalogEl.querySelectorAll('.card').forEach(el=>{
       el.addEventListener('click', ()=> addToCart(parseInt(el.dataset.id)));
     });
+    renderCatalogPager(items.length, totalPages);
   }
+  function renderCatalogPager(total, totalPages){
+    const el = document.getElementById('catalogPager');
+    if(total === 0){ el.innerHTML = ''; return; }
+    const from = (catalogPage-1)*catalogPageSize + 1, to = Math.min(total, catalogPage*catalogPageSize);
+    el.innerHTML = `
+      <div class="pager-info">Showing ${from}–${to} of ${total}</div>
+      <div class="pager-nav">
+        <div class="pager-btn ${catalogPage<=1?'disabled':''}" id="pgPrev">&lsaquo; Prev</div>
+        <span class="pager-page">Page ${catalogPage} of ${totalPages}</span>
+        <div class="pager-btn ${catalogPage>=totalPages?'disabled':''}" id="pgNext">Next &rsaquo;</div>
+      </div>
+      <label class="pager-size">Show
+        <select id="pgSize">${[12,24,48].map(n=>`<option value="${n}" ${n===catalogPageSize?'selected':''}>${n}</option>`).join('')}</select>
+      </label>`;
+    document.getElementById('pgPrev').addEventListener('click', ()=>{ if(catalogPage>1){ catalogPage--; renderCatalog(); } });
+    document.getElementById('pgNext').addEventListener('click', ()=>{ if(catalogPage<totalPages){ catalogPage++; renderCatalog(); } });
+    document.getElementById('pgSize').addEventListener('change', e=>{
+      catalogPageSize = parseInt(e.target.value); catalogPage = 1;
+      try{ localStorage.setItem('aureum_pos_pagesize', String(catalogPageSize)); }catch(err){}
+      renderCatalog();
+    });
+  }
+  document.getElementById('catalogSort').addEventListener('change', e=>{ catalogSort = e.target.value; renderCatalog(); });
 
   function addToCart(id){
     cart[id] = (cart[id]||0) + 1;
@@ -2048,7 +2553,7 @@ async function aureumSignIn(email, password){
     if(customer){
       let rec = CUSTOMERS.find(c=> customer.phone && c.phone === customer.phone) || CUSTOMERS.find(c=>c.name===customer.name);
       if(!rec){
-        rec = { id: nextCustomerId++, name:customer.name, phone:customer.phone||'', email:'', shop:'', notes:'', orders:0, spent:0, credit:0, joined:now.toISOString().slice(0,10) };
+        rec = { uid: AureumSync.uid(), id: nextCustomerId++, name:customer.name, phone:customer.phone||'', email:'', shop:'', notes:'', orders:0, spent:0, credit:0, joined:now.toISOString().slice(0,10) };
         CUSTOMERS.push(rec);
       }
       rec.orders += 1;
@@ -2162,61 +2667,42 @@ async function aureumSignIn(email, password){
   });
 
   /* ===== CLOUD SYNC ===== */
-  let _aureumSnapshot = '';
   function aureumSnapshotData(){
     return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, shiftClosures:SHIFT_CLOSURES, settings:POS_SETTINGS };
   }
-  function persistAureum(){
-    const str = JSON.stringify(aureumSnapshotData());
-    if(str === _aureumSnapshot) return;
-    _aureumSnapshot = str;
-    AureumDB.cacheWrite(aureumSnapshotData());
-    AureumDB.writeRemote(aureumSnapshotData()).then(()=>{ try{ renderSyncStatus(); }catch(e){} });
-  }
+  function persistAureum(){ AureumSync.touch(); }
   function applyLoadedData(shared){
     if(!shared) return;
-    if(shared.shops && shared.shops.length) SHOPS = shared.shops;
-    if(shared.products && shared.products.length) PRODUCTS = shared.products;
-    if(shared.customers && shared.customers.length) CUSTOMERS = shared.customers;
-    if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
-    if(shared.receipts && shared.receipts.length) RECEIPTS = shared.receipts;
-    if(shared.shiftClosures && shared.shiftClosures.length) SHIFT_CLOSURES = shared.shiftClosures;
+    const live = !!(supaReady && sb);   // a real cloud business: the server's copy is the truth — demo seed data never survives
+    const has = k => Array.isArray(shared[k]);
+    if(has('shops') && (shared.shops.length || live)) SHOPS = shared.shops;
+    if(has('products') && (shared.products.length || live)) PRODUCTS = shared.products;
+    if(has('customers') && (shared.customers.length || live)) CUSTOMERS = shared.customers;
+    if(has('employees') && (shared.employees.length || live)) EMPLOYEES = shared.employees;
+    RECEIPTS = has('receipts') ? shared.receipts : (live ? [] : RECEIPTS);
+    SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // Don't clobber the cashier's active shift if data reloads mid-shift
     // (e.g. a live sync update from Back Office) — only set a default
     // employee if no one has actually started a shift yet.
     if(!activeEmployee) activeEmployee = null;
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
-    _aureumSnapshot = JSON.stringify(aureumSnapshotData());
   }
 
   async function startApp(){
-    const cached = AureumDB.cacheRead();
-    if(cached){ applyLoadedData(cached); }
-
-    const remote = await AureumDB.loadRemote();
-    if(remote && Object.keys(remote).length){ applyLoadedData(remote); }
-    else { persistAureum(); }
+    // Load this business's data (or this device's own saved copy if the server can't be reached), merge,
+    // apply, and start background saving. Nothing is written before a successful load.
+    await AureumSync.start();
 
     taxPercent = POS_SETTINGS.taxPercent || 0;
     document.getElementById('taxPercentInput').value = taxPercent;
     applyEnabledPaymentMethods();
 
-    setInterval(persistAureum, 1200);
     window.addEventListener('beforeunload', persistAureum);
-    AureumDB.subscribeRemote(function(shared){
-      const str = JSON.stringify(shared);
-      if(str === _aureumSnapshot) return;
-      applyLoadedData(shared);
-      try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){}
-    });
-
     renderSyncStatus();
-    setInterval(async ()=>{ await AureumDB.flushPending(); renderSyncStatus(); }, 4000);
     window.addEventListener('online', async ()=>{
-      const flushed = await AureumDB.flushPending();
-      renderSyncStatus();
-      if(flushed && supaReady && sb) aureumToast('Back online \u2014 sales are synced.', 'ok');
+      await AureumSync.retryNow(); renderSyncStatus();
+      if(supaReady && sb && /^synced/.test(AureumSync.status().state)) aureumToast('Back online \u2014 sales are synced.', 'ok');
     });
     window.addEventListener('offline', ()=>{
       renderSyncStatus();
@@ -2251,20 +2737,16 @@ async function aureumSignIn(email, password){
   function renderSyncStatus(){
     const el = document.getElementById('syncStatus');
     const label = document.getElementById('syncStatusLabel');
-    const pending = AureumDB.getPending();
-    if(!supaReady || !sb){
-      el.style.color = 'var(--sage)';
-      label.textContent = 'Saved on this device';
-    } else if(!navigator.onLine){
-      el.style.color = 'var(--danger)';
-      label.textContent = pending ? 'Offline · sale queued' : 'Offline';
-    } else if(pending){
-      el.style.color = 'var(--gold-bright)';
-      label.textContent = 'Syncing…';
-    } else {
-      el.style.color = 'var(--sage)';
-      label.textContent = 'Synced';
-    }
+    if(!el || !label) return;
+    const st = AureumSync.status().state;
+    const set = (color, text) => { el.style.color = color; label.textContent = text; };
+    if(!supaReady || !sb) return set('var(--sage)', 'Saved on this device');
+    if(st === 'saving') return set('var(--gold-bright)', 'Syncing…');
+    if(st === 'loading') return set('var(--gold-bright)', 'Loading…');
+    if(st === 'offline') return set('var(--danger)', 'Offline · sales saved on this device');
+    if(st === 'error' || st === 'load-failed') return set('var(--danger)', 'Sync problem · retrying');
+    if(st === 'synced-compat') return set('var(--gold-bright)', 'Synced · update needed');
+    return set('var(--sage)', 'Synced');
   }
 
   /* ===== AUTH GATE =====

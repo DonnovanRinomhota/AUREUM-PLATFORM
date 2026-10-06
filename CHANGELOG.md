@@ -1,5 +1,61 @@
 # Changelog
 
+## Phase 14 — Safe saving (records no longer disappear), product paging/sorting, PO history, date filters (2026-10)
+
+### Fixed — records disappearing (root causes, reproduced)
+- **Every sale at the till deleted expenses, purchase orders, goods received, stock
+  adjustments and transfers from the server.** Each app saved by replacing the
+  whole business document with only the sections it knew; the till doesn't know
+  those five, so it wiped them. The Back Office didn't know shift closures and
+  wiped those. This is why records vanished "after some time" or after logging out.
+- **A failed load was treated as a new business** and an empty copy was saved over
+  the real data (Back Office and till).
+- **The browser cache was shared between businesses**, so one business's data could
+  appear in another on the same browser.
+- **The offline queue stored a whole old copy** that could overwrite newer data later.
+- Document numbers: PO/GRN/SA numbers came from list length (re-used after any
+  loss), transfers restarted at TR-1001 on every reload, and CSV goods-received
+  imports used a random number.
+
+### How saving works now
+- Each save re-reads the server's latest copy and **three-way merges** this app's
+  changes into it (using the last-synced copy as the common ancestor): sections an
+  app doesn't know are kept, records added on different devices are all kept,
+  deletions stick, stock/customer counters combine as differences.
+- **Compare-and-swap**: a save only lands if nobody saved in between; otherwise it
+  re-reads, re-merges and retries. A save whose reply was lost is recognised and
+  not applied twice.
+- **Nothing is written before a successful load**; a failed load shows a message and
+  retries. Offline edits are kept per business on the device and merge on reconnect.
+- **Database safeguards** (`supabase/data-safety.sql`): version number, safe-save
+  function, a guard that rejects the old overwrite-everything path, and rolling
+  restore points (every 6 hours, newest 12).
+- **Data recovery** (Settings → Business Profile): restores records an older version
+  left only on this device; ignores demo data; can't create duplicates.
+- New records get a unique id; saved documents keep an exact copy of each line.
+
+### Added / changed
+- **POS product list is paged** (12 / 24 / 48 per page, remembered) and **sortable**:
+  A–Z, Z–A, Category, Quantity high→low / low→high. Search also matches code and
+  barcode.
+- **Purchase Orders:** Measurement column removed; each saved PO records the exact
+  product, quantity, unit cost and line total (plus extra costs and subtotal in the
+  detail view). Same exact-line snapshot for goods received, adjustments, transfers.
+- **Date filters** on Purchase Orders and Transfers (new), and a real **"All time"**
+  option, now the default, on Purchase Orders, Goods Received, Stock Adjustments and
+  Transfers (the old GRN/Adjustment filters said "Today" while showing everything).
+  A range with no results says so.
+- **Reports:** Inventory, Valuation, Category summary, Low stock and Staff are all
+  paged; KPI cards still total the whole list.
+- Paging helper keeps the page valid when a filter shrinks the list (no empty table).
+
+### Worth knowing
+- Records the **server** already lost can't be re-created by this update (free
+  Supabase plan has no backups); use Data recovery on the device where you last saw them.
+- Refresh (Ctrl+Shift+R) every till and browser after deploying. Un-refreshed tabs are
+  rejected by the guard and show "Sync problem" until they do — nothing is lost.
+- The Measurement column is still on Goods Received (only Purchase Orders was changed).
+
 ## Phase 13 — Receipt accuracy, negative stock, sales history, phone layout (2026-10)
 
 ### Fixed — receipts & sales history (root causes found)

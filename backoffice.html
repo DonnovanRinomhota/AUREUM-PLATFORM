@@ -1380,6 +1380,7 @@
             </div>
           </div>
         </div>
+        <div class="filters-bar"><div id="poDateSlot"></div></div>
         <div class="table-panel">
           <table>
             <thead>
@@ -1436,7 +1437,7 @@
           </div>
           <table class="line-table">
             <thead>
-              <tr><th>Product</th><th>Measurement</th><th>In stock</th><th>Incoming</th><th>Quantity</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>In stock</th><th>Incoming</th><th>Quantity</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="poLineBody"></tbody>
           </table>
@@ -1954,6 +1955,7 @@
             </div>
           </div>
         </div>
+        <div class="filters-bar"><div id="trDateSlot"></div></div>
         <div class="table-panel">
           <table>
             <thead>
@@ -2063,6 +2065,7 @@
             <thead><tr><th>Product</th><th>Category</th><th>Shops</th><th style="text-align:right;">In stock</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Unit price</th></tr></thead>
             <tbody id="repInventoryBody"></tbody>
           </table>
+          <div id="repInventoryPagination"></div>
         </div>
       </div>
 
@@ -2074,6 +2077,7 @@
             <thead><tr><th>Product</th><th>Category</th><th style="text-align:right;">In stock</th><th style="text-align:right;">Cost/unit</th><th style="text-align:right;">Cost value</th><th style="text-align:right;">Price/unit</th><th style="text-align:right;">Retail value</th></tr></thead>
             <tbody id="repValuationBody"></tbody>
           </table>
+          <div id="repValuationPagination"></div>
         </div>
       </div>
 
@@ -2085,6 +2089,7 @@
             <thead><tr><th>Category</th><th style="text-align:right;">SKUs</th><th style="text-align:right;">Units in stock</th><th style="text-align:right;">Cost value</th><th style="text-align:right;">Retail value</th></tr></thead>
             <tbody id="repSummaryBody"></tbody>
           </table>
+          <div id="repSummaryPagination"></div>
         </div>
       </div>
 
@@ -2096,6 +2101,7 @@
             <thead><tr><th>Product</th><th>Category</th><th style="text-align:right;">In stock</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Reorder value (×20)</th></tr></thead>
             <tbody id="repLowStockBody"></tbody>
           </table>
+          <div id="repLowStockPagination"></div>
         </div>
       </div>
 
@@ -2107,6 +2113,7 @@
             <thead><tr><th>Employee</th><th>Role</th><th>Shop</th><th>Status</th></tr></thead>
             <tbody id="repStaffBody"></tbody>
           </table>
+          <div id="repStaffPagination"></div>
         </div>
       </div>
     </div>
@@ -2212,6 +2219,12 @@
                 <div class="btn-outline" id="stChangePasswordBtn">Change Password</div>
                 <div class="save-confirm" id="stChangePasswordConfirm">Password updated ✓</div>
               </div>
+            </div>
+            <div class="form-section" style="margin-top:8px;">
+              <div class="form-section-title" style="margin-bottom:10px;">Data recovery</div>
+              <div style="font-size:12px;color:var(--sage);line-height:1.6;margin-bottom:12px;">Records (purchase orders, goods received, expenses, adjustments, transfers, receipts) that went missing before this update may still be saved as a copy on a device you used. Check this device for anything your account doesn't have — demo records are never restored.</div>
+              <div class="btn-outline" id="stRecoverCheckBtn">Check this device</div>
+              <div id="stRecoverResult" style="margin-top:12px;font-size:12.5px;line-height:1.7;"></div>
             </div>
           </div>
 
@@ -2524,69 +2537,498 @@
     url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA'
   };
-  const AUREUM_KEY = 'aureum_pos_cache_v1'; // local cache only, for instant load + offline fallback
+
   const supaReady = SUPABASE_CONFIG.url.startsWith('http');
   const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
   let currentUser = null, currentBusinessId = null, currentRole = null;
 
-  const AUREUM_PENDING_KEY = 'aureum_pending_v1';
-  const AureumDB = (function(){
-    let channel = null;
-    return {
-      cacheRead(){
-        try{ const raw = localStorage.getItem(AUREUM_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
-      },
-      cacheWrite(data){
-        try{ localStorage.setItem(AUREUM_KEY, JSON.stringify(data)); }catch(e){}
-      },
-      async loadRemote(){
-        if(!sb || !currentBusinessId) return null;
-        try{
-          const { data, error } = await sb.from('business_data').select('data').eq('business_id', currentBusinessId).maybeSingle();
-          if(error){ console.error('Aureum load error', error); return null; }
-          return data ? data.data : null;
-        }catch(networkErr){ return null; }
-      },
-      async writeRemote(data){
-        // No cloud backend connected at all (local/static mode) — the local
-        // cache write already covers persistence, there's nothing to sync.
-        if(!sb || !currentBusinessId) return;
-        // Backend exists but the browser has no network right now — queue
-        // it instead of even attempting the request, and pick it back up
-        // the moment 'online' fires (see window 'online' listener below).
-        if(!navigator.onLine){ this.queuePending(data); return; }
-        try{
-          const { error } = await sb.from('business_data').upsert({ business_id: currentBusinessId, data, updated_at: new Date().toISOString() });
-          if(error){ this.queuePending(data); } else { this.clearPending(); }
-        }catch(networkErr){ this.queuePending(data); }
-      },
-      queuePending(data){
-        try{ localStorage.setItem(AUREUM_PENDING_KEY, JSON.stringify({ data, queuedAt: Date.now() })); }catch(e){}
-      },
-      clearPending(){
-        try{ localStorage.removeItem(AUREUM_PENDING_KEY); }catch(e){}
-      },
-      getPending(){
-        try{ const raw = localStorage.getItem(AUREUM_PENDING_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
-      },
-      async flushPending(){
-        const pending = this.getPending();
-        if(!pending || !sb || !currentBusinessId || !navigator.onLine) return;
-        try{
-          const { error } = await sb.from('business_data').upsert({ business_id: currentBusinessId, data: pending.data, updated_at: new Date().toISOString() });
-          if(!error){ this.clearPending(); return true; }
-        }catch(networkErr){ /* still offline / request failed, try again next tick */ }
-        return false;
-      },
-      subscribeRemote(cb){
-        if(!sb || !currentBusinessId) return;
-        channel = sb.channel('business_data_' + currentBusinessId)
-          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'business_data', filter:`business_id=eq.${currentBusinessId}` },
-            payload => cb(payload.new.data))
-          .subscribe();
-      }
+/* ==== AUREUM SYNC CORE (identical in backoffice.html and pos-checkout.html) ====
+   WHY THIS EXISTS: the Back Office and the POS used to save by REPLACING the
+   whole business document with whatever that one app held. The POS doesn't know
+   about expenses / purchase orders / goods received / adjustments / transfers,
+   so every sale deleted them; the Back Office doesn't know shift closures, so
+   every save deleted those. A failed load was also treated as "new business"
+   and saved an empty document over the real one.
+
+   NOW: every save (1) re-reads the server's latest copy, (2) 3-way merges this
+   app's changes into it using the last-synced copy as the common ancestor, so
+   nothing it doesn't know about is dropped and records added elsewhere survive,
+   and (3) writes with compare-and-swap so a concurrent save is never silently
+   overwritten. Nothing is ever written before a successful load. */
+const AureumSync = (function(){
+  'use strict';
+
+  /* ---------------------------------------------------------------- merge --- */
+  const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const isPrim = v => v === null || typeof v !== 'object';
+  function sortKeys(v){
+    if(Array.isArray(v)) return v.map(sortKeys);
+    if(isObj(v)){ const o = {}; Object.keys(v).sort().forEach(k => { o[k] = sortKeys(v[k]); }); return o; }
+    return v;
+  }
+  const stable = v => JSON.stringify(sortKeys(v));
+  const same = (a, b) => a === b || stable(a) === stable(b);
+  const clone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+
+  // Next free number for ids like "PO-1042" (never derived from list length).
+  function nextDocNumber(list, prefix, floor){
+    const re = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$');
+    let max = floor - 1;
+    (list || []).forEach(r => { const m = String(r && r.id != null ? r.id : '').match(re); if(m && +m[1] > max) max = +m[1]; });
+    return max + 1;
+  }
+
+  // Two records can end up with the same display number if two devices create
+  // one at the same moment. Keep both (they have different uids) but renumber
+  // the one THIS device just added so numbers stay unique.
+  function dedupeStringIds(prefix, floor){
+    return function(out, added){
+      const addedSet = new Set(added); let max = nextDocNumber(out, prefix, floor) - 1;
+      const taken = new Set(out.filter(r => !addedSet.has(r)).map(r => String(r.id)));
+      return out.map(r => {
+        if(!addedSet.has(r)) return r;
+        const id = String(r.id);
+        if(!taken.has(id)){ taken.add(id); return r; }
+        max += 1; const n = { ...r, id: prefix + max }; taken.add(n.id); return n;
+      });
     };
-  })();
+  }
+  function dedupeNumericIds(out, added){
+    const addedSet = new Set(added); let max = 0;
+    out.forEach(r => { if(typeof r.id === 'number' && r.id > max) max = r.id; });
+    const taken = new Set(out.filter(r => !addedSet.has(r) && typeof r.id === 'number').map(r => r.id));
+    return out.map(r => {
+      if(!addedSet.has(r) || typeof r.id !== 'number') return r;
+      if(!taken.has(r.id)){ taken.add(r.id); return r; }
+      max += 1; const n = { ...r, id: max }; taken.add(n.id); return n;
+    });
+  }
+  // stock = sum of per-shop stock, recomputed after a merge so the mirror can't drift
+  function recomputeStock(out){
+    return out.map(p => (isObj(p.shopStock) ? { ...p, stock: Object.values(p.shopStock).reduce((s, v) => s + (+v || 0), 0) } : p));
+  }
+
+  // Which top-level lists hold records with an identity, and how they behave.
+  //  key       → what identifies a record (uid when it has one)
+  //  newFirst  → this list is added to at the FRONT (unshift)
+  const byUid = (pfx) => r => r.uid ? 'u:' + r.uid : pfx + r.id;
+  const COLLECTIONS = {
+    products:         { key: p => 'p:' + p.id, fix: recomputeStock },
+    customers:        { key: byUid('c:'), fix: dedupeNumericIds },
+    employees:        { key: byUid('e:'), fix: dedupeNumericIds },
+    receipts:         { key: r => r.uid ? 'u:' + r.uid : 'L:' + r.dateTime + '|' + r.id + '|' + r.total },
+    expenses:         { key: byUid('x:'), fix: dedupeNumericIds },
+    employeeHours:    { key: byUid('h:'), fix: dedupeNumericIds },
+    purchaseOrders:   { key: byUid('PO:'), newFirst: true, fix: dedupeStringIds('PO-', 1042) },
+    grnRecords:       { key: byUid('GRN:'), newFirst: true, fix: dedupeStringIds('GRN-', 11223) },
+    stockAdjustments: { key: byUid('SA:'), newFirst: true, fix: dedupeStringIds('SA-', 10956) },
+    transfers:        { key: byUid('TR:'), newFirst: true, fix: dedupeStringIds('TR-', 1001) },
+    shiftClosures:    { key: byUid('SC:'), newFirst: true },
+  };
+  // Numbers that are COUNTERS (changed by deltas from several devices at once),
+  // so concurrent changes add up instead of one overwriting the other.
+  function isCounterChild(rec, key, parentIsCounter){
+    return parentIsCounter || (rec === 'products' && key === 'shopStock') || (rec === 'customers' && (key === 'orders' || key === 'spent'));
+  }
+
+  function mergeSet(base, remote, local){
+    const l = new Set(local), b = new Set(base);
+    const removedByMe = new Set(base.filter(x => !l.has(x)));
+    const out = remote.filter(x => !removedByMe.has(x));
+    local.forEach(x => { if(!b.has(x) && !out.includes(x)) out.push(x); });
+    return out;
+  }
+
+  function mergeRecords(base, remote, local, spec, name){
+    const keyOf = r => { let k; try{ k = spec.key(r); }catch(e){ k = undefined; } return (k === undefined || k === null || /undefined$/.test(String(k))) ? 'j:' + stable(r) : String(k); };
+    const index = arr => { const m = new Map(); arr.forEach(r => { if(isObj(r)) m.set(keyOf(r), r); }); return m; };
+    const B = index(base), R = index(remote), L = index(local);
+    const kept = [];
+    remote.forEach(r => {
+      if(!isObj(r)){ kept.push(r); return; }
+      const k = keyOf(r);
+      if(L.has(k)) kept.push(merge3(B.get(k), r, L.get(k), name, { top:false, rec:name, counter:false }));
+      else if(B.has(k)){ if(!same(r, B.get(k))) kept.push(r); }   // I deleted it — but if someone edited it meanwhile, the edit wins
+      else kept.push(r);                                           // someone else added it
+    });
+    const added = [];
+    local.forEach(l => {
+      if(!isObj(l)) return;
+      const k = keyOf(l);
+      if(R.has(k)) return;
+      if(!B.has(k)) added.push(l);                                 // I added it
+      else if(!same(l, B.get(k))) added.push(l);                   // they deleted it but I edited it — keep mine
+    });
+    let out = spec.newFirst ? added.concat(kept) : kept.concat(added);
+    if(spec.fix) out = spec.fix(out, added);
+    return out;
+  }
+
+  // base = what the server had when we last synced; remote = what it has now;
+  // local = what this device has now. Returns the combined result.
+  // 'delta' normally. 'remote' only right after we detect that our own previous
+  // save already reached the server (reply lost) — then our deltas are already in it.
+  let COUNTER_MODE = 'delta';
+  function merge3(base, remote, local, path, ctx){
+    if(local === undefined) return remote;            // this app doesn't know this part — keep the server's
+    if(same(local, base)) return remote;              // I didn't change it — take theirs
+    if(remote === undefined) return local;            // I changed it and it's gone remotely — mine
+    if(same(remote, base)) return local;              // they didn't change it — take mine
+    // Counters: BOTH sides' changes count, even if they happen to land on the same number
+    // (two tills each selling one item both move stock by -1 → total -2).
+    if(ctx.counter && typeof local === 'number' && typeof remote === 'number' && typeof base === 'number')
+      return COUNTER_MODE === 'remote' ? remote : remote + (local - base);
+    if(same(local, remote)) return local;
+    // both sides changed it, differently
+    if(Array.isArray(local) && Array.isArray(remote)){
+      const spec = ctx.top ? COLLECTIONS[path] : null;
+      const b = Array.isArray(base) ? base : [];
+      if(spec) return mergeRecords(b, remote, local, spec, path);
+      if(local.every(isPrim) && remote.every(isPrim)) return mergeSet(b, remote, local);
+      return local;
+    }
+    if(isObj(local) && isObj(remote)){
+      const b = isObj(base) ? base : {}, out = {};
+      new Set([...Object.keys(b), ...Object.keys(remote), ...Object.keys(local)]).forEach(k => {
+        const v = merge3(b[k], remote[k], local[k], path, { top:false, rec:ctx.rec, counter: isCounterChild(ctx.rec, k, ctx.counter) });
+        if(v !== undefined) out[k] = v;
+      });
+      return out;
+    }
+    return local;                                     // a genuine clash on one value: this device's change wins
+  }
+
+  function mergeDocs(base, remote, local){
+    base = base || {}; remote = remote || {}; local = local || {};
+    const out = {};
+    new Set([...Object.keys(base), ...Object.keys(remote), ...Object.keys(local)]).forEach(k => {
+      const v = merge3(base[k], remote[k], local[k], k, { top:true, rec:k, counter:false });
+      if(v !== undefined) out[k] = v;
+    });
+    return out;
+  }
+
+  /* --------------------------------------------------------------- engine --- */
+  let cfg = null, base = null, version = null, loaded = false, saving = false, pulling = false;
+  let failures = 0, nextAttemptAt = 0, state = 'loading', lastStr = null, started = false, compat = false;
+  let noVersion = false, noRpc = false, channel = null, blockEl = null, retryTimer = null;
+  let deviceId = null, lastAttempt = null;   // lastAttempt = { id, sent } of a save whose outcome we never saw
+  function getDeviceId(){
+    if(deviceId) return deviceId;
+    try{ deviceId = localStorage.getItem('aureum_device_id'); if(!deviceId){ deviceId = uid(); localStorage.setItem('aureum_device_id', deviceId); } }catch(e){ deviceId = uid(); }
+    return deviceId;
+  }
+  const stripMeta = d => { const o = { ...d }; delete o._saves; return o; };
+
+  const KEY_V2 = 'aureum_cache_v2:';
+  const LEGACY_KEYS = ['aureum_pos_cache_v1'];
+  const LEGACY_BACKUP = 'aureum_legacy_backup_v1';
+  const cacheKey = () => KEY_V2 + cfg.getBusinessId() + ':' + (cfg.app || 'app');
+  const localKey = () => KEY_V2 + 'local:' + (cfg.app || 'app');
+  const knownKeys = () => Object.keys(cfg.getSnapshot());
+  const pick = (doc, keys) => { const o = {}; keys.forEach(k => { if(doc && doc[k] !== undefined) o[k] = doc[k]; }); return o; };
+
+  function setState(s, detail){ state = s; try{ cfg.onStatus && cfg.onStatus(s, detail); }catch(e){} }
+  function configure(c){ cfg = c; }
+  function uid(){ return (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+
+  // Keep the old shared cache aside (once) before this version stops using it:
+  // it isn't tied to a business, and it may hold records the server lost.
+  function backupLegacyOnce(){
+    try{
+      if(localStorage.getItem(LEGACY_BACKUP)) return;
+      for(const k of LEGACY_KEYS){ const v = localStorage.getItem(k); if(v){ localStorage.setItem(LEGACY_BACKUP, v); return; } }
+    }catch(e){}
+  }
+
+  function readCache(){
+    try{ const c = JSON.parse(localStorage.getItem(cacheKey()) || 'null'); return c && c.v === 2 && c.base ? c : null; }catch(e){ return null; }
+  }
+  function cacheToLocal(c){
+    const local = {};
+    Object.keys(c.base).forEach(k => { local[k] = c.base[k]; });
+    Object.keys(c.changed || {}).forEach(k => { local[k] = c.changed[k]; });
+    return local;
+  }
+  // Only worth caching once we know what the server had (base) — otherwise a
+  // cache of unsynced guesses could later overwrite real data.
+  function writeCache(local){
+    if(!base) return;
+    try{
+      const changed = {};
+      Object.keys(local).forEach(k => { if(!same(local[k], base[k])) changed[k] = local[k]; });
+      localStorage.setItem(cacheKey(), JSON.stringify({ v:2, base, changed, version, attempt: lastAttempt ? lastAttempt.id : null, savedAt: Date.now() }));
+    }catch(e){ /* storage full: keep working, just without offline durability */ }
+  }
+
+  async function loadRemote(versionOnly){
+    const sb = cfg.getClient(), bid = cfg.getBusinessId();
+    try{
+      const wantVersion = !noVersion;
+      const verOnly = versionOnly && wantVersion;       // without a version column there is nothing cheaper than a full read
+      const cols = verOnly ? 'version' : (wantVersion ? 'data, version' : 'data');
+      let { data, error } = await sb.from('business_data').select(cols).eq('business_id', bid).maybeSingle();
+      if(error && wantVersion && /version/i.test(error.message || '')){
+        noVersion = true; compat = true;
+        ({ data, error } = await sb.from('business_data').select('data').eq('business_id', bid).maybeSingle());
+      }
+      if(error) return { ok:false, error };
+      if(!data) return { ok:true, exists:false, data:{}, version:0 };
+      return { ok:true, exists:true, data: verOnly ? undefined : (data.data || {}), version: noVersion ? null : Number(data.version || 0) };
+    }catch(e){ return { ok:false, error:e }; }
+  }
+
+  async function rpcSave(doc, expectedVersion){
+    const sb = cfg.getClient(), bid = cfg.getBusinessId();
+    if(!noRpc){
+      try{
+        const { data, error } = await sb.rpc('save_business_data', { p_data: doc, p_expected_version: expectedVersion });
+        if(!error) return { data };
+        if(/could not find the function|PGRST202|does not exist/i.test((error.message || '') + (error.code || ''))){ noRpc = true; compat = true; }
+        else return { error };
+      }catch(e){ return { error:e }; }
+    }
+    // Database not updated yet (data-safety.sql not run): still merged, just not atomic.
+    try{
+      const { error } = await sb.from('business_data').upsert({ business_id: bid, data: doc, updated_at: new Date().toISOString() });
+      if(error) return { error };
+      return { data:{ ok:true, version: noVersion ? null : (expectedVersion || 0) + 1 } };
+    }catch(e){ return { error:e }; }
+  }
+
+  function applyMerged(doc){
+    cfg.applyData(pick(doc, knownKeys()));
+  }
+  function nowDirtyLocal(){
+    const local = cfg.getSnapshot();
+    return same(local, pick(base, Object.keys(local))) ? null : local;
+  }
+
+  async function saveOnce(){
+    for(let i = 0; i < 6; i++){
+      const sentLocal = cfg.getSnapshot();
+      const r = await loadRemote(false);
+      if(!r.ok){ fail(r.error); return false; }
+      let ancestor = base;
+      if(lastAttempt){
+        // Did our previous save actually land even though we never got the reply?
+        const landed = r.data._saves && r.data._saves[getDeviceId()] === lastAttempt.id;
+        if(landed) ancestor = lastAttempt.sent;         // it's already part of the server's copy — don't apply it twice
+        lastAttempt = null;
+      }
+      const merged = mergeDocs(ancestor, r.data, sentLocal);
+      if(same(stripMeta(merged), stripMeta(r.data))){   // nothing to write: the server already has everything
+        base = clone(r.data); version = r.version; failures = 0; nextAttemptAt = 0;
+        const cur0 = cfg.getSnapshot();
+        if(!same(pick(merged, Object.keys(cur0)), cur0)){ applyMerged(merged); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+        setState(compat ? 'synced-compat' : 'synced'); writeCache(cfg.getSnapshot());
+        return true;
+      }
+      const attemptId = uid();
+      merged._saves = Object.assign({}, isObj(merged._saves) ? merged._saves : {}, { [getDeviceId()]: attemptId });
+      lastAttempt = { id: attemptId, sent: clone(merged) };   // remembered BEFORE sending, in case the reply is lost
+      writeCache(sentLocal);
+      const res = await rpcSave(merged, r.version);
+      if(res.error){ fail(res.error); return false; }         // outcome unknown → lastAttempt stays set
+      if(res.data && res.data.ok){
+        lastAttempt = null;
+        base = clone(merged); version = res.data.version; failures = 0; nextAttemptAt = 0;
+        // Pull in what others changed, keeping anything edited while we were saving.
+        const cur = cfg.getSnapshot();
+        const toApply = mergeDocs(sentLocal, merged, cur);
+        if(!same(pick(toApply, Object.keys(cur)), cur)){ applyMerged(toApply); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+        setState(compat ? 'synced-compat' : 'synced');
+        writeCache(cfg.getSnapshot());
+        return true;
+      }
+      lastAttempt = null;   // definitively rejected (someone saved first) → read, merge, retry
+    }
+    fail({ message:'Several people are saving at once — will retry' });
+    return false;
+  }
+
+  function fail(err){
+    failures += 1; nextAttemptAt = Date.now() + Math.min(30000, 1000 * Math.pow(2, failures));
+    console.error('Aureum sync problem:', err && err.message ? err.message : err);
+    setState(navigator.onLine === false ? 'offline' : 'error', err && err.message);
+  }
+
+  async function requestSave(){
+    if(!loaded || saving || !cfg.isCloud()) return;
+    if(Date.now() < nextAttemptAt) return;
+    saving = true; setState('saving');
+    try{
+      let rounds = 0;
+      while(rounds++ < 5){
+        const ok = await saveOnce();
+        if(!ok || !nowDirtyLocal()) break;     // keep going only if more edits arrived meanwhile
+      }
+    } finally { saving = false; }
+  }
+
+  // Called after every change, and on a timer. Keeps this device's cache current
+  // and saves if anything differs from what the server last had.
+  function touch(){
+    if(!cfg) return;
+    const local = cfg.getSnapshot();
+    const s = stable(local);
+    if(!cfg.isCloud()){                       // demo / no cloud backend: this device is the only store
+      if(s !== lastStr){ lastStr = s; try{ localStorage.setItem(localKey(), JSON.stringify(local)); }catch(e){} }
+      return;
+    }
+    if(s !== lastStr){ lastStr = s; writeCache(local); }
+    if(!loaded) return;
+    if(nowDirtyLocal()) requestSave();
+  }
+
+  async function receive(r){
+    const local = cfg.getSnapshot();
+    const merged = mergeDocs(base, r.data, local);
+    base = clone(r.data); version = r.version;
+    if(!same(pick(merged, Object.keys(local)), local)){ applyMerged(merged); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+    writeCache(cfg.getSnapshot());
+  }
+  async function pull(){
+    if(!loaded || saving || pulling || !cfg.isCloud()) return;
+    pulling = true;
+    try{
+      const head = await loadRemote(true);
+      if(!head.ok || (version !== null && head.version === version)) return;
+      const r = await loadRemote(false);
+      if(r.ok) await receive(r);
+    } finally { pulling = false; }
+  }
+
+  function showBlock(msg){
+    if(!blockEl){
+      blockEl = document.createElement('div');
+      blockEl.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(6,14,11,0.94);color:#F4EFDF;font-family:Inter,sans-serif;text-align:center;padding:24px;';
+      blockEl.innerHTML = '<div style="max-width:380px"><div style="font-size:18px;font-weight:700;margin-bottom:8px">Can\u2019t load your data</div><div id="aureumBlockMsg" style="font-size:13px;color:#8FA79A;line-height:1.6;margin-bottom:16px"></div><div id="aureumBlockRetry" style="display:inline-block;cursor:pointer;padding:10px 20px;border-radius:9px;background:#E7C766;color:#1B140A;font-weight:700;font-size:13px">Try again now</div></div>';
+      document.body.appendChild(blockEl);
+      blockEl.querySelector('#aureumBlockRetry').onclick = () => retryNow();
+    }
+    blockEl.querySelector('#aureumBlockMsg').textContent = msg;
+    blockEl.style.display = 'flex';
+  }
+  function hideBlock(){ if(blockEl) blockEl.style.display = 'none'; }
+
+  function finishLoad(r, cache){
+    const remoteDoc = r.data || {};
+    let merged = remoteDoc;
+    if(cache){
+      // If the last save before the page closed DID reach the server, the cache's stock/order deltas are
+      // already in it — merging them again would count them twice.
+      const landed = cache.attempt && remoteDoc._saves && remoteDoc._saves[getDeviceId()] === cache.attempt;
+      COUNTER_MODE = landed ? 'remote' : 'delta';
+      try{ merged = mergeDocs(cache.base, remoteDoc, cacheToLocal(cache)); } finally { COUNTER_MODE = 'delta'; }
+    }
+    base = clone(remoteDoc); version = r.version; loaded = true; failures = 0; nextAttemptAt = 0;
+    applyMerged(merged);
+    try{ cfg.onApplied && cfg.onApplied(); }catch(e){}
+    hideBlock();
+    setState(compat ? 'synced-compat' : 'synced');
+    if(!started){ started = true; startBackground(); }
+    touch();
+  }
+
+  function startBackground(){
+    setInterval(touch, 1200);
+    setInterval(pull, 20000);
+    try{
+      channel = cfg.getClient().channel('business_data_' + cfg.getBusinessId())
+        .on('postgres_changes', { event:'*', schema:'public', table:'business_data', filter:'business_id=eq.' + cfg.getBusinessId() },
+          payload => { const v = payload && payload.new ? payload.new.version : undefined; if(v !== undefined && v === version) return; pull(); })
+        .subscribe();
+    }catch(e){}
+    window.addEventListener('online', () => retryNow());
+  }
+
+  let startResolve = null;
+  async function attemptLoad(){
+    const cache = readCache();
+    const r = await loadRemote(false);
+    if(r.ok){ finishLoad(r, cache); if(startResolve){ startResolve({ ok:true }); startResolve = null; } return true; }
+    fail(r.error);
+    setState(navigator.onLine === false ? 'offline' : 'load-failed', r.error && r.error.message);
+    if(cache){
+      // Offline start: show what this device last had, keep retrying, and never save until a load succeeds.
+      if(startResolve){ startResolve({ ok:false, offline:true }); startResolve = null; }
+    } else {
+      showBlock(navigator.onLine === false ? 'You appear to be offline and nothing is stored on this device yet. Connect to the internet and it will load.' : 'The server didn\u2019t respond. Your data is safe — nothing has been changed. Retrying automatically…');
+    }
+    clearTimeout(retryTimer); retryTimer = setTimeout(attemptLoad, Math.min(15000, 2000 * failures));
+    return false;
+  }
+  function retryNow(){
+    nextAttemptAt = 0;
+    if(!loaded){ clearTimeout(retryTimer); return attemptLoad(); }
+    return requestSave().then(pull);
+  }
+
+  function startLocal(){
+    try{ const raw = localStorage.getItem(localKey()); if(raw){ cfg.applyData(JSON.parse(raw)); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} } }catch(e){}
+    setState('local');
+    if(!started){ started = true; setInterval(touch, 1200); }
+    return Promise.resolve({ ok:true, local:true });
+  }
+  function start(){
+    if(!cfg.isCloud()) return startLocal();
+    backupLegacyOnce();
+    const cache = readCache();
+    if(cache){ cfg.applyData(pick(cacheToLocal(cache), knownKeys())); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
+    setState('loading');
+    return new Promise(res => { startResolve = res; attemptLoad(); });
+  }
+
+  /* ------------------------------------------------------------- recovery --- */
+  // Older versions kept one SHARED copy of the data in this browser. It isn't tied to a
+  // business, but it may still hold records the server lost. These helpers find what is
+  // on this device but missing from the account — never demo data, never duplicates.
+  const SEED = { purchaseOrders:/^PO-104[12]$/, grnRecords:/^(GRN-1122[23]|TGRN-11983)$/, stockAdjustments:/^SA-109(5[256])$/ };
+  const fingerprint = r => [r.id, r.date || r.dateTime || '', r.total != null ? r.total : (r.amount != null ? r.amount : '')].join('|');
+  const RECOVERABLE = ['purchaseOrders','grnRecords','stockAdjustments','transfers','expenses','employeeHours','receipts'];
+  function findRecoverable(){
+    const out = {}; let total = 0;
+    const docs = [];
+    try{ ['aureum_legacy_backup_v1', 'aureum_pos_cache_v1'].forEach(k => { const v = localStorage.getItem(k); if(v) docs.push(JSON.parse(v)); }); }catch(e){}
+    const local = cfg.getSnapshot();
+    RECOVERABLE.forEach(name => {
+      if(!(name in local)) return;                        // this app doesn't hold that kind of record
+      const have = new Set((local[name] || []).map(fingerprint)), seenHere = new Set(), found = [];
+      docs.forEach(d => (d[name] || []).forEach(r => {
+        if(!isObj(r) || (SEED[name] && SEED[name].test(String(r.id)))) return;
+        if(name === 'receipts' && !Array.isArray(r.items)) return;
+        const f = fingerprint(r);
+        if(have.has(f) || seenHere.has(f)) return;
+        seenHere.add(f); found.push(r);
+      }));
+      if(found.length){ out[name] = found; total += found.length; }
+    });
+    return { byCollection: out, total };
+  }
+
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same,
+           findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
+})();
+/* ==== END AUREUM SYNC CORE ==== */
+
+  AureumSync.configure({
+    app: 'bo',
+    getSnapshot: () => aureumSnapshotData(),
+    applyData: (d) => applyLoadedData(d),
+    onApplied: () => { try{ renderAllData(); }catch(e){} },
+    onStatus: (state) => {
+      try{ renderSyncStatus(); }catch(e){}
+      if(state === 'synced-compat' && !window.__aureumCompatWarned){
+        window.__aureumCompatWarned = true;
+        console.warn('Aureum: run supabase/data-safety.sql in Supabase to enable fully safe saving.');
+        try{ aureumToast('Database update needed: run data-safety.sql in Supabase (see SETUP-DATA-SAFETY.md).', 'danger'); }catch(e){}
+      }
+    },
+    getClient: () => sb,
+    getBusinessId: () => currentBusinessId,
+    isCloud: () => !!(supaReady && sb && currentBusinessId)
+  });
 
   /* ===== AUTH ===== */
  async function aureumSignUp(email, password, businessName, fullName){
@@ -3049,7 +3491,8 @@
       </div>`;
   }
 
-  function initDateRangePicker(prefix, onApply, defaultPreset){
+  function initDateRangePicker(prefix, onApply, defaultPreset, opts){
+    const presetList = (opts && opts.allTime) ? ['All time', ...DATE_PRESETS] : DATE_PRESETS;
     const state = { activePreset:"Today", rangeStart:new Date(TODAY), rangeEnd:new Date(TODAY), calMonth:TODAY.getMonth(), calYear:TODAY.getFullYear(), customPickStep:0 };
 
     function applyPreset(preset){
@@ -3059,6 +3502,12 @@
       else if(preset === "Last week"){ s.setDate(TODAY.getDate() - TODAY.getDay() - 7); e.setDate(TODAY.getDate() - TODAY.getDay() - 1); }
       else if(preset === "This month"){ s = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1); }
       else if(preset === "Last month"){ s = new Date(TODAY.getFullYear(), TODAY.getMonth()-1, 1); e = new Date(TODAY.getFullYear(), TODAY.getMonth(), 0); }
+      else if(preset === "All time"){
+        state.rangeStart = new Date(2000, 0, 1); state.rangeEnd = new Date(TODAY.getFullYear() + 50, 11, 31);
+        document.getElementById(prefix+'Start').value = 'Any date'; document.getElementById(prefix+'End').value = 'Any date';
+        state.calMonth = TODAY.getMonth(); state.calYear = TODAY.getFullYear();
+        return;
+      }
       else if(preset === "Custom range"){ return; }
       state.rangeStart = s; state.rangeEnd = e;
       document.getElementById(prefix+'Start').value = fmtSlash(s);
@@ -3067,7 +3516,7 @@
     }
 
     function renderPresets(){
-      document.getElementById(prefix+'Presets').innerHTML = DATE_PRESETS.map(p=>
+      document.getElementById(prefix+'Presets').innerHTML = presetList.map(p=>
         `<div class="date-preset ${p===state.activePreset?'active':''}" data-preset="${p}">${p}</div>`
       ).join('');
       document.querySelectorAll(`#${prefix}Presets .date-preset`).forEach(el=>{
@@ -3095,8 +3544,9 @@
         const isToday = date.getTime() === TODAY.getTime();
         const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
         const t = date.getTime();
-        const inRange = t >= s && t <= e && !future;
-        const isEdge = (t === s || t === e) && !future;
+        const allTime = state.activePreset === "All time";
+        const inRange = !allTime && t >= s && t <= e && !future;
+        const isEdge = !allTime && (t === s || t === e) && !future;
         let cls = "cal-day";
         if(future) cls += " muted";
         if(isToday) cls += " today";
@@ -3139,12 +3589,12 @@
     return state;
   }
 
-  function mountDateFilterField(containerId, prefix, onApply, alignLeft, defaultPreset){
+  function mountDateFilterField(containerId, prefix, onApply, alignLeft, defaultPreset, opts){
     const el = document.getElementById(containerId);
     if(!el) return;
     el.className = 'filter-field';
     el.innerHTML = `<div class="fl-label">Date range</div><div class="ctrl-chip popover-anchor" id="${prefix}Trigger">${dateRangeMarkup(prefix, alignLeft, defaultPreset)}</div>`;
-    return initDateRangePicker(prefix, onApply, defaultPreset);
+    return initDateRangePicker(prefix, onApply, defaultPreset, opts);
   }
 
   // Dashboard's date chip already has static markup in the page — just wire it up.
@@ -3317,6 +3767,10 @@
 
   /* ===== GENERIC PAGINATION (reusable across any long list) ===== */
   function paginateSlice(items, state){
+    // keep the page number valid FIRST (a filter can shrink the list while you're on a later page)
+    const pages = Math.max(1, Math.ceil(items.length / state.pageSize));
+    if(state.page > pages) state.page = pages;
+    if(state.page < 1) state.page = 1;
     const start = (state.page-1)*state.pageSize;
     return items.slice(start, start+state.pageSize);
   }
@@ -4250,10 +4704,12 @@
   }
 
   function renderPODetailBody(po){
+    const itemsSubtotal = (po.items||[]).reduce((s,it)=> s + ((it.qty*it.unitCost)||0), 0);
+    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="3" style="color:var(--sage);">${c.name}</td><td style="text-align:right;">$${(c.amount||0).toFixed(2)}</td></tr>`).join('');
     const rows = (po.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${p?p.name:'Deleted product'}</td><td style="text-align:right;">${it.qty}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+      return `<tr><td>${itemLabel(it,p)}</td><td style="text-align:right;">${it.qty}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this order.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -4265,8 +4721,8 @@
         <div class="detail-field"><div class="field-label">Delivery instruction</div><div class="v">${po.delivery||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
-        <tbody>${rows}</tbody>
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
+        <tbody>${rows}${costRows ? `<tr><td colspan="3" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">$${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${po.total.toFixed(2)}</span></div>
     `;
@@ -4283,11 +4739,14 @@
   }
 
   let poPageState = { page:1, pageSize:20 };
+  let poDateRangeFilter = null;
+  const dateInFilter = (iso, f) => { if(!f) return true; const d = new Date(String(iso).slice(0,10) + 'T00:00:00').getTime(); return isNaN(d) || (d >= f.start.getTime() && d <= f.end.getTime()); };
   function renderPOTable(){
     const tbody = document.getElementById('poTableBody');
-    if(PURCHASE_ORDERS.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No purchase orders yet. Create one to start tracking incoming stock.</td></tr>`; const pg=document.getElementById('poPagination'); if(pg) pg.innerHTML=''; return; }
-    const totalFiltered = PURCHASE_ORDERS.length;
-    const pageItems = paginateSlice(PURCHASE_ORDERS, poPageState);
+    const poList = PURCHASE_ORDERS.filter(po => dateInFilter(po.date, poDateRangeFilter));
+    if(poList.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">${PURCHASE_ORDERS.length === 0 ? 'No purchase orders yet. Create one to start tracking incoming stock.' : 'No purchase orders in this date range.'}</td></tr>`; const pg=document.getElementById('poPagination'); if(pg) pg.innerHTML=''; return; }
+    const totalFiltered = poList.length;
+    const pageItems = paginateSlice(poList, poPageState);
     tbody.innerHTML = pageItems.map(po=>`
       <tr data-id="${po.id}" style="cursor:pointer;">
         <td class="mono">${po.id}</td>
@@ -4321,7 +4780,7 @@
   function poPdf(po){
     const rows = (po.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [p ? p.name : '—', String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+      return [itemLabel(it,p), String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
     });
     const bytes = buildTablePdfBytes({
       title: `Purchase Order ${po.id}`,
@@ -4361,6 +4820,13 @@
     document.getElementById('purchaseCreateView').classList.add('active');
   }
 
+  /* Documents keep an exact copy of each line as it was when saved (product NAME, quantity,
+     unit cost, line total) so history stays correct even if the product is later renamed or deleted. */
+  function snapshotLine(r){
+    const p = PRODUCTS.find(x => x.id === r.productId);
+    return { ...r, name: p ? p.name : (r.name || ''), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
+  }
+  function itemLabel(it, p){ return it.name || (p && p.name) || (PRODUCTS.find(x => x.id === it.productId) || {}).name || 'Deleted product'; }
   function renderPOLines(){
     const tbody = document.getElementById('poLineBody');
     tbody.innerHTML = poLineItems.map((row,i)=>{
@@ -4368,7 +4834,6 @@
       const total = (row.qty * row.unitCost) || 0;
       return `<tr>
         <td>${p ? p.name : '—'}</td>
-        <td>${p ? (p.soldBy==='weight'?'kg':'ea') : '—'}</td>
         <td class="mono">${p ? getStock(p, document.getElementById('poShop').value) : '—'}</td>
         <td class="mono">0</td>
         <td><input type="number" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
@@ -4470,14 +4935,14 @@
       shop: document.getElementById('poShop').value,
       payment: document.getElementById('poPayment').value,
       delivery: document.getElementById('poDelivery').value.trim(),
-      items: validLines.map(r=>({...r})),
+      items: validLines.map(snapshotLine),
       costs: validCosts.map(c=>({...c})),
       total
     };
     if(editingPOId){
       Object.assign(PURCHASE_ORDERS.find(p=>p.id===editingPOId), data);
     } else {
-      PURCHASE_ORDERS.unshift({ id: "PO-" + (1042 + PURCHASE_ORDERS.length), status:"Pending", ...data });
+      PURCHASE_ORDERS.unshift({ uid: AureumSync.uid(), id: "PO-" + AureumSync.nextDocNumber(PURCHASE_ORDERS, 'PO-', 1042), createdAt: new Date().toISOString(), status:"Pending", ...data });
     }
     persistAureum();
     renderPOTable();
@@ -4496,7 +4961,7 @@
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${p?p.name:'Deleted product'}</td><td style="text-align:right;">${it.qty}</td><td>${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+      return `<tr><td>${itemLabel(it,p)}</td><td style="text-align:right;">${it.qty}</td><td>${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -4537,7 +5002,7 @@
   function grnPdf(g){
     const rows = (g.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [p ? p.name : '—', String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+      return [itemLabel(it,p), String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
     });
     const bytes = buildTablePdfBytes({
       title: `Goods Received Note ${g.id}`,
@@ -4710,10 +5175,21 @@
   document.getElementById('grnStatusFilter').addEventListener('change', renderGRNTable);
   document.getElementById('grnShopFilter').addEventListener('change', renderGRNTable);
   document.getElementById('grnSupplierFilter').addEventListener('change', renderGRNTable);
+  mountDateFilterField('poDateSlot', 'poDate2', (state)=>{
+    poDateRangeFilter = { start: stripTime(state.rangeStart), end: stripTime(state.rangeEnd) };
+    poPageState.page = 1;
+    renderPOTable();
+  }, true, 'All time', { allTime:true });
+  mountDateFilterField('trDateSlot', 'trDate2', (state)=>{
+    transferDateRangeFilter = { start: stripTime(state.rangeStart), end: stripTime(state.rangeEnd) };
+    transferPageState.page = 1;
+    renderTransfers();
+  }, true, 'All time', { allTime:true });
   mountDateFilterField('grnDateSlot', 'grnDate2', (state)=>{
     grnDateRangeFilter = { start: stripTime(state.rangeStart), end: stripTime(state.rangeEnd) };
+    grnPageState.page = 1;
     renderGRNTable();
-  });
+  }, true, 'All time', { allTime:true });
   document.getElementById('grnSaveBtn').addEventListener('click', ()=>{
     if(!document.getElementById('grnShop').value){ alert('Select a shop for this GRN — add one in Settings → Shops first if you haven\'t yet.'); return; }
     const withProduct = grnLineItems.filter(r=>r.productId);
@@ -4730,7 +5206,8 @@
       if(p) addStock(p, grnShopVal, row.qty || 0);
     });
     GRN_RECORDS.unshift({
-      id: "GRN-" + (11223 + GRN_RECORDS.length),
+      uid: AureumSync.uid(), createdAt: new Date().toISOString(),
+      id: "GRN-" + AureumSync.nextDocNumber(GRN_RECORDS, 'GRN-', 11223),
       date: document.getElementById('grnDate').value || todayStr(),
       type: "Direct GRN", po: "",
       created: document.getElementById('grnDate').value || todayStr(),
@@ -4739,7 +5216,7 @@
       payment: document.getElementById('grnPayment').value,
       invoice: document.getElementById('grnInvoice').value.trim(),
       additional: document.getElementById('grnAdditional').value.trim(),
-      items: validLines.map(r=>({...r})),
+      items: validLines.map(snapshotLine),
       costs: validCosts.map(c=>({...c})),
       total, status: "Completed"
     });
@@ -4766,7 +5243,7 @@
       if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
       else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
       else { delta = it.counted - before; after = it.counted; } // Override
-      return `<tr><td>${p?p.name:'Deleted product'}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td></tr>`;
+      return `<tr><td>${itemLabel(it,p)}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -4848,7 +5325,7 @@
       if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
       else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
       else { delta = it.counted - before; after = it.counted; }
-      return [p ? p.name : 'Deleted product', String(before), String(it.counted), String(after), (delta>=0?'+':'')+delta];
+      return [itemLabel(it,p), String(before), String(it.counted), String(after), (delta>=0?'+':'')+delta];
     });
     const bytes = buildTablePdfBytes({
       title: `Stock Adjustment ${a.id}`,
@@ -4961,8 +5438,9 @@
   document.getElementById('saSupplierFilter').addEventListener('change', renderStockAdjTable);
   mountDateFilterField('saDateSlot', 'saDate2', (state)=>{
     saDateRangeFilter = { start: stripTime(state.rangeStart), end: stripTime(state.rangeEnd) };
+    saPageState.page = 1;
     renderStockAdjTable();
-  });
+  }, true, 'All time', { allTime:true });
   function addSAProductByName(name){
     const match = PRODUCTS.find(pp=> pp.name.toLowerCase() === name.trim().toLowerCase());
     if(!match) return false;
@@ -5020,10 +5498,11 @@
         else if(type === 'Reduce') addStock(p, saShopVal, -row.counted);
         else if(type === 'Override') setStock(p, saShopVal, row.counted);
       }
-      return { productId: row.productId, counted: row.counted, unitCost: row.unitCost, beforeStock };
+      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitCost: row.unitCost, beforeStock };
     });
     STOCK_ADJUSTMENTS.unshift({
-      id: "SA-" + (10956 + STOCK_ADJUSTMENTS.length),
+      uid: AureumSync.uid(), createdAt: new Date().toISOString(),
+      id: "SA-" + AureumSync.nextDocNumber(STOCK_ADJUSTMENTS, 'SA-', 10956),
       date: todayStr(), type, reason,
       supplier: document.getElementById('saSupplier').value,
       shop: saShopVal,
@@ -5400,7 +5879,7 @@
     if(editingCustomerId){
       Object.assign(CUSTOMERS.find(c=>c.id===editingCustomerId), data);
     } else {
-      CUSTOMERS.push({ id: nextCustomerId++, orders:0, spent:0, credit:0, joined:todayStr(), ...data });
+      CUSTOMERS.push({ uid: AureumSync.uid(), id: nextCustomerId++, orders:0, spent:0, credit:0, joined:todayStr(), ...data });
     }
     renderCustomers();
     switchToCustomerList();
@@ -5519,7 +5998,7 @@
       const hours = parseFloat(document.getElementById('calAddHours').value);
       if(!employeeId || isNaN(hours) || hours<=0){ alert('Select an employee and enter hours greater than 0.'); return; }
       const notes = document.getElementById('calAddNotes').value.trim();
-      EMPLOYEE_HOURS.push({ id: nextHoursId++, employeeId, date: dateStr, hours, notes });
+      EMPLOYEE_HOURS.push({ uid: AureumSync.uid(), id: nextHoursId++, employeeId, date: dateStr, hours, notes });
       persistAureum();
       closeModal('detailModal');
       renderEmployeeCalendar();
@@ -5649,7 +6128,7 @@
     if(editingEmployeeId){
       Object.assign(EMPLOYEES.find(x=>x.id===editingEmployeeId), data);
     } else {
-      EMPLOYEES.push({ id: nextEmployeeId++, ...data });
+      EMPLOYEES.push({ uid: AureumSync.uid(), id: nextEmployeeId++, ...data });
     }
     renderEmployees();
     switchToEmployeeList();
@@ -5689,13 +6168,17 @@
     else if(activeReportTab === 'staff') renderReportStaff();
   }
 
+  // Every report list is paged (no endless scrolling); KPI cards still total the FULL list.
+  const repInvPage = { page:1, pageSize:20 }, repValPage = { page:1, pageSize:20 }, repSumPage = { page:1, pageSize:20 },
+        repLowPage = { page:1, pageSize:20 }, repStaffPage = { page:1, pageSize:20 };
+  function clearPager(id){ const el = document.getElementById(id); if(el) el.innerHTML = ''; }
   function renderReportInventory(){
     const shopFilter = document.getElementById('repInvShopFilter').value || 'All Shops';
     const catFilter = document.getElementById('repInvCatFilter').value || 'All';
     const items = PRODUCTS.filter(p => productInShop(p, shopFilter) && (catFilter === 'All' || p.cat === catFilter));
     const tbody = document.getElementById('repInventoryBody');
-    if(items.length === 0){ tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--sage);">No products match this filter.</td></tr>`; return; }
-    tbody.innerHTML = items.map(p=>`
+    if(items.length === 0){ tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--sage);">No products match this filter.</td></tr>`; clearPager('repInventoryPagination'); return; }
+    tbody.innerHTML = paginateSlice(items, repInvPage).map(p=>`
       <tr>
         <td><div class="name-cell"><div class="row-thumb">${productThumb(p)}</div><div class="nm">${p.name}</div></div></td>
         <td>${p.cat || 'Uncategorized'}</td>
@@ -5704,6 +6187,7 @@
         <td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td>
         <td class="gold" style="text-align:right;">$${p.price.toFixed(2)}</td>
       </tr>`).join('');
+    renderPaginationControls('repInventoryPagination', items.length, repInvPage, renderReportInventory);
   }
 
   function renderReportValuation(){
@@ -5723,7 +6207,7 @@
       <div class="kpi-card"><div class="lbl"><span>Total retail value</span></div><div class="val">$${totRetailVal.toFixed(2)}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Potential margin</span></div><div class="val gold">$${(totRetailVal-totCostVal).toFixed(2)}</div></div>
     `;
-    document.getElementById('repValuationBody').innerHTML = rows.map(r=>`
+    document.getElementById('repValuationBody').innerHTML = paginateSlice(rows, repValPage).map(r=>`
       <tr>
         <td>${r.p.name}</td><td>${r.p.cat || 'Uncategorized'}</td>
         <td class="mono" style="text-align:right;">${r.stock}</td>
@@ -5732,6 +6216,7 @@
         <td class="mono" style="text-align:right;">$${r.p.price.toFixed(2)}</td>
         <td class="gold" style="text-align:right;">$${r.retailVal.toFixed(2)}</td>
       </tr>`).join('');
+    renderPaginationControls('repValuationPagination', rows.length, repValPage, renderReportValuation);
   }
 
   function renderReportSummary(){
@@ -5747,7 +6232,7 @@
       <div class="kpi-card"><div class="lbl"><span>Total cost value</span></div><div class="val">$${totalCostVal.toFixed(2)}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Low stock items</span></div><div class="val ${lowStockCount>0?'gold':''}">${lowStockCount}</div></div>
     `;
-    document.getElementById('repSummaryBody').innerHTML = cats.map(cat=>{
+    document.getElementById('repSummaryBody').innerHTML = paginateSlice(cats, repSumPage).map(cat=>{
       const inCat = PRODUCTS.filter(p=>p.cat===cat);
       const skus = inCat.length;
       const units = inCat.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
@@ -5755,15 +6240,17 @@
       const retailVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx))*p.price), 0);
       return `<tr><td>${cat}</td><td class="mono" style="text-align:right;">${skus}</td><td class="mono" style="text-align:right;">${units}</td><td class="mono" style="text-align:right;">$${costVal.toFixed(2)}</td><td class="gold" style="text-align:right;">$${retailVal.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">No categories yet.</td></tr>`;
+    renderPaginationControls('repSummaryPagination', cats.length, repSumPage, renderReportSummary);
   }
 
   function renderReportLowStock(){
     const shopCtx = viewingShop;
     const items = PRODUCTS.filter(p=> p.stockControl!==false && getStock(p, shopCtx) <= 15).sort((a,b)=>getStock(a,shopCtx)-getStock(b,shopCtx));
     const tbody = document.getElementById('repLowStockBody');
-    if(items.length===0){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">Nothing is low on stock right now.</td></tr>`; return; }
-    tbody.innerHTML = items.map(p=>`
+    if(items.length===0){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">Nothing is low on stock right now.</td></tr>`; clearPager('repLowStockPagination'); return; }
+    tbody.innerHTML = paginateSlice(items, repLowPage).map(p=>`
       <tr><td>${p.name}</td><td>${p.cat||'Uncategorized'}</td><td class="mono" style="text-align:right; color:var(--danger);">${getStock(p,shopCtx)}</td><td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td><td class="mono" style="text-align:right;">$${(p.cost*20).toFixed(2)}</td></tr>`).join('');
+    renderPaginationControls('repLowStockPagination', items.length, repLowPage, renderReportLowStock);
   }
 
   function salesCatPeriodRange(period){
@@ -5839,9 +6326,10 @@
 
   function renderReportStaff(){
     const tbody = document.getElementById('repStaffBody');
-    if(EMPLOYEES.length===0){ tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--sage);">No employees added yet.</td></tr>`; return; }
-    tbody.innerHTML = EMPLOYEES.map(e=>`
+    if(EMPLOYEES.length===0){ tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--sage);">No employees added yet.</td></tr>`; clearPager('repStaffPagination'); return; }
+    tbody.innerHTML = paginateSlice(EMPLOYEES, repStaffPage).map(e=>`
       <tr><td>${e.name}</td><td>${e.role}</td><td>${e.shop||'—'}</td><td><span class="status-badge ${e.active?'completed':'pending'}">${e.active?'Active':'Inactive'}</span></td></tr>`).join('');
+    renderPaginationControls('repStaffPagination', EMPLOYEES.length, repStaffPage, renderReportStaff);
   }
 
   document.getElementById('repInvShopFilter').addEventListener('change', renderReportInventory);
@@ -6045,8 +6533,8 @@
       }
       const total = items.reduce((s,it)=>s+it.qty*it.unitCost,0);
       const todayIso = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`;
-      const id = 'GRN-' + Math.floor(10000 + Math.random()*89999);
-      GRN_RECORDS.unshift({ id, date: todayIso, type:'Direct GRN', po:'', created: todayIso, supplier:'N/A', shop:viewingShop, payment:'Cash', invoice:'', additional:'Imported from CSV', items, total, status:'Completed' });
+      const id = 'GRN-' + AureumSync.nextDocNumber(GRN_RECORDS, 'GRN-', 11223);
+      GRN_RECORDS.unshift({ uid: AureumSync.uid(), createdAt: new Date().toISOString(), id, date: todayIso, type:'Direct GRN', po:'', created: todayIso, supplier:'N/A', shop:viewingShop, payment:'Cash', invoice:'', additional:'Imported from CSV', items: items.map(snapshotLine), total, status:'Completed' });
       items.forEach(it=>{ const p = PRODUCTS.find(x=>x.id===it.productId); if(p) addStock(p, viewingShop, it.qty); });
       renderGRNTable();
       renderProducts();
@@ -6089,7 +6577,7 @@
         if(!name || (email && !emailRe.test(email))){ skippedInvalid++; continue; }
         const key = name.toLowerCase()+'|'+phone;
         if(existingKeys.has(key)){ skippedDup++; continue; }
-        CUSTOMERS.push({ id: nextCustomerId++, name, phone, email, shop:'', notes: notesIdx>-1 ? (r[notesIdx]||'').trim() : '', orders:0, spent:0, credit:0, joined: `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}` });
+        CUSTOMERS.push({ uid: AureumSync.uid(), id: nextCustomerId++, name, phone, email, shop:'', notes: notesIdx>-1 ? (r[notesIdx]||'').trim() : '', orders:0, spent:0, credit:0, joined: `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}` });
         existingKeys.add(key);
         added++;
       }
@@ -6132,7 +6620,7 @@
         const email = emailIdx>-1 ? (r[emailIdx]||'').trim() : '';
         if(!name || (email && !emailRe.test(email))){ skippedInvalid++; continue; }
         if(existingNames.has(name.toLowerCase())){ skippedDup++; continue; }
-        EMPLOYEES.push({ id: nextEmployeeId++, name, role: roleIdx>-1 ? ((r[roleIdx]||'').trim() || 'Cashier') : 'Cashier', shop: shopIdx>-1 ? (r[shopIdx]||'').trim() : '', phone: phoneIdx>-1 ? (r[phoneIdx]||'').trim() : '', email, pin:'', active:true });
+        EMPLOYEES.push({ uid: AureumSync.uid(), id: nextEmployeeId++, name, role: roleIdx>-1 ? ((r[roleIdx]||'').trim() || 'Cashier') : 'Cashier', shop: shopIdx>-1 ? (r[shopIdx]||'').trim() : '', phone: phoneIdx>-1 ? (r[phoneIdx]||'').trim() : '', email, pin:'', active:true });
         existingNames.add(name.toLowerCase());
         added++;
       }
@@ -6765,7 +7253,7 @@
     const rows = t.items.map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       return [
-        p ? p.name : '—',
+        itemLabel(it,p),
         String(it.qty),
         String(it.beforeFrom ?? '—'), String(it.afterFrom ?? '—'),
         String(it.beforeTo ?? '—'), String(it.afterTo ?? '—')
@@ -6781,15 +7269,17 @@
   }
 
   let transferPageState = { page:1, pageSize:20 };
+  let transferDateRangeFilter = null;
   function renderTransfers(){
     const tbody = document.getElementById('transferTableBody');
-    if(TRANSFERS.length === 0){
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px 20px;color:var(--sage);">No stock transfers yet.</td></tr>`;
+    const trList = TRANSFERS.filter(t => dateInFilter(t.date, transferDateRangeFilter));
+    if(trList.length === 0){
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px 20px;color:var(--sage);">${TRANSFERS.length === 0 ? 'No stock transfers yet.' : 'No transfers in this date range.'}</td></tr>`;
       const pg=document.getElementById('transferPagination'); if(pg) pg.innerHTML='';
       return;
     }
-    const totalFiltered = TRANSFERS.length;
-    const pageItems = paginateSlice(TRANSFERS, transferPageState);
+    const totalFiltered = trList.length;
+    const pageItems = paginateSlice(trList, transferPageState);
     tbody.innerHTML = pageItems.map(t=>`
       <tr>
         <td class="mono">${t.id}</td>
@@ -6841,10 +7331,11 @@
       const beforeFrom = getStock(p, from), beforeTo = getStock(p, to);
       addStock(p, from, -r.qty);
       addStock(p, to, r.qty);
-      return { productId: r.productId, qty: r.qty, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
+      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
     });
     TRANSFERS.unshift({
-      id: 'TR-' + String(1000 + nextTransferId++),
+      uid: AureumSync.uid(), createdAt: new Date().toISOString(),
+      id: 'TR-' + AureumSync.nextDocNumber(TRANSFERS, 'TR-', 1001),
       date: document.getElementById('trDate').value || `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`,
       from, to,
       items: savedItems,
@@ -7024,7 +7515,7 @@
     if(editingExpenseId){
       Object.assign(EXPENSES.find(e=>e.id===editingExpenseId), data);
     } else {
-      EXPENSES.push({ id: nextExpenseId++, ...data });
+      EXPENSES.push({ uid: AureumSync.uid(), id: nextExpenseId++, ...data });
     }
     persistAureum();
     closeModal('detailModal');
@@ -7133,35 +7624,23 @@
      to the local cache for an instant paint before the network call
      resolves), then keeps saving/subscribing so both apps stay
      live-in-sync across any device signed into the same business. */
-  let _aureumSnapshot = '';
   function aureumSnapshotData(){
     return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, settings:POS_SETTINGS };
   }
-  function persistAureum(){
-    const str = JSON.stringify(aureumSnapshotData());
-    if(str === _aureumSnapshot) return;
-    _aureumSnapshot = str;
-    AureumDB.cacheWrite(aureumSnapshotData());
-    AureumDB.writeRemote(aureumSnapshotData()).then(()=>{ try{ renderSyncStatus(); }catch(e){} });
-  }
+  function persistAureum(){ AureumSync.touch(); }
   function renderSyncStatus(){
     const el = document.getElementById('syncStatus');
     const label = document.getElementById('syncStatusLabel');
-    const pending = AureumDB.getPending();
-    if(!supaReady || !sb){
-      // No cloud backend connected — everything is saved to this device only.
-      el.style.color = 'var(--sage)';
-      label.textContent = 'Saved on this device';
-    } else if(!navigator.onLine){
-      el.style.color = 'var(--danger)';
-      label.textContent = pending ? 'Offline · changes queued' : 'Offline';
-    } else if(pending){
-      el.style.color = 'var(--gold-bright)';
-      label.textContent = 'Syncing…';
-    } else {
-      el.style.color = 'var(--sage)';
-      label.textContent = 'Synced';
-    }
+    if(!el || !label) return;
+    const st = AureumSync.status().state;
+    const set = (color, text) => { el.style.color = color; label.textContent = text; };
+    if(!supaReady || !sb) return set('var(--sage)', 'Saved on this device');
+    if(st === 'saving') return set('var(--gold-bright)', 'Syncing…');
+    if(st === 'loading') return set('var(--gold-bright)', 'Loading…');
+    if(st === 'offline') return set('var(--danger)', 'Offline · changes saved on this device');
+    if(st === 'error' || st === 'load-failed') return set('var(--danger)', 'Sync problem · retrying');
+    if(st === 'synced-compat') return set('var(--gold-bright)', 'Synced · update needed');
+    return set('var(--sage)', 'Synced');
   }
 
   /* ===== CONNECTIVITY TOAST =====
@@ -7359,6 +7838,32 @@
     { q: "How does billing work?", a: "AUREUM is $5.00/month (Standard Plan), payable by card via Stripe or via Paynow (EcoCash, OneMoney, Visa/Mastercard, ZimSwitch, or InnBucks depending on what your Paynow account supports). Your card or mobile money details are entered directly on Stripe's or Paynow's own page — never stored by AUREUM." },
     { q: "Does my subscription auto-renew?", a: "Card payments via Stripe renew automatically each month. Paynow payments don't auto-renew (mobile money and most Paynow methods require you to actively approve each payment) — you'll see a reminder in Settings → Billing a few days before your period ends." },
   ];
+  /* ===== DATA RECOVERY (from the copy older versions kept in this browser) ===== */
+  const RECOVERY_LABELS = { purchaseOrders:'purchase order', grnRecords:'goods received note', stockAdjustments:'stock adjustment', transfers:'stock transfer', expenses:'expense', employeeHours:'employee-hours entry', receipts:'receipt' };
+  document.getElementById('stRecoverCheckBtn').addEventListener('click', ()=>{
+    const out = document.getElementById('stRecoverResult');
+    let found;
+    try{ found = AureumSync.findRecoverable(); }catch(e){ out.textContent = 'Could not read this device\'s saved copy.'; return; }
+    if(!found.total){ out.innerHTML = '<span style="color:var(--sage);">Nothing to restore — this device has no records that your account is missing.</span>'; return; }
+    const lines = Object.entries(found.byCollection).map(([k, arr]) => `<div>${arr.length} ${RECOVERY_LABELS[k]}${arr.length===1?'':'s'}</div>`).join('');
+    out.innerHTML = `<div style="color:var(--ivory);margin-bottom:8px;">Found on this device but missing from your account:</div>${lines}<div class="btn-gold" id="stRecoverRunBtn" style="margin-top:12px;display:inline-flex;">Restore ${found.total} record${found.total===1?'':'s'}</div>`;
+    document.getElementById('stRecoverRunBtn').addEventListener('click', ()=>{
+      const add = (arr, recs, front) => front ? [...recs, ...arr] : [...arr, ...recs];
+      const c = found.byCollection;
+      if(c.purchaseOrders) PURCHASE_ORDERS = add(PURCHASE_ORDERS, c.purchaseOrders, true);
+      if(c.grnRecords) GRN_RECORDS = add(GRN_RECORDS, c.grnRecords, true);
+      if(c.stockAdjustments) STOCK_ADJUSTMENTS = add(STOCK_ADJUSTMENTS, c.stockAdjustments, true);
+      if(c.transfers) TRANSFERS = add(TRANSFERS, c.transfers, true);
+      if(c.expenses) EXPENSES = add(EXPENSES, c.expenses, false);
+      if(c.employeeHours) EMPLOYEE_HOURS = add(EMPLOYEE_HOURS, c.employeeHours, false);
+      if(c.receipts) RECEIPTS = add(RECEIPTS, c.receipts, false);
+      nextExpenseId = Math.max(0, ...EXPENSES.map(e=>e.id||0)) + 1;
+      persistAureum();           // saved through the safe merge, like everything else
+      renderAllData();
+      out.innerHTML = `<span style="color:var(--green-bright,#4ADE80);">Restored ${found.total} record${found.total===1?'':'s'}. They are now saved to your account.</span>`;
+    });
+  });
+
   document.getElementById('stChangePasswordBtn').addEventListener('click', async ()=>{
     const pw = document.getElementById('stNewPassword').value;
     const pw2 = document.getElementById('stConfirmPassword').value;
@@ -7400,17 +7905,21 @@
   }
   function applyLoadedData(shared){
     if(!shared) return;
-    if(shared.shops && shared.shops.length) SHOPS = shared.shops;
-    if(shared.products && shared.products.length) PRODUCTS = shared.products;
-    if(shared.customers && shared.customers.length) CUSTOMERS = shared.customers;
-    if(shared.employees && shared.employees.length) EMPLOYEES = shared.employees;
-    if(shared.receipts) RECEIPTS = shared.receipts; // empty array is a valid, meaningful state — don't fall back to demo seed
-    if(shared.expenses) EXPENSES = shared.expenses;
-    if(shared.purchaseOrders) PURCHASE_ORDERS = shared.purchaseOrders;
-    if(shared.grnRecords) GRN_RECORDS = shared.grnRecords;
-    if(shared.stockAdjustments) STOCK_ADJUSTMENTS = shared.stockAdjustments;
-    if(shared.transfers) TRANSFERS = shared.transfers;
-    if(shared.employeeHours) EMPLOYEE_HOURS = shared.employeeHours;
+    const live = !!(supaReady && sb);   // a real cloud business: the server's copy is the truth — demo seed data never survives
+    const has = k => Array.isArray(shared[k]);
+    // starter data (products/customers/staff/shops) is kept only until the business has saved its own
+    if(has('shops') && (shared.shops.length || live)) SHOPS = shared.shops;
+    if(has('products') && (shared.products.length || live)) PRODUCTS = shared.products;
+    if(has('customers') && (shared.customers.length || live)) CUSTOMERS = shared.customers;
+    if(has('employees') && (shared.employees.length || live)) EMPLOYEES = shared.employees;
+    // records: an empty list is a real, meaningful state; a missing list is empty for a live business, never demo data
+    RECEIPTS = has('receipts') ? shared.receipts : (live ? [] : RECEIPTS);
+    EXPENSES = has('expenses') ? shared.expenses : (live ? [] : EXPENSES);
+    PURCHASE_ORDERS = has('purchaseOrders') ? shared.purchaseOrders : (live ? [] : PURCHASE_ORDERS);
+    GRN_RECORDS = has('grnRecords') ? shared.grnRecords : (live ? [] : GRN_RECORDS);
+    STOCK_ADJUSTMENTS = has('stockAdjustments') ? shared.stockAdjustments : (live ? [] : STOCK_ADJUSTMENTS);
+    TRANSFERS = has('transfers') ? shared.transfers : (live ? [] : TRANSFERS);
+    EMPLOYEE_HOURS = has('employeeHours') ? shared.employeeHours : (live ? [] : EMPLOYEE_HOURS);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
@@ -7422,47 +7931,19 @@
     nextEmployeeId = Math.max(0, ...EMPLOYEES.map(e=>e.id)) + 1;
     nextExpenseId = Math.max(0, ...EXPENSES.map(e=>e.id)) + 1;
     nextHoursId = Math.max(0, ...EMPLOYEE_HOURS.map(h=>h.id)) + 1;
-    _aureumSnapshot = JSON.stringify(aureumSnapshotData());
   }
 
   async function startApp(){
-    const cached = AureumDB.cacheRead();
-    if(cached){ applyLoadedData(cached); renderAllData(); } // instant paint
-
-    const remote = await AureumDB.loadRemote();
-    if(remote && Object.keys(remote).length){ applyLoadedData(remote); }
-    else if(supaReady){
-      // A real, freshly-created business with nothing saved yet — start
-      // from zero, not from the developer's demo receipts/expenses. Demo
-      // numbers only belong in the no-backend preview file, never in a
-      // live business's Dashboard/Accounting.
-      RECEIPTS = [];
-      EXPENSES = [];
-      PURCHASE_ORDERS = [];
-      GRN_RECORDS = [];
-      STOCK_ADJUSTMENTS = [];
-      TRANSFERS = [];
-      nextExpenseId = 1;
-      persistAureum();
-    }
-    else { persistAureum(); }
+    // Load this business's data (or this device's own saved copy if the server can't be reached), merge,
+    // apply, and start background saving. NOTHING is ever written before a successful load — a failed load
+    // used to be mistaken for "new business" and saved an empty copy over the real data.
+    await AureumSync.start();
     renderAllData();
-
-    setInterval(persistAureum, 1200);
     window.addEventListener('beforeunload', persistAureum);
-    AureumDB.subscribeRemote(function(shared){
-      const str = JSON.stringify(shared);
-      if(str === _aureumSnapshot) return;
-      applyLoadedData(shared);
-      try{ renderAllData(); }catch(e){}
-    });
-
     renderSyncStatus();
-    setInterval(async ()=>{ await AureumDB.flushPending(); renderSyncStatus(); }, 4000);
     window.addEventListener('online', async ()=>{
-      const flushed = await AureumDB.flushPending();
-      renderSyncStatus();
-      if(flushed && supaReady && sb) aureumToast('All caught up \u2014 changes are synced.', 'ok');
+      await AureumSync.retryNow(); renderSyncStatus();
+      if(supaReady && sb && /^synced/.test(AureumSync.status().state)) aureumToast('All caught up \u2014 changes are synced.', 'ok');
     });
     window.addEventListener('offline', renderSyncStatus);
 
