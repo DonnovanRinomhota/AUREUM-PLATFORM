@@ -539,6 +539,38 @@
   .pager-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
   .pager-btn.disabled{ opacity:.35; pointer-events:none; }
   .pager-page{ font-size:12.5px; color:var(--ivory-dim); white-space:nowrap; }
+  /* ---- shifts ---- */
+  .shift-note{ font-size:12px; line-height:1.55; color:var(--sage); background:rgba(143,167,154,0.08); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:left; }
+  .shift-note:empty{ display:none; }
+  .shift-note.warn{ color:#ffd9a0; border-color:rgba(227,154,75,.55); background:rgba(227,154,75,.09); }
+  #shiftBtn.warn{ border-color:rgba(227,154,75,.7); color:#ffd9a0; }
+  .sp-meta{ font-size:12px; color:var(--sage); line-height:1.7; margin-bottom:12px; }
+  .sp-meta b{ color:var(--ivory); font-weight:600; }
+  .sp-sec{ font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--sage-dim); margin:14px 0 6px; }
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
+  .badge.bal{ background:rgba(74,222,128,.13); color:#4ADE80; }
+  .badge.over{ background:rgba(227,154,75,.16); color:#E39A4B; }
+  .badge.short{ background:rgba(193,88,74,.18); color:var(--danger); }
+  .cs-filters{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; font-size:11.5px; color:var(--sage); }
+  .cs-filters input{ background:var(--panel); color:var(--ivory); border:1px solid var(--line-strong); border-radius:8px; padding:7px 9px; font:inherit; font-size:12px; color-scheme:dark; margin-left:6px; }
+  .closed-row{ display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .closed-row:hover{ background:rgba(231,199,102,0.05); }
+  .closed-row .no{ font-weight:700; font-size:13.5px; }
+  .closed-row .meta{ font-size:11.5px; color:var(--sage); margin-top:3px; }
+  .closed-row .amt{ text-align:right; font-weight:700; color:var(--gold-bright); }
+  .today-sum{ font-size:12px; color:var(--sage); margin-bottom:10px; }
+  .today-sum b{ color:var(--ivory); }
+  /* ---- refund picker ---- */
+  .rf-line{ display:grid; grid-template-columns:1fr auto; gap:6px 12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); }
+  .rf-line .nm{ font-weight:600; font-size:13.5px; }
+  .rf-line .sub{ font-size:11.5px; color:var(--sage); margin-top:2px; }
+  .rf-line.done{ opacity:.45; }
+  .rf-stepper{ display:flex; align-items:center; gap:8px; }
+  .rf-stepper .st{ width:38px; height:38px; border-radius:9px; border:1px solid var(--line-strong); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; user-select:none; color:var(--ivory-dim); background:var(--panel); }
+  .rf-stepper .st:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .rf-stepper .st.off{ opacity:.3; pointer-events:none; }
+  .rf-stepper .q{ min-width:26px; text-align:center; font-weight:700; }
+  .rf-amt{ grid-column:1 / -1; text-align:right; font-size:12px; color:var(--gold-bright); min-height:14px; }
   /* ---- history rows / negative stock ---- */
   .sale-row.clickable{ cursor:pointer; }
   .sale-row .refund-btn{ border:1px solid var(--line-strong); border-radius:8px; color:var(--gold-bright); font-weight:600; cursor:pointer; white-space:nowrap; }
@@ -582,7 +614,8 @@
     .clerk .when, .clerk .who{ display:none; }   /* avatar initials identify the cashier; tap it to end the shift */
     #helpBtn{ display:none; }                    /* keyboard-shortcut help is a desktop thing */
     .topbar-icon-btn:not([style*="width:auto"]){ width:36px; height:36px; }
-    #syncStatus, #shopSwitchBtn{ padding:0 9px !important; }
+    #syncStatus, #shopSwitchBtn, #shiftBtn{ padding:0 9px !important; }
+    #syncStatusLabel{ display:none; }            /* on a phone the coloured dot is enough (turns red when offline / failing) */
     .catalog{ flex:1 1 auto; min-height:0; padding:14px 12px 100px; gap:14px; }
     .grid{ grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap:10px; }
 
@@ -642,11 +675,12 @@
   .auth-gate{
     display:none; position:fixed; inset:0; z-index:500;
     background: radial-gradient(circle at 30% 20%, rgba(20,58,42,0.9), var(--bg-deep) 65%);
-    align-items:center; justify-content:center;
+    /* scrolls when the card is taller than the screen (small phones); margin:auto on the card keeps it centred otherwise */
+    align-items:flex-start; justify-content:center; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px;
   }
   .auth-gate.show{ display:flex; }
   .auth-card{
-    width:340px; background:var(--panel); border:1px solid var(--line-strong); border-radius:16px;
+    width:340px; max-width:100%; margin:auto; background:var(--panel); border:1px solid var(--line-strong); border-radius:16px;
     padding:32px 28px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);
   }
   .auth-seal{
@@ -685,10 +719,14 @@
 <div class="auth-gate" id="shiftGate">
   <div class="auth-card">
     <div class="auth-seal">A</div>
-    <div class="auth-title">Start Shift</div>
+    <div class="auth-title" id="shiftGateTitle">Start Shift</div>
     <div class="auth-sub" id="shiftGateMsg">Select this till's shop and your name, then enter your PIN. Every sale is recorded under this shop and employee only.</div>
     <select class="auth-field" id="shiftShopSelect"></select>
     <select class="auth-field" id="shiftEmployeeSelect"></select>
+    <div class="shift-note" id="shiftGateNote"></div>
+    <div id="shiftFloatRow" style="display:none;">
+      <input class="auth-field" id="shiftOpeningFloat" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Opening cash in the drawer (float) — optional">
+    </div>
     <input class="auth-field" id="shiftPin" type="password" inputmode="numeric" placeholder="Employee PIN" maxlength="8">
     <div class="auth-error" id="shiftError"></div>
     <div class="auth-btn" id="shiftSubmitBtn">Start Shift</div>
@@ -707,6 +745,7 @@
     <div class="topbar-right">
       <div class="topbar-icon-btn" id="syncStatus" title="Sync status" style="width:auto;padding:0 10px;font-size:10.5px;">&#9679; <span id="syncStatusLabel">Synced</span></div>
       <div class="topbar-icon-btn" id="shopSwitchBtn" title="Switch shop" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9733; <span id="shopChipLabel">All Shops</span></div>
+      <div class="topbar-icon-btn" id="shiftBtn" title="Shift — summary, close shift, closed shifts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9201; <span id="shiftBtnLabel">Shift</span></div>
       <div class="topbar-icon-btn" id="backOfficeBtn" title="Open Back Office">&#8599;</div>
       <div class="topbar-icon-btn" id="recentSalesBtn" title="Recent sales">&#8635;</div>
       <div class="topbar-icon-btn" id="helpBtn" title="Help">?</div>
@@ -836,10 +875,13 @@
 <div class="modal-overlay" id="recentSalesOverlay">
   <div class="modal-panel">
     <div class="modal-head">
-      <div class="title">Recent Sales</div>
+      <div class="title">Today's Sales</div>
       <div class="modal-close" data-close="recentSalesOverlay">&#10005;</div>
     </div>
-    <div class="modal-body" id="recentSalesBody"></div>
+    <div class="modal-body">
+      <div class="today-sum" id="recentSalesSub"></div>
+      <div id="recentSalesBody"></div>
+    </div>
   </div>
 </div>
 
@@ -900,6 +942,7 @@
       <div class="receipt-body" id="receiptBody"></div>
     </div>
     <div class="modal-actions">
+      <div class="modal-btn ghost" id="receiptRefundBtn" style="display:none; flex:1 1 100%;">Refund items…</div>
       <div class="modal-btn ghost" id="receiptCloseBtn">New Sale</div>
       <div class="modal-btn ghost" id="thermalPrintBtn" title="Print directly to a USB thermal receipt printer (Chrome/Edge desktop)">Print via USB</div>
       <div class="modal-btn ghost" id="thermalPrintBtnBt" title="Print directly to a Bluetooth thermal receipt printer, already paired in this device's Bluetooth settings (Chrome/Edge)">Print via Bluetooth</div>
@@ -978,7 +1021,53 @@
     <div class="modal-body" id="shiftCloseBody"></div>
     <div class="modal-actions">
       <div class="modal-btn ghost" data-close="shiftCloseOverlay">Cancel</div>
-      <div class="modal-btn solid" id="shiftCloseConfirmBtn">Confirm &amp; End Shift</div>
+      <div class="modal-btn solid" id="shiftCloseConfirmBtn">Close shift &amp; print report</div>
+    </div>
+  </div>
+</div>
+
+<!-- Shift panel -->
+<div class="modal-overlay" id="shiftOverlay">
+  <div class="modal-panel" style="max-width:460px;">
+    <div class="modal-head">
+      <div class="title" id="shiftPanelTitle">Shift</div>
+      <div class="modal-close" data-close="shiftOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body" id="shiftPanelBody"></div>
+    <div class="modal-actions" id="shiftPanelActions" style="flex-wrap:wrap;"></div>
+  </div>
+</div>
+
+<!-- Closed shifts -->
+<div class="modal-overlay" id="closedShiftsOverlay">
+  <div class="modal-panel" style="max-width:560px;">
+    <div class="modal-head">
+      <div class="title">Closed shifts</div>
+      <div class="modal-close" data-close="closedShiftsOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="cs-filters">
+        <label>From <input type="date" id="csFrom"></label>
+        <label>To <input type="date" id="csTo"></label>
+        <div class="pager-btn" id="csClear" style="height:34px;">Clear</div>
+      </div>
+      <div id="closedShiftsBody"></div>
+      <div class="catalog-pager" id="closedShiftsPager" style="margin-top:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Refund: pick products and quantities -->
+<div class="modal-overlay" id="refundOverlay">
+  <div class="modal-panel" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="title" id="refundTitle">Refund items</div>
+      <div class="modal-close" data-close="refundOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body" id="refundBody"></div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" data-close="refundOverlay">Cancel</div>
+      <div class="modal-btn solid" id="refundConfirmBtn">Refund selected items</div>
     </div>
   </div>
 </div>
@@ -1090,6 +1179,20 @@ const AureumSync = (function(){
     return out.map(p => (isObj(p.shopStock) ? { ...p, stock: Object.values(p.shopStock).reduce((s, v) => s + (+v || 0), 0) } : p));
   }
 
+  // Only ONE shift may be open per shop. If two tills opened one at the same moment, keep the
+  // earliest (its start time is the real one) — sales are attributed to a shift by time, so nothing is lost.
+  function dedupeOpenShifts(out){
+    const best = new Map();
+    out.forEach(s => { const cur = best.get(s.shop); if(!cur || String(s.openedAt) < String(cur.openedAt)) best.set(s.shop, s); });
+    return out.filter(s => best.get(s.shop) === s);
+  }
+  // A shift can only be closed once. If two devices closed the same shift, keep one record of it.
+  function dedupeClosures(out, added){
+    const addedSet = new Set(added), seen = new Set();
+    out.filter(r => !addedSet.has(r)).forEach(r => { if(r.shiftId) seen.add(r.shiftId); });
+    return out.filter(r => { if(!addedSet.has(r) || !r.shiftId) return true; if(seen.has(r.shiftId)) return false; seen.add(r.shiftId); return true; });
+  }
+
   // Which top-level lists hold records with an identity, and how they behave.
   //  key       → what identifies a record (uid when it has one)
   //  newFirst  → this list is added to at the FRONT (unshift)
@@ -1105,7 +1208,8 @@ const AureumSync = (function(){
     grnRecords:       { key: byUid('GRN:'), newFirst: true, fix: dedupeStringIds('GRN-', 11223) },
     stockAdjustments: { key: byUid('SA:'), newFirst: true, fix: dedupeStringIds('SA-', 10956) },
     transfers:        { key: byUid('TR:'), newFirst: true, fix: dedupeStringIds('TR-', 1001) },
-    shiftClosures:    { key: byUid('SC:'), newFirst: true },
+    shiftClosures:    { key: byUid('SC:'), newFirst: true, fix: dedupeClosures },
+    openShifts:       { key: byUid('OS:'), newFirst: true, fix: dedupeOpenShifts },
   };
   // Numbers that are COUNTERS (changed by deltas from several devices at once),
   // so concurrent changes add up instead of one overwriting the other.
@@ -1591,7 +1695,7 @@ async function aureumSignIn(email, password){
   let RECEIPTS = [];
   let nextCustomerId = CUSTOMERS.length + 1;
   let activeEmployee = null; // set only after a PIN is entered at the shift gate — see startShift()
-  let shiftStartTime = null;
+  let OPEN_SHIFTS = []; // synced: the shift currently running at each shop (at most one per shop)
   let SHIFT_CLOSURES = []; // synced audit record of every shift close + cash reconciliation
   let activeShop = null;     // set only after a real shop is chosen at the shift gate — never "All Shops"
 
@@ -1606,14 +1710,17 @@ async function aureumSignIn(email, password){
   let usbPrinterDevice = null; // paired WebUSB thermal printer, once connected
 
   function computeTotals(){
+    // Every money figure is rounded to whole cents HERE, once, so what's shown, what's charged and what's
+    // stored are the same number. (Unrounded arithmetic used to store totals like 12.420000000000002.)
+    const cents = n => Math.round((n + Number.EPSILON) * 100) / 100;
     const ids = Object.keys(cart);
-    const subtotal = ids.reduce((sum,id)=> sum + PRODUCTS.find(p=>p.id==id).price*cart[id], 0);
+    const subtotal = cents(ids.reduce((sum,id)=> sum + PRODUCTS.find(p=>p.id==id).price*cart[id], 0));
     let discountAmount = 0;
     if(discount.value > 0){
       discountAmount = discount.type === 'percent' ? subtotal * (discount.value/100) : discount.value;
-      discountAmount = Math.min(Math.max(discountAmount,0), subtotal);
+      discountAmount = cents(Math.min(Math.max(discountAmount,0), subtotal));
     }
-    const taxableBase = subtotal - discountAmount;
+    const taxableBase = cents(subtotal - discountAmount);
     // "Prices include tax" (set in Back Office → Settings → Taxes) changes
     // how tax is derived: inclusive means the tax is already baked into
     // the listed price (so the customer's total stays the same, tax is
@@ -1621,10 +1728,10 @@ async function aureumSignIn(email, password){
     let tax, total;
     if(POS_SETTINGS.taxInclusive){
       total = taxableBase;
-      tax = taxableBase - (taxableBase / (1 + taxPercent/100));
+      tax = cents(taxableBase - (taxableBase / (1 + taxPercent/100)));
     } else {
-      tax = taxableBase * (taxPercent/100);
-      total = taxableBase + tax;
+      tax = cents(taxableBase * (taxPercent/100));
+      total = cents(taxableBase + tax);
     }
     return { ids, subtotal, discountAmount, tax, total };
   }
@@ -2120,7 +2227,15 @@ async function aureumSignIn(email, password){
 
   /* ===== MODALS ===== */
   function openModal(id){ document.getElementById(id).classList.add('open'); }
-  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+  function closeModal(id){
+    document.getElementById(id).classList.remove('open');
+    // a shift was just closed: once its report is dismissed (button, ✕ or tapping outside), return to the sign-in screen
+    if(id === 'receiptOverlay' && pendingGateAfterReport){
+      pendingGateAfterReport = false;
+      activeShop = null; activeEmployee = null;
+      openShiftGate();
+    }
+  }
 
   document.querySelectorAll('[data-close]').forEach(el=>{
     el.addEventListener('click', ()=> closeModal(el.dataset.close));
@@ -2133,42 +2248,49 @@ async function aureumSignIn(email, password){
 
   /* ===== RECENT SALES ===== */
   const recentSales = [];
+  /* ===== TODAY'S SALES (this shop, today only — older receipts live in Back Office → Receipts) ===== */
   function renderRecentSales(){
-    const body = document.getElementById('recentSalesBody');
-    const canRefund = activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role);
-    const cur = POS_SETTINGS.currency;
-    const list = RECEIPTS.filter(r => r.shop === activeShop)
-      .sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime)).slice(0, 100);
+    const body = document.getElementById('recentSalesBody'), sub = document.getElementById('recentSalesSub');
+    const now = new Date();
+    const list = RECEIPTS.filter(r => r.shop === activeShop && sameDay(new Date(r.dateTime), now))
+      .sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
+    const sales = list.filter(r => !r.refund), refunds = list.filter(r => r.refund);
+    const net = sales.reduce((s,r)=> s + r.total, 0) - refunds.reduce((s,r)=> s + r.total, 0);
+    sub.innerHTML = `<b>${now.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</b> · ${sales.length} sale${sales.length===1?'':'s'}` +
+      `${refunds.length ? `, ${refunds.length} refund${refunds.length===1?'':'s'}` : ''} · net <b>${money(net)}</b>`;
     if(list.length === 0){
-      body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales recorded yet at this shop.</p></div>`;
+      body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales yet today at ${escHtml(activeShop || 'this shop')}.</p></div>`;
       return;
     }
     body.innerHTML = list.map(r => {
-      const key = receiptKey(r);
-      const d = new Date(r.dateTime);
-      const when = d.toLocaleDateString('en-US', {month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',hour12:true});
-      const qty = receiptQty(r);
+      const key = receiptKey(r), d = new Date(r.dateTime), qty = receiptQty(r);
+      const when = d.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',hour12:true});
+      let tag = '';
+      if(!r.refund){ const rf = refundedSoFar(r); if(rf.count) tag = remainingQty(r, rf) === 0 ? ' · <span style="color:var(--danger)">Refunded</span>' : ' · <span style="color:#E39A4B">Partly refunded</span>'; }
       return `
       <div class="sale-row clickable" data-key="${escHtml(key)}" title="Tap to view the full receipt">
         <div class="info">
           <div class="no">${r.refund ? 'Refund ' : 'No. '}${escHtml(r.id)}</div>
-          <div class="meta">${when} · ${qty} item${qty===1?'':'s'}${r.refund && r.refundOf ? ' · of No. ' + escHtml(r.refundOf) : ''}${r.refunded ? ' · <span style="color:var(--danger)">Refunded</span>' : ''}</div>
+          <div class="meta">${when} · ${qty} item${qty===1?'':'s'}${r.refund && r.refundOf ? ' · of No. ' + escHtml(r.refundOf) : ''}${tag}</div>
         </div>
         <div class="amt">
-          <div class="val ${r.refund ? 'neg' : ''}">${r.refund ? '-' : ''}${cur}${Number(r.total).toFixed(2)}</div>
+          <div class="val ${r.refund ? 'neg' : ''}">${r.refund ? '-' : ''}${money(r.total)}</div>
           <div class="method">${escHtml(r.payment || '')}</div>
         </div>
-        ${canRefund && !r.refund && !r.refunded ? `<div class="btn-outline refund-btn" data-key="${escHtml(key)}" style="margin-left:10px;padding:6px 12px;font-size:11.5px;">Refund</div>` : ''}
       </div>`;
     }).join('');
     body.querySelectorAll('.sale-row').forEach(row => row.addEventListener('click', ()=> openReceiptByKey(row.dataset.key)));
-    body.querySelectorAll('.refund-btn').forEach(btn => btn.addEventListener('click', (e)=>{ e.stopPropagation(); refundSale(btn.dataset.key); }));
   }
-  // Same pop-up serves two moments: "sale just completed" and "looking back at an old receipt".
+  // Same pop-up serves three moments: "sale just completed", "looking back at a receipt", "a shift report".
   function setReceiptChrome(fromHistory, sale){
     const title = document.querySelector('#receiptOverlay .modal-head .title');
     if(title) title.textContent = fromHistory ? (sale.refund ? 'Refund receipt' : 'Receipt') : 'Sale Complete';
     document.getElementById('receiptCloseBtn').textContent = fromHistory ? 'Close' : 'New Sale';
+    // Refunding starts from the receipt itself — managers/admins pick WHICH items and how many
+    const rb = document.getElementById('receiptRefundBtn');
+    const can = !!(fromHistory && sale && !sale.refund && sale.key && canManage() && sale.remainingQty > 0);
+    rb.style.display = can ? '' : 'none';
+    rb.dataset.key = can ? sale.key : '';
   }
   function openReceiptByKey(key){
     const r = RECEIPTS.find(x => receiptKey(x) === key);
@@ -2176,49 +2298,141 @@ async function aureumSignIn(email, password){
     lastSale = receiptToSale(r);     // so Print / thermal print output THIS receipt
     buildReceipt(lastSale);
     setReceiptChrome(true, lastSale);
+    pendingGateAfterReport = false;
     openModal('receiptOverlay');
   }
-  // Refunds are restricted to Shop Manager / Administrator roles — same permission
-  // level as Back Office access — since a refund reverses real money and stock.
-  // Full-sale refund only (not partial/line-item).
-  function refundSale(key){
-    if(!(activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role))){ aureumToast('Refunds are restricted to Shop Managers and Administrators.', 'danger'); return; }
-    const sale = RECEIPTS.find(r => receiptKey(r) === key && !r.refund);
-    if(!sale){ aureumToast('Sale not found.', 'danger'); return; }
-    if(sale.refunded){ aureumToast('This sale has already been refunded.', 'danger'); return; }
-    const cur = POS_SETTINGS.currency;
-    if(!confirm(`Refund No. ${sale.id} for ${cur}${Number(sale.total).toFixed(2)}? This restores stock and cannot be undone.`)) return;
 
-    (sale.items || []).forEach(it => {
-      const p = PRODUCTS.find(x => x.id === it.productId);
-      if(p && p.stockControl !== false) addStock(p, sale.shop, it.qty);   // back into the shop it was sold from
+  /* ===== REFUNDS — item by item, never the whole receipt by default =====
+     Managers / Administrators open a receipt, press "Refund items…", then choose the products and the
+     quantity of each to give back. Discount and tax are refunded in proportion to what's returned; stock
+     goes back to the shop it was sold from; the same item can't be refunded more times than it was sold. */
+  function refundedSoFar(r){
+    const key = receiptKey(r), qty = {};
+    let total = 0, tax = 0, disc = 0, count = 0;
+    RECEIPTS.forEach(x => {
+      if(x.refund && x.refundOfKey === key){
+        count++; total += x.total; tax += (x.tax || 0); disc += (x.discountAmount || 0);
+        (x.items || []).forEach(i => { qty[i.productId] = (qty[i.productId] || 0) + i.qty; });
+      }
     });
+    return { qty, total, tax, disc, count };
+  }
+  function remainingQty(r, rf){
+    rf = rf || refundedSoFar(r);
+    return (r.items || []).reduce((s, i) => s + Math.max(0, i.qty - (rf.qty[i.productId] || 0)), 0);
+  }
+  function computeRefund(r, qtyMap){
+    const rf = refundedSoFar(r), items = r.items || [];
+    const origSub = typeof r.subtotal === 'number' ? r.subtotal : items.reduce((s,i)=> s + i.qty*i.price, 0);
+    const origDisc = r.discountAmount || 0, origTax = r.tax || 0, origBase = origSub - origDisc;
+    const lines = [];
+    items.forEach(i => {
+      const left = i.qty - (rf.qty[i.productId] || 0);
+      const q = Math.max(0, Math.min(Math.floor(qtyMap[i.productId] || 0), left));
+      if(q > 0) lines.push({ productId: i.productId, name: i.name, qty: q, price: i.price, cost: i.cost || 0 });
+    });
+    const sub = lines.reduce((s,l)=> s + l.qty*l.price, 0);
+    const clearsEverything = lines.length > 0 && items.every(i => (qtyMap[i.productId] || 0) >= i.qty - (rf.qty[i.productId] || 0));
+    let disc, tax, total;
+    if(clearsEverything){
+      // settle to the exact remainder so cents can never drift across several partial refunds
+      disc = r2(origDisc - rf.disc); tax = r2(origTax - rf.tax); total = r2(r.total - rf.total);
+    } else {
+      disc = origSub > 0 ? r2(sub * origDisc / origSub) : 0;
+      const base = sub - disc;
+      tax = origBase > 0 ? r2(origTax * base / origBase) : 0;
+      total = r.taxInclusive ? r2(base) : r2(base + tax);
+    }
+    return { lines, subtotal: r2(sub), discountAmount: disc, tax, total, clearsEverything, rf };
+  }
+
+  let refundDraft = null;
+  function openRefundModal(key){
+    if(!canManage()){ aureumToast('Refunds are restricted to Shop Managers and Administrators.', 'danger'); return; }
+    const r = RECEIPTS.find(x => receiptKey(x) === key && !x.refund);
+    if(!r){ aureumToast('Receipt not found.', 'danger'); return; }
+    if(remainingQty(r) === 0){ aureumToast('Everything on this receipt has already been refunded.', 'danger'); return; }
+    refundDraft = { key, qty: {}, reason: '' };
+    document.getElementById('refundTitle').textContent = `Refund items — No. ${r.id}`;
+    renderRefundBody();
+    openModal('refundOverlay');
+  }
+  function renderRefundBody(){
+    const r = RECEIPTS.find(x => receiptKey(x) === refundDraft.key), calc = computeRefund(r, refundDraft.qty), rf = calc.rf;
+    const lineHtml = (r.items || []).map(i => {
+      const done = rf.qty[i.productId] || 0, left = i.qty - done, q = Math.min(refundDraft.qty[i.productId] || 0, left);
+      return `<div class="rf-line ${left === 0 ? 'done' : ''}">
+        <div><div class="nm">${escHtml(i.name)}</div>
+          <div class="sub">Sold ${i.qty} × ${money(i.price)}${done ? ` · already refunded ${done}` : ''} · <b>${left}</b> left to refund</div></div>
+        <div class="rf-stepper">
+          <div class="st ${q <= 0 ? 'off' : ''}" data-pid="${i.productId}" data-d="-1">−</div>
+          <div class="q">${q}</div>
+          <div class="st ${q >= left ? 'off' : ''}" data-pid="${i.productId}" data-d="1">+</div>
+        </div></div>`;
+    }).join('');
+    document.getElementById('refundBody').innerHTML = `
+      <div class="sp-meta">Sold <b>${fmtDT(r.dateTime)}</b> · paid by <b>${escHtml(r.payment || '')}</b> · cashier <b>${escHtml(r.employee || '')}</b></div>
+      ${lineHtml}
+      <div style="display:flex;justify-content:flex-end;margin:10px 0 4px;"><div class="pager-btn" id="rfAll" style="height:34px;">Select everything left</div></div>
+      <div class="field-label" style="margin-top:6px;">Reason (optional)</div>
+      <input type="text" class="modal-field" id="refundReason" maxlength="120" placeholder="e.g. damaged, wrong item" value="${escHtml(refundDraft.reason)}">
+      <div class="tender-row" style="margin-top:12px;"><span>Items to refund</span><span class="mono">${calc.lines.reduce((s,l)=>s+l.qty,0)}</span></div>
+      ${calc.discountAmount > 0 ? `<div class="tender-row"><span>Discount returned</span><span class="mono">-${money(calc.discountAmount)}</span></div>` : ''}
+      ${calc.tax > 0 ? `<div class="tender-row"><span>Tax${r.taxInclusive ? ' (included)' : ''}</span><span class="mono">${money(calc.tax)}</span></div>` : ''}
+      <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;color:var(--gold-bright);"><span>Refund total → ${escHtml(r.payment || '')}</span><span class="mono">-${money(calc.total)}</span></div>`;
+    document.getElementById('refundConfirmBtn').classList.toggle('disabled', calc.lines.length === 0);
+    document.getElementById('refundReason').addEventListener('input', e => { refundDraft.reason = e.target.value; });
+    document.getElementById('rfAll').addEventListener('click', () => {
+      (r.items || []).forEach(i => { refundDraft.qty[i.productId] = i.qty - (rf.qty[i.productId] || 0); });
+      renderRefundBody();
+    });
+    document.querySelectorAll('#refundBody .st').forEach(el => el.addEventListener('click', () => {
+      const pid = parseInt(el.dataset.pid), it = (r.items || []).find(x => x.productId === pid), left = it.qty - (rf.qty[pid] || 0);
+      refundDraft.qty[pid] = Math.max(0, Math.min(left, (refundDraft.qty[pid] || 0) + parseInt(el.dataset.d)));
+      renderRefundBody();
+    }));
+  }
+  document.getElementById('receiptRefundBtn').addEventListener('click', e => openRefundModal(e.currentTarget.dataset.key));
+  document.getElementById('refundConfirmBtn').addEventListener('click', ()=>{
+    if(!refundDraft) return;
+    if(!canManage()){ aureumToast('Refunds are restricted to Shop Managers and Administrators.', 'danger'); return; }
+    const sale = RECEIPTS.find(x => receiptKey(x) === refundDraft.key && !x.refund);
+    if(!sale){ aureumToast('Receipt not found.', 'danger'); return; }
+    const calc = computeRefund(sale, refundDraft.qty);
+    if(calc.lines.length === 0){ aureumToast('Choose at least one product to refund.', 'danger'); return; }
+
+    calc.lines.forEach(l => {
+      const p = PRODUCTS.find(x => x.id === l.productId);
+      if(p && p.stockControl !== false) addStock(p, sale.shop, l.qty);        // back into the shop it was sold from
+    });
+    const wholeSaleRefunded = calc.clearsEverything;
     if(sale.customer && sale.customer !== 'N/A'){
       const rec = CUSTOMERS.find(c => c.name === sale.customer);
-      if(rec){ rec.orders = Math.max(0, (rec.orders||0) - 1); rec.spent = Math.max(0, (rec.spent||0) - sale.total); }
+      if(rec){ rec.spent = Math.max(0, (rec.spent || 0) - calc.total); if(wholeSaleRefunded) rec.orders = Math.max(0, (rec.orders || 0) - 1); }
     }
-    sale.refunded = true;
-    const refundNumber = nextReceiptNumber();
+    if(wholeSaleRefunded) sale.refunded = true;
+    const sh = ensureOpenShift();
+    const refundUid = newReceiptUid();
     RECEIPTS.push({
-      uid: newReceiptUid(),
-      id: 'R' + padReceiptNo(refundNumber),
+      uid: refundUid, shiftId: sh.id,
+      id: 'R' + padReceiptNo(nextReceiptNumber()),
       dateTime: new Date().toISOString(),
-      total: sale.total, payment: sale.payment,
-      customer: sale.customer || 'N/A',
-      employee: activeEmployee.name,
-      shop: sale.shop,
-      refund: true,
-      refundOf: sale.id, refundOfKey: receiptKey(sale),
-      items: (sale.items || []).map(i => ({ ...i })), itemCount: receiptQty(sale),
-      subtotal: sale.subtotal, discountAmount: sale.discountAmount, tax: sale.tax,
-      taxInclusive: !!sale.taxInclusive
+      total: calc.total, payment: sale.payment,
+      customer: sale.customer || 'N/A', employee: activeEmployee.name, shop: sale.shop,
+      refund: true, refundOf: sale.id, refundOfKey: receiptKey(sale),
+      items: calc.lines, itemCount: calc.lines.reduce((s,l)=> s + l.qty, 0),
+      subtotal: calc.subtotal, discountAmount: calc.discountAmount, tax: calc.tax, taxInclusive: !!sale.taxInclusive,
+      note: refundDraft.reason ? 'Reason: ' + refundDraft.reason : null
     });
     persistAureum();
+    closeModal('refundOverlay');
+    refundDraft = null;
     renderCatalog();
     renderRecentSales();
-    refreshOrderNo();   // the refund used a number from the sequence
-    aureumToast(`No. ${sale.id} refunded — stock restored.`, 'ok');
-  }
+    refreshOrderNo();
+    aureumToast(`Refunded ${money(calc.total)} (${calc.lines.reduce((s,l)=>s+l.qty,0)} item${calc.lines.reduce((s,l)=>s+l.qty,0)===1?'':'s'}) — stock restored.`, 'ok');
+    openReceiptByKey(refundUid);          // show the refund slip so it can be printed
+  });
   document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
     renderRecentSales();
     openModal('recentSalesOverlay');
@@ -2280,7 +2494,10 @@ async function aureumSignIn(email, password){
       shop: r.shop,
       refund: !!r.refund,
       refundOf: r.refundOf || null,
-      taxInclusive: !!r.taxInclusive
+      taxInclusive: !!r.taxInclusive,
+      key: receiptKey(r),
+      refunds: r.refund ? [] : RECEIPTS.filter(x => x.refund && x.refundOfKey === receiptKey(r)).map(x => ({ id: x.id, total: x.total, items: (x.items || []).map(i => ({ name: i.name, qty: i.qty })) })),
+      remainingQty: r.refund ? 0 : remainingQty(r)
     };
   }
 
@@ -2317,7 +2534,8 @@ async function aureumSignIn(email, password){
       <div class="r-row"><span>${sale.refund ? 'Refunded to' : 'Paid via'}</span><span>${sale.payment}</span></div>
       ${sale.tendered > 0 ? `<div class="r-row"><span>Tendered</span><span>${sale.changeCurrencySymbol||cur}${Number(sale.tendered).toFixed(2)}</span></div>` : ''}
       ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||cur}${sale.change.toFixed(2)}</span></div>` : ''}
-      ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${sale.note}</span></div>` : ''}
+      ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${escHtml(sale.note)}</span></div>` : ''}
+      ${(sale.refunds && sale.refunds.length) ? `<div class="r-dash"></div><div class="r-row" style="font-weight:700;"><span>Refunds on this receipt</span><span></span></div>` + sale.refunds.map(rf => `<div class="r-row"><span>${escHtml(rf.id)} · ${rf.items.map(i => i.qty + ' × ' + escHtml(i.name)).join(', ')}</span><span>-${cur}${rf.total.toFixed(2)}</span></div>`).join('') : ''}
       <div class="receipt-thanks">${POS_SETTINGS.receiptFooter}</div>
     `;
   }
@@ -2335,6 +2553,7 @@ async function aureumSignIn(email, password){
      everywhere as the universal fallback). */
   const ESC = 0x1B, GS = 0x1D;
   function escposEncode(sale){
+    if(sale && sale.__shiftReport) return escposEncodeShift(sale);
     const enc = new TextEncoder();
     const bytes = [];
     const push = (...arr) => arr.forEach(b => bytes.push(b));
@@ -2526,6 +2745,7 @@ async function aureumSignIn(email, password){
     // have sold since). `uid` is the true unique key, immune to any clash.
     const receiptNumber = nextReceiptNumber();
     const receiptUid = newReceiptUid();
+    const shiftRef = ensureOpenShift().id;
     const sale = {
       uid: receiptUid,
       orderNo: 'No. ' + padReceiptNo(receiptNumber),
@@ -2562,7 +2782,7 @@ async function aureumSignIn(email, password){
 
     // Push the receipt into the shared store immediately (sales are critical — don't wait for the autosave tick)
     RECEIPTS.push({
-      uid: receiptUid,
+      uid: receiptUid, shiftId: shiftRef,
       id: padReceiptNo(receiptNumber),
       dateTime: now.toISOString(),
       total, payment: paymentLabel,
@@ -2618,6 +2838,7 @@ async function aureumSignIn(email, password){
     // settings, staff PINs, accounting, etc.) is restricted to managers/admins.
     const canOpenBackOffice = activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role);
     document.getElementById('backOfficeBtn').style.display = canOpenBackOffice ? '' : 'none';
+    renderShiftBtn();
   }
   function renderCashierList(){
     document.getElementById('cashierListBody').innerHTML = (EMPLOYEES.length ? EMPLOYEES : [{name:'Cashier'}]).map(e=>`
@@ -2651,8 +2872,9 @@ async function aureumSignIn(email, password){
   // Switching cashier or shop mid-till is exactly what item #6 requires a PIN
   // for — both actions now end the current shift and require the PIN gate
   // again, rather than letting anyone pick a name/shop from a free list.
-  document.getElementById('clerkSwitch').addEventListener('click', endShift);
-  document.getElementById('shopSwitchBtn').addEventListener('click', endShift);
+  document.getElementById('clerkSwitch').addEventListener('click', openShiftPanel);
+  document.getElementById('shopSwitchBtn').addEventListener('click', openShiftPanel);
+  document.getElementById('shiftBtn').addEventListener('click', openShiftPanel);
   document.getElementById('backOfficeBtn').addEventListener('click', ()=>{
     if(!activeEmployee || !BACK_OFFICE_ROLES.includes(activeEmployee.role)){
       aureumToast('Back Office is restricted to Shop Managers and Administrators.', 'danger');
@@ -2668,7 +2890,7 @@ async function aureumSignIn(email, password){
 
   /* ===== CLOUD SYNC ===== */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, shiftClosures:SHIFT_CLOSURES, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
   function applyLoadedData(shared){
@@ -2681,6 +2903,7 @@ async function aureumSignIn(email, password){
     if(has('employees') && (shared.employees.length || live)) EMPLOYEES = shared.employees;
     RECEIPTS = has('receipts') ? shared.receipts : (live ? [] : RECEIPTS);
     SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
+    OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // Don't clobber the cashier's active shift if data reloads mid-shift
     // (e.g. a live sync update from Back Office) — only set a default
@@ -2807,103 +3030,332 @@ async function aureumSignIn(email, password){
       el.innerHTML = eligible.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
     }
   }
-  document.getElementById('shiftShopSelect').addEventListener('change', populateShiftEmployeeSelect);
+  document.getElementById('shiftShopSelect').addEventListener('change', ()=>{ populateShiftEmployeeSelect(); updateGateShiftInfo(); });
+  /* ===== SHIFTS =====
+     A shift is a work period at a SHOP's till — not a browser session. It opens (with the cash float) the
+     first time someone signs in at that shop and then STAYS OPEN: through page reloads, other cashiers,
+     other devices and other days, until a manager closes it. Everything sold in that time adds to it, and
+     the original start time is kept. Closing counts the drawer, records expected vs counted cash, and keeps
+     an unchangeable, printable report. (Same lifecycle as other POS systems: open → trade → close → report.) */
+  const fmtDT = iso => { const d = new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ', ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}); };
+  const sameDay = (a, b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  function fmtDuration(ms){ const m = Math.max(0, Math.floor(ms/60000)), d = Math.floor(m/1440), h = Math.floor((m%1440)/60), mm = m%60; return (d ? d+'d ' : '') + ((h || d) ? h+'h ' : '') + mm+'m'; }
+  const money = n => POS_SETTINGS.currency + Number(n||0).toFixed(2);
+  const r2 = n => Math.round(n * 100) / 100;
+  const canManage = () => !!(activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role));
+  let pendingGateAfterReport = false;
+
+  function currentShift(){ return activeShop ? (OPEN_SHIFTS.find(s => s.shop === activeShop) || null) : null; }
+  function openNewShift(shop, employee, openingFloat){
+    const sh = {
+      uid: AureumSync.uid(),
+      id: 'SH-' + AureumSync.nextDocNumber([...OPEN_SHIFTS, ...SHIFT_CLOSURES], 'SH-', 1),
+      shop, openedAt: new Date().toISOString(), openedBy: employee.name,
+      openingFloat: Math.max(0, Number(openingFloat) || 0), employees: [employee.name]
+    };
+    OPEN_SHIFTS.unshift(sh);
+    persistAureum();
+    return sh;
+  }
+  // Someone may have closed this shop's shift from another device while this till was in use.
+  function ensureOpenShift(){
+    let sh = currentShift();
+    if(!sh){ sh = openNewShift(activeShop, activeEmployee, 0); aureumToast(`A new shift (${sh.id}) started — the previous one was closed.`, 'ok'); renderShiftBtn(); }
+    return sh;
+  }
+  function renderShiftBtn(){
+    const btn = document.getElementById('shiftBtn'), lab = document.getElementById('shiftBtnLabel');
+    if(!btn) return;
+    const sh = currentShift();
+    const old = !!(sh && !sameDay(new Date(sh.openedAt), new Date()));
+    lab.textContent = old ? 'Shift · since ' + new Date(sh.openedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Shift';
+    btn.classList.toggle('warn', old);
+  }
+  setInterval(renderShiftBtn, 60000);
+
+  function updateGateShiftInfo(){
+    const shop = document.getElementById('shiftShopSelect').value;
+    const sh = shop ? OPEN_SHIFTS.find(s => s.shop === shop) : null;
+    const note = document.getElementById('shiftGateNote'), row = document.getElementById('shiftFloatRow');
+    const title = document.getElementById('shiftGateTitle'), btn = document.getElementById('shiftSubmitBtn');
+    if(sh){
+      const old = !sameDay(new Date(sh.openedAt), new Date());
+      note.className = 'shift-note' + (old ? ' warn' : '');
+      note.textContent = `${old ? '⚠ ' : ''}Shift ${sh.id} is already open at ${shop} — started ${fmtDT(sh.openedAt)} by ${sh.openedBy}${old ? ', on an earlier day, and never closed' : ''}. Signing in continues it: sales and cash keep adding to the same shift until a manager closes it.`;
+      row.style.display = 'none'; title.textContent = 'Continue Shift'; btn.textContent = 'Continue Shift';
+    } else {
+      note.className = 'shift-note';
+      note.textContent = shop ? `No shift is open at ${shop}. Signing in starts a new one.` : '';
+      row.style.display = shop ? '' : 'none'; title.textContent = 'Start Shift'; btn.textContent = 'Start Shift';
+    }
+  }
   function openShiftGate(){
     populateShiftShopSelect();
     document.getElementById('shiftPin').value = '';
+    document.getElementById('shiftOpeningFloat').value = '';
     document.getElementById('shiftError').textContent = '';
+    updateGateShiftInfo();
     document.getElementById('shiftGate').classList.add('show');
     setTimeout(()=> document.getElementById('shiftPin').focus(), 50);
   }
-  function startShift(shopName, employee){
+  function startShift(shopName, employee, openingFloat){
     activeShop = shopName;
     activeEmployee = employee;
-    shiftStartTime = new Date();
+    let sh = OPEN_SHIFTS.find(s => s.shop === shopName);
+    if(!sh){
+      sh = openNewShift(shopName, employee, openingFloat);
+      aureumToast(`Shift ${sh.id} started.`, 'ok');
+    } else {
+      if(!(sh.employees || []).includes(employee.name)){ sh.employees = [...(sh.employees || []), employee.name]; persistAureum(); }
+      aureumToast(`Continuing shift ${sh.id}, opened ${fmtDT(sh.openedAt)}.`, 'ok');
+    }
     refreshOrderNo();
     document.getElementById('shiftGate').classList.remove('show');
     renderClerkUI();
     renderCategories();
     renderCatalog();
     renderTicket();
+    renderShiftBtn();
   }
-  function endShift(){
-    // Managers/Admins get a real shift-close & cash reconciliation step;
-    // Cashiers/Inventory Clerks just end their shift simply.
-    if(activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role)){
-      openShiftCloseModal();
-      return;
-    }
-    if(!confirm('End this shift? You\'ll need to enter a PIN again to start a new one.')) return;
+  // Signing out does NOT end the shift — the next person who signs in at this shop carries on with it.
+  function signOutOfTill(){
     activeShop = null;
     activeEmployee = null;
-    shiftStartTime = null;
+    closeModal('shiftOverlay');
+    renderShiftBtn();
     openShiftGate();
   }
-  function shiftSalesSummary(){
-    const start = shiftStartTime ? shiftStartTime.getTime() : 0;
-    const mySales = RECEIPTS.filter(r => r.shop === activeShop && r.employee === activeEmployee.name && new Date(r.dateTime).getTime() >= start);
-    const totals = { cash:0, card:0, mobile:0, other:0, refunds:0, count:0 };
-    mySales.forEach(r=>{
-      const key = (r.payment||'').toLowerCase();
-      const bucket = ['cash','card','mobile'].includes(key) ? key : 'other';
-      if(r.refund){ totals.refunds += r.total; } else { totals[bucket] += r.total; totals.count++; }
+
+  /* ---- what a shift has taken so far (works for open and closed shifts) ---- */
+  function computeShiftSummary(shift, endIso){
+    const start = new Date(shift.openedAt).getTime(), end = endIso ? new Date(endIso).getTime() : Infinity;
+    const rs = RECEIPTS.filter(r => { const t = new Date(r.dateTime).getTime(); return r.shop === shift.shop && t >= start && t <= end; });
+    const by = { cash:0, card:0, mobile:0, other:0 };
+    let refunds = 0, refundsCount = 0, cashRefunds = 0, tax = 0, discounts = 0, count = 0;
+    const emp = {};
+    rs.forEach(r => {
+      const key = String(r.payment || '').toLowerCase(), bucket = ['cash','card','mobile'].includes(key) ? key : 'other';
+      const e = emp[r.employee] = emp[r.employee] || { name: r.employee, sales: 0, count: 0, refunds: 0 };
+      if(r.refund){ refunds += r.total; refundsCount++; if(key === 'cash') cashRefunds += r.total; tax -= (r.tax || 0); discounts -= (r.discountAmount || 0); e.refunds += r.total; }
+      else { by[bucket] += r.total; count++; tax += (r.tax || 0); discounts += (r.discountAmount || 0); e.sales += r.total; e.count++; }
     });
-    const expectedCash = totals.cash - (mySales.filter(r=>r.refund && (r.payment||'').toLowerCase()==='cash').reduce((s,r)=>s+r.total,0));
-    return { ...totals, expectedCash, grandTotal: totals.cash+totals.card+totals.mobile+totals.other-totals.refunds };
+    const gross = by.cash + by.card + by.mobile + by.other;
+    const openingFloat = Number(shift.openingFloat) || 0;
+    return { cashSales: by.cash, cardSales: by.card, mobileSales: by.mobile, otherSales: by.other, grossSales: gross,
+             refunds, refundsCount, cashRefunds, netSales: gross - refunds, tax, discounts, transactionCount: count,
+             openingFloat, expectedCash: openingFloat + by.cash - cashRefunds, salesByEmployee: Object.values(emp) };
   }
+
+  /* ---- the shift report: one list of lines, drawn on screen AND sent to the thermal printer ---- */
+  function shiftReportLines(c){
+    const L = [], row = (l, r, bold) => L.push({ t:'row', l, r, bold });
+    const closed = !c.__live;
+    L.push({ t:'title', text: closed ? 'SHIFT REPORT' : 'SHIFT SUMMARY' });
+    if(!closed) L.push({ t:'text', text:'(shift still open — not closed yet)' });
+    L.push({ t:'sep' });
+    row('Shift', c.id || c.shiftId || '—'); row('Shop', c.shop || '—');
+    row('Opened', fmtDT(c.openedAt)); if(c.openedBy) row('Opened by', c.openedBy);
+    if(closed){ row('Closed', fmtDT(c.closedAt)); if(c.closedBy) row('Closed by', c.closedBy); }
+    row('Duration', fmtDuration((closed ? new Date(c.closedAt) : new Date()) - new Date(c.openedAt)));
+    L.push({ t:'sep' });
+    row('Cash sales', money(c.cashSales)); row('Card sales', money(c.cardSales)); row('Mobile sales', money(c.mobileSales));
+    if(c.otherSales) row('Other sales', money(c.otherSales));
+    row('Gross sales', money(c.grossSales), true);
+    row(`Refunds (${c.refundsCount || 0})`, '-' + money(c.refunds));
+    row('Net sales', money(c.netSales), true);
+    if(c.discounts) row('Discounts given', money(c.discounts));
+    if(c.tax) row('Tax', money(c.tax));
+    row('Number of sales', String(c.transactionCount || 0));
+    L.push({ t:'sep' }); L.push({ t:'sec', text:'CASH DRAWER' });
+    row('Opening float', money(c.openingFloat)); row('+ Cash sales', money(c.cashSales)); row('- Cash refunds', '-' + money(c.cashRefunds));
+    row('Expected cash', money(c.expectedCash), true);
+    if(closed && c.countedCash != null){
+      row('Counted cash', money(c.countedCash), true);
+      const v = c.variance || 0;
+      row('Difference', Math.abs(v) < 0.01 ? 'Balanced' : (v > 0 ? 'Over ' : 'Short ') + money(Math.abs(v)), true);
+    }
+    if(c.salesByEmployee && c.salesByEmployee.length){
+      L.push({ t:'sep' }); L.push({ t:'sec', text:'BY CASHIER' });
+      c.salesByEmployee.forEach(e => row(`${e.name} (${e.count})`, money(e.sales - e.refunds)));
+    }
+    if(c.notes){ L.push({ t:'sep' }); L.push({ t:'text', text:'Note: ' + c.notes }); }
+    return L;
+  }
+  function shiftReportHtml(c){
+    return `<div class="r-center"><div class="r-brand">${escHtml(POS_SETTINGS.businessName)}</div></div>` + shiftReportLines(c).map(l => {
+      if(l.t === 'title') return `<div class="r-center"><div class="r-brand" style="margin-top:6px;">${l.text}</div></div>`;
+      if(l.t === 'sep') return '<div class="r-dash"></div>';
+      if(l.t === 'sec') return `<div class="r-sub" style="margin:2px 0 6px;">${l.text}</div>`;
+      if(l.t === 'text') return `<div class="r-center r-sub">${escHtml(l.text)}</div>`;
+      return `<div class="r-row"${l.bold ? ' style="font-weight:700;"' : ''}><span>${escHtml(l.l)}</span><span>${escHtml(l.r)}</span></div>`;
+    }).join('');
+  }
+  function escposEncodeShift(c){
+    const enc = new TextEncoder(), bytes = [];
+    const push = (...a) => a.forEach(b => bytes.push(b)), text = s => bytes.push(...enc.encode(s));
+    push(ESC, 0x40); push(ESC, 0x61, 0x01); push(ESC, 0x45, 0x01); text(POS_SETTINGS.businessName + '\n'); push(ESC, 0x45, 0x00); push(ESC, 0x61, 0x00);
+    shiftReportLines(c).forEach(l => {
+      if(l.t === 'title'){ push(ESC, 0x61, 0x01, ESC, 0x45, 0x01); text(l.text + '\n'); push(ESC, 0x45, 0x00, ESC, 0x61, 0x00); }
+      else if(l.t === 'sep') text('--------------------------------\n');
+      else if(l.t === 'sec'){ push(ESC, 0x45, 0x01); text(l.text + '\n'); push(ESC, 0x45, 0x00); }
+      else if(l.t === 'text') text(l.text + '\n');
+      else { const left = String(l.l), right = String(l.r), pad = Math.max(1, 32 - left.length - right.length); if(l.bold) push(ESC, 0x45, 0x01); text(left + ' '.repeat(pad) + right + '\n'); if(l.bold) push(ESC, 0x45, 0x00); }
+    });
+    text('\n\n\n'); push(GS, 0x56, 0x41, 0x10);
+    return new Uint8Array(bytes);
+  }
+  // Shown in the same pop-up as a sale receipt, so Print / USB / Bluetooth all work for it too.
+  function showShiftReport(c, title, opts){
+    opts = opts || {};
+    lastSale = { __shiftReport: true, ...c };
+    document.getElementById('receiptBody').innerHTML = shiftReportHtml(c);
+    document.querySelector('#receiptOverlay .modal-head .title').textContent = title;
+    document.getElementById('receiptCloseBtn').textContent = opts.gateAfter ? 'Done' : 'Close';
+    document.getElementById('receiptRefundBtn').style.display = 'none';
+    pendingGateAfterReport = !!opts.gateAfter;
+    openModal('receiptOverlay');
+  }
+
+  /* ---- the Shift panel (summary, close, closed shifts, sign out) ---- */
+  function openShiftPanel(){
+    if(!activeShop || !activeEmployee){ openShiftGate(); return; }
+    const sh = currentShift(), body = document.getElementById('shiftPanelBody'), act = document.getElementById('shiftPanelActions');
+    document.getElementById('shiftPanelTitle').textContent = sh ? `Shift ${sh.id} · ${activeShop}` : `Shift · ${activeShop}`;
+    if(!sh){
+      body.innerHTML = `<div class="shift-note">No shift is open at ${escHtml(activeShop)}. A new one starts automatically with the next sale.</div>`;
+    } else {
+      const s = computeShiftSummary(sh), old = !sameDay(new Date(sh.openedAt), new Date());
+      body.innerHTML = `
+        ${old ? `<div class="shift-note warn">⚠ This shift was opened on an earlier day and hasn't been closed. Sales keep adding to it. A manager should close it when the work period is over.</div>` : ''}
+        <div class="sp-meta">Opened <b>${fmtDT(sh.openedAt)}</b> by <b>${escHtml(sh.openedBy)}</b><br>
+          Running for <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b> · Opening float <b>${money(sh.openingFloat)}</b><br>
+          Cashiers on this shift: <b>${(sh.employees || []).map(escHtml).join(', ')}</b></div>
+        <div class="tender-row"><span>Sales (${s.transactionCount})</span><span class="mono">${money(s.grossSales)}</span></div>
+        <div class="tender-row"><span>Refunds (${s.refundsCount})</span><span class="mono">-${money(s.refunds)}</span></div>
+        <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;"><span>Net sales</span><span class="mono">${money(s.netSales)}</span></div>
+        <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>`;
+    }
+    act.innerHTML =
+      (sh ? `<div class="modal-btn ghost" id="spPrint">Print summary</div>` : '') +
+      (sh && canManage() ? `<div class="modal-btn solid" id="spClose">Close shift…</div>` : '') +
+      (canManage() ? `<div class="modal-btn ghost" id="spHistory">Closed shifts</div>` : '') +
+      `<div class="modal-btn ghost" id="spSignOut" style="flex:1 1 100%;">Sign out — the shift stays open</div>`;
+    const on = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+    on('spPrint', ()=>{ closeModal('shiftOverlay'); showShiftReport({ ...sh, ...computeShiftSummary(sh), __live: true }, 'Shift summary'); });
+    on('spClose', ()=>{ closeModal('shiftOverlay'); openShiftCloseModal(); });
+    on('spHistory', ()=>{ closeModal('shiftOverlay'); openClosedShifts(); });
+    on('spSignOut', signOutOfTill);
+    openModal('shiftOverlay');
+  }
+
+  /* ---- closing a shift (managers / administrators) ---- */
   function openShiftCloseModal(){
-    const s = shiftSalesSummary();
-    const body = document.getElementById('shiftCloseBody');
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--sage);margin-bottom:12px;">Shift started ${shiftStartTime ? shiftStartTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'} · ${s.count} sale(s)</div>
-      <div class="tender-row"><span>Cash sales</span><span class="mono">${POS_SETTINGS.currency}${s.cash.toFixed(2)}</span></div>
-      <div class="tender-row"><span>Card sales</span><span class="mono">${POS_SETTINGS.currency}${s.card.toFixed(2)}</span></div>
-      <div class="tender-row"><span>Mobile sales</span><span class="mono">${POS_SETTINGS.currency}${s.mobile.toFixed(2)}</span></div>
-      <div class="tender-row"><span>Other</span><span class="mono">${POS_SETTINGS.currency}${s.other.toFixed(2)}</span></div>
-      <div class="tender-row"><span>Refunds</span><span class="mono">-${POS_SETTINGS.currency}${s.refunds.toFixed(2)}</span></div>
-      <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;"><span>Total sales</span><span class="mono">${POS_SETTINGS.currency}${s.grandTotal.toFixed(2)}</span></div>
-      <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${POS_SETTINGS.currency}${s.expectedCash.toFixed(2)}</span></div>
+    if(!canManage()){ aureumToast('Only a Shop Manager or Administrator can close a shift.', 'danger'); return; }
+    const sh = currentShift();
+    if(!sh){ aureumToast('There is no open shift to close.', 'danger'); return; }
+    const s = computeShiftSummary(sh);
+    document.getElementById('shiftCloseBody').innerHTML = `
+      <div class="sp-meta">Shift <b>${sh.id}</b> · opened <b>${fmtDT(sh.openedAt)}</b> by <b>${escHtml(sh.openedBy)}</b> · running <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b></div>
+      <div class="tender-row"><span>Cash sales</span><span class="mono">${money(s.cashSales)}</span></div>
+      <div class="tender-row"><span>Card sales</span><span class="mono">${money(s.cardSales)}</span></div>
+      <div class="tender-row"><span>Mobile sales</span><span class="mono">${money(s.mobileSales)}</span></div>
+      <div class="tender-row"><span>Other</span><span class="mono">${money(s.otherSales)}</span></div>
+      <div class="tender-row"><span>Refunds (${s.refundsCount})</span><span class="mono">-${money(s.refunds)}</span></div>
+      <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;"><span>Net sales (${s.transactionCount} sale${s.transactionCount===1?'':'s'})</span><span class="mono">${money(s.netSales)}</span></div>
+      <div class="sp-sec">Cash drawer</div>
+      <div class="tender-row"><span>Opening float</span><span class="mono">${money(s.openingFloat)}</span></div>
+      <div class="tender-row"><span>+ Cash sales − cash refunds</span><span class="mono">${money(s.cashSales - s.cashRefunds)}</span></div>
+      <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>
       <div class="field-label" style="margin-top:14px;">Counted cash (actual)</div>
       <input type="number" min="0" step="0.01" id="shiftCountedCash" class="auth-field" placeholder="0.00" style="margin-bottom:0;">
       <div id="shiftVarianceRow" style="font-size:12.5px;margin-top:8px;color:var(--sage);"></div>
-      <div class="field-label" style="margin-top:10px;">Notes (optional)</div>
-      <textarea id="shiftCloseNotes" class="modal-field" rows="2" placeholder="e.g. $2 short, likely a rounding error"></textarea>
-    `;
+      <div class="field-label" style="margin-top:10px;">Notes <span id="shiftNoteReq" style="color:var(--danger);"></span></div>
+      <textarea id="shiftCloseNotes" class="modal-field" rows="2" placeholder="e.g. $2 short, likely a rounding error"></textarea>`;
     document.getElementById('shiftCountedCash').addEventListener('input', function(){
-      const counted = parseFloat(this.value);
-      const row = document.getElementById('shiftVarianceRow');
-      if(isNaN(counted)){ row.textContent = ''; return; }
-      const variance = counted - s.expectedCash;
-      row.style.color = Math.abs(variance) < 0.01 ? 'var(--gold-bright)' : 'var(--danger)';
-      row.textContent = Math.abs(variance) < 0.01 ? 'Balanced ✓' : `${variance>0?'Over':'Short'} by ${POS_SETTINGS.currency}${Math.abs(variance).toFixed(2)}`;
+      const counted = parseFloat(this.value), row = document.getElementById('shiftVarianceRow'), req = document.getElementById('shiftNoteReq');
+      if(isNaN(counted)){ row.textContent = ''; req.textContent = ''; return; }
+      const v = counted - s.expectedCash, off = Math.abs(v) >= 0.01;
+      row.style.color = off ? 'var(--danger)' : 'var(--gold-bright)';
+      row.textContent = off ? `${v > 0 ? 'Over' : 'Short'} by ${money(Math.abs(v))}` : 'Balanced ✓';
+      req.textContent = off ? '(required — explain the difference)' : '';
     });
     openModal('shiftCloseOverlay');
   }
   document.getElementById('shiftCloseConfirmBtn').addEventListener('click', ()=>{
-    const s = shiftSalesSummary();
-    const countedRaw = document.getElementById('shiftCountedCash').value;
-    const counted = parseFloat(countedRaw);
-    if(isNaN(counted)){ aureumToast('Enter the counted cash amount before closing.', 'danger'); return; }
-    SHIFT_CLOSURES.unshift({
-      id: 'SC-' + Date.now(),
-      shop: activeShop,
-      employee: activeEmployee.name,
-      role: activeEmployee.role,
-      shiftStart: shiftStartTime ? shiftStartTime.toISOString() : null,
-      shiftEnd: new Date().toISOString(),
-      cashSales: s.cash, cardSales: s.card, mobileSales: s.mobile, otherSales: s.other,
-      refunds: s.refunds, expectedCash: s.expectedCash, countedCash: counted,
-      variance: counted - s.expectedCash,
-      transactionCount: s.count,
-      notes: document.getElementById('shiftCloseNotes').value.trim()
-    });
+    if(!canManage()){ aureumToast('Only a Shop Manager or Administrator can close a shift.', 'danger'); return; }
+    const sh = currentShift();
+    if(!sh){ closeModal('shiftCloseOverlay'); aureumToast('That shift was already closed.', 'danger'); return; }
+    const counted = parseFloat(document.getElementById('shiftCountedCash').value);
+    if(isNaN(counted) || counted < 0){ aureumToast('Enter the counted cash amount before closing.', 'danger'); return; }
+    const closedAt = new Date().toISOString();
+    const s = computeShiftSummary(sh, closedAt);
+    const variance = r2(counted - s.expectedCash), notes = document.getElementById('shiftCloseNotes').value.trim();
+    if(Math.abs(variance) >= 0.01 && !notes){ aureumToast('The drawer doesn\'t balance — add a note explaining the difference.', 'danger'); return; }
+    const closure = {
+      uid: AureumSync.uid(), id: sh.id, shiftId: sh.id, shop: sh.shop,
+      openedAt: sh.openedAt, closedAt, openedBy: sh.openedBy, closedBy: activeEmployee.name, closedByRole: activeEmployee.role,
+      employeesWorked: sh.employees || [], ...s, countedCash: counted, variance, notes,
+      // older readers expect these names
+      employee: activeEmployee.name, role: activeEmployee.role, shiftStart: sh.openedAt, shiftEnd: closedAt
+    };
+    SHIFT_CLOSURES.unshift(closure);
+    OPEN_SHIFTS = OPEN_SHIFTS.filter(x => x.uid !== sh.uid);
+    cart = {}; renderTicket();
     persistAureum();
     closeModal('shiftCloseOverlay');
-    activeShop = null;
-    activeEmployee = null;
-    shiftStartTime = null;
-    openShiftGate();
+    renderShiftBtn();
+    showShiftReport(closure, 'Shift closed', { gateAfter: true });
   });
+
+  /* ---- closed shifts: look any of them up again, and re-print ---- */
+  const closedShiftsState = { page: 1, pageSize: 8, from: '', to: '' };
+  function normClosure(c){
+    const cash = c.cashSales || 0, card = c.cardSales || 0, mob = c.mobileSales || 0, oth = c.otherSales || 0;
+    return { ...c,
+      openedAt: c.openedAt || c.shiftStart, closedAt: c.closedAt || c.shiftEnd, closedBy: c.closedBy || c.employee, openedBy: c.openedBy || c.employee,
+      grossSales: c.grossSales ?? (cash + card + mob + oth), netSales: c.netSales ?? (cash + card + mob + oth - (c.refunds || 0)),
+      openingFloat: c.openingFloat || 0, cashRefunds: c.cashRefunds || 0, refundsCount: c.refundsCount ?? 0 };
+  }
+  const localDay = iso => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+  function openClosedShifts(){
+    if(!canManage()){ aureumToast('Only a Shop Manager or Administrator can view closed shifts.', 'danger'); return; }
+    renderClosedShifts();
+    openModal('closedShiftsOverlay');
+  }
+  function renderClosedShifts(){
+    const st = closedShiftsState;
+    let list = SHIFT_CLOSURES.map(normClosure).filter(c => c.closedAt)
+      .sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
+    if(st.from) list = list.filter(c => localDay(c.closedAt) >= st.from);
+    if(st.to) list = list.filter(c => localDay(c.closedAt) <= st.to);
+    const pages = Math.max(1, Math.ceil(list.length / st.pageSize));
+    if(st.page > pages) st.page = pages;
+    const rows = list.slice((st.page - 1) * st.pageSize, st.page * st.pageSize);
+    const body = document.getElementById('closedShiftsBody');
+    body.innerHTML = rows.length ? rows.map(c => {
+      const v = c.variance, cls = v == null ? '' : Math.abs(v) < 0.01 ? 'bal' : v > 0 ? 'over' : 'short';
+      const label = v == null ? '' : Math.abs(v) < 0.01 ? 'Balanced' : (v > 0 ? 'Over ' : 'Short ') + money(Math.abs(v));
+      return `<div class="closed-row" data-uid="${escHtml(c.uid || c.id)}">
+        <div><div class="no">${escHtml(c.id)} · ${escHtml(c.shop || '')}</div>
+          <div class="meta">${fmtDT(c.openedAt)} → ${fmtDT(c.closedAt)}<br>Closed by ${escHtml(c.closedBy || '—')}</div></div>
+        <div class="amt">${money(c.netSales)}<div style="margin-top:5px;">${label ? `<span class="badge ${cls}">${label}</span>` : ''}</div></div></div>`;
+    }).join('') : `<div class="empty-state" style="margin-top:6px;"><p>${SHIFT_CLOSURES.length ? 'No closed shifts in this date range.' : 'No shifts have been closed yet.'}</p></div>`;
+    body.querySelectorAll('.closed-row').forEach(row => row.addEventListener('click', () => {
+      const c = SHIFT_CLOSURES.map(normClosure).find(x => (x.uid || x.id) === row.dataset.uid);
+      if(c) showShiftReport(c, 'Shift report');
+    }));
+    const pg = document.getElementById('closedShiftsPager');
+    pg.innerHTML = list.length ? `
+      <div class="pager-info">${list.length} closed shift${list.length===1?'':'s'}</div>
+      <div class="pager-nav"><div class="pager-btn ${st.page<=1?'disabled':''}" id="csPrev">&lsaquo; Prev</div><span class="pager-page">Page ${st.page} of ${pages}</span><div class="pager-btn ${st.page>=pages?'disabled':''}" id="csNext">Next &rsaquo;</div></div>` : '';
+    const prev = document.getElementById('csPrev'), next = document.getElementById('csNext');
+    if(prev) prev.addEventListener('click', () => { st.page--; renderClosedShifts(); });
+    if(next) next.addEventListener('click', () => { st.page++; renderClosedShifts(); });
+  }
+  document.getElementById('csFrom').addEventListener('change', e => { closedShiftsState.from = e.target.value; closedShiftsState.page = 1; renderClosedShifts(); });
+  document.getElementById('csTo').addEventListener('change', e => { closedShiftsState.to = e.target.value; closedShiftsState.page = 1; renderClosedShifts(); });
+  document.getElementById('csClear').addEventListener('click', () => { closedShiftsState.from = closedShiftsState.to = ''; document.getElementById('csFrom').value = document.getElementById('csTo').value = ''; closedShiftsState.page = 1; renderClosedShifts(); });
+
   document.getElementById('shiftSubmitBtn').addEventListener('click', ()=>{
     const shop = document.getElementById('shiftShopSelect').value;
     const employeeId = parseInt(document.getElementById('shiftEmployeeSelect').value);
@@ -2915,7 +3367,7 @@ async function aureumSignIn(email, password){
     if(!pin){ errEl.textContent = 'Enter your PIN.'; return; }
     const employee = EMPLOYEES.find(e => e.id === employeeId);
     if(!employee || employee.pin !== pin){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
-    startShift(shop, employee);
+    startShift(shop, employee, parseFloat(document.getElementById('shiftOpeningFloat').value));
   });
   document.getElementById('shiftPin').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('shiftSubmitBtn').click(); });
 

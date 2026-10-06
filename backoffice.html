@@ -55,7 +55,7 @@
     border-right:1px solid var(--line);
     display:flex; flex-direction:column;
     padding:22px 0;
-    height:100vh; min-height:0; overflow-y:auto; scroll-behavior:smooth; overscroll-behavior:contain;
+    height:100vh; min-height:0; overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth; overscroll-behavior:contain;
   }
   .side-brand{ display:flex; align-items:center; gap:12px; padding:0 22px 24px; }
   .side-seal{
@@ -99,10 +99,22 @@
   }
   .nav-item.active svg{ stroke: var(--gold-bright); }
 
+  /* Stacked, not one cramped row: the old row was 30px wider than the sidebar, so the Open POS button
+     was cut off on the right. Everything now fits, and the sidebar scrolls vertically to reach it. */
   .sidebar-foot{
-    margin-top:auto; padding:16px 22px 4px; border-top:1px solid var(--line);
-    display:flex; align-items:center; gap:10px;
+    margin-top:auto; padding:16px 18px calc(28px + env(safe-area-inset-bottom)); border-top:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:stretch; gap:10px; flex:0 0 auto;
   }
+  .sf-user{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .sf-avatar{ flex:0 0 auto; }
+  .sf-info{ min-width:0; }
+  .sf-info .who{ word-break:break-word; }
+  .sf-email{ font-size:11px; color:var(--sage); word-break:break-all; line-height:1.4; }
+  .sf-email:empty{ display:none; }
+  .sf-actions{ display:flex; flex-direction:column; gap:8px; margin-top:2px; }
+  .sf-btn{ cursor:pointer; text-align:center; font-size:12px; font-weight:600; color:var(--ivory-dim); border:1px solid var(--line-strong); border-radius:9px; padding:9px 10px; user-select:none; }
+  .sf-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .sf-btn.gold{ color:var(--gold-bright); }
   .sf-avatar{
     width:32px;height:32px;border-radius:50%;
     background: linear-gradient(135deg, var(--emerald-light), var(--emerald));
@@ -518,6 +530,32 @@
   .alert-card .txt{ flex:1; font-size:13px; color:var(--ivory-dim); }
   .alert-card .txt b{ color:var(--ivory); }
   .alert-card .go{ font-size:11.5px; color:var(--gold-bright); white-space:nowrap; }
+  /* dashboard alerts: two columns with a dividing line, capped at five items each */
+  .alerts-split{ display:grid; grid-template-columns:1fr 1fr; }
+  .alerts-col{ padding:0 18px; min-width:0; }
+  .alerts-col:first-child{ padding-left:0; }
+  .alerts-col:last-child{ padding-right:0; }
+  .alerts-col + .alerts-col{ border-left:1px solid var(--line); }
+  .alerts-head{ font-size:13px; color:var(--ivory-dim); margin-bottom:10px; }
+  .alerts-head .n{ font-family:'JetBrains Mono',monospace; font-size:15px; }
+  .alerts-head .n.neg{ color:var(--danger); }
+  .alerts-head .n.low{ color:var(--gold-bright); }
+  .alerts-head .ok{ color:var(--sage); font-size:12.5px; }
+  .alert-mini{ display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:6px; border:1px solid var(--line); border-radius:9px; cursor:pointer; background:rgba(255,255,255,0.015); }
+  .alert-mini:hover{ border-color:var(--gold-dim); }
+  .alert-mini .dot{ width:7px; height:7px; border-radius:50%; background:var(--gold-bright); flex-shrink:0; }
+  .alert-mini.critical{ border-color:rgba(193,88,74,0.4); }
+  .alert-mini.critical .dot{ background:var(--danger); box-shadow:0 0 5px rgba(193,88,74,0.6); }
+  .alert-mini .txt{ min-width:0; display:flex; justify-content:space-between; gap:10px; align-items:baseline; flex:1; font-size:12.5px; }
+  .alert-mini .txt b{ color:var(--ivory); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .alert-mini .txt span{ color:var(--sage); font-size:11.5px; white-space:nowrap; }
+  .alerts-more{ font-size:12px; color:var(--gold-bright); cursor:pointer; padding:4px 2px; display:inline-block; }
+  .alerts-more:hover{ text-decoration:underline; }
+  @media (max-width:760px){
+    .alerts-split{ grid-template-columns:1fr; }
+    .alerts-col{ padding:0; }
+    .alerts-col + .alerts-col{ border-left:none; border-top:1px solid var(--line); margin-top:14px; padding-top:14px; }
+  }
   .top-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
   .top-row:last-child{ border-bottom:none; }
   .top-row .rank{ width:20px; color:var(--sage); font-size:12px; }
@@ -677,11 +715,12 @@
   .auth-gate{
     display:none; position:fixed; inset:0; z-index:500;
     background: radial-gradient(circle at 30% 20%, rgba(20,58,42,0.9), var(--bg-deep) 65%);
-    align-items:center; justify-content:center;
+    /* scrolls when the card is taller than the screen (small phones); margin:auto on the card keeps it centred otherwise */
+    align-items:flex-start; justify-content:center; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px;
   }
   .auth-gate.show{ display:flex; }
   .auth-card{
-    width:340px; background:var(--panel); border:1px solid var(--line-strong); border-radius:16px;
+    width:340px; max-width:100%; margin:auto; background:var(--panel); border:1px solid var(--line-strong); border-radius:16px;
     padding:32px 28px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);
   }
   .auth-seal{
@@ -850,14 +889,19 @@
     </div>
 
     <div class="sidebar-foot">
-      <div class="sf-avatar">AN</div>
-      <div class="sf-info">
-        <div class="who" id="sfWho">Amara N.</div>
-        <div class="role" id="sfRole">Shop Owner</div>
+      <div class="sf-user">
+        <div class="sf-avatar">AN</div>
+        <div class="sf-info">
+          <div class="who" id="sfWho">Amara N.</div>
+          <div class="role" id="sfRole">Shop Owner</div>
+        </div>
       </div>
-      <div id="syncStatus" title="Sync status" style="font-size:10px;color:var(--sage);white-space:nowrap;">&#9679; <span id="syncStatusLabel">Synced</span></div>
-      <div id="logoutBtn" title="Sign out" style="cursor:pointer;font-size:11px;color:var(--sage);padding:6px;">&#10132;</div>
-      <div id="openPosBtn" title="Open POS Checkout" style="margin-left:6px;cursor:pointer;font-size:11px;color:var(--gold-bright);border:1px solid var(--line-strong);border-radius:8px;padding:6px 10px;white-space:nowrap;">Open POS &#8599;</div>
+      <div class="sf-email" id="sfEmail"></div>
+      <div id="syncStatus" title="Sync status" style="font-size:10.5px;color:var(--sage);">&#9679; <span id="syncStatusLabel">Synced</span></div>
+      <div class="sf-actions">
+        <div id="openPosBtn" class="sf-btn gold" title="Open POS Checkout">Open POS Checkout &#8599;</div>
+        <div id="logoutBtn" class="sf-btn" title="Sign out">Sign out &#10132;</div>
+      </div>
     </div>
   </div>
 
@@ -2116,6 +2160,25 @@
           <div id="repStaffPagination"></div>
         </div>
       </div>
+
+      <div class="report-panel" id="report-shifts">
+        <div class="page-sub" style="margin-bottom:12px;">A shift stays open — even across days — until a manager closes it at the till. Open the till's Shift button to print a report.</div>
+        <div class="form-section-title" style="margin-bottom:8px;">Open now</div>
+        <div class="table-panel" style="margin-bottom:22px;">
+          <table>
+            <thead><tr><th>Shift</th><th>Shop</th><th>Opened</th><th>Running</th><th>Opened by</th><th style="text-align:right;">Float</th><th style="text-align:right;">Net sales so far</th></tr></thead>
+            <tbody id="repOpenShiftsBody"></tbody>
+          </table>
+        </div>
+        <div class="form-section-title" style="margin-bottom:8px;">Closed shifts</div>
+        <div class="table-panel">
+          <table>
+            <thead><tr><th>Shift</th><th>Shop</th><th>Opened</th><th>Closed</th><th>Closed by</th><th style="text-align:right;">Net sales</th><th style="text-align:right;">Expected cash</th><th style="text-align:right;">Counted</th><th>Difference</th></tr></thead>
+            <tbody id="repClosedShiftsBody"></tbody>
+          </table>
+          <div id="repClosedShiftsPagination"></div>
+        </div>
+      </div>
     </div>
 
     <div class="page" data-page="settings">
@@ -2608,6 +2671,20 @@ const AureumSync = (function(){
     return out.map(p => (isObj(p.shopStock) ? { ...p, stock: Object.values(p.shopStock).reduce((s, v) => s + (+v || 0), 0) } : p));
   }
 
+  // Only ONE shift may be open per shop. If two tills opened one at the same moment, keep the
+  // earliest (its start time is the real one) — sales are attributed to a shift by time, so nothing is lost.
+  function dedupeOpenShifts(out){
+    const best = new Map();
+    out.forEach(s => { const cur = best.get(s.shop); if(!cur || String(s.openedAt) < String(cur.openedAt)) best.set(s.shop, s); });
+    return out.filter(s => best.get(s.shop) === s);
+  }
+  // A shift can only be closed once. If two devices closed the same shift, keep one record of it.
+  function dedupeClosures(out, added){
+    const addedSet = new Set(added), seen = new Set();
+    out.filter(r => !addedSet.has(r)).forEach(r => { if(r.shiftId) seen.add(r.shiftId); });
+    return out.filter(r => { if(!addedSet.has(r) || !r.shiftId) return true; if(seen.has(r.shiftId)) return false; seen.add(r.shiftId); return true; });
+  }
+
   // Which top-level lists hold records with an identity, and how they behave.
   //  key       → what identifies a record (uid when it has one)
   //  newFirst  → this list is added to at the FRONT (unshift)
@@ -2623,7 +2700,8 @@ const AureumSync = (function(){
     grnRecords:       { key: byUid('GRN:'), newFirst: true, fix: dedupeStringIds('GRN-', 11223) },
     stockAdjustments: { key: byUid('SA:'), newFirst: true, fix: dedupeStringIds('SA-', 10956) },
     transfers:        { key: byUid('TR:'), newFirst: true, fix: dedupeStringIds('TR-', 1001) },
-    shiftClosures:    { key: byUid('SC:'), newFirst: true },
+    shiftClosures:    { key: byUid('SC:'), newFirst: true, fix: dedupeClosures },
+    openShifts:       { key: byUid('OS:'), newFirst: true, fix: dedupeOpenShifts },
   };
   // Numbers that are COUNTERS (changed by deltas from several devices at once),
   // so concurrent changes add up instead of one overwriting the other.
@@ -5517,12 +5595,20 @@ const AureumSync = (function(){
 
   /* ===== RECEIPTS ===== */
   let RECEIPTS = [];
+  let OPEN_SHIFTS = [], SHIFT_CLOSURES = [];   // written by the tills; shown in Reports → Shifts
   function escHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   // Receipts are identified by `uid`. Older ones predate it (and the old POS
   // numbered sales at random, so numbers could repeat) — derive a stable key
   // from other fields so every receipt still opens ITS OWN contents.
   function receiptKey(r){ return r.uid || ('L:' + r.dateTime + '|' + r.id + '|' + r.total); }
   function receiptQty(r){ return (r.items || []).reduce((s,i)=> s + (i.qty || 0), 0); }
+  // refunds are separate receipts pointing at the sale; work out how much of it has come back
+  function refundsOn(r){ const key = receiptKey(r); return r.refund ? [] : RECEIPTS.filter(x => x.refund && x.refundOfKey === key); }
+  function refundStatusOf(r){
+    const rs = refundsOn(r);
+    if(!rs.length) return r.refunded ? 'full' : null;
+    return rs.reduce((s, x) => s + receiptQty(x), 0) >= receiptQty(r) ? 'full' : 'partial';
+  }
   (function seedReceipts(){
     const employees = ["Employee2","Employee4"];
     const hours =    [7, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 6];
@@ -5557,7 +5643,7 @@ const AureumSync = (function(){
     const subtotal = typeof r.subtotal === 'number' ? r.subtotal : items.reduce((s,i)=> s + i.qty*i.price, 0);
     const disc = r.discountAmount || 0, tax = r.tax || 0;
     const sign = r.refund ? '-' : '';
-    const kind = r.refund ? `Refund${r.refundOf ? ' of No. ' + escHtml(r.refundOf) : ''}` : (r.refunded ? 'Sale (later refunded)' : 'Sale');
+    const kind = r.refund ? `Refund${r.refundOf ? ' of No. ' + escHtml(r.refundOf) : ''}` : ({ full:'Sale (fully refunded)', partial:'Sale (partly refunded)' }[refundStatusOf(r)] || 'Sale');
     const line = (label, val, bold) => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:${bold?'14':'12.5'}px;${bold?'font-weight:700;':'color:var(--sage);'}"><span>${label}</span><span class="mono">${val}</span></div>`;
     const body = `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -5583,6 +5669,7 @@ const AureumSync = (function(){
       ${disc > 0 ? line('Discount', '-' + money(disc)) : ''}
       ${items.length ? line('Tax' + (r.taxInclusive ? ' (included in prices)' : ''), money(tax)) : ''}
       <div class="grand-total-row"><span class="gt-label">${r.refund ? 'Total refunded' : 'Grand total'}</span><span class="gt-val">${sign}${money(r.total)}</span></div>
+      ${refundsOn(r).length ? `<div style="margin-top:12px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--sage-dim);">Refunds on this receipt</div>` + refundsOn(r).map(x => line(`${escHtml(x.id)} — ${(x.items||[]).map(i => i.qty + ' × ' + escHtml(i.name)).join(', ')}`, '-' + money(x.total))).join('') : ''}
       ${r.tendered > 0 ? line('Tendered', money(r.tendered)) : ''}
       ${r.change > 0 ? line('Change given', money(r.change)) : ''}
       ${r.note ? `<div style="margin-top:10px;font-size:12px;color:var(--sage);">Note: ${escHtml(r.note)}</div>` : ''}
@@ -5691,7 +5778,7 @@ const AureumSync = (function(){
         <td>${escHtml(r.payment)}</td>
         <td>${escHtml(r.customer)}</td>
         <td>${escHtml(r.employee)}</td>
-        <td>${r.refund ? 'Yes' : (r.refunded ? 'No (later refunded)' : 'No')}</td>
+        <td>${r.refund ? 'Yes' : ({ full:'No (fully refunded)', partial:'No (partly refunded)' }[refundStatusOf(r)] || 'No')}</td>
         <td><span class="rcp-view" data-key="${escHtml(receiptKey(r))}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">VIEW</span></td>
       </tr>`).join('');
     tbody.querySelectorAll('.rcp-view').forEach(el=> el.addEventListener('click', ()=> viewReceipt(el.dataset.key)));
@@ -6141,6 +6228,7 @@ const AureumSync = (function(){
     { id:"summary", label:"Inventory Summary" },
     { id:"lowstock", label:"Low Stock" },
     { id:"staff", label:"Staff Snapshot" },
+    { id:"shifts", label:"Shifts" },
   ];
   let activeReportTab = "inventory";
 
@@ -6166,6 +6254,7 @@ const AureumSync = (function(){
     else if(activeReportTab === 'summary') renderReportSummary();
     else if(activeReportTab === 'lowstock') renderReportLowStock();
     else if(activeReportTab === 'staff') renderReportStaff();
+    else if(activeReportTab === 'shifts') renderReportShifts();
   }
 
   // Every report list is paged (no endless scrolling); KPI cards still total the FULL list.
@@ -6322,6 +6411,69 @@ const AureumSync = (function(){
         <div class="pct">$${r.net.toFixed(2)} · ${pct.toFixed(1)}%</div>
       </div>`;
     }).join('');
+  }
+
+  /* ===== REPORTS → SHIFTS ===== */
+  const repShiftPage = { page:1, pageSize:15 };
+  const usd = n => '$' + Number(n || 0).toFixed(2);
+  function shiftNet(shift){
+    const start = new Date(shift.openedAt).getTime();
+    return RECEIPTS.filter(r => r.shop === shift.shop && new Date(r.dateTime).getTime() >= start)
+      .reduce((s, r) => s + (r.refund ? -r.total : r.total), 0);
+  }
+  function runningFor(iso){
+    const m = Math.max(0, Math.floor((Date.now() - new Date(iso)) / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+    return (d ? d + 'd ' : '') + ((h || d) ? h + 'h ' : '') + (m % 60) + 'm';
+  }
+  function shiftDiffLabel(c){
+    if(c.variance == null) return '—';
+    return Math.abs(c.variance) < 0.01 ? 'Balanced' : (c.variance > 0 ? 'Over ' : 'Short ') + usd(Math.abs(c.variance));
+  }
+  function normShift(c){
+    const n = (k) => c[k] || 0;
+    return { ...c, openedAt: c.openedAt || c.shiftStart, closedAt: c.closedAt || c.shiftEnd, closedBy: c.closedBy || c.employee,
+      netSales: c.netSales ?? (n('cashSales') + n('cardSales') + n('mobileSales') + n('otherSales') - n('refunds')) };
+  }
+  function renderReportShifts(){
+    const openBody = document.getElementById('repOpenShiftsBody');
+    openBody.innerHTML = OPEN_SHIFTS.length ? OPEN_SHIFTS.map(sh => {
+      const opened = new Date(sh.openedAt), now = new Date();
+      const old = !(opened.getFullYear() === now.getFullYear() && opened.getMonth() === now.getMonth() && opened.getDate() === now.getDate());
+      return `<tr><td class="mono">${sh.id}</td><td>${sh.shop}</td><td>${fmtReceiptTime(sh.openedAt)}${old ? ' <span style="color:#E39A4B;font-size:11px;">· from an earlier day, not closed</span>' : ''}</td>
+        <td>${runningFor(sh.openedAt)}</td><td>${sh.openedBy || '—'}</td><td class="mono" style="text-align:right;">${usd(sh.openingFloat)}</td><td class="gold" style="text-align:right;">${usd(shiftNet(sh))}</td></tr>`;
+    }).join('') : `<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--sage);">No shift is open right now.</td></tr>`;
+
+    const closed = SHIFT_CLOSURES.map(normShift).filter(c => c.closedAt).sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
+    const body = document.getElementById('repClosedShiftsBody');
+    if(!closed.length){ body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--sage);">No shifts have been closed yet.</td></tr>`; document.getElementById('repClosedShiftsPagination').innerHTML = ''; return; }
+    body.innerHTML = paginateSlice(closed, repShiftPage).map(c => {
+      const diff = shiftDiffLabel(c), bad = c.variance != null && Math.abs(c.variance) >= 0.01;
+      return `<tr data-uid="${c.uid || c.id}" style="cursor:pointer;"><td class="mono">${c.id}</td><td>${c.shop || ''}</td><td>${fmtReceiptTime(c.openedAt)}</td><td>${fmtReceiptTime(c.closedAt)}</td>
+        <td>${c.closedBy || '—'}</td><td class="gold" style="text-align:right;">${usd(c.netSales)}</td><td class="mono" style="text-align:right;">${usd(c.expectedCash)}</td>
+        <td class="mono" style="text-align:right;">${c.countedCash == null ? '—' : usd(c.countedCash)}</td><td style="${bad ? 'color:var(--danger);' : ''}">${diff}</td></tr>`;
+    }).join('');
+    body.querySelectorAll('tr[data-uid]').forEach(tr => tr.addEventListener('click', () => {
+      const c = closed.find(x => String(x.uid || x.id) === tr.dataset.uid); if(c) viewClosedShift(c);
+    }));
+    renderPaginationControls('repClosedShiftsPagination', closed.length, repShiftPage, renderReportShifts);
+  }
+  function viewClosedShift(c){
+    const row = (l, v, strong) => `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:${strong ? 14 : 12.5}px;${strong ? 'font-weight:700;' : 'color:var(--sage);'}"><span>${l}</span><span class="mono">${v}</span></div>`;
+    const emp = (c.salesByEmployee || []).map(e => row(`${e.name} (${e.count} sale${e.count === 1 ? '' : 's'})`, usd(e.sales - e.refunds))).join('');
+    openDetailModal(`Shift ${c.id} · ${c.shop || ''}`, `
+      <div class="create-form-grid" style="margin-bottom:14px;">
+        <div class="detail-field"><div class="field-label">Opened</div><div class="v">${fmtReceiptTime(c.openedAt)}${c.openedBy ? ' by ' + c.openedBy : ''}</div></div>
+        <div class="detail-field"><div class="field-label">Closed</div><div class="v">${fmtReceiptTime(c.closedAt)}${c.closedBy ? ' by ' + c.closedBy : ''}</div></div>
+      </div>
+      ${row('Cash sales', usd(c.cashSales))}${row('Card sales', usd(c.cardSales))}${row('Mobile sales', usd(c.mobileSales))}${c.otherSales ? row('Other sales', usd(c.otherSales)) : ''}
+      ${row('Refunds' + (c.refundsCount ? ` (${c.refundsCount})` : ''), '-' + usd(c.refunds))}
+      ${row('Net sales', usd(c.netSales), true)}
+      <div style="height:10px"></div>
+      ${row('Opening float', usd(c.openingFloat))}${row('Expected cash', usd(c.expectedCash), true)}
+      ${c.countedCash != null ? row('Counted cash', usd(c.countedCash), true) + row('Difference', shiftDiffLabel(c), true) : ''}
+      ${emp ? `<div style="margin-top:12px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--sage-dim);">By cashier</div>${emp}` : ''}
+      ${c.notes ? `<div style="margin-top:12px;font-size:12px;color:var(--sage);">Note: ${c.notes}</div>` : ''}
+      <div style="margin-top:14px;font-size:11.5px;color:var(--sage);">To print this report, open the till → Shift → Closed shifts.</div>`);
   }
 
   function renderReportStaff(){
@@ -7018,39 +7170,30 @@ const AureumSync = (function(){
       !(p.safetyStock !== undefined && getStock(p, shopCtx) <= p.safetyStock) &&
       getStock(p, shopCtx) <= (p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD)
     );
-    const cards = [];
-
-    if(negativeStock.length === 0 && belowSafety.length === 0 && lowStock.length === 0){
-      cards.push(`<div class="alert-card ok"><div class="dot"></div><div class="txt">All good — no products are below their low-stock threshold or safety stock, and nothing shows a negative count.</div></div>`);
-    } else {
-      if(negativeStock.length > 0){
-        const shownNeg = negativeStock.slice(0, 6);
-        shownNeg.forEach(e=>{
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>NEGATIVE STOCK — ${e.p.name}</b> is at <b>${e.qty}</b> at <b>${e.shop}</b>. More was sold than the system had in stock. Receive stock (Goods Received) or correct it with a Stock Adjustment.</div><div class="go">View report &#8250;</div></div>`);
-        });
-        if(negativeStock.length > shownNeg.length){
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt">${negativeStock.length - shownNeg.length} more product/shop combination(s) also show negative stock.</div><div class="go">View all &#8250;</div></div>`);
-        }
-      }
-      if(belowSafety.length > 0){
-        const shownSafety = belowSafety.slice(0, 4);
-        shownSafety.forEach(p=>{
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> is at or below its safety stock buffer — ${getStock(p, shopCtx)} of ${p.safetyStock} unit${p.safetyStock===1?'':'s'} minimum. Reorder soon to avoid a stockout.</div><div class="go">View report &#8250;</div></div>`);
-        });
-        if(belowSafety.length > shownSafety.length){
-          cards.push(`<div class="alert-card critical" data-alert="lowstock"><div class="dot"></div><div class="txt">${belowSafety.length - shownSafety.length} more product(s) are also below their safety stock.</div><div class="go">View all &#8250;</div></div>`);
-        }
-      }
-      const shownLow = lowStock.slice(0, 4);
-      shownLow.forEach(p=>{
-        const threshold = p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
-        cards.push(`<div class="alert-card" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${p.name}</b> is low on stock — ${getStock(p, shopCtx)} unit${getStock(p, shopCtx)===1?'':'s'} left (threshold: ${threshold}).</div><div class="go">View report &#8250;</div></div>`);
-      });
-      if(lowStock.length > shownLow.length){
-        cards.push(`<div class="alert-card" data-alert="lowstock"><div class="dot"></div><div class="txt">${lowStock.length - shownLow.length} more product(s) are also low on stock.</div><div class="go">View all &#8250;</div></div>`);
-      }
-    }
-    el.innerHTML = cards.join('');
+    // Two separate columns so a long list of one kind never pushes the other (or the rest of the
+    // dashboard) off screen: negatives on the left, low stock on the right, five shown in each.
+    const MAX_SHOWN = 5;
+    const lowItems = [
+      ...belowSafety.map(p => ({ p, critical:true, note:`at or below its safety stock of ${p.safetyStock}` })),
+      ...lowStock.map(p => ({ p, critical:false, note:`threshold ${p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD}` }))
+    ];
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const column = (cls, headHtml, itemsHtml, total, noneText) => `
+      <div class="alerts-col ${cls}">
+        <div class="alerts-head">${total === 0 ? noneText : headHtml}</div>
+        ${itemsHtml}
+        ${total > MAX_SHOWN ? `<div class="alerts-more" data-alert="lowstock">View all ${total} &#8250;</div>` : ''}
+      </div>`;
+    const negHtml = negativeStock.slice(0, MAX_SHOWN).map(e =>
+      `<div class="alert-mini critical" data-alert="lowstock" title="More was sold than the system had in stock. Receive stock (Goods Received) or correct it with a Stock Adjustment."><div class="dot"></div><div class="txt"><b>${e.p.name}</b><span>${e.qty} at ${e.shop}</span></div></div>`).join('');
+    const lowHtml = lowItems.slice(0, MAX_SHOWN).map(it => {
+      const q = getStock(it.p, shopCtx);
+      return `<div class="alert-mini ${it.critical ? 'critical' : ''}" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${it.p.name}</b><span>${q} left · ${it.note}</span></div></div>`;
+    }).join('');
+    el.innerHTML = `<div class="alerts-split">` +
+      column('neg', `You have <b class="n neg">${negativeStock.length}</b> negative-stock ${negativeStock.length === 1 ? 'item' : 'items'}`, negHtml, negativeStock.length, `<span class="ok">&#10003; No negative stock</span>`) +
+      column('low', `You have <b class="n low">${lowItems.length}</b> low-stock ${lowItems.length === 1 ? 'item' : 'items'}`, lowHtml, lowItems.length, `<span class="ok">&#10003; Nothing is low on stock</span>`) +
+      `</div>`;
     el.querySelectorAll('[data-alert="lowstock"]').forEach(c=> c.addEventListener('click', goToLowStockReport));
   }
 
@@ -7625,7 +7768,7 @@ const AureumSync = (function(){
      resolves), then keeps saving/subscribing so both apps stay
      live-in-sync across any device signed into the same business. */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
   function renderSyncStatus(){
@@ -7920,6 +8063,8 @@ const AureumSync = (function(){
     STOCK_ADJUSTMENTS = has('stockAdjustments') ? shared.stockAdjustments : (live ? [] : STOCK_ADJUSTMENTS);
     TRANSFERS = has('transfers') ? shared.transfers : (live ? [] : TRANSFERS);
     EMPLOYEE_HOURS = has('employeeHours') ? shared.employeeHours : (live ? [] : EMPLOYEE_HOURS);
+    SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
+    OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
@@ -8005,6 +8150,7 @@ const AureumSync = (function(){
     }
     document.getElementById('authGate').classList.remove('show');
     document.getElementById('sfWho').textContent = profile.full_name || currentUser.email;
+    document.getElementById('sfEmail').textContent = profile.full_name ? currentUser.email : '';
     document.getElementById('sfRole').textContent = profile.role;
     if(subCheck.warning){
       const banner = document.getElementById('trialBanner');

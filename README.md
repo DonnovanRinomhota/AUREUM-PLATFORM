@@ -15,6 +15,7 @@ supabase/functions/     → edge functions (billing, payments, and admin-manage 
 SETUP-INSTRUCTIONS.md   → full step-by-step setup guide — start here
 SETUP-ADMIN.md          → setting up the Control Panel and giving other emails access
 SETUP-DATA-SAFETY.md    → safe saving: deploy order, sync indicator, recovering missing records
+SHIFTS-GUIDE.md         → shifts, closing and printing, closed shifts, item-by-item refunds
 ```
 
 ## Quick start

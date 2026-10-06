@@ -1,5 +1,61 @@
 # Changelog
 
+## Phase 15 — Real shifts, item-by-item refunds, today's sales, alerts layout, sidebar (2026-10)
+
+### Shifts (see SHIFTS-GUIDE.md)
+- **A shift is now a work period at a shop, not a browser session.** It opens (with an optional
+  cash float) at the first sign-in and **stays open** — through reloads, other cashiers, other
+  devices and other days — until a manager closes it. Signing in on a later day **continues** the
+  shift with its original start time instead of starting a new one. Previously every page load or
+  new day silently started a "new shift" and the old one's sales were left out of the close.
+- Sign-in says whether a shift is already open (warning if it's from an earlier day) and offers
+  "Continue Shift" / "Start Shift". The top bar's **Shift** button shows "since <date>" when a shift
+  is left over from a previous day.
+- **Closing** (managers/admins): sales by payment type, refunds, net sales, expected cash =
+  float + cash sales − cash refunds, counted cash, over/short, and a **required note if it doesn't
+  balance**. Only managers/admins can close; signing out never does.
+- **Shift report** shown on closing and **printable** (browser, USB and Bluetooth thermal printers).
+  Live "Print summary" available mid-shift.
+- **Closed shifts** can be found again: at the till (date filter, paging, tap to reopen and
+  re-print) and in **Back Office → Reports → Shifts** (also lists shifts open now). Old-format
+  closures still appear.
+- Two tills opening at the same moment can't leave two open shifts; the same shift closed on two
+  devices keeps one record; a shift closed elsewhere is noticed and the next sale opens a new one.
+
+### Refunds
+- **No Refund button on the sales list.** Open a receipt → **Refund items…** → choose products
+  and quantities (nothing pre-selected) → optional reason. Managers/admins only.
+- Discount and tax are refunded in proportion, tax-inclusive sales are handled, stock goes back
+  to the shop it was sold from, an item can't be refunded more than it was sold, and several
+  partial refunds add up to exactly the original total. The sales list tags receipts
+  "Partly refunded" / "Refunded"; receipts list the refunds made against them; the Back Office
+  receipts screens say "partly/fully refunded".
+
+### Today's Sales
+- The till's sales list now shows **only today's** sales and refunds for the shop, with a day total.
+
+### Dashboard alerts (Back Office)
+- Negative stock (left) and low stock (right) are separate columns with a dividing line. Each
+  says **"You have N negative-stock / low-stock items"**, lists **5**, and has **View all N**
+  (opens Reports → Low Stock). Each side says when all is well. Stacks on small screens.
+
+### Back Office sidebar
+- The footer (name, **full email**, sync status, **Open POS Checkout**, **Sign out**) is stacked
+  so nothing is cut off — the old single row was 30px wider than the sidebar, hiding the Open POS
+  button. The sidebar scrolls to reach it; verified at several laptop heights and on a phone.
+
+### Also fixed
+- **Money is stored in whole cents.** Sales used to be saved with floating-point noise (a 10%
+  discount sale as 12.420000000000002).
+- **Sign-in screens couldn't scroll** and the card was a fixed 340px, so on a small/short phone
+  the button could be unreachable. Both apps fixed.
+- Phone top bar fits with the new Shift button (sync label shows as a dot on phones).
+
+### Worth knowing
+- After updating there is no open shift; the first sign-in starts one.
+- Shift sales are matched by shop and time — keep each till's clock correct.
+- Refunds made before this update (whole-receipt) remain as they were.
+
 ## Phase 14 — Safe saving (records no longer disappear), product paging/sorting, PO history, date filters (2026-10)
 
 ### Fixed — records disappearing (root causes, reproduced)
