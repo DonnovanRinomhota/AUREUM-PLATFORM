@@ -1,16 +1,19 @@
 # Shifts, closing, and refunds — how they work
 
 ## What a shift is
-A shift is a **work period at one shop's till** — not a browser session. It stays open until a
-manager closes it, so a shift that runs past midnight (or is never closed one evening) simply
-**continues the next day**, keeping its original start time, instead of silently restarting.
+A shift is a **work period for one cashier at one shop** — not a browser session. It stays open until it is
+closed, so a shift that runs past midnight (or is never closed one evening) simply **continues the next day**,
+keeping its original start time, instead of silently restarting.
+
+**Every cashier has their own shift** — own float, own sales, own cash to count — so money from different
+cashiers is never mixed. When a second cashier signs in, they start their own shift; the first one keeps running.
 
 | Step | What happens |
 |---|---|
-| **Open** | The first person to sign in at a shop with no open shift starts one, and can enter the cash float (money already in the drawer). |
-| **Trade** | Every sale and refund at that shop adds to the open shift. Any cashier can sign in and out — the shift carries on. |
+| **Open** | A cashier with no open shift at the shop starts their own when they sign in, and can enter their cash float (money already in their drawer). |
+| **Trade** | Each cashier's sales add to their own shift. Refunds are recorded on the shift of whoever processes them. |
 | **Continue** | Signing in when a shift is already open says so ("Shift SH-4 is already open… started Oct 4, 7:30 AM"). Nothing new is started. A warning shows if it's from an earlier day. |
-| **Close** | A **Shop Manager / Administrator** counts the drawer and closes it. |
+| **Close** | The cashier closes **their own** shift (counts their drawer). Managers/administrators can close **anyone's**. |
 | **Report** | A shift report is kept permanently, shown immediately, and can be printed (browser, USB or Bluetooth thermal printer). |
 
 One shift per shop at a time. Signing out **never** closes a shift.
@@ -22,8 +25,8 @@ Till → **Shift** (top bar) → **Close shift…**
 - If it doesn't balance, a **note is required**.
 - On closing, the report appears (print it before pressing Done), then the till returns to sign-in.
 
-Only managers/admins can close a shift or open the closed-shifts list. Cashiers can print the
-running summary and sign out.
+A cashier sees only their own shift and can close it. A manager/administrator also sees the other
+cashiers' open shifts at the shop (and can close them), and can open the closed-shifts list (filter by cashier).
 
 ## Looking back
 - **At the till (Shift → Closed shifts):** every closed shift, newest first, with a date filter and

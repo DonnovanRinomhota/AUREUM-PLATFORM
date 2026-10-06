@@ -714,5 +714,53 @@
     verifyAndEnter();
   })();
 </script>
+<script>
+/* ==== SHOW / HIDE PASSWORD (same code on every AUREUM page) ==== */
+(function(){
+  var EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 5c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+  var style = document.createElement('style');
+  style.textContent = '.pw-wrap{position:relative;display:block;width:100%}.pw-wrap>input{padding-right:48px!important}' +
+    '.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:transparent;color:var(--sage,#8FA79A);cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}' +
+    '.pw-eye:hover{color:var(--gold-bright,#E7C766)}.pw-eye:focus-visible{outline:2px solid var(--gold-bright,#E7C766);outline-offset:1px}.pw-eye[aria-pressed="true"]{color:var(--gold-bright,#E7C766)}';
+  document.head.appendChild(style);
+  function attach(root){
+    (root || document).querySelectorAll('input[type="password"]:not([data-pw])').forEach(function(inp){
+      inp.setAttribute('data-pw', '1');
+      var cs = getComputedStyle(inp), wrap = document.createElement('div');
+      wrap.className = 'pw-wrap';
+      wrap.style.marginTop = cs.marginTop; wrap.style.marginBottom = cs.marginBottom;   // keep the original spacing
+      inp.style.marginTop = '0'; inp.style.marginBottom = '0';
+      inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'pw-eye'; btn.innerHTML = EYE;
+      btn.setAttribute('aria-label', 'Show password'); btn.setAttribute('aria-pressed', 'false'); btn.title = 'Show password';
+      // pressing the eye must not steal focus from the field (keeps the keyboard open on phones)
+      btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      btn.addEventListener('touchstart', function(e){ e.preventDefault(); btn.click(); }, { passive:false });
+      btn.addEventListener('click', function(){ setShown(inp, btn, inp.type === 'password'); });
+      wrap.appendChild(btn);
+    });
+  }
+  function setShown(inp, btn, show){
+    inp.type = show ? 'text' : 'password';
+    btn.innerHTML = show ? EYE_OFF : EYE;
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    var label = show ? 'Hide password' : 'Show password';
+    btn.setAttribute('aria-label', label); btn.title = label;
+  }
+  // never leave a password showing when the app is backgrounded or the screen is locked
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) return;
+    document.querySelectorAll('input[data-pw]').forEach(function(inp){
+      var btn = inp.parentNode && inp.parentNode.querySelector('.pw-eye');
+      if(btn && inp.type !== 'password') setShown(inp, btn, false);
+    });
+  });
+  attach();
+  window.AureumPw = { attach: attach };
+})();
+/* ==== END SHOW / HIDE PASSWORD ==== */
+</script>
 </body>
 </html>

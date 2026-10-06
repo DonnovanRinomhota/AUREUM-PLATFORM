@@ -539,6 +539,13 @@
   .pager-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
   .pager-btn.disabled{ opacity:.35; pointer-events:none; }
   .pager-page{ font-size:12.5px; color:var(--ivory-dim); white-space:nowrap; }
+  .swipe-hint{ display:none; flex:1 1 100%; text-align:center; font-size:11px; color:var(--sage-dim); order:5; }
+  @media (pointer:coarse){ .swipe-hint{ display:block; } }
+  #productGrid.slide-next{ animation: slideInNext .2s ease-out; }
+  #productGrid.slide-prev{ animation: slideInPrev .2s ease-out; }
+  @keyframes slideInNext{ from{ opacity:.2; transform:translateX(28px); } to{ opacity:1; transform:none; } }
+  @keyframes slideInPrev{ from{ opacity:.2; transform:translateX(-28px); } to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ #productGrid.slide-next, #productGrid.slide-prev{ animation:none; } }
   /* ---- shifts ---- */
   .shift-note{ font-size:12px; line-height:1.55; color:var(--sage); background:rgba(143,167,154,0.08); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; text-align:left; }
   .shift-note:empty{ display:none; }
@@ -553,6 +560,10 @@
   .badge.short{ background:rgba(193,88,74,.18); color:var(--danger); }
   .cs-filters{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; font-size:11.5px; color:var(--sage); }
   .cs-filters input{ background:var(--panel); color:var(--ivory); border:1px solid var(--line-strong); border-radius:8px; padding:7px 9px; font:inherit; font-size:12px; color-scheme:dark; margin-left:6px; }
+  .cs-filters select{ background:var(--panel); color:var(--ivory); border:1px solid var(--line-strong); border-radius:8px; padding:7px 9px; font:inherit; font-size:12px; }
+  .other-shift{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .other-shift .nm{ font-weight:600; font-size:13px; }
+  .other-shift .sub{ font-size:11.5px; color:var(--sage); line-height:1.5; }
   .closed-row{ display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
   .closed-row:hover{ background:rgba(231,199,102,0.05); }
   .closed-row .no{ font-weight:700; font-size:13.5px; }
@@ -579,6 +590,13 @@
   .sale-row .amt .val.neg{ color:var(--danger); }
   .pstock.neg{ color:var(--danger); }
   .r-row.r-unit{ font-size:10.5px; opacity:.75; }
+  .r-table{ width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
+  .r-table th{ font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--sage); font-weight:700; padding:2px 0 6px; border-bottom:1px solid var(--line); }
+  .r-table td{ padding:6px 0; vertical-align:top; word-break:break-word; }
+  .r-table th.l, .r-table td.l{ text-align:left; width:auto; padding-right:6px; }
+  .r-table th.c, .r-table td.c{ text-align:center; width:20%; }
+  .r-table th.r, .r-table td.r{ text-align:right; width:21%; font-variant-numeric:tabular-nums; }
+  .r-table tbody tr + tr td{ border-top:1px dotted var(--line); }
 
   /* phone-only controls: hidden everywhere else */
   .ticket-back{ display:none; }
@@ -668,6 +686,7 @@
     }
     #receiptOverlay .modal-head, #receiptOverlay .modal-actions{ display:none !important; }
     #receiptOverlay .receipt-body{ color:#111 !important; font-size:11.5px !important; }
+    #receiptOverlay .r-table th, #receiptOverlay .r-table td{ color:#111 !important; border-color:#bbb !important; }
     #receiptOverlay .receipt-body .r-brand{ color:#000 !important; }
     #receiptOverlay .r-row.total{ color:#000 !important; }
     #receiptOverlay .receipt-thanks{ color:#333 !important; }
@@ -1049,6 +1068,7 @@
       <div class="cs-filters">
         <label>From <input type="date" id="csFrom"></label>
         <label>To <input type="date" id="csTo"></label>
+        <select id="csCashier" aria-label="Filter by cashier"></select>
         <div class="pager-btn" id="csClear" style="height:34px;">Clear</div>
       </div>
       <div id="closedShiftsBody"></div>
@@ -1179,12 +1199,13 @@ const AureumSync = (function(){
     return out.map(p => (isObj(p.shopStock) ? { ...p, stock: Object.values(p.shopStock).reduce((s, v) => s + (+v || 0), 0) } : p));
   }
 
-  // Only ONE shift may be open per shop. If two tills opened one at the same moment, keep the
-  // earliest (its start time is the real one) — sales are attributed to a shift by time, so nothing is lost.
+  // Only ONE shift may be open per CASHIER per shop (each cashier has their own, so money is never mixed).
+  // If the same cashier's shift was opened twice at the same moment (two devices), keep the earliest — its
+  // start time is the real one, and sales are tied to a shift by id, so nothing is lost.
   function dedupeOpenShifts(out){
-    const best = new Map();
-    out.forEach(s => { const cur = best.get(s.shop); if(!cur || String(s.openedAt) < String(cur.openedAt)) best.set(s.shop, s); });
-    return out.filter(s => best.get(s.shop) === s);
+    const best = new Map(), keyOf = s => s.shop + '|' + (s.employeeId != null ? s.employeeId : s.openedBy);
+    out.forEach(s => { const k = keyOf(s), cur = best.get(k); if(!cur || String(s.openedAt) < String(cur.openedAt)) best.set(k, s); });
+    return out.filter(s => best.get(keyOf(s)) === s);
   }
   // A shift can only be closed once. If two devices closed the same shift, keep one record of it.
   function dedupeClosures(out, added){
@@ -1785,7 +1806,7 @@ async function aureumSignIn(email, password){
   }
   /* Catalogue: sorted and paged (no endless scroll). The page resets whenever the search,
      category, sort or shop changes; a stock change or a sale keeps you on the same page. */
-  let catalogPage = 1, catalogSort = 'az', _catalogKey = '';
+  let catalogPage = 1, catalogSort = 'az', _catalogKey = '', _catalogTotalPages = 1;
   let catalogPageSize = (() => { try{ const n = parseInt(localStorage.getItem('aureum_pos_pagesize')); return [12,24,48].includes(n) ? n : 12; }catch(e){ return 12; } })();
   const byName = (a,b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base', numeric:true });
   const CATALOG_SORTS = {
@@ -1806,10 +1827,11 @@ async function aureumSignIn(email, password){
     const key = [q, activeCat, catalogSort, activeShop].join('|');
     if(key !== _catalogKey){ _catalogKey = key; catalogPage = 1; }
     const totalPages = Math.max(1, Math.ceil(items.length / catalogPageSize));
+    _catalogTotalPages = totalPages;
     if(catalogPage > totalPages) catalogPage = totalPages;
     const pageItems = items.slice((catalogPage-1)*catalogPageSize, catalogPage*catalogPageSize);
 
-    catalogEl.innerHTML = pageItems.map(p => `
+    const gridHtml = pageItems.map(p => `
       <div class="card" data-id="${p.id}">
         <div class="glyph">${productArt(p)}</div>
         <div class="pname">${p.name}</div>
@@ -1819,35 +1841,67 @@ async function aureumSignIn(email, password){
         </div>
       </div>
     `).join('') || `<div style="color:var(--sage-dim);font-size:13px;padding:20px;">No products match your search.</div>`;
-
-    catalogEl.querySelectorAll('.card').forEach(el=>{
-      el.addEventListener('click', ()=> addToCart(parseInt(el.dataset.id)));
-    });
+    // Replacing identical cards would detach the element under a finger mid-swipe (the gesture would be
+    // lost), so the DOM is only touched when something visible really changed.
+    if(catalogEl._html !== gridHtml){ catalogEl.innerHTML = gridHtml; catalogEl._html = gridHtml; }
     renderCatalogPager(items.length, totalPages);
   }
   function renderCatalogPager(total, totalPages){
     const el = document.getElementById('catalogPager');
-    if(total === 0){ el.innerHTML = ''; return; }
     const from = (catalogPage-1)*catalogPageSize + 1, to = Math.min(total, catalogPage*catalogPageSize);
-    el.innerHTML = `
+    const html = total === 0 ? '' : `
       <div class="pager-info">Showing ${from}–${to} of ${total}</div>
       <div class="pager-nav">
         <div class="pager-btn ${catalogPage<=1?'disabled':''}" id="pgPrev">&lsaquo; Prev</div>
         <span class="pager-page">Page ${catalogPage} of ${totalPages}</span>
         <div class="pager-btn ${catalogPage>=totalPages?'disabled':''}" id="pgNext">Next &rsaquo;</div>
       </div>
+      ${totalPages > 1 ? '<div class="swipe-hint">Swipe left or right for more pages</div>' : ''}
       <label class="pager-size">Show
         <select id="pgSize">${[12,24,48].map(n=>`<option value="${n}" ${n===catalogPageSize?'selected':''}>${n}</option>`).join('')}</select>
       </label>`;
-    document.getElementById('pgPrev').addEventListener('click', ()=>{ if(catalogPage>1){ catalogPage--; renderCatalog(); } });
-    document.getElementById('pgNext').addEventListener('click', ()=>{ if(catalogPage<totalPages){ catalogPage++; renderCatalog(); } });
-    document.getElementById('pgSize').addEventListener('change', e=>{
-      catalogPageSize = parseInt(e.target.value); catalogPage = 1;
-      try{ localStorage.setItem('aureum_pos_pagesize', String(catalogPageSize)); }catch(err){}
-      renderCatalog();
-    });
+    if(el._html !== html){ el.innerHTML = html; el._html = html; }
   }
+  document.getElementById('catalogPager').addEventListener('click', e => {
+    if(e.target.closest('#pgPrev')) goCatalogPage(-1);
+    else if(e.target.closest('#pgNext')) goCatalogPage(1);
+  });
+  document.getElementById('catalogPager').addEventListener('change', e => {
+    if(e.target.id !== 'pgSize') return;
+    catalogPageSize = parseInt(e.target.value); catalogPage = 1;
+    try{ localStorage.setItem('aureum_pos_pagesize', String(catalogPageSize)); }catch(err){}
+    renderCatalog();
+  });
   document.getElementById('catalogSort').addEventListener('change', e=>{ catalogSort = e.target.value; renderCatalog(); });
+  catalogEl.addEventListener('click', e => { const c = e.target.closest('.card'); if(c) addToCart(parseInt(c.dataset.id)); });
+
+  /* Swipe the product list left / right to move between pages (touch screens). Only a deliberate,
+     mostly-horizontal flick counts, so normal up/down scrolling and tapping a product still work. */
+  function goCatalogPage(delta){
+    const next = Math.min(_catalogTotalPages, Math.max(1, catalogPage + delta));
+    if(next === catalogPage) return false;
+    catalogPage = next;
+    renderCatalog();
+    catalogEl.classList.remove('slide-next', 'slide-prev'); void catalogEl.offsetWidth;
+    catalogEl.classList.add(delta > 0 ? 'slide-next' : 'slide-prev');
+    return true;
+  }
+  (function(){
+    const area = document.querySelector('.catalog');
+    let sx = 0, sy = 0, st = 0, tracking = false;
+    area.addEventListener('touchstart', e => {
+      tracking = e.touches.length === 1 && !!e.target.closest('#productGrid, #catalogPager');
+      if(!tracking) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+    }, { passive:true });
+    area.addEventListener('touchend', e => {
+      if(!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if(Math.abs(dx) >= 60 && Math.abs(dx) > 1.6 * Math.abs(dy) && Date.now() - st < 800) goCatalogPage(dx < 0 ? 1 : -1);
+    }, { passive:true });
+    area.addEventListener('touchcancel', () => { tracking = false; }, { passive:true });
+  })();
 
   function addToCart(id){
     cart[id] = (cart[id]||0) + 1;
@@ -2505,10 +2559,12 @@ async function aureumSignIn(email, password){
     const cur = POS_SETTINGS.currency;
     const cashier = sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier');
     const shop = sale.shop || activeShop;
-    const rows = sale.items.map(i => `
-      <div class="r-row"><span>${i.qty} × ${i.name}</span><span>${cur}${(i.qty*i.price).toFixed(2)}</span></div>
-      ${i.qty > 1 ? `<div class="r-row r-unit"><span>&nbsp;&nbsp;@ ${cur}${i.price.toFixed(2)} each</span><span></span></div>` : ''}
-    `).join('');
+    // Items are a real table with headings so Product / Quantity / Cost (each) / Total line up in columns
+    const rows = `
+      <table class="r-table">
+        <thead><tr><th class="l">Product</th><th class="c">Quantity</th><th class="r">Cost</th><th class="r">Total</th></tr></thead>
+        <tbody>${sale.items.map(i => `<tr><td class="l">${escHtml(i.name)}</td><td class="c">${i.qty}</td><td class="r">${cur}${i.price.toFixed(2)}</td><td class="r">${cur}${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
+      </table>`;
     const showLogo = POS_SETTINGS.toggles ? POS_SETTINGS.toggles.stReceiptLogo !== false : true;
     document.getElementById('receiptBody').innerHTML = `
       <div class="r-center">
@@ -2569,12 +2625,14 @@ async function aureumSignIn(email, password){
     { const shopName = sale.shop || activeShop; if(shopName && shopName !== 'All Shops') text(`Shop: ${shopName}\n`); }
     if(sale.customer) text(`Customer: ${sale.customer}\n`);
     text('--------------------------------\n');
-    (sale.items||[]).forEach(it=>{
-      const line = `${it.qty} x ${it.name}`;
-      const amt = `${POS_SETTINGS.currency}${(it.qty*it.price).toFixed(2)}`;
-      const pad = Math.max(1, 32 - line.length - amt.length);
-      text(line + ' '.repeat(pad) + amt + '\n');
-    });
+    { // columns on a 32-character line:  Qty (6) | Cost (12) | Total (14)
+      const cols = (qty, cost, total) => String(qty).padEnd(6) + String(cost).padStart(12) + String(total).padStart(14);
+      push(ESC, 0x45, 0x01); text('Product\n' + cols('Qty', 'Cost', 'Total') + '\n'); push(ESC, 0x45, 0x00);
+      (sale.items||[]).forEach(it=>{
+        text(String(it.name).slice(0, 64).replace(/(.{1,32})(\s+|$)/g, '$1\n').replace(/\n+$/, '\n'));
+        text(cols(it.qty, `${POS_SETTINGS.currency}${it.price.toFixed(2)}`, `${POS_SETTINGS.currency}${(it.qty*it.price).toFixed(2)}`) + '\n');
+      });
+    }
     text('--------------------------------\n');
     text(`Subtotal:${' '.repeat(Math.max(1,23-9))}${POS_SETTINGS.currency}${sale.subtotal.toFixed(2)}\n`);
     if(sale.discountAmount) text(`Discount:${' '.repeat(Math.max(1,23-9))}-${POS_SETTINGS.currency}${sale.discountAmount.toFixed(2)}\n`);
@@ -3032,11 +3090,12 @@ async function aureumSignIn(email, password){
   }
   document.getElementById('shiftShopSelect').addEventListener('change', ()=>{ populateShiftEmployeeSelect(); updateGateShiftInfo(); });
   /* ===== SHIFTS =====
-     A shift is a work period at a SHOP's till — not a browser session. It opens (with the cash float) the
-     first time someone signs in at that shop and then STAYS OPEN: through page reloads, other cashiers,
-     other devices and other days, until a manager closes it. Everything sold in that time adds to it, and
-     the original start time is kept. Closing counts the drawer, records expected vs counted cash, and keeps
-     an unchangeable, printable report. (Same lifecycle as other POS systems: open → trade → close → report.) */
+     A shift is a work period for ONE CASHIER at ONE SHOP — not a browser session. It opens (with that
+     cashier's cash float) the first time they sign in at the shop and then STAYS OPEN: through page reloads,
+     other devices and other days, until it is closed. Everything that cashier sells adds to THEIR shift, so
+     money from different cashiers is never mixed — each has their own float, sales and drawer to count.
+     Closing counts the cash, records expected vs counted, and keeps an unchangeable, printable report.
+     (open → trade → close → report). A cashier closes their own shift; managers/admins can close anyone's. */
   const fmtDT = iso => { const d = new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ', ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}); };
   const sameDay = (a, b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
   function fmtDuration(ms){ const m = Math.max(0, Math.floor(ms/60000)), d = Math.floor(m/1440), h = Math.floor((m%1440)/60), mm = m%60; return (d ? d+'d ' : '') + ((h || d) ? h+'h ' : '') + mm+'m'; }
@@ -3045,22 +3104,29 @@ async function aureumSignIn(email, password){
   const canManage = () => !!(activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role));
   let pendingGateAfterReport = false;
 
-  function currentShift(){ return activeShop ? (OPEN_SHIFTS.find(s => s.shop === activeShop) || null) : null; }
+  // Shifts made before cashiers had their own have no employeeId — they belong to whoever opened them.
+  const shiftOwnerName = s => s.employeeName || s.openedBy || '—';
+  const shiftOwnerId = s => s.employeeId != null ? s.employeeId : (EMPLOYEES.find(e => e.name === shiftOwnerName(s)) || {}).id;
+  const ownsShift = (s, emp) => !!emp && (shiftOwnerId(s) != null ? shiftOwnerId(s) === emp.id : shiftOwnerName(s) === emp.name);
+  function findOpenShift(shop, emp){ return OPEN_SHIFTS.find(s => s.shop === shop && ownsShift(s, emp)) || null; }
+  function currentShift(){ return (activeShop && activeEmployee) ? findOpenShift(activeShop, activeEmployee) : null; }
+  const canCloseShift = s => !!s && !!activeEmployee && (canManage() || ownsShift(s, activeEmployee));
   function openNewShift(shop, employee, openingFloat){
     const sh = {
       uid: AureumSync.uid(),
       id: 'SH-' + AureumSync.nextDocNumber([...OPEN_SHIFTS, ...SHIFT_CLOSURES], 'SH-', 1),
-      shop, openedAt: new Date().toISOString(), openedBy: employee.name,
-      openingFloat: Math.max(0, Number(openingFloat) || 0), employees: [employee.name]
+      shop, employeeId: employee.id, employeeName: employee.name,
+      openedAt: new Date().toISOString(), openedBy: employee.name,
+      openingFloat: Math.max(0, Number(openingFloat) || 0)
     };
     OPEN_SHIFTS.unshift(sh);
     persistAureum();
     return sh;
   }
-  // Someone may have closed this shop's shift from another device while this till was in use.
+  // Someone may have closed this cashier's shift from another device while this till was in use.
   function ensureOpenShift(){
     let sh = currentShift();
-    if(!sh){ sh = openNewShift(activeShop, activeEmployee, 0); aureumToast(`A new shift (${sh.id}) started — the previous one was closed.`, 'ok'); renderShiftBtn(); }
+    if(!sh){ sh = openNewShift(activeShop, activeEmployee, 0); aureumToast(`A new shift (${sh.id}) started for you — your previous one was closed.`, 'ok'); renderShiftBtn(); }
     return sh;
   }
   function renderShiftBtn(){
@@ -3075,18 +3141,21 @@ async function aureumSignIn(email, password){
 
   function updateGateShiftInfo(){
     const shop = document.getElementById('shiftShopSelect').value;
-    const sh = shop ? OPEN_SHIFTS.find(s => s.shop === shop) : null;
+    const emp = EMPLOYEES.find(e => e.id === parseInt(document.getElementById('shiftEmployeeSelect').value));
+    const mine = (shop && emp) ? findOpenShift(shop, emp) : null;
+    const others = shop ? OPEN_SHIFTS.filter(s => s.shop === shop && s !== mine) : [];
     const note = document.getElementById('shiftGateNote'), row = document.getElementById('shiftFloatRow');
     const title = document.getElementById('shiftGateTitle'), btn = document.getElementById('shiftSubmitBtn');
-    if(sh){
-      const old = !sameDay(new Date(sh.openedAt), new Date());
+    const alsoOpen = others.length ? ` Also open here: ${others.map(s => `${shiftOwnerName(s)} (since ${new Date(s.openedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})})`).join(', ')}.` : '';
+    if(mine){
+      const old = !sameDay(new Date(mine.openedAt), new Date());
       note.className = 'shift-note' + (old ? ' warn' : '');
-      note.textContent = `${old ? '⚠ ' : ''}Shift ${sh.id} is already open at ${shop} — started ${fmtDT(sh.openedAt)} by ${sh.openedBy}${old ? ', on an earlier day, and never closed' : ''}. Signing in continues it: sales and cash keep adding to the same shift until a manager closes it.`;
+      note.textContent = `${old ? '⚠ ' : ''}Your shift ${mine.id} is open at ${shop} — started ${fmtDT(mine.openedAt)}${old ? ', on an earlier day, and never closed' : ''}. Signing in continues it: your sales and cash keep adding to it until it's closed.${alsoOpen}`;
       row.style.display = 'none'; title.textContent = 'Continue Shift'; btn.textContent = 'Continue Shift';
     } else {
       note.className = 'shift-note';
-      note.textContent = shop ? `No shift is open at ${shop}. Signing in starts a new one.` : '';
-      row.style.display = shop ? '' : 'none'; title.textContent = 'Start Shift'; btn.textContent = 'Start Shift';
+      note.textContent = (shop && emp) ? `You have no open shift at ${shop}. Signing in starts your own — your sales and cash are kept separate from other cashiers'.${alsoOpen}` : '';
+      row.style.display = (shop && emp) ? '' : 'none'; title.textContent = 'Start Shift'; btn.textContent = 'Start Shift';
     }
   }
   function openShiftGate(){
@@ -3101,13 +3170,12 @@ async function aureumSignIn(email, password){
   function startShift(shopName, employee, openingFloat){
     activeShop = shopName;
     activeEmployee = employee;
-    let sh = OPEN_SHIFTS.find(s => s.shop === shopName);
+    let sh = findOpenShift(shopName, employee);
     if(!sh){
       sh = openNewShift(shopName, employee, openingFloat);
       aureumToast(`Shift ${sh.id} started.`, 'ok');
     } else {
-      if(!(sh.employees || []).includes(employee.name)){ sh.employees = [...(sh.employees || []), employee.name]; persistAureum(); }
-      aureumToast(`Continuing shift ${sh.id}, opened ${fmtDT(sh.openedAt)}.`, 'ok');
+      aureumToast(`Continuing your shift ${sh.id}, opened ${fmtDT(sh.openedAt)}.`, 'ok');
     }
     refreshOrderNo();
     document.getElementById('shiftGate').classList.remove('show');
@@ -3129,7 +3197,14 @@ async function aureumSignIn(email, password){
   /* ---- what a shift has taken so far (works for open and closed shifts) ---- */
   function computeShiftSummary(shift, endIso){
     const start = new Date(shift.openedAt).getTime(), end = endIso ? new Date(endIso).getTime() : Infinity;
-    const rs = RECEIPTS.filter(r => { const t = new Date(r.dateTime).getTime(); return r.shop === shift.shop && t >= start && t <= end; });
+    // Receipts carry the id of the shift they were rung up in. Older receipts (before that) are matched by
+    // shop + cashier + time.
+    const owner = shiftOwnerName(shift);
+    const rs = RECEIPTS.filter(r => {
+      if(r.shiftId) return r.shiftId === shift.id;
+      const t = new Date(r.dateTime).getTime();
+      return r.shop === shift.shop && r.employee === owner && t >= start && t <= end;
+    });
     const by = { cash:0, card:0, mobile:0, other:0 };
     let refunds = 0, refundsCount = 0, cashRefunds = 0, tax = 0, discounts = 0, count = 0;
     const emp = {};
@@ -3153,9 +3228,9 @@ async function aureumSignIn(email, password){
     L.push({ t:'title', text: closed ? 'SHIFT REPORT' : 'SHIFT SUMMARY' });
     if(!closed) L.push({ t:'text', text:'(shift still open — not closed yet)' });
     L.push({ t:'sep' });
-    row('Shift', c.id || c.shiftId || '—'); row('Shop', c.shop || '—');
-    row('Opened', fmtDT(c.openedAt)); if(c.openedBy) row('Opened by', c.openedBy);
-    if(closed){ row('Closed', fmtDT(c.closedAt)); if(c.closedBy) row('Closed by', c.closedBy); }
+    row('Shift', c.id || c.shiftId || '—'); row('Shop', c.shop || '—'); row('Cashier', shiftOwnerName(c));
+    row('Opened', fmtDT(c.openedAt));
+    if(closed){ row('Closed', fmtDT(c.closedAt)); if(c.closedBy && c.closedBy !== shiftOwnerName(c)) row('Closed by', c.closedBy); }
     row('Duration', fmtDuration((closed ? new Date(c.closedAt) : new Date()) - new Date(c.openedAt)));
     L.push({ t:'sep' });
     row('Cash sales', money(c.cashSales)); row('Card sales', money(c.cardSales)); row('Mobile sales', money(c.mobileSales));
@@ -3174,7 +3249,7 @@ async function aureumSignIn(email, password){
       const v = c.variance || 0;
       row('Difference', Math.abs(v) < 0.01 ? 'Balanced' : (v > 0 ? 'Over ' : 'Short ') + money(Math.abs(v)), true);
     }
-    if(c.salesByEmployee && c.salesByEmployee.length){
+    if(c.salesByEmployee && c.salesByEmployee.length > 1){      // only older, shared shifts have more than one cashier
       L.push({ t:'sep' }); L.push({ t:'sec', text:'BY CASHIER' });
       c.salesByEmployee.forEach(e => row(`${e.name} (${e.count})`, money(e.sales - e.refunds)));
     }
@@ -3221,41 +3296,59 @@ async function aureumSignIn(email, password){
     if(!activeShop || !activeEmployee){ openShiftGate(); return; }
     const sh = currentShift(), body = document.getElementById('shiftPanelBody'), act = document.getElementById('shiftPanelActions');
     document.getElementById('shiftPanelTitle').textContent = sh ? `Shift ${sh.id} · ${activeShop}` : `Shift · ${activeShop}`;
+    let html = '';
     if(!sh){
-      body.innerHTML = `<div class="shift-note">No shift is open at ${escHtml(activeShop)}. A new one starts automatically with the next sale.</div>`;
+      html += `<div class="shift-note">You have no open shift at ${escHtml(activeShop)}. A new one starts automatically with your next sale.</div>`;
     } else {
       const s = computeShiftSummary(sh), old = !sameDay(new Date(sh.openedAt), new Date());
-      body.innerHTML = `
-        ${old ? `<div class="shift-note warn">⚠ This shift was opened on an earlier day and hasn't been closed. Sales keep adding to it. A manager should close it when the work period is over.</div>` : ''}
-        <div class="sp-meta">Opened <b>${fmtDT(sh.openedAt)}</b> by <b>${escHtml(sh.openedBy)}</b><br>
-          Running for <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b> · Opening float <b>${money(sh.openingFloat)}</b><br>
-          Cashiers on this shift: <b>${(sh.employees || []).map(escHtml).join(', ')}</b></div>
+      html += `
+        ${old ? `<div class="shift-note warn">⚠ Your shift was opened on an earlier day and hasn't been closed. Your sales keep adding to it. Close it when your work period is over.</div>` : ''}
+        <div class="sp-meta">Cashier <b>${escHtml(shiftOwnerName(sh))}</b> · opened <b>${fmtDT(sh.openedAt)}</b><br>
+          Running for <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b> · Opening float <b>${money(sh.openingFloat)}</b></div>
         <div class="tender-row"><span>Sales (${s.transactionCount})</span><span class="mono">${money(s.grossSales)}</span></div>
         <div class="tender-row"><span>Refunds (${s.refundsCount})</span><span class="mono">-${money(s.refunds)}</span></div>
         <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;"><span>Net sales</span><span class="mono">${money(s.netSales)}</span></div>
         <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>`;
     }
+    // managers / admins can see — and close — the other cashiers' open shifts at this shop
+    const others = canManage() ? OPEN_SHIFTS.filter(s => s.shop === activeShop && s !== sh) : [];
+    if(others.length){
+      html += `<div class="sp-sec">Other cashiers' open shifts here</div>` + others.map(o => {
+        const os = computeShiftSummary(o), oldO = !sameDay(new Date(o.openedAt), new Date());
+        return `<div class="other-shift"><div><div class="nm">${escHtml(shiftOwnerName(o))} <span class="sub">· ${o.id}</span></div>
+          <div class="sub">Since ${fmtDT(o.openedAt)}${oldO ? ' <span style="color:#E39A4B">· earlier day, not closed</span>' : ''}<br>Net ${money(os.netSales)} · expected cash ${money(os.expectedCash)}</div></div>
+          <div class="pager-btn" data-close-shift="${escHtml(o.uid)}" style="height:36px;">Close…</div></div>`;
+      }).join('');
+    }
+    body.innerHTML = html;
     act.innerHTML =
       (sh ? `<div class="modal-btn ghost" id="spPrint">Print summary</div>` : '') +
-      (sh && canManage() ? `<div class="modal-btn solid" id="spClose">Close shift…</div>` : '') +
+      (sh ? `<div class="modal-btn solid" id="spClose">Close my shift…</div>` : '') +
       (canManage() ? `<div class="modal-btn ghost" id="spHistory">Closed shifts</div>` : '') +
-      `<div class="modal-btn ghost" id="spSignOut" style="flex:1 1 100%;">Sign out — the shift stays open</div>`;
+      `<div class="modal-btn ghost" id="spSignOut" style="flex:1 1 100%;">Sign out — my shift stays open</div>`;
     const on = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
     on('spPrint', ()=>{ closeModal('shiftOverlay'); showShiftReport({ ...sh, ...computeShiftSummary(sh), __live: true }, 'Shift summary'); });
-    on('spClose', ()=>{ closeModal('shiftOverlay'); openShiftCloseModal(); });
+    on('spClose', ()=>{ closeModal('shiftOverlay'); openShiftCloseModal(sh); });
     on('spHistory', ()=>{ closeModal('shiftOverlay'); openClosedShifts(); });
     on('spSignOut', signOutOfTill);
+    body.querySelectorAll('[data-close-shift]').forEach(el => el.addEventListener('click', () => {
+      const target = OPEN_SHIFTS.find(x => x.uid === el.dataset.closeShift);
+      closeModal('shiftOverlay'); openShiftCloseModal(target);
+    }));
     openModal('shiftOverlay');
   }
 
   /* ---- closing a shift (managers / administrators) ---- */
-  function openShiftCloseModal(){
-    if(!canManage()){ aureumToast('Only a Shop Manager or Administrator can close a shift.', 'danger'); return; }
-    const sh = currentShift();
+  let closeTargetUid = null;
+  function openShiftCloseModal(target){
+    const sh = target || currentShift();
     if(!sh){ aureumToast('There is no open shift to close.', 'danger'); return; }
+    if(!canCloseShift(sh)){ aureumToast('You can only close your own shift (managers and administrators can close anyone\'s).', 'danger'); return; }
+    closeTargetUid = sh.uid;
+    const mine = ownsShift(sh, activeEmployee);
     const s = computeShiftSummary(sh);
     document.getElementById('shiftCloseBody').innerHTML = `
-      <div class="sp-meta">Shift <b>${sh.id}</b> · opened <b>${fmtDT(sh.openedAt)}</b> by <b>${escHtml(sh.openedBy)}</b> · running <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b></div>
+      <div class="sp-meta">Shift <b>${sh.id}</b> · cashier <b>${escHtml(shiftOwnerName(sh))}</b>${mine ? '' : ' <span style="color:#E39A4B">(you are closing someone else\'s shift)</span>'}<br>Opened <b>${fmtDT(sh.openedAt)}</b> · running <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b></div>
       <div class="tender-row"><span>Cash sales</span><span class="mono">${money(s.cashSales)}</span></div>
       <div class="tender-row"><span>Card sales</span><span class="mono">${money(s.cardSales)}</span></div>
       <div class="tender-row"><span>Mobile sales</span><span class="mono">${money(s.mobileSales)}</span></div>
@@ -3282,9 +3375,10 @@ async function aureumSignIn(email, password){
     openModal('shiftCloseOverlay');
   }
   document.getElementById('shiftCloseConfirmBtn').addEventListener('click', ()=>{
-    if(!canManage()){ aureumToast('Only a Shop Manager or Administrator can close a shift.', 'danger'); return; }
-    const sh = currentShift();
+    const sh = OPEN_SHIFTS.find(x => x.uid === closeTargetUid);
     if(!sh){ closeModal('shiftCloseOverlay'); aureumToast('That shift was already closed.', 'danger'); return; }
+    if(!canCloseShift(sh)){ aureumToast('You can only close your own shift (managers and administrators can close anyone\'s).', 'danger'); return; }
+    const closingOwn = ownsShift(sh, activeEmployee);
     const counted = parseFloat(document.getElementById('shiftCountedCash').value);
     if(isNaN(counted) || counted < 0){ aureumToast('Enter the counted cash amount before closing.', 'danger'); return; }
     const closedAt = new Date().toISOString();
@@ -3293,22 +3387,24 @@ async function aureumSignIn(email, password){
     if(Math.abs(variance) >= 0.01 && !notes){ aureumToast('The drawer doesn\'t balance — add a note explaining the difference.', 'danger'); return; }
     const closure = {
       uid: AureumSync.uid(), id: sh.id, shiftId: sh.id, shop: sh.shop,
-      openedAt: sh.openedAt, closedAt, openedBy: sh.openedBy, closedBy: activeEmployee.name, closedByRole: activeEmployee.role,
-      employeesWorked: sh.employees || [], ...s, countedCash: counted, variance, notes,
+      employeeId: shiftOwnerId(sh), employeeName: shiftOwnerName(sh),
+      openedAt: sh.openedAt, closedAt, openedBy: shiftOwnerName(sh), closedBy: activeEmployee.name, closedByRole: activeEmployee.role,
+      ...s, countedCash: counted, variance, notes,
       // older readers expect these names
-      employee: activeEmployee.name, role: activeEmployee.role, shiftStart: sh.openedAt, shiftEnd: closedAt
+      employee: shiftOwnerName(sh), role: activeEmployee.role, shiftStart: sh.openedAt, shiftEnd: closedAt
     };
     SHIFT_CLOSURES.unshift(closure);
     OPEN_SHIFTS = OPEN_SHIFTS.filter(x => x.uid !== sh.uid);
-    cart = {}; renderTicket();
+    if(closingOwn){ cart = {}; renderTicket(); }
     persistAureum();
     closeModal('shiftCloseOverlay');
     renderShiftBtn();
-    showShiftReport(closure, 'Shift closed', { gateAfter: true });
+    // closing your own shift ends your session after the report; a manager closing someone else's carries on working
+    showShiftReport(closure, 'Shift closed', { gateAfter: closingOwn });
   });
 
   /* ---- closed shifts: look any of them up again, and re-print ---- */
-  const closedShiftsState = { page: 1, pageSize: 8, from: '', to: '' };
+  const closedShiftsState = { page: 1, pageSize: 8, from: '', to: '', cashier: '' };
   function normClosure(c){
     const cash = c.cashSales || 0, card = c.cardSales || 0, mob = c.mobileSales || 0, oth = c.otherSales || 0;
     return { ...c,
@@ -3328,6 +3424,10 @@ async function aureumSignIn(email, password){
       .sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
     if(st.from) list = list.filter(c => localDay(c.closedAt) >= st.from);
     if(st.to) list = list.filter(c => localDay(c.closedAt) <= st.to);
+    const names = [...new Set(SHIFT_CLOSURES.map(c => shiftOwnerName(c)).filter(n => n && n !== '—'))].sort();
+    const sel = document.getElementById('csCashier');
+    sel.innerHTML = '<option value="">All cashiers</option>' + names.map(n => `<option value="${escHtml(n)}" ${n === st.cashier ? 'selected' : ''}>${escHtml(n)}</option>`).join('');
+    if(st.cashier) list = list.filter(c => shiftOwnerName(c) === st.cashier);
     const pages = Math.max(1, Math.ceil(list.length / st.pageSize));
     if(st.page > pages) st.page = pages;
     const rows = list.slice((st.page - 1) * st.pageSize, st.page * st.pageSize);
@@ -3336,8 +3436,8 @@ async function aureumSignIn(email, password){
       const v = c.variance, cls = v == null ? '' : Math.abs(v) < 0.01 ? 'bal' : v > 0 ? 'over' : 'short';
       const label = v == null ? '' : Math.abs(v) < 0.01 ? 'Balanced' : (v > 0 ? 'Over ' : 'Short ') + money(Math.abs(v));
       return `<div class="closed-row" data-uid="${escHtml(c.uid || c.id)}">
-        <div><div class="no">${escHtml(c.id)} · ${escHtml(c.shop || '')}</div>
-          <div class="meta">${fmtDT(c.openedAt)} → ${fmtDT(c.closedAt)}<br>Closed by ${escHtml(c.closedBy || '—')}</div></div>
+        <div><div class="no">${escHtml(c.id)} · ${escHtml(shiftOwnerName(c))}</div>
+          <div class="meta">${escHtml(c.shop || '')} · ${fmtDT(c.openedAt)} → ${fmtDT(c.closedAt)}${c.closedBy && c.closedBy !== shiftOwnerName(c) ? '<br>Closed by ' + escHtml(c.closedBy) : ''}</div></div>
         <div class="amt">${money(c.netSales)}<div style="margin-top:5px;">${label ? `<span class="badge ${cls}">${label}</span>` : ''}</div></div></div>`;
     }).join('') : `<div class="empty-state" style="margin-top:6px;"><p>${SHIFT_CLOSURES.length ? 'No closed shifts in this date range.' : 'No shifts have been closed yet.'}</p></div>`;
     body.querySelectorAll('.closed-row').forEach(row => row.addEventListener('click', () => {
@@ -3354,7 +3454,9 @@ async function aureumSignIn(email, password){
   }
   document.getElementById('csFrom').addEventListener('change', e => { closedShiftsState.from = e.target.value; closedShiftsState.page = 1; renderClosedShifts(); });
   document.getElementById('csTo').addEventListener('change', e => { closedShiftsState.to = e.target.value; closedShiftsState.page = 1; renderClosedShifts(); });
-  document.getElementById('csClear').addEventListener('click', () => { closedShiftsState.from = closedShiftsState.to = ''; document.getElementById('csFrom').value = document.getElementById('csTo').value = ''; closedShiftsState.page = 1; renderClosedShifts(); });
+  document.getElementById('csCashier').addEventListener('change', e => { closedShiftsState.cashier = e.target.value; closedShiftsState.page = 1; renderClosedShifts(); });
+  document.getElementById('shiftEmployeeSelect').addEventListener('change', updateGateShiftInfo);
+  document.getElementById('csClear').addEventListener('click', () => { closedShiftsState.from = closedShiftsState.to = closedShiftsState.cashier = ''; document.getElementById('csFrom').value = document.getElementById('csTo').value = ''; closedShiftsState.page = 1; renderClosedShifts(); });
 
   document.getElementById('shiftSubmitBtn').addEventListener('click', ()=>{
     const shop = document.getElementById('shiftShopSelect').value;
@@ -3386,6 +3488,54 @@ async function aureumSignIn(email, password){
   });
 
   boot();
+</script>
+<script>
+/* ==== SHOW / HIDE PASSWORD (same code on every AUREUM page) ==== */
+(function(){
+  var EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 5c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+  var style = document.createElement('style');
+  style.textContent = '.pw-wrap{position:relative;display:block;width:100%}.pw-wrap>input{padding-right:48px!important}' +
+    '.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:transparent;color:var(--sage,#8FA79A);cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}' +
+    '.pw-eye:hover{color:var(--gold-bright,#E7C766)}.pw-eye:focus-visible{outline:2px solid var(--gold-bright,#E7C766);outline-offset:1px}.pw-eye[aria-pressed="true"]{color:var(--gold-bright,#E7C766)}';
+  document.head.appendChild(style);
+  function attach(root){
+    (root || document).querySelectorAll('input[type="password"]:not([data-pw])').forEach(function(inp){
+      inp.setAttribute('data-pw', '1');
+      var cs = getComputedStyle(inp), wrap = document.createElement('div');
+      wrap.className = 'pw-wrap';
+      wrap.style.marginTop = cs.marginTop; wrap.style.marginBottom = cs.marginBottom;   // keep the original spacing
+      inp.style.marginTop = '0'; inp.style.marginBottom = '0';
+      inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'pw-eye'; btn.innerHTML = EYE;
+      btn.setAttribute('aria-label', 'Show password'); btn.setAttribute('aria-pressed', 'false'); btn.title = 'Show password';
+      // pressing the eye must not steal focus from the field (keeps the keyboard open on phones)
+      btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      btn.addEventListener('touchstart', function(e){ e.preventDefault(); btn.click(); }, { passive:false });
+      btn.addEventListener('click', function(){ setShown(inp, btn, inp.type === 'password'); });
+      wrap.appendChild(btn);
+    });
+  }
+  function setShown(inp, btn, show){
+    inp.type = show ? 'text' : 'password';
+    btn.innerHTML = show ? EYE_OFF : EYE;
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    var label = show ? 'Hide password' : 'Show password';
+    btn.setAttribute('aria-label', label); btn.title = label;
+  }
+  // never leave a password showing when the app is backgrounded or the screen is locked
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) return;
+    document.querySelectorAll('input[data-pw]').forEach(function(inp){
+      var btn = inp.parentNode && inp.parentNode.querySelector('.pw-eye');
+      if(btn && inp.type !== 'password') setShown(inp, btn, false);
+    });
+  });
+  attach();
+  window.AureumPw = { attach: attach };
+})();
+/* ==== END SHOW / HIDE PASSWORD ==== */
 </script>
 </body>
 </html>

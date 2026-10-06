@@ -549,6 +549,11 @@
   .alert-mini .txt{ min-width:0; display:flex; justify-content:space-between; gap:10px; align-items:baseline; flex:1; font-size:12.5px; }
   .alert-mini .txt b{ color:var(--ivory); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .alert-mini .txt span{ color:var(--sage); font-size:11.5px; white-space:nowrap; }
+  .seg{ display:inline-flex; gap:4px; padding:4px; margin-bottom:12px; border:1px solid var(--line-strong); border-radius:11px; background:rgba(255,255,255,0.02); flex-wrap:wrap; }
+  .seg-btn{ font:inherit; font-size:12.5px; font-weight:600; color:var(--ivory-dim); background:transparent; border:0; border-radius:8px; padding:8px 14px; cursor:pointer; }
+  .seg-btn:hover{ color:var(--gold-bright); }
+  .seg-btn.active{ background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1B140A; }
+  .seg-n{ font-family:'JetBrains Mono',monospace; font-size:11px; opacity:.85; margin-left:4px; }
   .alerts-more{ font-size:12px; color:var(--gold-bright); cursor:pointer; padding:4px 2px; display:inline-block; }
   .alerts-more:hover{ text-decoration:underline; }
   @media (max-width:760px){
@@ -1591,7 +1596,7 @@
           </div>
           <table class="line-table">
             <thead>
-              <tr><th>Product</th><th>Measurement</th><th>Expiry date</th><th>GRN quantity</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>Quantity</th><th>Expiry date</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="grnLineBody"></tbody>
           </table>
@@ -2003,7 +2008,7 @@
         <div class="table-panel">
           <table>
             <thead>
-              <tr><th>Transfer #</th><th>Date</th><th>From shop</th><th>To shop</th><th style="text-align:right;">Items</th><th>Status</th><th style="width:70px;"></th></tr>
+              <tr><th>Transfer #</th><th>Date</th><th>From shop</th><th>To shop</th><th style="text-align:right;">Items</th><th>Status</th><th style="width:110px;"></th></tr>
             </thead>
             <tbody id="transferTableBody"></tbody>
           </table>
@@ -2139,10 +2144,11 @@
 
       <!-- Low stock -->
       <div class="report-panel" id="report-lowstock">
-        <div class="page-sub" style="margin-bottom:12px;">Products at or below 15 units on hand.</div>
+        <div class="seg" id="lowStockSeg" role="tablist" aria-label="Stock alert view"></div>
+        <div class="page-sub" id="lowStockSub" style="margin-bottom:12px;"></div>
         <div class="table-panel">
           <table>
-            <thead><tr><th>Product</th><th>Category</th><th style="text-align:right;">In stock</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Reorder value (×20)</th></tr></thead>
+            <thead><tr><th>Product</th><th>Category</th><th>Shop</th><th style="text-align:right;">In stock</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Reorder value (×20)</th></tr></thead>
             <tbody id="repLowStockBody"></tbody>
           </table>
           <div id="repLowStockPagination"></div>
@@ -2166,14 +2172,14 @@
         <div class="form-section-title" style="margin-bottom:8px;">Open now</div>
         <div class="table-panel" style="margin-bottom:22px;">
           <table>
-            <thead><tr><th>Shift</th><th>Shop</th><th>Opened</th><th>Running</th><th>Opened by</th><th style="text-align:right;">Float</th><th style="text-align:right;">Net sales so far</th></tr></thead>
+            <thead><tr><th>Shift</th><th>Shop</th><th>Cashier</th><th>Opened</th><th>Running</th><th style="text-align:right;">Float</th><th style="text-align:right;">Net sales so far</th></tr></thead>
             <tbody id="repOpenShiftsBody"></tbody>
           </table>
         </div>
         <div class="form-section-title" style="margin-bottom:8px;">Closed shifts</div>
         <div class="table-panel">
           <table>
-            <thead><tr><th>Shift</th><th>Shop</th><th>Opened</th><th>Closed</th><th>Closed by</th><th style="text-align:right;">Net sales</th><th style="text-align:right;">Expected cash</th><th style="text-align:right;">Counted</th><th>Difference</th></tr></thead>
+            <thead><tr><th>Shift</th><th>Shop</th><th>Cashier</th><th>Opened</th><th>Closed</th><th style="text-align:right;">Net sales</th><th style="text-align:right;">Expected cash</th><th style="text-align:right;">Counted</th><th>Difference</th></tr></thead>
             <tbody id="repClosedShiftsBody"></tbody>
           </table>
           <div id="repClosedShiftsPagination"></div>
@@ -2671,12 +2677,13 @@ const AureumSync = (function(){
     return out.map(p => (isObj(p.shopStock) ? { ...p, stock: Object.values(p.shopStock).reduce((s, v) => s + (+v || 0), 0) } : p));
   }
 
-  // Only ONE shift may be open per shop. If two tills opened one at the same moment, keep the
-  // earliest (its start time is the real one) — sales are attributed to a shift by time, so nothing is lost.
+  // Only ONE shift may be open per CASHIER per shop (each cashier has their own, so money is never mixed).
+  // If the same cashier's shift was opened twice at the same moment (two devices), keep the earliest — its
+  // start time is the real one, and sales are tied to a shift by id, so nothing is lost.
   function dedupeOpenShifts(out){
-    const best = new Map();
-    out.forEach(s => { const cur = best.get(s.shop); if(!cur || String(s.openedAt) < String(cur.openedAt)) best.set(s.shop, s); });
-    return out.filter(s => best.get(s.shop) === s);
+    const best = new Map(), keyOf = s => s.shop + '|' + (s.employeeId != null ? s.employeeId : s.openedBy);
+    out.forEach(s => { const k = keyOf(s), cur = best.get(k); if(!cur || String(s.openedAt) < String(cur.openedAt)) best.set(k, s); });
+    return out.filter(s => best.get(keyOf(s)) === s);
   }
   // A shift can only be closed once. If two devices closed the same shift, keep one record of it.
   function dedupeClosures(out, added){
@@ -5051,7 +5058,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Additional info</div><div class="v">${g.additional||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Qty</th><th>Expiry</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th>Expiry</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
@@ -5080,12 +5087,12 @@ const AureumSync = (function(){
   function grnPdf(g){
     const rows = (g.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+      return [itemLabel(it,p), String(it.qty), it.expiry ? fmtDisplay(it.expiry) : '—', (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
     });
     const bytes = buildTablePdfBytes({
       title: `Goods Received Note ${g.id}`,
       subtitle: `${fmtDisplay(g.date)}  ·  ${g.shop}  ·  Supplier: ${g.supplier}  ·  ${g.po ? 'From PO '+g.po : g.type}  ·  Total: $${g.total.toFixed(2)}`,
-      head: ['Product','Qty Received','Unit Cost','Line Total'],
+      head: ['Product','Quantity','Expiry','Unit Cost','Line Total'],
       rows
     });
     downloadPdfBytes(bytes, `${g.id}.pdf`);
@@ -5162,9 +5169,8 @@ const AureumSync = (function(){
       const total = (row.qty * row.unitCost) || 0;
       return `<tr>
         <td>${p ? p.name : '—'}</td>
-        <td>${p ? (p.soldBy==='weight'?'kg':'ea') : '—'}</td>
-        <td><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}"></td>
-        <td><input type="number" min="0" step="1" value="${row.qty}" data-idx="${i}" class="grn-qty"></td>
+        <td><input type="number" min="0" step="1" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Quantity received"></td>
+        <td><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
         <td><input type="number" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost"></td>
         <td class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
         <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
@@ -6239,6 +6245,7 @@ const AureumSync = (function(){
     document.querySelectorAll('.report-tab').forEach(el=>{
       el.addEventListener('click', ()=>{
         activeReportTab = el.dataset.tab;
+        if(activeReportTab === 'lowstock'){ lowStockView = 'all'; repLowPage.page = 1; }   // opening the tab yourself starts from "Everything"
         renderReportTabs();
         showReportPanel();
         renderActiveReport();
@@ -6332,14 +6339,36 @@ const AureumSync = (function(){
     renderPaginationControls('repSummaryPagination', cats.length, repSumPage, renderReportSummary);
   }
 
+  let lowStockView = 'all';      // 'all' | 'negative' | 'low'
   function renderReportLowStock(){
-    const shopCtx = viewingShop;
-    const items = PRODUCTS.filter(p=> p.stockControl!==false && getStock(p, shopCtx) <= 15).sort((a,b)=>getStock(a,shopCtx)-getStock(b,shopCtx));
+    const { shopCtx, negativeStock, lowItems } = computeStockAlerts();
+    const rowsNeg = negativeStock.map(e => ({ p:e.p, shop:e.shop, qty:e.qty, neg:true }));
+    const rowsLow = lowItems.map(it => ({ p:it.p, shop: shopCtx, qty:getStock(it.p, shopCtx), neg:false }));
+    const views = [
+      { id:'all', label:`Everything`, n: rowsNeg.length + rowsLow.length },
+      { id:'negative', label:`Negative stock`, n: rowsNeg.length },
+      { id:'low', label:`Low stock`, n: rowsLow.length },
+    ];
+    const seg = document.getElementById('lowStockSeg');
+    seg.innerHTML = views.map(v => `<button type="button" class="seg-btn ${v.id === lowStockView ? 'active' : ''}" role="tab" aria-selected="${v.id === lowStockView}" data-view="${v.id}">${v.label} <span class="seg-n">${v.n}</span></button>`).join('');
+    seg.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { lowStockView = b.dataset.view; repLowPage.page = 1; renderReportLowStock(); }));
+    document.getElementById('lowStockSub').textContent = {
+      all: 'Negative stock (more sold than recorded) first, then products at or below their low-stock level.',
+      negative: 'Only products whose stock is below zero — more was sold than the system had. Receive stock (Goods Received) or correct it with a Stock Adjustment.',
+      low: 'Only products that are low on stock (at or below their threshold or safety stock) but not negative.'
+    }[lowStockView];
+    const rows = lowStockView === 'negative' ? rowsNeg : lowStockView === 'low' ? rowsLow : [...rowsNeg, ...rowsLow.sort((a, b) => a.qty - b.qty)];
     const tbody = document.getElementById('repLowStockBody');
-    if(items.length===0){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">Nothing is low on stock right now.</td></tr>`; clearPager('repLowStockPagination'); return; }
-    tbody.innerHTML = paginateSlice(items, repLowPage).map(p=>`
-      <tr><td>${p.name}</td><td>${p.cat||'Uncategorized'}</td><td class="mono" style="text-align:right; color:var(--danger);">${getStock(p,shopCtx)}</td><td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td><td class="mono" style="text-align:right;">$${(p.cost*20).toFixed(2)}</td></tr>`).join('');
-    renderPaginationControls('repLowStockPagination', items.length, repLowPage, renderReportLowStock);
+    if(rows.length === 0){
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--sage);">${{ all:'Nothing is low or negative on stock right now.', negative:'No negative stock right now.', low:'Nothing is low on stock right now.' }[lowStockView]}</td></tr>`;
+      clearPager('repLowStockPagination'); return;
+    }
+    tbody.innerHTML = paginateSlice(rows, repLowPage).map(r => `
+      <tr><td>${r.p.name}</td><td>${r.p.cat || 'Uncategorized'}</td><td>${r.shop}</td>
+        <td class="mono" style="text-align:right; color:var(--danger); ${r.neg ? 'font-weight:700;' : ''}">${r.qty}</td>
+        <td class="mono" style="text-align:right;">$${r.p.cost.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${r.neg ? '—' : '$' + (r.p.cost * 20).toFixed(2)}</td></tr>`).join('');
+    renderPaginationControls('repLowStockPagination', rows.length, repLowPage, renderReportLowStock);
   }
 
   function salesCatPeriodRange(period){
@@ -6416,9 +6445,12 @@ const AureumSync = (function(){
   /* ===== REPORTS → SHIFTS ===== */
   const repShiftPage = { page:1, pageSize:15 };
   const usd = n => '$' + Number(n || 0).toFixed(2);
+  // Each cashier has their own shift. Receipts carry the id of the shift they were rung up in; older ones
+  // are matched by shop + cashier + time.
+  const shiftOwner = c => c.employeeName || c.openedBy || c.employee || '—';
   function shiftNet(shift){
-    const start = new Date(shift.openedAt).getTime();
-    return RECEIPTS.filter(r => r.shop === shift.shop && new Date(r.dateTime).getTime() >= start)
+    const start = new Date(shift.openedAt).getTime(), owner = shiftOwner(shift);
+    return RECEIPTS.filter(r => r.shiftId ? r.shiftId === shift.id : (r.shop === shift.shop && r.employee === owner && new Date(r.dateTime).getTime() >= start))
       .reduce((s, r) => s + (r.refund ? -r.total : r.total), 0);
   }
   function runningFor(iso){
@@ -6439,8 +6471,8 @@ const AureumSync = (function(){
     openBody.innerHTML = OPEN_SHIFTS.length ? OPEN_SHIFTS.map(sh => {
       const opened = new Date(sh.openedAt), now = new Date();
       const old = !(opened.getFullYear() === now.getFullYear() && opened.getMonth() === now.getMonth() && opened.getDate() === now.getDate());
-      return `<tr><td class="mono">${sh.id}</td><td>${sh.shop}</td><td>${fmtReceiptTime(sh.openedAt)}${old ? ' <span style="color:#E39A4B;font-size:11px;">· from an earlier day, not closed</span>' : ''}</td>
-        <td>${runningFor(sh.openedAt)}</td><td>${sh.openedBy || '—'}</td><td class="mono" style="text-align:right;">${usd(sh.openingFloat)}</td><td class="gold" style="text-align:right;">${usd(shiftNet(sh))}</td></tr>`;
+      return `<tr><td class="mono">${sh.id}</td><td>${sh.shop}</td><td>${shiftOwner(sh)}</td><td>${fmtReceiptTime(sh.openedAt)}${old ? ' <span style="color:#E39A4B;font-size:11px;">· from an earlier day, not closed</span>' : ''}</td>
+        <td>${runningFor(sh.openedAt)}</td><td class="mono" style="text-align:right;">${usd(sh.openingFloat)}</td><td class="gold" style="text-align:right;">${usd(shiftNet(sh))}</td></tr>`;
     }).join('') : `<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--sage);">No shift is open right now.</td></tr>`;
 
     const closed = SHIFT_CLOSURES.map(normShift).filter(c => c.closedAt).sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
@@ -6448,8 +6480,7 @@ const AureumSync = (function(){
     if(!closed.length){ body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--sage);">No shifts have been closed yet.</td></tr>`; document.getElementById('repClosedShiftsPagination').innerHTML = ''; return; }
     body.innerHTML = paginateSlice(closed, repShiftPage).map(c => {
       const diff = shiftDiffLabel(c), bad = c.variance != null && Math.abs(c.variance) >= 0.01;
-      return `<tr data-uid="${c.uid || c.id}" style="cursor:pointer;"><td class="mono">${c.id}</td><td>${c.shop || ''}</td><td>${fmtReceiptTime(c.openedAt)}</td><td>${fmtReceiptTime(c.closedAt)}</td>
-        <td>${c.closedBy || '—'}</td><td class="gold" style="text-align:right;">${usd(c.netSales)}</td><td class="mono" style="text-align:right;">${usd(c.expectedCash)}</td>
+      return `<tr data-uid="${c.uid || c.id}" style="cursor:pointer;"><td class="mono">${c.id}</td><td>${c.shop || ''}</td><td>${shiftOwner(c)}</td><td>${fmtReceiptTime(c.openedAt)}</td><td>${fmtReceiptTime(c.closedAt)}</td><td class="gold" style="text-align:right;">${usd(c.netSales)}</td><td class="mono" style="text-align:right;">${usd(c.expectedCash)}</td>
         <td class="mono" style="text-align:right;">${c.countedCash == null ? '—' : usd(c.countedCash)}</td><td style="${bad ? 'color:var(--danger);' : ''}">${diff}</td></tr>`;
     }).join('');
     body.querySelectorAll('tr[data-uid]').forEach(tr => tr.addEventListener('click', () => {
@@ -6462,8 +6493,9 @@ const AureumSync = (function(){
     const emp = (c.salesByEmployee || []).map(e => row(`${e.name} (${e.count} sale${e.count === 1 ? '' : 's'})`, usd(e.sales - e.refunds))).join('');
     openDetailModal(`Shift ${c.id} · ${c.shop || ''}`, `
       <div class="create-form-grid" style="margin-bottom:14px;">
-        <div class="detail-field"><div class="field-label">Opened</div><div class="v">${fmtReceiptTime(c.openedAt)}${c.openedBy ? ' by ' + c.openedBy : ''}</div></div>
-        <div class="detail-field"><div class="field-label">Closed</div><div class="v">${fmtReceiptTime(c.closedAt)}${c.closedBy ? ' by ' + c.closedBy : ''}</div></div>
+        <div class="detail-field"><div class="field-label">Cashier</div><div class="v">${shiftOwner(c)}</div></div>
+        <div class="detail-field"><div class="field-label">Opened</div><div class="v">${fmtReceiptTime(c.openedAt)}</div></div>
+        <div class="detail-field"><div class="field-label">Closed</div><div class="v">${fmtReceiptTime(c.closedAt)}${c.closedBy && c.closedBy !== shiftOwner(c) ? ' by ' + c.closedBy : ''}</div></div>
       </div>
       ${row('Cash sales', usd(c.cashSales))}${row('Card sales', usd(c.cardSales))}${row('Mobile sales', usd(c.mobileSales))}${c.otherSales ? row('Other sales', usd(c.otherSales)) : ''}
       ${row('Refunds' + (c.refundsCount ? ` (${c.refundsCount})` : ''), '-' + usd(c.refunds))}
@@ -7134,7 +7166,10 @@ const AureumSync = (function(){
   renderSettingsPos();
 
   /* ===== DASHBOARD: ALERTS ===== */
-  function goToLowStockReport(){
+  // mode: 'negative' | 'low' | 'all' — "View all" on an alert column shows ONLY that kind
+  function goToLowStockReport(mode){
+    lowStockView = (mode === 'negative' || mode === 'low') ? mode : 'all';
+    repLowPage.page = 1;
     const navItem = document.querySelector('.nav-item[data-page="reports"]');
     if(navItem) navItem.click();
     activeReportTab = 'lowstock';
@@ -7142,8 +7177,9 @@ const AureumSync = (function(){
     showReportPanel();
     renderActiveReport();
   }
-  function renderAlerts(){
-    const el = document.getElementById('alertsList');
+  // The single source of truth for "what is negative / low": the dashboard alerts and the Low Stock report
+  // both read this, so their counts can never disagree.
+  function computeStockAlerts(){
     const DEFAULT_LOW_STOCK_THRESHOLD = 15;
     const shopCtx = viewingShop; // "All Shops" sums across shops via getStock; a real shop scopes to just that shop
     // Only ever flag a product for THIS shop if the product is actually
@@ -7172,29 +7208,34 @@ const AureumSync = (function(){
     );
     // Two separate columns so a long list of one kind never pushes the other (or the rest of the
     // dashboard) off screen: negatives on the left, low stock on the right, five shown in each.
-    const MAX_SHOWN = 5;
     const lowItems = [
       ...belowSafety.map(p => ({ p, critical:true, note:`at or below its safety stock of ${p.safetyStock}` })),
       ...lowStock.map(p => ({ p, critical:false, note:`threshold ${p.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD}` }))
     ];
+    return { shopCtx, DEFAULT_LOW_STOCK_THRESHOLD, negativeStock, lowItems };
+  }
+  function renderAlerts(){
+    const el = document.getElementById('alertsList');
+    const { shopCtx, DEFAULT_LOW_STOCK_THRESHOLD, negativeStock, lowItems } = computeStockAlerts();
+    const MAX_SHOWN = 5;
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
     const column = (cls, headHtml, itemsHtml, total, noneText) => `
       <div class="alerts-col ${cls}">
         <div class="alerts-head">${total === 0 ? noneText : headHtml}</div>
         ${itemsHtml}
-        ${total > MAX_SHOWN ? `<div class="alerts-more" data-alert="lowstock">View all ${total} &#8250;</div>` : ''}
+        ${total > MAX_SHOWN ? `<div class="alerts-more" data-alert="${cls}">View all ${total} &#8250;</div>` : ''}
       </div>`;
     const negHtml = negativeStock.slice(0, MAX_SHOWN).map(e =>
-      `<div class="alert-mini critical" data-alert="lowstock" title="More was sold than the system had in stock. Receive stock (Goods Received) or correct it with a Stock Adjustment."><div class="dot"></div><div class="txt"><b>${e.p.name}</b><span>${e.qty} at ${e.shop}</span></div></div>`).join('');
+      `<div class="alert-mini critical" data-alert="neg" title="More was sold than the system had in stock. Receive stock (Goods Received) or correct it with a Stock Adjustment."><div class="dot"></div><div class="txt"><b>${e.p.name}</b><span>${e.qty} at ${e.shop}</span></div></div>`).join('');
     const lowHtml = lowItems.slice(0, MAX_SHOWN).map(it => {
       const q = getStock(it.p, shopCtx);
-      return `<div class="alert-mini ${it.critical ? 'critical' : ''}" data-alert="lowstock"><div class="dot"></div><div class="txt"><b>${it.p.name}</b><span>${q} left · ${it.note}</span></div></div>`;
+      return `<div class="alert-mini ${it.critical ? 'critical' : ''}" data-alert="low"><div class="dot"></div><div class="txt"><b>${it.p.name}</b><span>${q} left · ${it.note}</span></div></div>`;
     }).join('');
     el.innerHTML = `<div class="alerts-split">` +
       column('neg', `You have <b class="n neg">${negativeStock.length}</b> negative-stock ${negativeStock.length === 1 ? 'item' : 'items'}`, negHtml, negativeStock.length, `<span class="ok">&#10003; No negative stock</span>`) +
       column('low', `You have <b class="n low">${lowItems.length}</b> low-stock ${lowItems.length === 1 ? 'item' : 'items'}`, lowHtml, lowItems.length, `<span class="ok">&#10003; Nothing is low on stock</span>`) +
       `</div>`;
-    el.querySelectorAll('[data-alert="lowstock"]').forEach(c=> c.addEventListener('click', goToLowStockReport));
+    el.querySelectorAll('[data-alert]').forEach(c => c.addEventListener('click', () => goToLowStockReport(c.dataset.alert === 'neg' ? 'negative' : 'low')));
   }
 
   /* ===== DASHBOARD: TOP PERFORMERS ===== */
@@ -7411,6 +7452,36 @@ const AureumSync = (function(){
     downloadPdfBytes(bytes, `${t.id}.pdf`);
   }
 
+  function renderTransferDetailBody(t){
+    const rows = (t.items || []).map(it => {
+      const p = PRODUCTS.find(x => x.id === it.productId);
+      return `<tr><td>${itemLabel(it, p)}</td><td style="text-align:right;">${it.qty}</td>
+        <td style="text-align:right;" class="mono">${it.beforeFrom ?? '—'} → ${it.afterFrom ?? '—'}</td>
+        <td style="text-align:right;" class="mono">${it.beforeTo ?? '—'} → ${it.afterTo ?? '—'}</td></tr>`;
+    }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this transfer.</td></tr>`;
+    const totalQty = (t.items || []).reduce((s, it) => s + (it.qty || 0), 0);
+    return `
+      <div class="create-form-grid" style="margin-bottom:18px;">
+        <div class="detail-field"><div class="field-label">Transfer number</div><div class="v mono">${t.id}</div></div>
+        <div class="detail-field"><div class="field-label">Date</div><div class="v">${fmtDisplay(t.date)}</div></div>
+        <div class="detail-field"><div class="field-label">From shop</div><div class="v">${t.from}</div></div>
+        <div class="detail-field"><div class="field-label">To shop</div><div class="v">${t.to}</div></div>
+        <div class="detail-field"><div class="field-label">Status</div><div class="v">${t.status || '—'}</div></div>
+        <div class="detail-field"><div class="field-label">Total quantity moved</div><div class="v">${totalQty}</div></div>
+      </div>
+      <table class="detail-table">
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Stock at ${t.from}<br><span style="font-weight:400;opacity:.7;">before → after</span></th><th style="text-align:right;">Stock at ${t.to}<br><span style="font-weight:400;opacity:.7;">before → after</span></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Completed transfers have already moved the stock, so they are kept as a permanent record. To correct a mistake, make a new transfer the other way.</div>`;
+  }
+  function viewTransfer(id){
+    const t = TRANSFERS.find(x => x.id === id);
+    if(!t) return;
+    openDetailModal(`Stock Transfer ${t.id}`, renderTransferDetailBody(t),
+      `<div class="modal-btn ghost" id="trDetailPdfBtn">Download PDF</div><div class="modal-btn solid" data-close="detailModal">Close</div>`);
+    document.getElementById('trDetailPdfBtn').addEventListener('click', () => transferPdf(t));
+  }
   let transferPageState = { page:1, pageSize:20 };
   let transferDateRangeFilter = null;
   function renderTransfers(){
@@ -7424,21 +7495,19 @@ const AureumSync = (function(){
     const totalFiltered = trList.length;
     const pageItems = paginateSlice(trList, transferPageState);
     tbody.innerHTML = pageItems.map(t=>`
-      <tr>
+      <tr data-id="${t.id}" style="cursor:pointer;" title="Click to view this transfer">
         <td class="mono">${t.id}</td>
         <td>${fmtDisplay(t.date)}</td>
         <td>${t.from}</td>
         <td>${t.to}</td>
         <td class="mono" style="text-align:right;">${t.items.reduce((s,it)=>s+it.qty,0)}</td>
         <td><span class="status-badge ${t.status==='Completed'?'completed':'pending'}">${t.status}</span></td>
-        <td onclick="event.stopPropagation()"><span class="rcp-view" data-id="${t.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span></td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;"><span class="rcp-view" data-view="${t.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">VIEW</span> <span style="color:var(--sage-dim);">·</span> <span class="rcp-view" data-pdf="${t.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span></td>
       </tr>`).join('');
-    tbody.querySelectorAll('[data-id]').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const t = TRANSFERS.find(x=>x.id===el.dataset.id);
-        if(t) transferPdf(t);
-      });
-    });
+    // a saved transfer opens on screen (row or VIEW); PDF is a separate, optional download
+    tbody.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', ()=> viewTransfer(tr.dataset.id)));
+    tbody.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', ()=> viewTransfer(el.dataset.view)));
+    tbody.querySelectorAll('[data-pdf]').forEach(el => el.addEventListener('click', ()=>{ const t = TRANSFERS.find(x=>x.id===el.dataset.pdf); if(t) transferPdf(t); }));
     renderPaginationControls('transferPagination', totalFiltered, transferPageState, renderTransfers);
   }
 
@@ -8247,6 +8316,54 @@ const AureumSync = (function(){
   });
 
   boot();
+</script>
+<script>
+/* ==== SHOW / HIDE PASSWORD (same code on every AUREUM page) ==== */
+(function(){
+  var EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 5c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+  var style = document.createElement('style');
+  style.textContent = '.pw-wrap{position:relative;display:block;width:100%}.pw-wrap>input{padding-right:48px!important}' +
+    '.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:transparent;color:var(--sage,#8FA79A);cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}' +
+    '.pw-eye:hover{color:var(--gold-bright,#E7C766)}.pw-eye:focus-visible{outline:2px solid var(--gold-bright,#E7C766);outline-offset:1px}.pw-eye[aria-pressed="true"]{color:var(--gold-bright,#E7C766)}';
+  document.head.appendChild(style);
+  function attach(root){
+    (root || document).querySelectorAll('input[type="password"]:not([data-pw])').forEach(function(inp){
+      inp.setAttribute('data-pw', '1');
+      var cs = getComputedStyle(inp), wrap = document.createElement('div');
+      wrap.className = 'pw-wrap';
+      wrap.style.marginTop = cs.marginTop; wrap.style.marginBottom = cs.marginBottom;   // keep the original spacing
+      inp.style.marginTop = '0'; inp.style.marginBottom = '0';
+      inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'pw-eye'; btn.innerHTML = EYE;
+      btn.setAttribute('aria-label', 'Show password'); btn.setAttribute('aria-pressed', 'false'); btn.title = 'Show password';
+      // pressing the eye must not steal focus from the field (keeps the keyboard open on phones)
+      btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      btn.addEventListener('touchstart', function(e){ e.preventDefault(); btn.click(); }, { passive:false });
+      btn.addEventListener('click', function(){ setShown(inp, btn, inp.type === 'password'); });
+      wrap.appendChild(btn);
+    });
+  }
+  function setShown(inp, btn, show){
+    inp.type = show ? 'text' : 'password';
+    btn.innerHTML = show ? EYE_OFF : EYE;
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    var label = show ? 'Hide password' : 'Show password';
+    btn.setAttribute('aria-label', label); btn.title = label;
+  }
+  // never leave a password showing when the app is backgrounded or the screen is locked
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) return;
+    document.querySelectorAll('input[data-pw]').forEach(function(inp){
+      var btn = inp.parentNode && inp.parentNode.querySelector('.pw-eye');
+      if(btn && inp.type !== 'password') setShown(inp, btn, false);
+    });
+  });
+  attach();
+  window.AureumPw = { attach: attach };
+})();
+/* ==== END SHOW / HIDE PASSWORD ==== */
 </script>
 </body>
 </html>

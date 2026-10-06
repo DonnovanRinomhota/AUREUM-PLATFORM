@@ -1,5 +1,51 @@
 # Changelog
 
+## Phase 16 — Swipe paging, receipt table, per-cashier shifts, alert views, GRN/transfers, password eye (2026-10)
+
+### Product list (POS)
+- **Swipe left / right** on a touch screen to move between pages. Only a deliberate, mostly-horizontal
+  flick counts (60px+, under 0.8s): normal scrolling, short flicks, pinch-zoom, and swipes on the category
+  chips or search box are ignored, and a swipe never adds a product. A small hint shows on touch devices.
+- The product cards are now only redrawn when something visible changes. Previously a background refresh
+  replaced the cards under a finger mid-swipe, so the gesture was occasionally lost.
+
+### Receipts
+- Items are shown as an aligned table: **Product · Quantity · Cost · Total**, on screen, on paper, and on
+  the thermal printer (headings, then each item with Qty / Cost / Total in fixed columns; long names wrap).
+
+### Shifts — now one per cashier
+- **Each cashier has their own shift** at a shop: own opening float, own sales, own expected cash. Money
+  from different cashiers is never mixed. A second cashier signing in starts their own shift while the first
+  keeps running until it is closed.
+- Sign-in tells each cashier about THEIR shift ("Your shift SH-4 is open…" / "You have no open shift… starts
+  your own") and mentions other cashiers' shifts open at the shop.
+- A cashier can close **their own** shift; managers/administrators can close **anyone's** (the Shift panel
+  lists other cashiers' open shifts for them, and says so clearly when closing someone else's). Only
+  managers/admins can open the closed-shifts list (now filterable by cashier).
+- Refunds are recorded on the shift of whoever processes them (the cash comes from their drawer).
+- Reports → Shifts (Back Office) shows the cashier for open and closed shifts.
+- Shifts opened before this update belong to whoever opened them; their receipts are matched by shift id.
+
+### Dashboard alerts
+- "View all" on **Negative stock** shows only negatives; on **Low stock** only low stock. The Low Stock report
+  has a switch (Everything / Negative stock / Low stock, with counts), a Shop column, and starts from
+  Everything when opened from the tab. The dashboard and the report share one calculation.
+
+### Goods Received
+- **Measurement removed.** Quantity now comes before Expiry in the entry form, the saved view and the PDF
+  (the form had them in the opposite order to the saved view, and the PDF had no expiry). The PDF now
+  includes the expiry date. Stored data was never swapped.
+
+### Transfers
+- Saved transfers open **on screen** (row click or VIEW): from/to shop, date, status, each product with the
+  quantity moved and stock before → after at both shops. Download PDF is still available inside the view
+  and from the list.
+
+### Passwords
+- Show / hide **eye icon** on every password field (sign-in, reset, change password) and the cashier PIN, in
+  the Back Office, POS and admin panel. Keyboard accessible, doesn't steal focus, keeps the numeric keypad for
+  PINs, and re-hides when the app is backgrounded.
+
 ## Phase 15 — Real shifts, item-by-item refunds, today's sales, alerts layout, sidebar (2026-10)
 
 ### Shifts (see SHIFTS-GUIDE.md)
