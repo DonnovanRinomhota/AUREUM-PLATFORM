@@ -12,8 +12,9 @@ admin.html             → platform control panel at /admin (accounts, trials, s
 sw.js, offline.html    → offline support (apps open with no internet once loaded)
 manifest*.webmanifest  → makes the Back Office and POS installable as apps
 icons/, vendor/        → app icons; fonts and libraries hosted by AUREUM (see vendor/LICENSES.md)
-supabase/              → database SQL files + edge functions (incl. help-agent: the AI assistant)
-tools/                 → build-knowledge.mjs (regenerates the assistant's knowledge file)
+supabase/              → database SQL files + edge functions
+help-bot/              → AUREUM Bot: kb.js (the help library) + engine.js (the search engine); no AI, no internet
+tools/                 → build-bot.mjs (copies the Bot into backoffice.html after you edit help-bot/)
 vercel.json            → redirects, /admin route, headers
 ```
 
@@ -22,7 +23,7 @@ vercel.json            → redirects, /admin route, headers
 
 ## Guides
 - `SETUP-INSTRUCTIONS.md` — first-time setup
-- `SETUP-HELP.md` — the AI help assistant and support tickets
+- `SETUP-HELP.md` — AUREUM Bot (built-in help) and support tickets
 - `SETUP-BILLING.md`, `SETUP-ADMIN.md`, `SETUP-DATA-SAFETY.md`, `SETUP-EMAIL-TEMPLATE.md`
 - `SETTINGS-GUIDE.md` — what every Settings switch does
 - `SHIFTS-GUIDE.md` — how shifts, closing and refunds work

@@ -34,7 +34,7 @@ supabase functions deploy billing-stripe-shops          # NEW: adding / updating
 **Remove the Paynow billing functions** (no longer used):
 ```
 supabase functions delete billing-paynow-initiate
-supabase functions delete billing-paynow-webhook
+supabase functions delete billing-paynow-webhook          # one name per command
 ```
 (`paynow-initiate` / `paynow-poll` / `create-payment-intent` are older, separate functions and are not part of subscriptions.)
 

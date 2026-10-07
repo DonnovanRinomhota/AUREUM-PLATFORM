@@ -1,5 +1,5 @@
 -- =====================================================================
--- support-schema.sql — support tickets + help-assistant usage limits.
+-- support-schema.sql — support tickets (the AUREUM Bot hands unanswered questions over to these).
 -- Run once in the Supabase SQL Editor, AFTER schema.sql (it uses current_business_id()). Safe to run again.
 --
 -- How it is protected
@@ -11,16 +11,6 @@
 --   * The AUREUM team reads and answers tickets through the control panel (admin-manage function, which
 --     uses the service role). No customer can reach that.
 -- =====================================================================
-
--- ---------- daily limit for the help assistant (it costs money per question) ----------
-create table if not exists public.help_usage (
-  user_id     uuid not null,
-  business_id uuid not null,
-  day         date not null default ((now() at time zone 'utc')::date),
-  count       integer not null default 0,
-  primary key (user_id, day)
-);
-alter table public.help_usage enable row level security;     -- no policies: only the server (service role) uses it
 
 -- ---------- tickets ----------
 create table if not exists public.support_tickets (
@@ -60,6 +50,8 @@ create index if not exists support_messages_ticket_idx on public.support_ticket_
 alter table public.support_tickets enable row level security;
 alter table public.support_ticket_messages enable row level security;
 
+-- (If an earlier version of this file created the unused table public.help_usage, it is harmless; you may drop it:  drop table if exists public.help_usage;)
+
 drop policy if exists "business reads its own tickets" on public.support_tickets;
 create policy "business reads its own tickets" on public.support_tickets
   for select using (business_id = public.current_business_id());
@@ -71,7 +63,6 @@ create policy "business reads its own ticket messages" on public.support_ticket_
 -- no insert / update / delete policies = customers cannot write directly; belt and braces:
 revoke insert, update, delete on public.support_tickets from anon, authenticated;
 revoke insert, update, delete on public.support_ticket_messages from anon, authenticated;
-revoke all on public.help_usage from anon, authenticated;
 
 -- ---------- the only ways a customer changes anything ----------
 

@@ -1,56 +1,48 @@
-# Help assistant and support tickets
+# AUREUM Bot and support tickets
 
 Customers get two things in **Back Office → Settings → Help & FAQ** (and the **Help & support** button at the bottom of the left menu):
-- **Ask the assistant** — an AI chat that knows AUREUM (every menu, setting, price and rule) and explains how to do things. It **cannot see or change** a business's data.
-- **My tickets** — a message to your team. You answer from the control panel (**/admin → Support**). Replies appear inside the customer's ticket with a red dot on their Help button. (There is no email notification yet.)
 
-## 1. Run the SQL (once)
-Supabase → SQL Editor → run `supabase/support-schema.sql` (after `schema.sql`). It creates the ticket tables and the daily-usage counter.
-Protection: a business can only read **its own** tickets; your **internal notes are never visible to customers**; customers can't write to the tables directly or forge a support reply; ticket creation is rate-limited (5 per hour per business).
+- **Ask AUREUM Bot** — a built-in guide. It is **not a live AI**. It searches AUREUM's own help library (about 120 questions and answers, written from how the app really works), explains how to do things in short steps, and offers related questions. It needs **no internet, no account with anyone, no key and no subscription** — everything lives inside the app. It cannot see or change a business's data.
+- **My tickets** — when the Bot can't answer (or the person asks for a human), it offers **Send this to support**. The chat is attached to the ticket so you can see exactly what was asked. You answer from the control panel (**/admin → Support**). Replies appear in the customer's ticket with a red dot on their Help button. (There is no email notification yet.)
 
-## 2. Give the assistant its brain (Anthropic API key)
-1. Create an account at https://console.anthropic.com and an API key. **Set a monthly spend limit there** — it is your safety net.
-2. Add it as a Supabase secret (never in the app files):
-```
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-```
-Optional secrets:
-```
-supabase secrets set HELP_AGENT_MODEL=claude-haiku-4-5-20251001   # cheaper & faster (default is claude-sonnet-5-5)
-supabase secrets set HELP_USER_DAILY_LIMIT=60                      # questions per person per day (default 60)
-supabase secrets set HELP_BUSINESS_DAILY_LIMIT=400                 # per business per day (default 400)
-```
-Without a key the chat says it "isn't connected yet" and points customers to a ticket — nothing breaks.
-**Cost:** you pay Anthropic per question. The large fixed part (the product knowledge) is cached, so it is cheap, and the daily limits cap any one person or business. Failed or limited questions are never counted or charged.
+## What you need to do
+**Only the ticket tables:** run `supabase/support-schema.sql` once in the Supabase SQL Editor (after `schema.sql`). Without it the Bot still works; the ticket screens just say they are not available yet.
 
-## 3. Deploy
+If you deployed the earlier AI version (`help-agent`), remove it — it isn't used any more:
 ```
-supabase functions deploy help-agent
-supabase functions deploy admin-manage      # updated: adds the ticket actions
+supabase functions delete help-agent
 ```
+and you can delete the `ANTHROPIC_API_KEY` secret (`supabase secrets unset ANTHROPIC_API_KEY`). Nothing is sent to any AI company.
+If an earlier `support-schema.sql` created the unused table `help_usage`, it is harmless; remove it with `drop table if exists public.help_usage;`.
 
-## 4. Answering tickets (control panel → Support)
-- **Open** = waiting for you. **Waiting for customer** = you replied. **Resolved / Closed** = done. A customer reply reopens a solved ticket.
-- Open a ticket to read it (including the customer's earlier chat with the assistant, so you can see what was already tried).
-- **Send reply** → the customer sees it as "AUREUM Support" (your own email is never shown to customers) and gets a red dot. **Send & resolve** answers and solves. **Add internal note** is only for your team.
-- Set priority and **Assign to me**. Every reply, note and change is in the **Activity log** (without copying what was written).
-- The Support tab shows a badge with the number of open tickets (a "!" when one is urgent).
+## How the Bot behaves
+- It understands plurals, common typos ("refudn", "recieve"), and synonyms ("store/shop", "delete/remove", "cashier/clerk").
+- It says how sure it is: a clear match answers directly; a likely match says "I think you're asking about…"; a vague question gets a short menu ("which one do you mean?"); and when nothing fits it says **"I couldn't find an answer"** and offers the ticket button. It never makes up an answer.
+- Questions about money already taken, lost data, bugs, accounts and anything only your team can do get the guidance it has **plus** the ticket button. Asking for "a human" goes straight to the ticket.
+- It uses the screen the person was on to settle vague questions (on *Customers*, "how do I add one?" explains adding a customer).
+- **Did this answer your question? — Not really** gives related topics and the ticket button.
+- In an **app-store build** (`?store=1`) its billing answers give no payment instructions or prices, only "managed from your account on the web".
 
-## 5. What is sent to Anthropic
-Only the person's question and the recent conversation, plus: their role, plan status, trial days left, number of shops, and the screen they are on. **Never** business names, email addresses, products, sales, customers or sign-in details. Mention this in your privacy policy.
+## Measured accuracy (be realistic)
+On questions written *after* the library and engine were tuned (so not used to improve it), it reached the right answer about **92%** of the time on the first try, and correctly declined to answer **9 of 10** questions the library genuinely doesn't cover. It is not perfect — that is exactly why the ticket button is always one tap away. Tickets are your signal: **read the attached chats to see what people asked that the Bot missed, then teach it.**
 
-## 6. Keeping the assistant accurate
-Its knowledge lives in `supabase/functions/help-agent/knowledge.md`. When AUREUM changes (a new setting, price, menu name):
-1. Edit `knowledge.md` (use the exact words shown on screen).
-2. Run `node tools/build-knowledge.mjs` to regenerate `knowledge.ts`.
-3. Redeploy: `supabase functions deploy help-agent`.
-The assistant is told to answer only from this knowledge, say when it isn't sure, and offer a ticket instead of guessing.
+## Teaching the Bot something new
+Everything it knows is in **`help-bot/kb.js`**. Each entry is one line like:
+```
+E('id', 'Topic', 'Title shown to the user',
+  ['ways people ask it', 'another way', 'a third way'],
+  'extra search words',
+  `The answer. Use **bold** for buttons and numbered lines (1. 2. 3.) for steps.`,
+  ['related-id-1', 'related-id-2'])
+```
+1. Edit `help-bot/kb.js` (add an entry, or add a new phrasing to an existing one — that is the usual fix for a missed question).
+2. Run `node tools/build-bot.mjs` — it copies the library and engine into `backoffice.html`.
+3. Commit and push. Press Ctrl+Shift+R on devices.
+Use the **exact words shown on screen** for menus and buttons. When the app changes (a new setting, a new price), update the matching entry. (If you give me the change, I will update the library and run the accuracy checks that compare it with the app.)
 
 ## Troubleshooting
 | Symptom | Cause / fix |
 |---|---|
-| Chat says "isn't connected yet" | `ANTHROPIC_API_KEY` secret missing, or `help-agent` not deployed |
-| Chat says "isn't connected properly" | the API key is wrong or has no credit |
-| "very busy" / "took too long" | Anthropic is overloaded; retry in a minute |
 | My tickets says "aren't available yet" | `support-schema.sql` not run |
 | Control panel Support tab says "not set up yet" | `support-schema.sql` not run, or `admin-manage` not redeployed |
+| The Bot gives a wrong or odd answer | send it to me, or add that wording to the right entry in `help-bot/kb.js` and rebuild |

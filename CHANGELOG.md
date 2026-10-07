@@ -1,5 +1,22 @@
 # Changelog
 
+## Phase 20 — AUREUM Bot replaces the live AI (no external service, no subscription)
+
+The Help screen's assistant is now **AUREUM Bot**, a built-in guide instead of a call to an AI service:
+- **No AI, no internet, no key, no subscription.** It searches an internal library of ~120 questions and answers (`help-bot/kb.js`)
+  with a small search engine (`help-bot/engine.js`) embedded in the Back Office. It works offline and sends nothing anywhere.
+  A test proves the code contains no network calls, no storage, no eval and no AI-service names.
+- Understands plurals, typos and synonyms; says how sure it is; shows "I think you're asking about…", a short "which one do you mean?"
+  menu, related questions, **Did this answer your question? Yes / Not really**, and browse-by-topic buttons. Uses the current screen to
+  settle vague questions. In app-store builds its billing answers give no payment instructions.
+- **Honest by design:** when nothing fits it says "I couldn't find an answer" and offers **Send this to support**; asking for a human, or
+  questions only your team can handle (refund disputes, missing data, bugs), go to the ticket button. The chat is attached to the ticket.
+- Accuracy (questions written after tuning): ~92% reach the right answer first time; 9 of 10 unanswerable questions correctly declined.
+  A cross-check test compares the library with the real app (menus, tabs, every switch label, prices, thresholds, buttons).
+- **Removed:** the `help-agent` function, the Anthropic key, daily-limit counters (`help_usage`) and the AI knowledge file.
+  Run `supabase functions delete help-agent` if you deployed it. Tickets and the control-panel Support tab are unchanged.
+- New: `tools/build-bot.mjs` (copies the library + engine into backoffice.html). See `SETUP-HELP.md`.
+
 ## Phase 19 — $5 per shop (card only), help assistant, support tickets
 
 ### Billing: $5 per shop per month, Stripe only
@@ -17,7 +34,7 @@
 - New function `billing-stripe-shops`. Billing screen shows plan, shops, monthly total; lock-out screen is card-only.
   See `SETUP-BILLING.md` (rewritten). App-store builds never show payment buttons.
 
-### Help assistant (live AI) and support tickets
+### Help assistant and support tickets (the AI part was replaced by the built-in AUREUM Bot in Phase 20)
 - **Settings → Help & FAQ** is now three tabs: **Ask the assistant**, **Help topics** (the existing FAQ), **My tickets**; plus a
   **Help & support** button in the sidebar with a red dot when your team has replied.
 - **The assistant** (`help-agent` function, Claude) answers from a ~3,500-word AUREUM knowledge base written from the real app,
@@ -31,10 +48,10 @@
 
 ### Deploy checklist (in order)
 1. Run `supabase/shop-billing.sql` and `supabase/support-schema.sql` in the SQL Editor.
-2. `supabase functions deploy billing-stripe-checkout billing-stripe-webhook admin-manage` and
-   `supabase functions deploy billing-stripe-shops help-agent`; `supabase functions delete billing-paynow-initiate billing-paynow-webhook`.
+2. `supabase functions deploy billing-stripe-checkout admin-manage`, `supabase functions deploy billing-stripe-webhook --no-verify-jwt` (Stripe sends no Supabase sign-in token, so this flag is required) and
+   `supabase functions deploy billing-stripe-shops`; `supabase functions delete billing-paynow-initiate` and then `supabase functions delete billing-paynow-webhook` (one name per command).
 3. Stripe webhook: add the event `customer.subscription.updated`.
-4. `supabase secrets set ANTHROPIC_API_KEY=...` (and set a spend limit at Anthropic).
+4. (No key is needed — the AI assistant was replaced in Phase 20.)
 5. Push to GitHub; hard-refresh devices.
 
 ## Phase 18 — Settings switches that work (Taxes, Receipts, Payment Methods, Notifications, Users & Permissions)
