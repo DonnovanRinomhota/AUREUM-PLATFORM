@@ -554,7 +554,7 @@
   .seg-btn.active{ background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1B140A; }
   .seg-n{ font-family:'JetBrains Mono',monospace; font-size:11px; opacity:.85; margin-left:4px; }
   /* store-app mode: no way to pay is shown anywhere inside the app */
-  .store-app #stPayStripeBtn, .store-app #stPayPaynowBtn, .store-app #stManageStripeBtn, .store-app #authPayBlock, .store-app .web-only{ display:none !important; }
+  .store-app #stPayStripeBtn, .store-app #stSyncShopsBtn, .store-app #stManageStripeBtn, .store-app #authPayBlock, .store-app .web-only{ display:none !important; }
   .store-only{ display:none; }
   .store-app .store-only{ display:block; }
   /* ----- product import dialog ----- */
@@ -604,6 +604,44 @@
   .settings-save-row .unsaved{ display:none; margin-left:12px; font-size:12px; color:#E3B04B; font-weight:600; }
   .toggle-row .soon{ margin-left:8px; font-size:10.5px; padding:2px 7px; border-radius:999px; border:1px solid var(--line-strong); color:var(--sage); font-weight:600; letter-spacing:.03em; }
   .toggle-row .lbl .hint{ display:block; font-size:11px; color:var(--sage); font-weight:400; margin-top:2px; }
+  /* ----- help assistant + support tickets ----- */
+  .help-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; background:#ff6b5e; margin-left:6px; vertical-align:middle; box-shadow:0 0 0 2px rgba(255,107,94,.25); }
+  .help-tabs{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; border-bottom:1px solid var(--line); padding-bottom:10px; }
+  .help-tab{ font:inherit; font-size:13px; font-weight:600; color:var(--ivory-dim); background:transparent; border:1px solid transparent; border-radius:9px; padding:8px 14px; cursor:pointer; }
+  .help-tab:hover{ color:var(--gold-bright); } .help-tab.active{ color:#1B140A; background:linear-gradient(135deg,var(--gold-bright),var(--gold)); }
+  .chat-log{ display:flex; flex-direction:column; gap:12px; min-height:260px; max-height:52vh; overflow-y:auto; padding:6px 4px 10px; scroll-behavior:smooth; }
+  .chat-msg{ max-width:88%; padding:11px 14px; border-radius:14px; font-size:13.5px; line-height:1.6; word-break:break-word; }
+  .chat-msg p{ margin:0 0 6px; } .chat-msg p:last-child{ margin-bottom:0; } .chat-msg .sp{ height:6px; } .chat-msg ol, .chat-msg ul{ margin:4px 0 6px 20px; padding:0; } .chat-msg li{ margin-bottom:3px; }
+  .chat-msg code{ font-family:'JetBrains Mono',monospace; font-size:12px; background:rgba(255,255,255,.07); padding:1px 5px; border-radius:5px; }
+  .chat-msg.bot{ align-self:flex-start; background:rgba(255,255,255,.04); border:1px solid var(--line); color:var(--ivory); }
+  .chat-msg.me{ align-self:flex-end; background:linear-gradient(135deg,rgba(231,199,102,.22),rgba(201,162,39,.16)); border:1px solid rgba(231,199,102,.35); color:var(--ivory); white-space:pre-wrap; }
+  .chat-msg.err{ align-self:flex-start; background:rgba(224,102,102,.08); border:1px solid rgba(224,102,102,.35); color:var(--ivory); }
+  .chat-msg .cta{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .typing{ align-self:flex-start; display:flex; gap:5px; padding:12px 14px; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.04); }
+  .typing i{ width:7px; height:7px; border-radius:50%; background:var(--sage); animation:blink 1.1s infinite ease-in-out; } .typing i:nth-child(2){ animation-delay:.18s; } .typing i:nth-child(3){ animation-delay:.36s; }
+  @keyframes blink{ 0%,80%,100%{ opacity:.25; transform:scale(.8);} 40%{ opacity:1; transform:scale(1);} }
+  @media (prefers-reduced-motion: reduce){ .typing i{ animation:none; opacity:.7; } .chat-log{ scroll-behavior:auto; } }
+  .chat-suggest{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+  .chat-chip{ font:inherit; font-size:12px; color:var(--gold-bright); background:transparent; border:1px solid rgba(231,199,102,.4); border-radius:999px; padding:6px 12px; cursor:pointer; }
+  .chat-chip:hover{ background:rgba(231,199,102,.1); }
+  .chat-input{ display:flex; gap:10px; align-items:flex-end; margin-top:8px; }
+  .chat-input textarea{ flex:1; resize:none; font:inherit; font-size:14px; color:var(--ivory); background:var(--panel-raised); border:1px solid var(--line-strong); border-radius:11px; padding:11px 13px; outline:none; }
+  .chat-input textarea:focus{ border-color:var(--gold-bright); }
+  .chat-foot{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; font-size:12px; color:var(--sage); }
+  .chat-foot a{ color:var(--gold-bright); font-weight:600; text-decoration:none; } .chat-foot a:hover{ text-decoration:underline; } .chat-note{ flex:1 1 100%; font-size:11px; color:var(--sage-dim); }
+  .tk-item{ display:flex; gap:12px; align-items:center; justify-content:space-between; padding:13px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .tk-item:hover{ background:rgba(255,255,255,.03); } .tk-item .sub{ font-size:11.5px; color:var(--sage); margin-top:3px; } .tk-item .nm{ font-weight:600; color:var(--ivory); font-size:13.5px; }
+  .tk-badge{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; border:1px solid var(--line-strong); white-space:nowrap; color:var(--ivory-dim); }
+  .tk-badge.you{ color:#1B140A; background:var(--gold-bright); border-color:var(--gold-bright); } .tk-badge.ok{ color:#6FCF97; border-color:rgba(111,207,151,.5); }
+  .tk-thread{ display:flex; flex-direction:column; gap:10px; margin:14px 0; max-height:46vh; overflow-y:auto; }
+  .tk-bub{ max-width:90%; padding:10px 13px; border-radius:13px; border:1px solid var(--line); font-size:13px; line-height:1.55; white-space:pre-wrap; word-break:break-word; }
+  .tk-bub .who{ font-size:11px; color:var(--sage); font-weight:600; margin-bottom:3px; }
+  .tk-bub.customer{ align-self:flex-end; background:linear-gradient(135deg,rgba(231,199,102,.18),rgba(201,162,39,.12)); border-color:rgba(231,199,102,.3); }
+  .tk-bub.admin{ align-self:flex-start; background:rgba(47,107,84,.28); border-color:rgba(111,207,151,.4); }
+  .tk-bub.bot{ align-self:flex-start; background:rgba(255,255,255,.03); font-size:12px; }
+  .tk-form label{ display:block; font-size:11.5px; font-weight:600; color:var(--sage); margin:12px 0 5px; text-transform:uppercase; letter-spacing:.04em; }
+  .tk-form .modal-field, .tk-form textarea{ width:100%; box-sizing:border-box; } .tk-form textarea{ min-height:130px; resize:vertical; font:inherit; font-size:13.5px; }
+  .tk-back{ display:inline-block; margin-bottom:10px; color:var(--gold-bright); font-weight:600; font-size:12.5px; cursor:pointer; }
   .alerts-more{ font-size:12px; color:var(--gold-bright); cursor:pointer; padding:4px 2px; display:inline-block; }
   .alerts-more:hover{ text-decoration:underline; }
   @media (max-width:760px){
@@ -840,8 +878,7 @@
     <input class="auth-field" id="authPassword" type="password" placeholder="Password">
     <div class="auth-error" id="authError"></div>
     <div id="authPayBlock" style="display:none; margin-bottom:10px;">
-      <div class="auth-btn" id="authPayStripeBtn">Pay with Card (Stripe)</div>
-      <div class="auth-btn" id="authPayPaynowBtn" style="margin-top:8px; background:transparent; border:1px solid var(--gold-bright); color:var(--gold-bright);">Pay with Paynow</div>
+      <div class="auth-btn" id="authPayStripeBtn">Subscribe with card — $5 per shop / month</div>
       <div id="authPayError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;text-align:center;"></div>
       <div style="font-size:11px;color:var(--sage);text-align:center;margin:4px 0 6px;">After paying, wait a few seconds and refresh this page.</div>
     </div>
@@ -972,6 +1009,7 @@
       <div id="syncStatus" title="Sync status" style="font-size:10.5px;color:var(--sage);">&#9679; <span id="syncStatusLabel">Synced</span></div>
       <div class="sf-actions">
         <div id="openPosBtn" class="sf-btn gold" title="Open POS Checkout">Open POS Checkout &#8599;</div>
+        <div id="helpBtn" class="sf-btn" title="Help &amp; support" role="button" tabindex="0">Help &amp; support <span class="help-dot" id="helpDot" hidden></span></div>
         <div id="logoutBtn" class="sf-btn" title="Sign out">Sign out &#10132;</div>
       </div>
     </div>
@@ -2382,7 +2420,7 @@
           <div class="settings-panel" id="settings-stores">
             <div class="settings-panel-head">
               <div class="t">Stores</div>
-              <div class="s">The shop locations selling under this account.</div>
+              <div class="s">The shop locations selling under this account. On a paid plan each shop is $5/month — adding one asks you to confirm the extra charge first.</div>
             </div>
             <div class="form-section">
               <div class="data-toolbar" style="padding:0 0 14px;">
@@ -2608,20 +2646,23 @@
           <div class="settings-panel" id="settings-billing">
             <div class="settings-panel-head">
               <div class="t">Billing &amp; Subscription</div>
-              <div class="s web-only">Standard Plan — $5.00/month. Pay with card (Stripe) or EcoCash/OneMoney/ZimSwitch/InnBucks (Paynow). We never see or store your card number or CVV — payment is entered directly on Stripe's or Paynow's own page.</div>
+              <div class="s web-only">$5 per shop, per month, paid by card (Stripe). Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. We never see or store your card number or CVV — payment is entered directly on Stripe's own page.</div>
               <div class="s store-only">Your AUREUM subscription is managed from your account on the web. This screen shows its current status.</div>
             </div>
             <div class="form-section">
               <div class="create-form-grid" style="margin-bottom:0;">
-                <div class="detail-field"><div class="field-label">Current plan</div><div class="v" style="font-weight:700; color:var(--gold-bright);">Standard — $5.00/mo</div></div>
+                <div class="detail-field"><div class="field-label">Current plan</div><div class="v" id="stPlanLabel" style="font-weight:700; color:var(--gold-bright);">$5 per shop / month</div></div>
+            <div class="detail-field"><div class="field-label">Shops</div><div class="v" id="stShopsVal">—</div></div>
+            <div class="detail-field"><div class="field-label" id="stMonthlyLabel">Monthly total</div><div class="v" id="stMonthlyVal">—</div></div>
                 <div class="detail-field"><div class="field-label">Status</div><div class="v"><span class="status-badge" id="stSubStatusBadge">—</span></div></div>
                 <div class="detail-field"><div class="field-label">Current period ends</div><div class="v" id="stNextBillDate">—</div></div>
                 <div class="detail-field"><div class="field-label">Last paid via</div><div class="v" id="stBillingProcessor">—</div></div>
               </div>
               <div id="stBillingBanner" style="display:none; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(201,162,39,0.12); border:1px solid var(--gold-bright); font-size:12.5px; color:var(--ivory-dim);"></div>
               <div class="settings-save-row" style="margin-top:16px;">
-                <div class="btn-gold" id="stPayStripeBtn">Pay with Card (Stripe)</div>
-                <div class="btn-outline" id="stPayPaynowBtn">Pay with Paynow</div>
+                <div class="btn-gold" id="stPayStripeBtn">Subscribe with card</div>
+              <div class="btn-gold" id="stSyncShopsBtn" style="display:none;">Update subscription</div>
+                
                 <div class="btn-outline" id="stManageStripeBtn" style="display:none;">Manage card on Stripe</div>
               </div>
               <div id="stBillingError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;"></div>
@@ -2650,9 +2691,43 @@
           <div class="settings-panel" id="settings-help">
             <div class="settings-panel-head">
               <div class="t">Help &amp; FAQ</div>
-              <div class="s">Quick answers to common questions about running AUREUM.</div>
+              <div class="s">Ask the assistant, browse common questions, or send a message to the AUREUM team.</div>
             </div>
-            <div id="helpFaqList"></div>
+            <div class="help-tabs" id="helpTabs" role="tablist">
+              <button type="button" class="help-tab active" data-hpane="ask" role="tab">Ask the assistant</button>
+              <button type="button" class="help-tab" data-hpane="topics" role="tab">Help topics</button>
+              <button type="button" class="help-tab" data-hpane="tickets" role="tab">My tickets <span class="help-dot" id="helpTabDot" hidden></span></button>
+            </div>
+
+            <div class="help-pane" id="helpAsk">
+              <div class="chat-log" id="chatLog" aria-live="polite"></div>
+              <div class="chat-suggest" id="chatSuggest"></div>
+              <div class="chat-input">
+                <textarea id="chatInput" rows="2" maxlength="1000" placeholder="Ask anything about using AUREUM…" aria-label="Ask the assistant"></textarea>
+                <div class="btn-gold" id="chatSend" role="button" tabindex="0">Send</div>
+              </div>
+              <div class="chat-foot">
+                <a href="#" id="chatNew">New chat</a><span>·</span><a href="#" id="chatToTicket">Not solved? Contact support</a>
+                <span class="chat-note">The assistant can make mistakes and can't see your shop's data. Never type passwords, PINs or card numbers.</span>
+              </div>
+            </div>
+
+            <div class="help-pane" id="helpTopics" hidden>
+              <div id="helpFaqList"></div>
+            </div>
+
+            <div class="help-pane" id="helpTickets" hidden>
+              <div id="tkListView">
+                <div class="data-toolbar" style="padding:0 0 14px;">
+                  <div class="btn-gold" id="tkNewBtn">New ticket</div>
+                  <div class="btn-ghost-sm" id="tkRefreshBtn" style="margin-left:auto;">Refresh</div>
+                </div>
+                <div id="tkList"></div>
+              </div>
+              <div id="tkFormView" hidden></div>
+              <div id="tkThreadView" hidden></div>
+            </div>
+          </div>
           </div>
 
         </div>
@@ -3254,8 +3329,10 @@ const AureumSync = (function(){
   // admin-schema.sql run yet (no is_exempt column) so deploy order never
   // locks anyone out or blanks the Billing screen.
   async function fetchBusinessBilling(){
+    // The newest columns may not exist yet if the SQL hasn't been run, so fall back step by step (never fail open or crash).
     const base = 'subscription_status, trial_ends_at, current_period_end, billing_processor, stripe_customer_id';
-    let { data, error } = await sb.from('businesses').select(base + ', is_exempt').eq('id', currentBusinessId).maybeSingle();
+    let { data, error } = await sb.from('businesses').select(base + ', is_exempt, stripe_subscription_id, shops_paid, shop_count').eq('id', currentBusinessId).maybeSingle();
+    if(error){ ({ data, error } = await sb.from('businesses').select(base + ', is_exempt').eq('id', currentBusinessId).maybeSingle()); }
     if(error){ ({ data } = await sb.from('businesses').select(base).eq('id', currentBusinessId).maybeSingle()); }
     return data;
   }
@@ -3293,7 +3370,7 @@ const AureumSync = (function(){
       }
       const daysLeft = Math.ceil((end - now) / DAY);
       if(daysLeft <= 3){
-        const who = biz.billing_processor === 'paynow' ? "Paynow doesn't auto-renew, pay again" : 'renew';
+        const who = biz.billing_processor === 'paynow' ? "Paynow is no longer accepted — subscribe with a card" : 'renew';
         if(AUREUM_STORE_MODE) return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period. Manage your subscription from your account on the web.` : 'Your subscription period has ended. Manage your subscription from your account on the web to avoid being locked out.' };
         return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — ${who} in Settings → Billing.` : 'Your subscription period has ended — renew in Settings → Billing to avoid being locked out.' };
       }
@@ -3506,10 +3583,11 @@ const AureumSync = (function(){
     });
     const input = popoverEl.querySelector('.add-shop-row input');
     const go = popoverEl.querySelector('.add-shop-row .go');
-    function addShop(){
+    async function addShop(){
       const val = input.value.trim();
       if(!val) return;
-      if(!SHOPS.includes(val)){ SHOPS.push(val); }
+      const added = await addShopWithBilling(val);      // charges $5 first on a paid plan; false = not added (cancelled / declined)
+      if(!added) return;
       input.value = '';
       refreshAllShopUI();
       onSelect(val);
@@ -7312,6 +7390,8 @@ const AureumSync = (function(){
       el.addEventListener('click', ()=>{
         activeSettingsTab = el.dataset.stab;
         renderSettingsNav();
+        if(activeSettingsTab === 'billing'){ try{ renderBilling(); }catch(e){} }      // always show the current shops and total when Billing is opened
+        if(activeSettingsTab === 'help'){ try{ loadHelpChat(); setHelpPane('ask'); }catch(e){} }
         document.querySelectorAll('.settings-panel').forEach(p=> p.classList.toggle('active', p.id === 'settings-' + activeSettingsTab));
       });
     });
@@ -7538,14 +7618,16 @@ const AureumSync = (function(){
           POS_DEVICES = POS_DEVICES.filter(d=>d.store !== current);
           if(viewingShop === current) setViewingShop('All Shops');
           refreshAllShopUI(); renderSettingsStores(); renderSettingsPos();
+          scheduleShopReconcile();                          // a paid plan drops to the new shop count from the next invoice
         }
       });
     });
   }
-  document.getElementById('stAddStoreBtn').addEventListener('click', ()=>{
+  document.getElementById('stAddStoreBtn').addEventListener('click', async ()=>{
     const val = prompt('New store name');
     if(!val || !val.trim()) return;
-    if(!SHOPS.includes(val.trim())) SHOPS.push(val.trim());
+    const added = await addShopWithBilling(val.trim());
+    if(!added) return;
     refreshAllShopUI();
     renderSettingsStores();
   });
@@ -8474,9 +8556,18 @@ const AureumSync = (function(){
     const status = business.subscription_status || 'trial';
     badge.textContent = status.charAt(0).toUpperCase() + status.slice(1).replace('_',' ');
     badge.className = 'status-badge ' + (status==='active' ? 'completed' : status==='trial' ? 'pending' : 'refunded');
-    procEl.textContent = business.billing_processor ? (business.billing_processor==='stripe'?'Stripe (card)':'Paynow') : '—';
-    const payStripe = document.getElementById('stPayStripeBtn'), payPaynow = document.getElementById('stPayPaynowBtn');
-    payStripe.style.display = ''; payPaynow.style.display = '';
+    procEl.textContent = business.billing_processor ? (business.billing_processor==='stripe'?'Stripe (card)':'Paynow (no longer accepted)') : '—';
+    const payStripe = document.getElementById('stPayStripeBtn'), syncBtn = document.getElementById('stSyncShopsBtn');
+    const have = SHOPS.length, covered = shopsCovered(business), live = cardSubLive(business), nShops = Math.max(1, have);
+    // $5 per shop: what the plan is, how many shops it covers, and what that costs
+    document.getElementById('stPlanLabel').textContent = live ? `${money0(covered * PRICE_PER_SHOP)} / month · ${covered} shop${covered === 1 ? '' : 's'}` : '$5 per shop / month';
+    document.getElementById('stShopsVal').textContent = live ? `${have} in your account · ${covered} covered` : `${have} in your account`;
+    document.getElementById('stMonthlyLabel').textContent = live ? 'Monthly total' : 'Monthly total once subscribed';
+    document.getElementById('stMonthlyVal').textContent = live ? `${money0(covered * PRICE_PER_SHOP)}  (${covered} × $5)` : `${money0(nShops * PRICE_PER_SHOP)}  (${nShops} × $5)`;
+    payStripe.textContent = `Subscribe with card — ${money0(nShops * PRICE_PER_SHOP)}/month (${nShops} shop${nShops === 1 ? '' : 's'} × $5)`;
+    payStripe.style.display = live ? 'none' : '';
+    syncBtn.style.display = (live && business.subscription_status === 'active' && have > covered) ? '' : 'none';
+    syncBtn.textContent = `Update subscription to cover all ${have} shops — ${money0(have * PRICE_PER_SHOP)}/month`;
 
     const periodEnd = business.current_period_end ? new Date(business.current_period_end) : null;
     const trialEnd = business.trial_ends_at ? new Date(business.trial_ends_at) : null;
@@ -8492,7 +8583,7 @@ const AureumSync = (function(){
       dateEl.textContent = 'No expiry';
       bannerEl.style.display = 'block';
       bannerEl.textContent = 'Your account has complimentary access — no payment is needed.';
-      payStripe.style.display = 'none'; payPaynow.style.display = 'none';
+      payStripe.style.display = 'none'; syncBtn.style.display = 'none';
     } else if(status === 'trial' && trialEnd){
       const daysLeft = Math.ceil((trialEnd - new Date()) / 86400000);
       if(daysLeft <= 5){
@@ -8506,13 +8597,18 @@ const AureumSync = (function(){
       bannerEl.textContent = AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed. Please pay below to avoid interruption.';
     } else if(status === 'active' && periodEnd){
       const daysLeft = Math.ceil((periodEnd - new Date()) / 86400000);
-      if(business.billing_processor === 'paynow' && daysLeft <= 3 && !AUREUM_STORE_MODE){
+      if(business.billing_processor === 'paynow' && !AUREUM_STORE_MODE){
         bannerEl.style.display = 'block';
-        bannerEl.textContent = daysLeft > 0 ? `Your Paynow period ends in ${daysLeft} day${daysLeft===1?'':'s'} — Paynow doesn't auto-renew, pay again below to continue.` : `Your Paynow period has ended — pay again below to continue.`;
+        bannerEl.textContent = `Paynow is no longer accepted for subscriptions. Your access continues until ${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} — subscribe with a card before then to keep using AUREUM.`;
+        payStripe.style.display = '';
+      } else if(live && have > covered && !AUREUM_STORE_MODE){
+        bannerEl.style.display = 'block';
+        bannerEl.textContent = `You have ${have} shops but your subscription covers ${covered}. Everything keeps working — update your subscription to pay for all ${have} shops (${money0(have * PRICE_PER_SHOP)}/month).`;
       }
     }
 
     manageBtn.style.display = business.stripe_customer_id ? '' : 'none';
+    if(live && business.subscription_status === 'active' && covered > Math.max(1, have) && Date.now() - lastShopReconcile > 60000) scheduleShopReconcile(1500);   // shops were removed: lower next month's bill
 
     const { data: payments } = await sb.from('subscription_payments')
       .select('*').eq('business_id', currentBusinessId).order('created_at', { ascending:false }).limit(50);
@@ -8523,7 +8619,7 @@ const AureumSync = (function(){
       tbody.innerHTML = payments.map(p=>`
         <tr>
           <td>${new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
-          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : p.processor === 'manual' ? 'Complimentary (admin)' : 'Paynow'}</td>
+          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : p.processor === 'manual' ? 'Complimentary (admin)' : 'Paynow (no longer accepted)'}</td>
           <td>${p.period_start ? new Date(p.period_start).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + new Date(p.period_end).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}</td>
           <td style="text-align:right;" class="mono">$${Number(p.amount).toFixed(2)}</td>
           <td><span class="status-badge ${p.status==='paid'?'completed':p.status==='pending'?'pending':'refunded'}">${p.status}</span></td>
@@ -8531,12 +8627,116 @@ const AureumSync = (function(){
     }
   }
 
+  /* ----- $5 per shop ----- */
+  const PRICE_PER_SHOP = 5;
+  const money0 = n => '$' + (Math.round(n * 100) / 100).toFixed(Number.isInteger(Math.round(n * 100) / 100) ? 0 : 2);
+  const cardSubLive = b => !!b && b.billing_processor === 'stripe' && !!b.stripe_subscription_id && !b.is_exempt && ['active', 'past_due'].includes(b.subscription_status);
+  const shopsCovered = b => cardSubLive(b) ? (b.shops_paid ?? 1) : null;      // an older subscription (shops_paid empty) covered 1 shop
+  async function callShopsFn(action){
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/billing-stripe-shops`, {
+      method: 'POST', headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` }, body: JSON.stringify({ action })
+    });
+    const json = await resp.json().catch(() => ({ error: 'Unexpected reply from billing.' }));
+    if(!resp.ok || json.error){ const e = new Error(json.error || 'Billing request failed.'); e.status = resp.status; throw e; }
+    return json;
+  }
+  // A confirmation dialog that resolves true only after the charge went through; false if cancelled or declined.
+  function confirmShopCharge({ title, intro, fine, button, action }){
+    return new Promise(resolve => {
+      let done = false; const finish = v => { if(!done){ done = true; obs.disconnect(); resolve(v); } };
+      openDetailModal(title, `<div style="font-size:13.5px;line-height:1.6;color:var(--ivory-dim);">${intro}</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--sage);line-height:1.55;">${fine}</div>
+        <div id="shopChargeError" style="margin-top:12px;font-size:12.5px;color:var(--danger);min-height:16px;" role="alert"></div>`,
+        `<div class="modal-btn ghost" id="shopChargeCancel">Cancel</div><div class="modal-btn solid" id="shopChargeGo">${button}</div>`);
+      const modal = document.getElementById('detailModal');
+      const obs = new MutationObserver(() => { if(!modal.classList.contains('open')) finish(false); }); obs.observe(modal, { attributes:true, attributeFilter:['class'] });
+      document.getElementById('shopChargeCancel').addEventListener('click', () => { closeModal('detailModal'); finish(false); });
+      const go = document.getElementById('shopChargeGo');
+      go.addEventListener('click', async () => {
+        if(go.classList.contains('busy')) return;
+        go.classList.add('busy', 'disabled'); go.textContent = 'Charging your card…';
+        try{
+          const r = await callShopsFn(action);
+          done = true; obs.disconnect(); closeModal('detailModal'); resolve(r);
+        }catch(err){
+          go.classList.remove('busy', 'disabled'); go.textContent = button;
+          document.getElementById('shopChargeError').textContent = err.status === 402 ? err.message : (err.message && !/fetch|network/i.test(err.message) ? err.message : "Couldn't reach billing — check your connection and try again.");
+        }
+      });
+    });
+  }
+  // Every way of adding a shop comes through here. It resolves true only when the shop has been added.
+  let addingShop = false;
+  async function addShopWithBilling(rawName){
+    const name = String(rawName || '').trim();
+    if(!name) return false;
+    if(SHOPS.includes(name)) return true;                                // already exists — just select it, as before
+    if(addingShop) return false;
+    addingShop = true;
+    try{
+      let biz = null; try{ biz = await fetchBusinessBilling(); }catch(e){}
+      if(biz) currentBusinessRow = biz;
+      // trial, complimentary, or no paid plan yet → free (the card checkout later charges $5 × shops)
+      if(!biz || biz.is_exempt || !(biz.subscription_status === 'active' || biz.subscription_status === 'past_due')){
+        SHOPS.push(name);
+        if(biz && biz.subscription_status === 'trial' && !biz.is_exempt) aureumToast('Shop added. During your free trial every shop is included — afterwards each shop is $5/month.', 'ok');
+        return true;
+      }
+      if(biz.billing_processor === 'paynow' || !cardSubLive(biz)){
+        aureumToast('Paynow subscriptions are no longer accepted. Subscribe with a card in Settings → Billing, then add your shop.', 'danger'); return false;
+      }
+      if(biz.subscription_status === 'past_due'){ aureumToast("Your last payment didn't go through. Fix your payment in Settings → Billing before adding a shop.", 'danger'); return false; }
+      if(AUREUM_STORE_MODE){ aureumToast('Adding a shop changes your subscription. Manage your subscription from your account on the web, then add the shop.', 'danger'); return false; }
+      let st; try{ st = await callShopsFn('status'); }catch(err){ aureumToast("Couldn't reach billing to check your plan — check your connection and try again.", 'danger'); return false; }
+      if(st.shopsPaid > SHOPS.length){ SHOPS.push(name); aureumToast(`Shop added — it uses one of the ${st.shopsPaid} shops your subscription already covers.`, 'ok'); return true; }
+      const next = (st.shopsPaid || SHOPS.length) + 1;
+      const now = st.estimateNow ? `about <b>${money0(st.estimateNow)}</b>` : 'a <b>prorated part of $5</b>';
+      const r = await confirmShopCharge({
+        title: `Add “${escHtml(name)}”?`,
+        intro: `Each shop is <b>$5 a month</b>. Adding this shop takes your subscription from <b>${money0((st.shopsPaid || SHOPS.length) * PRICE_PER_SHOP)}</b> to <b>${money0(next * PRICE_PER_SHOP)}</b> a month (${next} shops).`,
+        fine: `Stripe charges your saved card ${now} now, for the rest of this billing period, then ${money0(next * PRICE_PER_SHOP)} each month. If the payment fails, the shop is not added.`,
+        button: `Pay & add shop`, action: 'add'
+      });
+      if(!r) return false;
+      SHOPS.push(name);
+      aureumToast(`Shop added. Your subscription now covers ${r.shopsPaid} shops — ${money0(r.monthlyNow)}/month.`, 'ok');
+      renderBilling();
+      return true;
+    } finally { addingShop = false; }
+  }
+  // After shops are removed, lower the quantity so the NEXT invoice is smaller (never charges, no refund for this month).
+  let reconcileTimer = null, lastShopReconcile = 0;
+  function scheduleShopReconcile(delay){
+    clearTimeout(reconcileTimer);
+    reconcileTimer = setTimeout(async () => {
+      lastShopReconcile = Date.now();
+      try{
+        const biz = await fetchBusinessBilling();
+        if(!cardSubLive(biz) || biz.subscription_status !== 'active') return;
+        const r = await callShopsFn('reconcile');
+        if(r.changed){ aureumToast(`Your subscription now covers ${r.shopsPaid} shop${r.shopsPaid === 1 ? '' : 's'} — ${money0(r.monthlyNow)}/month from your next payment.`, 'ok'); renderBilling(); }
+      }catch(e){ /* quiet — tried again the next time Billing is opened */ }
+    }, delay == null ? 7000 : delay);
+  }
+  document.getElementById('stSyncShopsBtn').addEventListener('click', async () => {
+    const errEl = document.getElementById('stBillingError'); errEl.textContent = '';
+    const have = SHOPS.length, biz = await fetchBusinessBilling(), covered = shopsCovered(biz) || 1;
+    const r = await confirmShopCharge({
+      title: 'Update your subscription',
+      intro: `You have <b>${have} shops</b> but your subscription covers <b>${covered}</b>. Updating takes it from <b>${money0(covered * PRICE_PER_SHOP)}</b> to <b>${money0(have * PRICE_PER_SHOP)}</b> a month.`,
+      fine: `Stripe charges your saved card a prorated amount now for the rest of this billing period, then ${money0(have * PRICE_PER_SHOP)} each month. If the payment fails, nothing changes.`,
+      button: 'Pay & update', action: 'sync_up'
+    });
+    if(r){ aureumToast(`Subscription updated — ${r.shopsPaid} shops, ${money0(r.monthlyNow)}/month.`, 'ok'); renderBilling(); }
+  });
+
   async function startBillingPayment(processor, errElId = 'stBillingError'){
     const errEl = document.getElementById(errElId);
     errEl.textContent = '';
     if(!sb) return;
     const { data: { session } } = await sb.auth.getSession();
-    const fnName = processor === 'stripe' ? 'billing-stripe-checkout' : 'billing-paynow-initiate';
+    const fnName = 'billing-stripe-checkout';          // card (Stripe) is the only way to pay for a subscription
     try{
       const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/${fnName}`, {
         method: 'POST',
@@ -8551,7 +8751,6 @@ const AureumSync = (function(){
     }
   }
   document.getElementById('stPayStripeBtn').addEventListener('click', ()=> startBillingPayment('stripe'));
-  document.getElementById('stPayPaynowBtn').addEventListener('click', ()=> startBillingPayment('paynow'));
   document.getElementById('stManageStripeBtn').addEventListener('click', async ()=>{
     const errEl = document.getElementById('stBillingError');
     errEl.textContent = '';
@@ -8578,7 +8777,6 @@ const AureumSync = (function(){
       const result = params.get('billing');
       setTimeout(()=>{
         if(result === 'success') aureumToast('Payment successful — thank you!', 'ok');
-        else if(result === 'paynow_return') aureumToast('If you completed the Paynow payment, it\'ll reflect here shortly.', 'ok');
         renderBilling();
       }, 800);
       const clean = window.location.pathname;
@@ -8586,15 +8784,217 @@ const AureumSync = (function(){
     }
   })();
 
+  /* ===== HELP ASSISTANT + SUPPORT TICKETS =====
+     The assistant is the help-agent function (Claude + the AUREUM knowledge). It can only explain — it never sees the
+     business's records. Tickets go to the AUREUM team through database functions that check who you are. */
+  const HELP_SUGGESTIONS = ['How do I add a product?', 'How does billing work?', 'How do I close my shift?', 'Why is my stock negative?', 'How do I import products from Excel?'];
+  const HELP_WELCOME = "Hi! I'm AUREUM Help. Ask me how to do anything in AUREUM — products, stock, the till, shifts, settings or billing. I can explain, but I can't see or change your shop's data.";
+  let helpChat = { messages:[], busy:false }, helpFromPage = '';
+  const helpKey = () => 'aureum_help_chat_' + (currentBusinessId || 'x');
+  function loadHelpChat(){ try{ const j = JSON.parse(sessionStorage.getItem(helpKey()) || 'null'); if(j && Array.isArray(j.messages)) helpChat.messages = j.messages.slice(-40); }catch(e){} }
+  function saveHelpChat(){ try{ sessionStorage.setItem(helpKey(), JSON.stringify({ messages: helpChat.messages.slice(-40) })); }catch(e){} }
+  function currentPageLabel(){
+    const nav = document.querySelector('.nav-item.active'); let l = nav ? nav.textContent.replace(/\s+/g, ' ').trim() : '';
+    if(typeof currentPage !== 'undefined' && currentPage === 'settings'){ const t = document.querySelector('.settings-tab-item.active'); if(t) l = 'Settings → ' + t.textContent.trim(); }
+    return l;
+  }
+  // assistant text → safe HTML (escaped first; then just bold, code, lists and paragraphs)
+  function chatHtml(text){
+    const lines = escHtml(String(text)).split('\n'); let out = '', list = null;
+    const flush = () => { if(list){ out += `<${list.t}>${list.items.map(i => `<li>${i}</li>`).join('')}</${list.t}>`; list = null; } };
+    lines.forEach(raw => {
+      const line = raw.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>'); let m;
+      if((m = line.match(/^\s*(\d+)[.)]\s+(.*)$/))){ if(!list || list.t !== 'ol'){ flush(); list = { t:'ol', items:[] }; } list.items.push(m[2]); }
+      else if((m = line.match(/^\s*[-*•]\s+(.*)$/))){ if(!list || list.t !== 'ul'){ flush(); list = { t:'ul', items:[] }; } list.items.push(m[1]); }
+      else if(line.trim() === ''){ flush(); out += '<div class="sp"></div>'; }
+      else { flush(); out += `<p>${line}</p>`; }
+    });
+    flush(); return out;
+  }
+  function renderChat(){
+    const log = document.getElementById('chatLog'); if(!log) return;
+    const msgs = helpChat.messages;
+    log.innerHTML = `<div class="chat-msg bot">${chatHtml(HELP_WELCOME)}</div>` + msgs.map((m, i) => m.role === 'user'
+      ? `<div class="chat-msg me">${escHtml(m.content)}</div>`
+      : `<div class="chat-msg ${m.error ? 'err' : 'bot'}">${chatHtml(m.content)}${m.ticket ? `<div class="cta"><div class="btn-gold" data-ticket-from="${i}" role="button" tabindex="0">Send this to support</div></div>` : ''}</div>`).join('')
+      + (helpChat.busy ? '<div class="typing" aria-label="The assistant is typing"><i></i><i></i><i></i></div>' : '');
+    log.querySelectorAll('[data-ticket-from]').forEach(b => b.addEventListener('click', () => openTicketForm({ fromChat:true })));
+    log.scrollTop = log.scrollHeight;
+    document.getElementById('chatSuggest').innerHTML = msgs.length ? '' : HELP_SUGGESTIONS.map(q => `<button type="button" class="chat-chip">${escHtml(q)}</button>`).join('');
+    document.querySelectorAll('#chatSuggest .chat-chip').forEach(c => c.addEventListener('click', () => sendChat(c.textContent)));
+    const send = document.getElementById('chatSend'); send.classList.toggle('disabled', helpChat.busy);
+  }
+  async function sendChat(text){
+    text = String(text || '').trim();
+    if(!text || helpChat.busy) return;
+    helpChat.messages.push({ role:'user', content:text }); helpChat.busy = true; saveHelpChat(); renderChat();
+    document.getElementById('chatInput').value = '';
+    const fail = (msg, ticket = true) => { helpChat.messages.push({ role:'assistant', content:msg, error:true, ticket }); };
+    try{
+      if(!navigator.onLine) throw Object.assign(new Error("You're offline — connect to the internet to ask the assistant."), { soft:true });
+      const { data: { session } } = await sb.auth.getSession();
+      const history = helpChat.messages.filter(m => !m.error).slice(-12).map(m => ({ role:m.role, content:m.content }));
+      const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/help-agent`, {
+        method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ messages: history, page: helpFromPage || currentPageLabel(), storeApp: AUREUM_STORE_MODE })
+      });
+      const json = await resp.json().catch(() => ({ error:'The assistant sent an unexpected reply.' }));
+      if(!resp.ok || json.error) throw Object.assign(new Error(json.error || 'The assistant is unavailable right now.'), { code: json.code });
+      helpChat.messages.push({ role:'assistant', content: json.reply, ticket: !!json.suggestTicket });
+    }catch(err){
+      fail(err.soft || err.code ? err.message : "Couldn't reach the assistant — check your connection and try again, or contact support.", !err.soft);
+    }
+    helpChat.busy = false; saveHelpChat(); renderChat();
+  }
+  document.getElementById('chatSend').addEventListener('click', () => sendChat(document.getElementById('chatInput').value));
+  document.getElementById('chatInput').addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(e.target.value); } });
+  document.getElementById('chatSend').addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); sendChat(document.getElementById('chatInput').value); } });
+  document.getElementById('chatNew').addEventListener('click', e => { e.preventDefault(); helpChat.messages = []; saveHelpChat(); renderChat(); });
+  document.getElementById('chatToTicket').addEventListener('click', e => { e.preventDefault(); openTicketForm({ fromChat:true }); });
+
+  /* ----- tabs ----- */
+  function setHelpPane(name){
+    document.querySelectorAll('#helpTabs .help-tab').forEach(t => { t.classList.toggle('active', t.dataset.hpane === name); t.setAttribute('aria-selected', t.dataset.hpane === name); });
+    document.getElementById('helpAsk').hidden = name !== 'ask'; document.getElementById('helpTopics').hidden = name !== 'topics'; document.getElementById('helpTickets').hidden = name !== 'tickets';
+    if(name === 'ask'){ renderChat(); } if(name === 'tickets'){ showTicketList(); loadSupportTickets(); }
+  }
+  document.querySelectorAll('#helpTabs .help-tab').forEach(t => t.addEventListener('click', () => setHelpPane(t.dataset.hpane)));
+  function openHelp(pane){
+    helpFromPage = currentPageLabel();
+    if(!/Help/.test(helpFromPage)) { /* remember where they were */ } else helpFromPage = '';
+    document.querySelector('.nav-item[data-page="settings"]').click();
+    document.querySelector('.settings-tab-item[data-stab="help"]').click();
+    setHelpPane(pane || 'ask');
+  }
+  document.getElementById('helpBtn').addEventListener('click', () => openHelp('ask'));
+  document.getElementById('helpBtn').addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openHelp('ask'); } });
+
+  /* ----- support tickets ----- */
+  const TK_CAT = { problem:'Problem', question:'Question / how-to', billing:'Billing', account:'Account', feature:'Feature request' };
+  const TK_PRI = { low:'Not urgent', normal:'Normal', high:'Important', urgent:"Urgent — I can't sell" };
+  let supportTickets = [], supportAvailable = true, openTicketId = null;
+  const tkNeedsYou = t => t.status === 'pending';
+  const tkUnseen = t => !!t.last_admin_reply_at && (!t.customer_seen_at || new Date(t.customer_seen_at) < new Date(t.last_admin_reply_at));
+  const tkBadge = t => t.status === 'open' ? ['Waiting for AUREUM', ''] : t.status === 'pending' ? ['Waiting for you', 'you'] : t.status === 'resolved' ? ['Solved', 'ok'] : ['Closed', ''];
+  const tkWhen = iso => iso ? new Date(iso).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+  const cleanRpcMsg = m => String(m || '').replace(/^RATE_LIMIT:\s*/, '').replace(/^.*?P0001[: ]*/, '');
+  function updateHelpDots(){
+    const unseen = supportTickets.some(tkUnseen);
+    ['helpDot', 'helpTabDot'].forEach(id => { const el = document.getElementById(id); if(el) el.hidden = !unseen; });
+  }
+  async function loadSupportTickets(){
+    const box = document.getElementById('tkList');
+    try{
+      const { data, error } = await sb.from('support_tickets').select('*').order('last_message_at', { ascending:false }).limit(50);
+      if(error) throw error;
+      supportTickets = data || []; supportAvailable = true;
+    }catch(err){ supportAvailable = false; supportTickets = []; }
+    updateHelpDots();
+    if(!box) return;
+    if(!supportAvailable){ box.innerHTML = `<div style="color:var(--sage);font-size:13px;padding:18px 4px;">Support tickets aren't available yet. Please try again later.</div>`; return; }
+    box.innerHTML = supportTickets.length === 0
+      ? `<div style="color:var(--sage);font-size:13px;padding:22px 4px;">No tickets yet. If the assistant can't solve something, press <b>New ticket</b> and the AUREUM team will reply here.</div>`
+      : supportTickets.map(t => { const [label, cls] = tkBadge(t); return `<div class="tk-item" data-tk="${escHtml(t.id)}" role="button" tabindex="0">
+          <div><div class="nm">${escHtml(t.subject)}${tkUnseen(t) ? '<span class="help-dot" title="New reply"></span>' : ''}</div>
+            <div class="sub">${escHtml(TK_CAT[t.category] || t.category)} · updated ${escHtml(tkWhen(t.last_message_at))}</div></div>
+          <span class="tk-badge ${cls}">${label}</span></div>`; }).join('');
+    box.querySelectorAll('[data-tk]').forEach(el => { el.addEventListener('click', () => openTicketThread(el.dataset.tk)); el.addEventListener('keydown', e => { if(e.key === 'Enter') openTicketThread(el.dataset.tk); }); });
+  }
+  const showTkView = v => { ['tkListView', 'tkFormView', 'tkThreadView'].forEach(id => { document.getElementById(id).hidden = id !== v; }); };
+  function showTicketList(){ showTkView('tkListView'); openTicketId = null; }
+  document.getElementById('tkNewBtn').addEventListener('click', () => openTicketForm({}));
+  document.getElementById('tkRefreshBtn').addEventListener('click', loadSupportTickets);
+
+  function chatTranscript(){
+    return helpChat.messages.filter(m => !m.error).map(m => (m.role === 'user' ? 'You: ' : 'Assistant: ') + m.content).join('\n\n');
+  }
+  function openTicketForm({ fromChat }){
+    openHelpTicketsPane();
+    const hasChat = helpChat.messages.some(m => !m.error);
+    const lastQ = [...helpChat.messages].reverse().find(m => m.role === 'user');
+    const v = document.getElementById('tkFormView');
+    v.innerHTML = `<div class="tk-form">
+      <a class="tk-back" id="tkFormBack">‹ Back to my tickets</a>
+      <label for="tkSubject">Subject</label><input type="text" id="tkSubject" class="modal-field" maxlength="140" placeholder="A few words, e.g. “Printer won't print”" value="${fromChat && lastQ ? escHtml(lastQ.content.slice(0, 80)) : ''}">
+      <label for="tkCategory">What is it about?</label><select id="tkCategory" class="modal-field">${Object.entries(TK_CAT).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select>
+      <label for="tkPriority">How urgent is it?</label><select id="tkPriority" class="modal-field">${Object.entries(TK_PRI).map(([k, n]) => `<option value="${k}" ${k === 'normal' ? 'selected' : ''}>${n}</option>`).join('')}</select>
+      <label for="tkBody">What happened?</label><textarea id="tkBody" class="modal-field" maxlength="8000" placeholder="Tell us what you were doing, what you expected and what happened instead."></textarea>
+      ${hasChat ? `<label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12.5px;"><input type="checkbox" id="tkAttachChat" ${fromChat ? 'checked' : ''}> Include my chat with the assistant, so the team sees what was already tried</label>` : ''}
+      <div style="font-size:11.5px;color:var(--sage);margin-top:10px;">The screen you were on is added automatically. Please don't include passwords, PINs or card numbers.</div>
+      <div id="tkFormError" style="font-size:12.5px;color:var(--danger);min-height:16px;margin-top:10px;" role="alert"></div>
+      <div class="settings-save-row" style="margin-top:10px;"><div class="btn-gold" id="tkSubmit" role="button" tabindex="0">Send ticket</div></div></div>`;
+    showTkView('tkFormView');
+    document.getElementById('tkFormBack').addEventListener('click', () => { showTicketList(); });
+    document.getElementById('tkSubmit').addEventListener('click', submitTicket);
+    setTimeout(() => document.getElementById(fromChat && lastQ ? 'tkBody' : 'tkSubject').focus(), 50);
+  }
+  function openHelpTicketsPane(){
+    if(document.getElementById('settings-help').classList.contains('active') === false){ helpFromPage = currentPageLabel() || helpFromPage; document.querySelector('.nav-item[data-page="settings"]').click(); document.querySelector('.settings-tab-item[data-stab="help"]').click(); }
+    document.querySelectorAll('#helpTabs .help-tab').forEach(t => t.classList.toggle('active', t.dataset.hpane === 'tickets'));
+    document.getElementById('helpAsk').hidden = true; document.getElementById('helpTopics').hidden = true; document.getElementById('helpTickets').hidden = false;
+  }
+  async function submitTicket(){
+    const btn = document.getElementById('tkSubmit'), err = document.getElementById('tkFormError'); if(btn.classList.contains('busy')) return;
+    const subject = document.getElementById('tkSubject').value.trim(), body = document.getElementById('tkBody').value.trim();
+    err.textContent = '';
+    if(subject.length < 3){ err.textContent = 'Please give your ticket a short subject.'; document.getElementById('tkSubject').focus(); return; }
+    if(body.length < 5){ err.textContent = 'Please describe what happened (at least a few words).'; document.getElementById('tkBody').focus(); return; }
+    btn.classList.add('busy', 'disabled'); btn.textContent = 'Sending…';
+    const attach = document.getElementById('tkAttachChat'), transcript = attach && attach.checked ? chatTranscript() : null;
+    try{
+      const { data, error } = await sb.rpc('support_create_ticket', { p_subject:subject, p_category:document.getElementById('tkCategory').value, p_priority:document.getElementById('tkPriority').value, p_body:body, p_page:helpFromPage || currentPageLabel(), p_transcript:transcript });
+      if(error) throw error;
+      aureumToast('Ticket sent. The AUREUM team will reply here.', 'ok');
+      await loadSupportTickets(); openTicketThread(data);
+    }catch(e){ btn.classList.remove('busy', 'disabled'); btn.textContent = 'Send ticket'; err.textContent = cleanRpcMsg(e.message) || "Couldn't send the ticket — check your connection and try again."; }
+  }
+  async function openTicketThread(id){
+    openHelpTicketsPane(); openTicketId = id;
+    const t = supportTickets.find(x => x.id === id), v = document.getElementById('tkThreadView');
+    v.innerHTML = '<div style="color:var(--sage);padding:16px 4px;">Loading…</div>'; showTkView('tkThreadView');
+    let msgs = [];
+    try{ const { data, error } = await sb.from('support_ticket_messages').select('*').eq('ticket_id', id).order('created_at', { ascending:true }); if(error) throw error; msgs = data || []; }
+    catch(e){ v.innerHTML = `<a class="tk-back" id="tkThreadBack">‹ Back to my tickets</a><div style="color:var(--danger);padding:10px 4px;">Couldn't load this ticket.</div>`; document.getElementById('tkThreadBack').addEventListener('click', showTicketList); return; }
+    const [label, cls] = t ? tkBadge(t) : ['', ''];
+    const closed = t && (t.status === 'resolved' || t.status === 'closed');
+    v.innerHTML = `<a class="tk-back" id="tkThreadBack">‹ Back to my tickets</a>
+      <div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;">
+        <div><div style="font-weight:700;font-size:15px;color:var(--ivory);">${escHtml(t ? t.subject : 'Ticket')}</div><div style="font-size:11.5px;color:var(--sage);margin-top:3px;">${t ? escHtml(TK_CAT[t.category] || '') + ' · ' + escHtml(TK_PRI[t.priority] || '') : ''}</div></div>
+        <span class="tk-badge ${cls}">${label}</span></div>
+      <div class="tk-thread" id="tkThread">${msgs.map(m => m.author_type === 'bot'
+        ? `<div class="tk-bub bot"><details><summary style="cursor:pointer;">Your chat with the assistant</summary><div style="margin-top:6px;white-space:pre-wrap;">${escHtml(String(m.body).replace(/^Chat with the help assistant before this ticket:\s*/, ''))}</div></details></div>`
+        : `<div class="tk-bub ${m.author_type === 'admin' ? 'admin' : 'customer'}"><div class="who">${m.author_type === 'admin' ? 'AUREUM Support' : 'You'} · ${escHtml(tkWhen(m.created_at))}</div>${escHtml(m.body)}</div>`).join('')}</div>
+      ${closed ? `<div style="font-size:12.5px;color:var(--sage);margin-bottom:8px;">This ticket is marked ${t.status === 'resolved' ? 'solved' : 'closed'}. Write below to reopen it.</div>` : ''}
+      <textarea id="tkReply" class="modal-field" style="width:100%;box-sizing:border-box;min-height:84px;font:inherit;font-size:13.5px;" maxlength="8000" placeholder="Write a reply…" aria-label="Reply"></textarea>
+      <div id="tkReplyError" style="font-size:12.5px;color:var(--danger);min-height:16px;margin-top:6px;" role="alert"></div>
+      <div class="settings-save-row" style="margin-top:8px;"><div class="btn-gold" id="tkReplySend" role="button" tabindex="0">Send reply</div>${closed ? '' : '<div class="btn-outline" id="tkSolved" role="button" tabindex="0">Mark as solved</div>'}</div>`;
+    const th = document.getElementById('tkThread'); th.scrollTop = th.scrollHeight;
+    document.getElementById('tkThreadBack').addEventListener('click', () => { showTicketList(); loadSupportTickets(); });
+    document.getElementById('tkReplySend').addEventListener('click', async () => {
+      const txt = document.getElementById('tkReply').value.trim(), e = document.getElementById('tkReplyError'); e.textContent = '';
+      if(!txt){ e.textContent = 'Type a message first.'; return; }
+      const b = document.getElementById('tkReplySend'); if(b.classList.contains('busy')) return; b.classList.add('busy', 'disabled');
+      const { error } = await sb.rpc('support_add_message', { p_ticket_id:id, p_body:txt });
+      if(error){ b.classList.remove('busy', 'disabled'); e.textContent = cleanRpcMsg(error.message); return; }
+      await loadSupportTickets(); openTicketThread(id);
+    });
+    const solved = document.getElementById('tkSolved');
+    if(solved) solved.addEventListener('click', async () => { await sb.rpc('support_close_ticket', { p_ticket_id:id }); aureumToast('Marked as solved. Reply any time to reopen it.', 'ok'); await loadSupportTickets(); openTicketThread(id); });
+    if(t && tkUnseen(t)){ await sb.rpc('support_mark_seen', { p_ticket_id:id }); t.customer_seen_at = new Date().toISOString(); updateHelpDots(); }
+  }
+  // the red dot: check quietly now and every couple of minutes
+  async function checkSupportDot(){ try{ if(!sb || !currentBusinessId) return; await loadSupportTickets(); }catch(e){} }
+  setInterval(checkSupportDot, 120000);
+
   /* ===== HELP & FAQ ===== */
   const HELP_FAQ = [
-    { q: "How do I add a new shop?", a: "Back Office → Dashboard → click the \"All Shops\" dropdown (top right, or \"VIEWING\" in the sidebar) → type a name under \"Add a new shop…\". A new shop starts with no products or stock — add products to it explicitly (Products → edit each product's shop assignment, or receive stock via a GRN for that shop)." },
+    { q: "How do I add a new shop?", a: "Back Office → Dashboard → click the \"All Shops\" dropdown (top right, or \"VIEWING\" in the sidebar) → type a name under \"Add a new shop…\" (or Settings → Stores → Add store). During your free trial every shop is included. On a paid plan each shop is $5 a month: you'll be shown the new monthly total and asked to confirm, your card is charged a prorated amount right away, and if the payment fails the shop is not added. A new shop starts with no products or stock — add products to it explicitly (Products → edit each product's shop assignment, or receive stock via a GRN for that shop)." },
     { q: "How do I add staff and let them use the till?", a: "Back Office → Staff → add their name, role, and a 4-digit PIN. At the POS, they select the shop, then their name, then enter their PIN to start a shift — no PIN means no till access." },
     { q: "How do card and mobile money payments work at checkout now?", a: "Card and Mobile buttons at checkout just record which payment method the customer used — they don't process a real charge inside the app. Take payment on your own card terminal or mobile money handset, then tap the matching button here to log the sale." },
     { q: "Why does a new shop show 0 stock for a product I sell elsewhere?", a: "Each shop has its own independent inventory. A product isn't available at a shop until you explicitly add it there — this is intentional, so stock counts and low-stock alerts are always accurate per shop rather than assuming every shop carries everything." },
     { q: "Can I delete a Purchase Order, GRN, Stock Adjustment, or Transfer?", a: "No — these are kept as permanent history for accuracy and audit purposes. To correct a mistake, create a new adjustment or transfer that reverses it, rather than deleting the record." },
-    { q: "How does billing work?", a: "AUREUM is $5.00/month (Standard Plan), payable by card via Stripe or via Paynow (EcoCash, OneMoney, Visa/Mastercard, ZimSwitch, or InnBucks depending on what your Paynow account supports). Your card or mobile money details are entered directly on Stripe's or Paynow's own page — never stored by AUREUM." },
-    { q: "Does my subscription auto-renew?", a: "Card payments via Stripe renew automatically each month. Paynow payments don't auto-renew (mobile money and most Paynow methods require you to actively approve each payment) — you'll see a reminder in Settings → Billing a few days before your period ends." },
+    { q: "How does billing work?", a: "AUREUM is $5 per shop, per month, paid by card through Stripe. Every shop is included while you are on your free trial; afterwards you pay $5 × the number of shops (3 shops = $15/month). Your card details are entered directly on Stripe's own page — never stored by AUREUM. Paynow is no longer accepted for subscriptions." },
+    { q: "Does my subscription auto-renew?", a: "Yes. Your card is charged automatically each month. If you remove a shop, your next invoice drops by $5 (there is no refund for the month already paid). If a payment fails you'll see a notice in Settings → Billing and can update your card there." },
   ];
   /* ===== DATA RECOVERY (from the copy older versions kept in this browser) ===== */
   const RECOVERY_LABELS = { purchaseOrders:'purchase order', grnRecords:'goods received note', stockAdjustments:'stock adjustment', transfers:'stock transfer', expenses:'expense', employeeHours:'employee-hours entry', receipts:'receipt' };
@@ -8644,7 +9044,7 @@ const AureumSync = (function(){
   function renderHelpFaq(){
     const el = document.getElementById('helpFaqList');
     if(!el) return;
-    el.innerHTML = HELP_FAQ.filter(f => !(AUREUM_STORE_MODE && /^(How does billing work|Does my subscription auto-renew)/i.test(f.q))).map((item, i) => `
+    el.innerHTML = HELP_FAQ.filter(f => !(AUREUM_STORE_MODE && /^(How does billing work|Does my subscription auto-renew|How do I add a new shop)/i.test(f.q))).map((item, i) => `
       <div class="faq-item" data-faq="${i}" style="border-bottom:1px solid var(--line); padding:14px 0; cursor:pointer;">
         <div style="display:flex; justify-content:space-between; align-items:center; font-weight:600; color:var(--ivory);">
           <span>${item.q}</span><span class="faq-car" style="color:var(--sage-dim);">&#9662;</span>
@@ -8703,6 +9103,7 @@ const AureumSync = (function(){
     renderAllData();
     try{ runNotifications(); }catch(e){}                          // first look = baseline only
     try{ maybeShowDailySummary(); }catch(e){}
+    try{ loadHelpChat(); checkSupportDot(); }catch(e){}
     window.addEventListener('beforeunload', persistAureum);
     renderSyncStatus();
     window.addEventListener('online', async ()=>{
@@ -8761,7 +9162,6 @@ const AureumSync = (function(){
       if(subCheck.billingLock && !AUREUM_STORE_MODE){
         payBlock.style.display = 'block';
         document.getElementById('authPayStripeBtn').onclick = () => startBillingPayment('stripe', 'authPayError');
-        document.getElementById('authPayPaynowBtn').onclick = () => startBillingPayment('paynow', 'authPayError');
       } else { payBlock.style.display = 'none'; }
       document.getElementById('authSubmitBtn').textContent = 'Sign Out';
       document.getElementById('authSubmitBtn').onclick = aureumSignOut;

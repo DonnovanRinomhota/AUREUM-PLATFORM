@@ -1,7 +1,7 @@
 # AUREUM Platform
 
 A multi-shop point-of-sale + back-office web app, backed by Supabase (database + sign-in) and hosted on Vercel.
-Customers subscribe with Stripe (card) or Paynow (EcoCash/OneMoney, etc.).
+Customers subscribe by card (Stripe): **$5 per shop, per month**.
 
 ## Structure
 
@@ -12,16 +12,19 @@ admin.html             → platform control panel at /admin (accounts, trials, s
 sw.js, offline.html    → offline support (apps open with no internet once loaded)
 manifest*.webmanifest  → makes the Back Office and POS installable as apps
 icons/, vendor/        → app icons; fonts and libraries hosted by AUREUM (see vendor/LICENSES.md)
-supabase/              → database SQL files + edge functions
+supabase/              → database SQL files + edge functions (incl. help-agent: the AI assistant)
+tools/                 → build-knowledge.mjs (regenerates the assistant's knowledge file)
 vercel.json            → redirects, /admin route, headers
 ```
 
 ## SQL to run in Supabase (SQL Editor), once each, in this order
-`schema.sql` → `billing-schema.sql` → `admin-schema.sql` → `data-safety.sql`
+`schema.sql` → `billing-schema.sql` → `admin-schema.sql` → `data-safety.sql` → `shop-billing.sql` → `support-schema.sql`
 
 ## Guides
 - `SETUP-INSTRUCTIONS.md` — first-time setup
+- `SETUP-HELP.md` — the AI help assistant and support tickets
 - `SETUP-BILLING.md`, `SETUP-ADMIN.md`, `SETUP-DATA-SAFETY.md`, `SETUP-EMAIL-TEMPLATE.md`
+- `SETTINGS-GUIDE.md` — what every Settings switch does
 - `SHIFTS-GUIDE.md` — how shifts, closing and refunds work
 - `IMPORT-AND-IMAGES.md` — importing products from Excel/CSV, and product pictures
 - `CHANGELOG.md` — what changed in each phase

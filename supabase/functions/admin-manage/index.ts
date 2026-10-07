@@ -18,6 +18,8 @@ const corsHeaders = {
 };
 
 const VALID_STATUSES = ["trial", "active", "past_due", "cancelled", "suspended"];
+const TICKET_STATUSES = ["open", "pending", "resolved", "closed"];
+const TICKET_PRIORITIES = ["low", "normal", "high", "urgent"];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BUSINESS_COLS =
@@ -267,6 +269,114 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false }).range(offset, offset + limit - 1);
         if (error) throw new HttpError(500, "Could not load activity: " + error.message);
         return json({ rows: data ?? [], total: count ?? 0 });
+      }
+
+      // ---------------- support tickets ----------------
+      // Customers create tickets from the Back Office (Settings → Help & FAQ). Here the AUREUM team reads and answers
+      // them. Replies to customers are shown as "AUREUM Support" (an admin's own email is never shown to a customer);
+      // internal notes are visible only here.
+      case "tickets_summary": {
+        const { data, error } = await supabase.from("support_tickets").select("status, priority");
+        if (error) throw new HttpError(500, "Could not load tickets: " + error.message);
+        const rows = data ?? [];
+        const count = (f: (r: any) => boolean) => rows.filter(f).length;
+        return json({ summary: {
+          open: count(r => r.status === "open"), pending: count(r => r.status === "pending"),
+          resolved: count(r => r.status === "resolved"), closed: count(r => r.status === "closed"),
+          urgentOpen: count(r => r.status === "open" && r.priority === "urgent"), total: rows.length,
+        } });
+      }
+
+      case "tickets_list": {
+        const limit = intInRange(body.limit ?? 25, 1, 100, "Page size");
+        const offset = intInRange(body.offset ?? 0, 0, 1_000_000, "Offset");
+        const status = String(body.status ?? "active"), priority = String(body.priority ?? "");
+        const search = String(body.search ?? "").trim().slice(0, 100);
+        if (status !== "active" && status !== "all" && !TICKET_STATUSES.includes(status)) throw new HttpError(400, "Invalid status filter.");
+        if (priority && !TICKET_PRIORITIES.includes(priority)) throw new HttpError(400, "Invalid priority filter.");
+        let q = supabase.from("support_tickets").select("*", { count: "exact" });
+        if (status === "active") q = q.in("status", ["open", "pending"]);
+        else if (status !== "all") q = q.eq("status", status);
+        if (priority) q = q.eq("priority", priority);
+        if (search) q = q.ilike("subject", "%" + search.replace(/[%_]/g, "") + "%");
+        const { data, error, count } = await q.order("last_message_at", { ascending: false }).range(offset, offset + limit - 1);
+        if (error) throw new HttpError(500, "Could not load tickets: " + error.message);
+        const rows = data ?? [];
+        const ids = Array.from(new Set(rows.map((r: any) => r.business_id)));
+        const names: Record<string, any> = {};
+        if (ids.length) {
+          const { data: biz } = await supabase.from("businesses").select("id, name, subscription_status, is_exempt").in("id", ids);
+          (biz ?? []).forEach((b: any) => { names[b.id] = b; });
+        }
+        return json({ total: count ?? rows.length, rows: rows.map((r: any) => ({
+          ...r, business_name: names[r.business_id]?.name ?? "(deleted business)",
+          plan_status: names[r.business_id]?.is_exempt ? "complimentary" : names[r.business_id]?.subscription_status ?? null,
+        })) });
+      }
+
+      case "ticket_get": {
+        const id = requireUuid(body.ticketId);
+        const { data: ticket, error } = await supabase.from("support_tickets").select("*").eq("id", id).maybeSingle();
+        if (error) throw new HttpError(500, "Could not load the ticket: " + error.message);
+        if (!ticket) throw new HttpError(404, "Ticket not found.");
+        const { data: messages } = await supabase.from("support_ticket_messages").select("*").eq("ticket_id", id).order("created_at", { ascending: true });
+        const { data: biz } = await supabase.from("businesses").select(BUSINESS_COLS).eq("id", ticket.business_id).maybeSingle();
+        return json({ ticket, messages: messages ?? [], business: biz ?? null });
+      }
+
+      case "ticket_reply": {
+        const id = requireUuid(body.ticketId);
+        const text = String(body.body ?? "").trim();
+        if (text.length < 1) throw new HttpError(400, "Type a reply first.");
+        if (text.length > 8000) throw new HttpError(400, "The reply is too long (8,000 characters at most).");
+        const internal = body.internal === true;
+        const nextStatus = body.status ? String(body.status) : "";
+        if (nextStatus && !TICKET_STATUSES.includes(nextStatus)) throw new HttpError(400, "Invalid status.");
+        const { data: ticket } = await supabase.from("support_tickets").select("*").eq("id", id).maybeSingle();
+        if (!ticket) throw new HttpError(404, "Ticket not found.");
+        const { error: mErr } = await supabase.from("support_ticket_messages").insert({
+          ticket_id: id, business_id: ticket.business_id, author_type: "admin", internal,
+          author_name: internal ? "Internal note" : "AUREUM Support", author_email: internal ? email : null, body: text,
+        });
+        if (mErr) throw new HttpError(500, "Could not save the reply: " + mErr.message);
+        const now = new Date().toISOString();
+        const patch: Record<string, unknown> = { updated_at: now, last_message_at: now };
+        if (!internal) { patch.last_admin_reply_at = now; patch.status = nextStatus || "pending"; }      // waiting for the customer
+        else if (nextStatus) patch.status = nextStatus;
+        if (patch.status === "resolved" || patch.status === "closed") patch.closed_at = now;
+        else if (patch.status) patch.closed_at = null;
+        if (!ticket.assigned_to) patch.assigned_to = email;                                              // whoever answers first owns it
+        await supabase.from("support_tickets").update(patch).eq("id", id);
+        await audit(internal ? "ticket_note" : "ticket_reply", { id: ticket.business_id }, { ticket: id, subject: ticket.subject, status: patch.status ?? ticket.status });
+        return json({ ok: true });
+      }
+
+      case "ticket_update": {
+        const id = requireUuid(body.ticketId);
+        const { data: ticket } = await supabase.from("support_tickets").select("*").eq("id", id).maybeSingle();
+        if (!ticket) throw new HttpError(404, "Ticket not found.");
+        const patch: Record<string, unknown> = {};
+        if (body.status !== undefined) {
+          const st = String(body.status);
+          if (!TICKET_STATUSES.includes(st)) throw new HttpError(400, "Invalid status.");
+          patch.status = st; patch.closed_at = (st === "resolved" || st === "closed") ? new Date().toISOString() : null;
+        }
+        if (body.priority !== undefined) {
+          const pr = String(body.priority);
+          if (!TICKET_PRIORITIES.includes(pr)) throw new HttpError(400, "Invalid priority.");
+          patch.priority = pr;
+        }
+        if (body.assignedTo !== undefined) {
+          const who = String(body.assignedTo).trim().toLowerCase();
+          patch.assigned_to = who === "" ? null : who === "me" ? email : who.slice(0, 120);
+        }
+        if (!Object.keys(patch).length) throw new HttpError(400, "Nothing to change.");
+        const before = { status: ticket.status, priority: ticket.priority, assigned_to: ticket.assigned_to };     // snapshot BEFORE the update
+        patch.updated_at = new Date().toISOString();
+        const { data: updated, error } = await supabase.from("support_tickets").update(patch).eq("id", id).select("*").single();
+        if (error) throw new HttpError(500, "Could not update the ticket: " + error.message);
+        await audit("ticket_update", { id: ticket.business_id }, { ticket: id, subject: ticket.subject, from: before, to: patch });
+        return json({ ok: true, ticket: updated });
       }
 
       default:

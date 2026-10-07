@@ -1,8 +1,9 @@
 // supabase/functions/billing-stripe-checkout/index.ts
 // Creates a Stripe Checkout Session (subscription mode) for the AUREUM
-// platform's own $5/month Standard plan — this is YOUR (the platform
-// owner's) Stripe account charging YOUR customers, completely separate
-// from the old per-shop card-processing that was removed from the POS.
+// platform's own subscription: $5 per SHOP per month. The number of shops
+// is read from the database (never trusted from the browser). This is YOUR
+// (the platform owner's) Stripe account charging YOUR customers, completely
+// separate from the old per-shop card-processing that was removed from the POS.
 //
 // Card details are entered on Stripe's own hosted Checkout page and never
 // touch this server or Supabase — we only ever store the resulting
@@ -15,7 +16,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PLAN_PRICE_USD = 5.00;
+const PRICE_PER_SHOP_USD = 5.00;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -45,10 +46,17 @@ Deno.serve(async (req) => {
 
     const { data: business } = await supabase
       .from("businesses")
-      .select("id, name, stripe_customer_id")
+      .select("*")
       .eq("id", profile.business_id)
       .maybeSingle();
     if (!business) throw new Error("Business not found.");
+
+    // someone who already has a live card subscription must not start a second one (they would be charged twice)
+    const periodOpen = !business.current_period_end || new Date(business.current_period_end) > new Date();
+    if (business.billing_processor === "stripe" && business.subscription_status === "active" && business.stripe_subscription_id && periodOpen) {
+      throw new Error("You already have an active subscription. To add a shop use Settings → Stores; to change your card use “Manage card”.");
+    }
+    const shops = Math.max(1, Number(business.shop_count) || 0);
 
     const { returnUrl } = await req.json();
     const base = returnUrl || "https://example.com";
@@ -57,15 +65,17 @@ Deno.serve(async (req) => {
       mode: "subscription",
       "managed_payments[enabled]": "false",
       "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][product_data][name]": "AUREUM Standard Plan",
+      "line_items[0][price_data][product_data][name]": "AUREUM — per shop",
       "line_items[0][price_data][recurring][interval]": "month",
-      "line_items[0][price_data][unit_amount]": String(Math.round(PLAN_PRICE_USD * 100)),
-      "line_items[0][quantity]": "1",
+      "line_items[0][price_data][unit_amount]": String(Math.round(PRICE_PER_SHOP_USD * 100)),
+      "line_items[0][quantity]": String(shops),
       success_url: `${base}?billing=success`,
       cancel_url: `${base}?billing=cancelled`,
       client_reference_id: business.id,
       "metadata[business_id]": business.id,
+      "metadata[shops]": String(shops),
       "subscription_data[metadata][business_id]": business.id,
+      "subscription_data[metadata][shops]": String(shops),
     };
     if (business.stripe_customer_id) form.customer = business.stripe_customer_id;
     else form.customer_email = userData.user.email || "";
@@ -81,7 +91,7 @@ Deno.serve(async (req) => {
     const session = await resp.json();
     if (session.error) throw new Error(session.error.message);
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    return new Response(JSON.stringify({ url: session.url, shops, monthly: shops * PRICE_PER_SHOP_USD }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

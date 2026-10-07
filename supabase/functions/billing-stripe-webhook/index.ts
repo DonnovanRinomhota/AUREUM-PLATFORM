@@ -4,7 +4,8 @@
 // your database without anyone needing to check manually. Configure the
 // webhook URL in the Stripe Dashboard (see SETUP-BILLING.md) pointing at
 // this function's URL, listening for: checkout.session.completed,
-// invoice.paid, invoice.payment_failed, customer.subscription.deleted.
+// invoice.paid, invoice.payment_failed, customer.subscription.updated,
+// customer.subscription.deleted.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -40,10 +41,12 @@ Deno.serve(async (req) => {
       const session = event.data.object;
       const businessId = session.client_reference_id || session.metadata?.business_id;
       if (businessId) {
+        const shops = parseInt(session.metadata?.shops ?? "", 10);          // how many shops this checkout paid for ($5 each)
         await supabase.from("businesses").update({
           stripe_customer_id: session.customer,
           stripe_subscription_id: session.subscription,
           billing_processor: "stripe",
+          ...(shops > 0 ? { shops_paid: shops } : {}),
         }).eq("id", businessId);
       }
     }
@@ -54,11 +57,15 @@ Deno.serve(async (req) => {
       const periodStart = new Date(invoice.lines.data[0]?.period?.start * 1000).toISOString();
       const periodEnd = new Date(invoice.lines.data[0]?.period?.end * 1000).toISOString();
       if (businessId) {
-        await supabase.from("businesses").update({
-          subscription_status: "active",
-          current_period_start: periodStart,
-          current_period_end: periodEnd,
-        }).eq("id", businessId);
+        // Adding a shop part-way through the month creates a small "proration" invoice (billing_reason
+        // subscription_update). It is a payment to record — NOT a new billing period, so the period dates stay.
+        if (invoice.billing_reason !== "subscription_update") {
+          await supabase.from("businesses").update({
+            subscription_status: "active",
+            current_period_start: periodStart,
+            current_period_end: periodEnd,
+          }).eq("id", businessId);
+        }
         await supabase.from("subscription_payments").insert({
           business_id: businessId,
           processor: "stripe",
@@ -82,6 +89,20 @@ Deno.serve(async (req) => {
           amount: (invoice.amount_due || 0) / 100, currency: invoice.currency || "usd",
           status: "failed", external_reference: invoice.id,
         });
+      }
+    }
+
+    if (event.type === "customer.subscription.updated") {
+      // keep "shops paid for" equal to the subscription's quantity, however it was changed
+      const sub = event.data.object;
+      let businessId = sub.metadata?.business_id;
+      if (!businessId && sub.id) {
+        const { data: found } = await supabase.from("businesses").select("id").eq("stripe_subscription_id", sub.id).maybeSingle();
+        businessId = found?.id;
+      }
+      const quantity = Number(sub.items?.data?.[0]?.quantity);
+      if (businessId && quantity > 0) {
+        await supabase.from("businesses").update({ shops_paid: quantity }).eq("id", businessId);
       }
     }
 

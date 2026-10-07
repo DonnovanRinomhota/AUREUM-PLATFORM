@@ -1,5 +1,42 @@
 # Changelog
 
+## Phase 19 — $5 per shop (card only), help assistant, support tickets
+
+### Billing: $5 per shop per month, Stripe only
+- **Price is now $5 × the number of shops.** Free trial: every shop included. Checkout charges for the shop count read
+  from the database (a browser can't change it). **Paynow is removed** for subscriptions (people already paid up keep access
+  until their period ends and are asked to subscribe by card).
+- **Adding a shop on a paid plan**: the owner sees "$10 → $15 a month" and confirms; Stripe charges the prorated amount
+  immediately; **if the card is declined the shop is not added**. Both doors (Settings → Stores and the shop dropdown) use the same rule.
+- **Removing a shop** lowers the next invoice by $5 (never charges, no refund for the month already paid).
+- A **database rule** (`shop-billing.sql`) stops a paid card subscription adding a shop it hasn't paid for, even by editing
+  data directly. Trials, complimentary accounts, removals and renames are never blocked; accounts with more shops than they pay for
+  are not locked out (they get an "Update subscription to cover all N shops" button).
+- The webhook now records shops paid for, follows plan changes made in Stripe (`customer.subscription.updated`), and no longer
+  treats the small mid-month "new shop" invoice as a new billing period.
+- New function `billing-stripe-shops`. Billing screen shows plan, shops, monthly total; lock-out screen is card-only.
+  See `SETUP-BILLING.md` (rewritten). App-store builds never show payment buttons.
+
+### Help assistant (live AI) and support tickets
+- **Settings → Help & FAQ** is now three tabs: **Ask the assistant**, **Help topics** (the existing FAQ), **My tickets**; plus a
+  **Help & support** button in the sidebar with a red dot when your team has replied.
+- **The assistant** (`help-agent` function, Claude) answers from a ~3,500-word AUREUM knowledge base written from the real app,
+  plus safe account facts (role, plan, shop count, screen). It cannot see or change business data, is told never to invent
+  features, offers a ticket when it can't help, replies in the user's language, and has daily limits per person and business.
+  A test cross-checks the knowledge against the app (menus, tabs, every switch label, prices, thresholds, buttons).
+- **Tickets**: customers send a ticket (category, urgency, message, optional chat transcript). You answer from the control
+  panel's new **Support** tab (filters, search, replies shown as "AUREUM Support", internal notes, status/priority/assign, audit log).
+  Customers read only their own tickets and never your internal notes; they can't write to the tables directly or forge a reply.
+- See `SETUP-HELP.md`.
+
+### Deploy checklist (in order)
+1. Run `supabase/shop-billing.sql` and `supabase/support-schema.sql` in the SQL Editor.
+2. `supabase functions deploy billing-stripe-checkout billing-stripe-webhook admin-manage` and
+   `supabase functions deploy billing-stripe-shops help-agent`; `supabase functions delete billing-paynow-initiate billing-paynow-webhook`.
+3. Stripe webhook: add the event `customer.subscription.updated`.
+4. `supabase secrets set ANTHROPIC_API_KEY=...` (and set a spend limit at Anthropic).
+5. Push to GitHub; hard-refresh devices.
+
 ## Phase 18 — Settings switches that work (Taxes, Receipts, Payment Methods, Notifications, Users & Permissions)
 
 ### Root cause: the switches could not be moved

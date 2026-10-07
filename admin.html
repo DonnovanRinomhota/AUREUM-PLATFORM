@@ -161,6 +161,22 @@
     .facts{ grid-template-columns:1fr; }
     .modal-body, .modal-head{ padding-left:16px; padding-right:16px; }
   }
+
+  /* ----- support tickets ----- */
+  .pri{ display:inline-block; font-weight:700; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1px solid var(--line-strong); color:var(--ivory-dim); }
+  .pri.urgent{ color:#ff8a80; border-color:#ff8a80; } .pri.high{ color:#E3B04B; border-color:#E3B04B; } .pri.low{ color:var(--sage); }
+  .tk-row{ cursor:pointer; } .tk-row:hover{ background:rgba(255,255,255,0.03); }
+  .tk-row.hot td:first-child{ box-shadow:inset 3px 0 0 #ff8a80; }
+  .tk-thread{ display:flex; flex-direction:column; gap:10px; margin:14px 0; max-height:46vh; overflow-y:auto; padding-right:4px; }
+  .tk-msg{ padding:10px 12px; border-radius:12px; border:1px solid var(--line); font-size:13px; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-width:92%; }
+  .tk-msg .who{ font-size:11px; color:var(--sage); margin-bottom:3px; font-weight:600; }
+  .tk-msg.customer{ align-self:flex-start; background:rgba(255,255,255,0.03); }
+  .tk-msg.admin{ align-self:flex-end; background:rgba(47,107,84,0.25); border-color:rgba(111,207,151,0.35); }
+  .tk-msg.bot{ align-self:flex-start; background:rgba(90,169,163,0.08); font-size:12px; opacity:.9; }
+  .tk-msg.note{ align-self:flex-end; background:rgba(227,176,75,0.10); border:1px dashed #E3B04B; }
+  .tk-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+  .tk-controls select.field{ width:auto; margin:0; padding:8px 10px; }
+  textarea.field{ min-height:90px; resize:vertical; }
 </style>
 <meta name="theme-color" content="#0A1B16">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
@@ -210,6 +226,7 @@
     <div class="tabs" id="tabs">
       <div class="tab active" data-tab="accounts">Accounts</div>
       <div class="tab" data-tab="admins">Admin access</div>
+      <div class="tab" data-tab="support">Support <span class="pill" id="ticketBadge" hidden></span></div>
       <div class="tab" data-tab="activity">Activity log</div>
     </div>
 
@@ -255,6 +272,27 @@
       </div>
     </section>
 
+    <!-- Support tickets -->
+    <section id="tab-support" hidden>
+      <div class="muted" id="tkHint" style="margin-bottom:12px; font-size:12.5px; line-height:1.6;">Tickets sent by customers from Settings → Help &amp; FAQ. "Open" = waiting for us; "Waiting for customer" = we replied.</div>
+      <div class="toolbar">
+        <input class="field search" id="tkSearch" type="search" placeholder="Search ticket subject…">
+        <select class="field" id="tkStatus">
+          <option value="active">Needs attention</option><option value="open">Open (waiting for us)</option><option value="pending">Waiting for customer</option>
+          <option value="resolved">Resolved</option><option value="closed">Closed</option><option value="all">All tickets</option>
+        </select>
+        <select class="field" id="tkPriority"><option value="">Any priority</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select>
+        <div class="btn ghost small" id="tkRefresh">Refresh</div>
+      </div>
+      <div class="table-wrap">
+        <table style="min-width:860px;">
+          <thead><tr><th>Priority</th><th>Subject</th><th>Business</th><th>Category</th><th>Status</th><th>Last activity</th></tr></thead>
+          <tbody id="tkBody"></tbody>
+        </table>
+        <div class="pager" id="tkPager"></div>
+      </div>
+    </section>
+
     <!-- Activity -->
     <section id="tab-activity" hidden>
       <div class="table-wrap">
@@ -276,6 +314,17 @@
       <div class="x" id="mClose" title="Close">&#10005;</div>
     </div>
     <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+
+<!-- ===== TICKET MODAL ===== -->
+<div class="overlay" id="ticketOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tkTitle" style="max-width:720px;">
+    <div class="modal-head">
+      <div><h2 id="tkTitle"></h2><div class="muted" id="tkSub" style="font-size:12px;margin-top:3px;word-break:break-word;"></div></div>
+      <div class="x" id="tkClose" title="Close" role="button" tabindex="0">&#10005;</div>
+    </div>
+    <div class="modal-body" id="tkView"></div>
   </div>
 </div>
 
@@ -375,7 +424,7 @@
       $('whoEmail').textContent = who.email;
       $('whoRole').hidden = !who.isSuper;
       showView('app');
-      await Promise.all([ loadSummary(), loadAccounts() ]);
+      await Promise.all([ loadSummary(), loadAccounts(), loadTicketBadge() ]);
     }catch(err){
       if(err.status === 403){ $('deniedMsg').textContent = err.message; showView('denied'); }
       else if(err.status === 401){ showView('signin'); }
@@ -395,7 +444,7 @@
     showView('loading'); verifyAndEnter();
   });
   $('siPassword').addEventListener('keydown', e => { if(e.key === 'Enter') $('siBtn').click(); });
-  async function signOut(){ await sb.auth.signOut(); closeManage(); showView('signin'); }
+  async function signOut(){ await sb.auth.signOut(); closeManage(); if(typeof closeTicket === 'function') closeTicket(); showView('signin'); }
   $('signOutLink').addEventListener('click', signOut);
   $('deniedSignOut').addEventListener('click', signOut);
 
@@ -626,8 +675,9 @@
   /* ---------- tabs ---------- */
   function setTab(name){
     document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-    ['accounts','admins','activity'].forEach(n => $('tab-' + n).hidden = (n !== name));
+    ['accounts','admins','support','activity'].forEach(n => $('tab-' + n).hidden = (n !== name));
     if(name === 'admins') loadAdmins();
+    if(name === 'support') loadTickets(true);
     if(name === 'activity') loadActivity(true);
   }
   document.querySelectorAll('#tabs .tab').forEach(t => t.addEventListener('click', ()=> setTab(t.dataset.tab)));
@@ -673,7 +723,8 @@
   /* ---------- activity log ---------- */
   const ACTION_LABEL = {
     extend_trial:'Extended free trial', extend_subscription:'Extended subscription', grant_exempt:'Granted complimentary access',
-    remove_exempt:'Removed complimentary access', set_status:'Changed status', add_admin:'Added admin', remove_admin:'Removed admin'
+    remove_exempt:'Removed complimentary access', set_status:'Changed status', add_admin:'Added admin', remove_admin:'Removed admin',
+    ticket_reply:'Replied to a ticket', ticket_note:'Added an internal note', ticket_update:'Updated a ticket'
   };
   function detailText(a){
     const d = a.details || {};
@@ -684,6 +735,8 @@
       case 'set_status': return `${STATUS_LABEL[d.from] || d.from} → ${STATUS_LABEL[d.to] || d.to}`;
       case 'add_admin': return `${d.email}${d.isSuper ? ' (super admin)' : ''}`;
       case 'remove_admin': return d.email || '';
+      case 'ticket_reply': case 'ticket_note': return d.subject || '';
+      case 'ticket_update': return `${d.subject || ''} — ` + Object.entries(d.to || {}).filter(([k]) => k !== 'updated_at' && k !== 'closed_at').map(([k, v]) => `${k.replace('_', ' ')}: ${v ?? 'none'}`).join(', ');
       default: return '';
     }
   }
@@ -707,6 +760,100 @@
         : `<div>${state.act.total} event${state.act.total===1?'':'s'}</div>`;
       const more = $('moreAct'); if(more) more.addEventListener('click', ()=> loadActivity(false));
     }catch(err){ $('activityBody').innerHTML = `<tr><td colspan="5" class="empty">${esc(err.message)}</td></tr>`; }
+  }
+
+  /* ---------- support tickets ---------- */
+  const TK_CATEGORY = { billing:'Billing', problem:'Problem', question:'Question', feature:'Feature request', account:'Account' };
+  const TK_STATUS = { open:'Open', pending:'Waiting for customer', resolved:'Resolved', closed:'Closed' };
+  const TK_PRIORITY = { urgent:'Urgent', high:'High', normal:'Normal', low:'Low' };
+  state.tk = { rows:[], total:0, current:null };
+  async function loadTicketBadge(){
+    const b = $('ticketBadge');
+    try{ const { summary } = await api('tickets_summary'); b.textContent = summary.open + (summary.urgentOpen ? '!' : ''); b.hidden = !summary.open; b.title = `${summary.open} open, ${summary.pending} waiting for customer` + (summary.urgentOpen ? `, ${summary.urgentOpen} urgent` : ''); }
+    catch(err){ b.hidden = true; }
+  }
+  async function loadTickets(reset){
+    if(reset){ state.tk.rows = []; state.tk.total = 0; $('tkBody').innerHTML = `<tr><td colspan="6" class="empty">Loading…</td></tr>`; }
+    try{
+      const { rows, total } = await api('tickets_list', { status: $('tkStatus').value, priority: $('tkPriority').value, search: $('tkSearch').value.trim(), limit:25, offset: state.tk.rows.length });
+      state.tk.rows = state.tk.rows.concat(rows); state.tk.total = total;
+      renderTickets();
+    }catch(err){
+      $('tkBody').innerHTML = `<tr><td colspan="6" class="empty">${/does not exist|relation/i.test(err.message) ? 'Support tickets are not set up yet — run support-schema.sql in the Supabase SQL Editor.' : esc(err.message)}</td></tr>`;
+      $('tkPager').innerHTML = '';
+    }
+  }
+  function renderTickets(){
+    const rows = state.tk.rows;
+    $('tkBody').innerHTML = rows.length === 0 ? `<tr><td colspan="6" class="empty">No tickets here. ${$('tkStatus').value === 'active' ? 'Nothing needs attention.' : ''}</td></tr>` : rows.map(t => `
+      <tr class="tk-row ${t.priority === 'urgent' && t.status === 'open' ? 'hot' : ''}" data-id="${esc(t.id)}" tabindex="0">
+        <td><span class="pri ${esc(t.priority)}">${esc(TK_PRIORITY[t.priority] || t.priority)}</span></td>
+        <td>${esc(t.subject)}<div class="sub">${esc(t.created_by_email || '')}${t.assigned_to ? ' · assigned to ' + esc(t.assigned_to) : ''}</div></td>
+        <td>${esc(t.business_name)}<div class="sub">${esc(t.plan_status || '')}</div></td>
+        <td>${esc(TK_CATEGORY[t.category] || t.category)}</td>
+        <td><span class="badge ${t.status === 'open' ? 'b-trial' : t.status === 'pending' ? 'b-active' : 'b-cancelled'}">${esc(TK_STATUS[t.status] || t.status)}</span></td>
+        <td class="muted" style="white-space:nowrap;">${esc(fmtDateTime(t.last_message_at))}</td>
+      </tr>`).join('');
+    $('tkPager').innerHTML = rows.length < state.tk.total ? `<div>Showing ${rows.length} of ${state.tk.total}</div><span class="btn ghost small" id="tkMore">Load more</span>` : `<div>${state.tk.total} ticket${state.tk.total === 1 ? '' : 's'}</div>`;
+    const more = $('tkMore'); if(more) more.addEventListener('click', () => loadTickets(false));
+    document.querySelectorAll('#tkBody .tk-row').forEach(r => { r.addEventListener('click', () => openTicket(r.dataset.id)); r.addEventListener('keydown', e => { if(e.key === 'Enter') openTicket(r.dataset.id); }); });
+  }
+  ['tkStatus', 'tkPriority'].forEach(id => $(id).addEventListener('change', () => loadTickets(true)));
+  let tkSearchTimer = null; $('tkSearch').addEventListener('input', () => { clearTimeout(tkSearchTimer); tkSearchTimer = setTimeout(() => loadTickets(true), 300); });
+  $('tkRefresh').addEventListener('click', () => { loadTickets(true); loadTicketBadge(); });
+  function closeTicket(){ $('ticketOverlay').hidden = true; document.body.style.overflow = ''; state.tk.current = null; }
+  $('tkClose').addEventListener('click', closeTicket); $('ticketOverlay').addEventListener('click', e => { if(e.target === $('ticketOverlay')) closeTicket(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('ticketOverlay').hidden) closeTicket(); });
+  async function openTicket(id){
+    try{ state.tk.current = await api('ticket_get', { ticketId:id }); }catch(err){ toast(err.message, 'err'); return; }
+    renderTicket(); $('ticketOverlay').hidden = false; document.body.style.overflow = 'hidden';
+  }
+  function renderTicket(){
+    const { ticket: t, messages, business: b } = state.tk.current;
+    $('tkTitle').textContent = t.subject;
+    $('tkSub').textContent = `${b ? b.name : '(deleted business)'}${b ? ' · ' + (b.is_exempt ? 'complimentary' : (STATUS_LABEL[b.subscription_status] || b.subscription_status)) : ''} · ${t.created_by_email || ''} · ${TK_CATEGORY[t.category] || t.category}${t.page_context ? ' · on “' + t.page_context + '”' : ''}`;
+    const msgHtml = messages.map(m => {
+      const kind = m.author_type === 'admin' ? (m.internal ? 'note' : 'admin') : m.author_type;
+      const who = m.author_type === 'bot' ? 'Assistant chat' : m.author_type === 'customer' ? (m.author_email || 'Customer') : m.internal ? `Internal note · ${m.author_email || ''}` : 'AUREUM Support';
+      return `<div class="tk-msg ${kind}"><div class="who">${esc(who)} · ${esc(fmtDateTime(m.created_at))}</div>${esc(m.body)}</div>`;
+    }).join('');
+    $('tkView').innerHTML = `
+      <div class="tk-controls">
+        <select class="field" id="tkSetStatus" aria-label="Status">${Object.entries(TK_STATUS).map(([k, v]) => `<option value="${k}" ${t.status === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
+        <select class="field" id="tkSetPriority" aria-label="Priority">${Object.entries(TK_PRIORITY).map(([k, v]) => `<option value="${k}" ${t.priority === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
+        <span class="muted" style="font-size:12px;">${t.assigned_to ? 'Assigned to ' + esc(t.assigned_to) : 'Unassigned'}</span>
+        <div class="btn ghost small" id="tkAssignMe">Assign to me</div>
+      </div>
+      <div class="tk-thread" id="tkThread">${msgHtml}</div>
+      <textarea class="field" id="tkReplyText" placeholder="Write a reply to the customer…" maxlength="8000"></textarea>
+      <div class="tk-controls">
+        <div class="btn" id="tkSend">Send reply</div>
+        <div class="btn ghost" id="tkSendResolve">Send &amp; resolve</div>
+        <div class="btn ghost" id="tkNote" title="Only the AUREUM team can see a note">Add internal note</div>
+      </div>
+      <div class="muted" style="font-size:11.5px;margin-top:10px;">A reply is shown to the customer as “AUREUM Support” and lights the new-reply dot in their Back Office. Internal notes are never shown to them.</div>`;
+    const thread = $('tkThread'); thread.scrollTop = thread.scrollHeight;
+    $('tkSetStatus').addEventListener('change', e => updateTicket({ status: e.target.value }));
+    $('tkSetPriority').addEventListener('change', e => updateTicket({ priority: e.target.value }));
+    $('tkAssignMe').addEventListener('click', () => updateTicket({ assignedTo: 'me' }));
+    $('tkSend').addEventListener('click', () => sendTicket('reply'));
+    $('tkSendResolve').addEventListener('click', () => sendTicket('resolve'));
+    $('tkNote').addEventListener('click', () => sendTicket('note'));
+  }
+  async function refreshTicket(){ const id = state.tk.current.ticket.id; state.tk.current = await api('ticket_get', { ticketId:id }); renderTicket(); loadTickets(true); loadTicketBadge(); }
+  async function sendTicket(mode){
+    const text = $('tkReplyText').value.trim();
+    if(!text){ toast('Type something first.', 'err'); return; }
+    const btns = ['tkSend', 'tkSendResolve', 'tkNote'].map($); if(btns.some(b => b.classList.contains('busy'))) return; btns.forEach(b => b.classList.add('busy'));
+    try{
+      await api('ticket_reply', { ticketId: state.tk.current.ticket.id, body:text, internal: mode === 'note', ...(mode === 'resolve' ? { status:'resolved' } : {}) });
+      toast(mode === 'note' ? 'Note added.' : mode === 'resolve' ? 'Reply sent and ticket resolved.' : 'Reply sent.');
+      await refreshTicket();
+    }catch(err){ toast(err.message, 'err'); btns.forEach(b => b.classList.remove('busy')); }
+  }
+  async function updateTicket(patch){
+    try{ await api('ticket_update', { ticketId: state.tk.current.ticket.id, ...patch }); toast('Ticket updated.'); await refreshTicket(); }
+    catch(err){ toast(err.message, 'err'); renderTicket(); }
   }
 
   /* ---------- boot ---------- */

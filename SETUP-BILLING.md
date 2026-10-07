@@ -1,107 +1,67 @@
-# Setting up Billing & Subscription (Phase 6)
+# Billing & Subscription — $5 per shop, per month (card only)
 
-This is AUREUM (your platform) charging **your customers** $5.00/month —
-completely separate from the in-store checkout, which no longer processes
-real payments at all. Card/mobile details are entered on Stripe's or
-Paynow's own page and never touch your server.
+AUREUM (your platform) charges **your customers** through **your** Stripe account:
+**$5 per shop, per month**. Card details are typed on Stripe's own page and never touch your server or database.
 
-You don't have Stripe or Paynow accounts yet, so start there.
+| Situation | What happens |
+|---|---|
+| Free trial | Every shop is included, however many. |
+| Subscribing | Checkout charges **$5 × the number of shops** (read from the database, not from the browser). |
+| Adding a shop on a paid plan | The owner sees "$10 → $15 a month", confirms, Stripe charges the prorated amount **immediately**, and **only then** is the shop added. A declined card = no shop. |
+| Removing a shop | The next invoice drops by $5 (no refund for the month already paid). |
+| Paynow | **No longer accepted** for subscriptions. People already paid up on Paynow keep access until their period ends and are asked to subscribe by card. |
 
-## 1. Run the new database schema
+## 1. Run the database SQL (once)
+Supabase → SQL Editor → run, in this order (skip any you already ran): `schema.sql` → `billing-schema.sql` → `admin-schema.sql` → `data-safety.sql` → **`shop-billing.sql`**.
 
-1. Supabase dashboard → **SQL Editor** → New query
-2. Paste in `supabase/billing-schema.sql` (from this package), run it.
+`shop-billing.sql` adds `shops_paid` (what the subscription covers) and `shop_count`, and a database rule so that **a paid card subscription cannot add a shop it hasn't paid for — even by editing data directly.**
+It never blocks trials, complimentary accounts, removing shops, or a business that already has more shops than it pays for.
 
-## 2. Create your Stripe account (for card payments)
-
-1. Sign up free at https://dashboard.stripe.com/register
-2. Once in, go to **Developers → API keys**. Copy the **Secret key**
-   (`sk_test_...` while testing, `sk_live_...` when ready for real charges).
-3. You'll set this as a secret in step 4 below — **not** pasted into any
-   file.
-
-## 3. Create your Paynow account (for EcoCash/OneMoney/cards/ZimSwitch/InnBucks)
-
-1. Sign up at https://www.paynow.co.zw as a merchant (needs your business
-   and bank details for payouts).
-2. Once approved, go to **Integrations** in your Paynow merchant
-   dashboard → create a new integration → copy the **Integration ID** and
-   **Integration Key**.
-
-## 4. Set the secrets (platform-level — these are YOURS, not per-customer)
-
-Using the Supabase CLI, from this project folder:
-
-```bash
+## 2. Stripe account and secrets
+Create a Stripe account at https://stripe.com (use **test mode** first). Set these as Supabase **secrets** (never in the app files):
+```
 supabase secrets set PLATFORM_STRIPE_SECRET_KEY=sk_test_...
-supabase secrets set PLATFORM_PAYNOW_INTEGRATION_ID=your_integration_id
-supabase secrets set PLATFORM_PAYNOW_INTEGRATION_KEY=your_integration_key
+supabase secrets set PLATFORM_STRIPE_WEBHOOK_SECRET=whsec_...      # from step 4
 ```
 
-(You'll add `PLATFORM_STRIPE_WEBHOOK_SECRET` in step 6, after Stripe gives
-it to you.)
-
-## 5. Deploy the 5 new billing edge functions
-
-```bash
+## 3. Deploy the functions
+```
 supabase functions deploy billing-stripe-checkout
-supabase functions deploy billing-stripe-webhook
 supabase functions deploy billing-stripe-portal
-supabase functions deploy billing-paynow-initiate
-supabase functions deploy billing-paynow-webhook
+supabase functions deploy billing-stripe-webhook --no-verify-jwt
+supabase functions deploy billing-stripe-shops          # NEW: adding / updating / lowering shops
 ```
-
-## 6. Connect Stripe's webhook (this is what makes renewals automatic)
-
-1. Stripe dashboard → **Developers → Webhooks → Add endpoint**
-2. Endpoint URL:
-   ```
-   https://pizwuzwkzfwgfjeolmqp.supabase.co/functions/v1/billing-stripe-webhook
-   ```
-3. Select these events: `checkout.session.completed`, `invoice.paid`,
-   `invoice.payment_failed`, `customer.subscription.deleted`
-4. Save, then copy the **Signing secret** (`whsec_...`) it gives you.
-5. Set it as a secret:
-   ```bash
-   supabase secrets set PLATFORM_STRIPE_WEBHOOK_SECRET=whsec_...
-   ```
-6. Redeploy the webhook function so it picks up the new secret:
-   ```bash
-   supabase functions deploy billing-stripe-webhook
-   ```
-
-Paynow doesn't need a separate webhook setup step — the `resulturl` is
-already wired into the `billing-paynow-initiate` function automatically.
-
-## 7. Test it
-
-- **Stripe**: while your secret key is still `sk_test_...`, use test card
-  `4242 4242 4242 4242`, any future date, any CVC.
-- **Paynow**: use their sandbox/test integration if they provide one
-  before switching to your live integration.
-
-Go to Back Office → Settings → Billing & Subscription, click **Pay with
-Card (Stripe)** or **Pay with Paynow**, and confirm:
-- The payment completes on Stripe's/Paynow's own page
-- You're redirected back and the status updates to "Active"
-- A row appears in Payment History
-- The "Current period ends" date is exactly one month out
-
-## Honest limitation worth knowing
-
-Stripe subscriptions **auto-renew** every month automatically (that's
-what the webhook is for). **Paynow does not** — there's no "charge saved
-card automatically" concept for EcoCash/OneMoney/most Paynow methods.
-Each period, the business owner (or a reminder banner a few days before
-the period ends, which is already built in) needs to actively pay again
-via the same "Pay with Paynow" button. This is a real constraint of how
-Paynow works, not a bug.
-
-## When you're ready for real charges
-
-Swap `PLATFORM_STRIPE_SECRET_KEY` for your `sk_live_...` key, switch your
-Paynow integration from test to live, and redeploy:
-```bash
-supabase secrets set PLATFORM_STRIPE_SECRET_KEY=sk_live_...
-supabase functions deploy billing-stripe-checkout
+**Remove the Paynow billing functions** (no longer used):
 ```
+supabase functions delete billing-paynow-initiate
+supabase functions delete billing-paynow-webhook
+```
+(`paynow-initiate` / `paynow-poll` / `create-payment-intent` are older, separate functions and are not part of subscriptions.)
+
+## 4. Stripe webhook
+Stripe → Developers → Webhooks → Add endpoint → URL = your `billing-stripe-webhook` function URL. Listen for these **five** events:
+`checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, **`customer.subscription.updated`** (new), `customer.subscription.deleted`.
+Copy the signing secret into `PLATFORM_STRIPE_WEBHOOK_SECRET`.
+
+## 5. Customers who subscribed before this change
+They were paying a flat $5. Nothing is forced on them:
+- Their subscription covers **1 shop** (that is what $5 bought). Everything keeps working, including shops they already have.
+- Settings → Billing shows a calm banner and an **"Update subscription to cover all N shops — $X/month"** button. Pressing it charges the prorated difference once.
+- They **cannot add a further shop** without paying for it.
+- If you'd rather bill them for their existing shops, ask them to press that button (or tell me and I can add an admin action for it).
+
+## 6. Test it (Stripe test mode)
+Use card `4242 4242 4242 4242`, any future date, any CVC.
+1. New business, 3 shops, trial → Settings → Billing → **Subscribe with card — $15/month (3 shops × $5)** → pay. Billing now shows "$15 / month · 3 shops".
+2. Settings → Stores → **Add store** → the dialog shows $15 → $20 → **Pay & add shop**. The shop appears; an extra small invoice shows in your Stripe dashboard and under Payment history.
+3. Decline test: Stripe card `4000 0000 0000 0341` (saves fine, then fails to charge). Add a shop → it is declined, the message is shown, **no shop is added**.
+4. Remove a shop → a few seconds later you are told the plan drops from the next payment; Stripe's quantity goes down with no charge.
+5. Open the app signed in as a **non-owner**: they cannot subscribe or add paid shops.
+
+## 7. Going live
+Switch Stripe to live mode, replace the secrets with the live ones (`sk_live_...`, the live webhook `whsec_...`), recreate the webhook endpoint in live mode, and redeploy.
+
+## Good to know
+- The shop limit is enforced by the **database**, so it can't be bypassed from the browser.
+- Adding a shop mid-month creates a small *proration* invoice. The webhook records it as a payment but does **not** treat it as a new billing period.
+- App-store builds (`?store=1`) never show payment buttons: adding a shop that needs payment tells the owner to manage the subscription from their account on the web.
