@@ -1,5 +1,42 @@
 # Changelog
 
+## Phase 18 — Settings switches that work (Taxes, Receipts, Payment Methods, Notifications, Users & Permissions)
+
+### Root cause: the switches could not be moved
+Every Settings switch was wired to flip **twice** per click (one handler for all switches, and a second one added for
+Settings), so it went on and straight back off — it looked frozen, and "Save" just stored the screen's starting
+positions. Fixed: one handler. A small "Unsaved changes — press Save" hint now shows next to Save when something moved.
+
+### Every switch now does what it says
+- **Taxes** — *Prices include tax* now shows the true state. *Apply tax to all new products by default* needed
+  something to apply to, so products now have a **Charge tax on this product** switch (Products → add/edit) whose
+  starting position is that setting. **Existing products stay taxed exactly as before** (verified identical on 600
+  random carts). Tax-free items carry no tax; a discount is shared across lines; refunds apportion tax by the taxed
+  lines only and always add up to the receipt to the cent (150 random mixed receipts refunded in random pieces).
+- **Receipts** — header and footer messages were never printed; now they print on screen and on the thermal printer
+  (HTML typed in them is shown as plain text). *Show logo*, *Show cashier* now work on screen and thermal.
+  *Print automatically* prints after each new sale (USB printer if connected, else the browser print window; never
+  for old receipts). *Email receipt* is a button that opens your email app with the receipt written out (addressed to
+  the customer when their email is known).
+- **Payment Methods** — the *Other* button now follows its switch (relabelled "Other (vouchers, bank transfer, store
+  credit…)", which is what the till's Other button really is). *Split payments* is marked **Coming soon** and disabled
+  because the till has no split-payment feature yet.
+- **Notifications** (alerts appear while the Back Office is open): *Low stock alerts* controls the dashboard low-stock
+  list (negative stock is always shown); *New sale*, *Refund* and *Shift opened/closed* pop-ups when a till does that
+  (never for old activity, max 4 at once); *Daily sales summary* shows yesterday's sales the first time you open the
+  Back Office each day. (Email delivery isn't possible without an email service, so the daily summary is in-app.)
+- **Users & Permissions** (cashiers; managers/admins can always) — *Can apply discounts*, *Can process refunds*,
+  *Can view Today's Sales*, *Can change an item's price at checkout* (new: tap the price on the ticket; this ticket
+  only; the product price never changes; the receipt keeps the list price), and *Requires PIN* are enforced at the till.
+- Changes made in the Back Office reach the tills within seconds, with no reload.
+
+### One-time safe migration
+Because the switches never worked, anything "saved" before is just the old starting positions. On first open after
+this update they are put back to how the till actually behaved (Today's Sales still allowed, Other payment still shown,
+cashier refunds off, PIN required…) so nothing changes by surprise. Settings that really were in effect (tax rate,
+prices include tax, logo) are left alone. **If you ever pressed Save on the Taxes page, "Prices include tax" was
+stored as ON — check it.**
+
 ## Phase 17 — Product codes, any-spreadsheet import, picture finder, GRN spacing, Z Fold dropdowns (2026-10)
 
 ### Product codes — every product always has one

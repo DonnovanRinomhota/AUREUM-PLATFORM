@@ -590,6 +590,8 @@
   .sale-row .amt .val.neg{ color:var(--danger); }
   .pstock.neg{ color:var(--danger); }
   .r-row.r-unit{ font-size:10.5px; opacity:.75; }
+  .li-unit.editable{ cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; }
+  .li-unit s{ opacity:.55; margin-left:4px; }
   .r-table{ width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
   .r-table th{ font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--sage); font-weight:700; padding:2px 0 6px; border-bottom:1px solid var(--line); }
   .r-table td{ padding:6px 0; vertical-align:top; word-break:break-word; }
@@ -976,6 +978,7 @@
       <div class="modal-btn ghost" id="receiptCloseBtn">New Sale</div>
       <div class="modal-btn ghost" id="thermalPrintBtn" title="Print directly to a USB thermal receipt printer (Chrome/Edge desktop)">Print via USB</div>
       <div class="modal-btn ghost" id="thermalPrintBtnBt" title="Print directly to a Bluetooth thermal receipt printer, already paired in this device's Bluetooth settings (Chrome/Edge)">Print via Bluetooth</div>
+      <div class="modal-btn ghost" id="receiptEmailBtn" title="Opens your email app with the receipt written in it">Email receipt</div>
       <div class="modal-btn solid" id="receiptPrintBtn">Print Receipt</div>
     </div>
   </div>
@@ -1002,6 +1005,27 @@
 </div>
 
 <!-- Discount Modal -->
+<div class="modal-overlay" id="priceOverlay">
+  <div class="modal-panel" style="max-width:380px;">
+    <div class="modal-head">
+      <div class="title">Change price</div>
+      <div class="modal-close" data-close="priceOverlay">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div id="priceEditName" style="font-weight:600;margin-bottom:4px;"></div>
+      <div id="priceEditList" style="font-size:12px;color:var(--sage);margin-bottom:12px;"></div>
+      <div class="field-label">Price for this sale</div>
+      <input type="number" id="priceEditField" class="modal-field" min="0" step="0.01" inputmode="decimal">
+      <div class="field-error" id="priceEditError">Enter a price of 0 or more</div>
+      <div style="font-size:11.5px;color:var(--sage);margin-top:8px;">Only this ticket changes — the product's own price stays the same.</div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" id="priceResetBtn">Back to list price</div>
+      <div class="modal-btn solid" id="priceApplyBtn">Apply</div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="discountOverlay">
   <div class="modal-panel" style="max-width:380px;">
     <div class="modal-head">
@@ -1741,29 +1765,42 @@ async function aureumSignIn(email, password){
   let lastSale = null;
   let usbPrinterDevice = null; // paired WebUSB thermal printer, once connected
 
+  /* ===== SETTINGS THE BACK OFFICE CONTROLS (Settings → Receipts / Payment Methods / Users & Permissions) =====
+     Anything the Back Office has never set behaves exactly as the till always did, so nothing changes until someone
+     moves a switch. Managers and administrators can always do everything; the permission switches are for cashiers. */
+  const settingOn = (id, def) => { const t = POS_SETTINGS.toggles; return (t && Object.prototype.hasOwnProperty.call(t, id)) ? !!t[id] : def; };
+  const PERM = { discount:['stPermDiscount', true], refund:['stPermRefund', false], reports:['stPermReports', true], editPrice:['stPermEditPrice', false] };
+  const cashierMay = key => !!activeEmployee && (canManage() || settingOn(PERM[key][0], PERM[key][1]));
+  const canRefund = () => cashierMay('refund');
+  let priceOverride = {};   // this ticket only: product id → the price set at the till (never changes the product itself)
+  const unitPrice = p => Object.prototype.hasOwnProperty.call(priceOverride, p.id) ? priceOverride[p.id] : p.price;
+
   function computeTotals(){
     // Every money figure is rounded to whole cents HERE, once, so what's shown, what's charged and what's
     // stored are the same number. (Unrounded arithmetic used to store totals like 12.420000000000002.)
     const cents = n => Math.round((n + Number.EPSILON) * 100) / 100;
     const ids = Object.keys(cart);
-    const subtotal = cents(ids.reduce((sum,id)=> sum + PRODUCTS.find(p=>p.id==id).price*cart[id], 0));
+    const lineVal = id => unitPrice(PRODUCTS.find(p=>p.id==id)) * cart[id];
+    const subtotal = cents(ids.reduce((sum,id)=> sum + lineVal(id), 0));
+    // Only products with "Charge tax" on carry tax. Products saved before that switch existed are all taxed, as always.
+    const taxableSub = cents(ids.reduce((sum,id)=> sum + (PRODUCTS.find(p=>p.id==id).taxable === false ? 0 : lineVal(id)), 0));
     let discountAmount = 0;
     if(discount.value > 0){
       discountAmount = discount.type === 'percent' ? subtotal * (discount.value/100) : discount.value;
       discountAmount = cents(Math.min(Math.max(discountAmount,0), subtotal));
     }
-    const taxableBase = cents(subtotal - discountAmount);
-    // "Prices include tax" (set in Back Office → Settings → Taxes) changes
-    // how tax is derived: inclusive means the tax is already baked into
-    // the listed price (so the customer's total stays the same, tax is
-    // just broken out for reporting); exclusive means tax is added on top.
+    const net = cents(subtotal - discountAmount);
+    // a discount is shared across every line, so the taxed part carries its share of it
+    const taxableBase = cents(taxableSub - (subtotal > 0 ? discountAmount * (taxableSub / subtotal) : 0));
+    // "Prices include tax" (Back Office → Settings → Taxes): inclusive means the tax is already inside the listed
+    // price (the customer's total stays the same, tax is just broken out); exclusive means tax is added on top.
     let tax, total;
     if(POS_SETTINGS.taxInclusive){
-      total = taxableBase;
+      total = net;
       tax = cents(taxableBase - (taxableBase / (1 + taxPercent/100)));
     } else {
       tax = cents(taxableBase * (taxPercent/100));
-      total = cents(taxableBase + tax);
+      total = cents(net + tax);
     }
     return { ids, subtotal, discountAmount, tax, total };
   }
@@ -1927,6 +1964,7 @@ async function aureumSignIn(email, password){
   function removeItem(id){ delete cart[id]; renderTicket(); }
 
   function renderTicket(){
+    Object.keys(priceOverride).forEach(k => { if(!(k in cart)) delete priceOverride[k]; });   // a changed price lives only while its item is on the ticket
     const ids = Object.keys(cart);
     if(ids.length === 0){
       ticketItemsEl.innerHTML = `<div class="empty-state">
@@ -1936,16 +1974,16 @@ async function aureumSignIn(email, password){
     } else {
       ticketItemsEl.innerHTML = ids.map(id=>{
         const p = PRODUCTS.find(p=>p.id==id);
-        const qty = cart[id];
+        const qty = cart[id], up = unitPrice(p), changed = up !== p.price, editable = cashierMay('editPrice');
         return `
         <div class="line-item">
           <div class="li-name">${p.name}</div>
-          <div class="li-total">${POS_SETTINGS.currency}${(p.price*qty).toFixed(2)}</div>
+          <div class="li-total">${POS_SETTINGS.currency}${(up*qty).toFixed(2)}</div>
           <div class="li-controls">
             <div class="qty-btn" data-act="dec" data-id="${p.id}">–</div>
             <div class="qty-val">${qty}</div>
             <div class="qty-btn" data-act="inc" data-id="${p.id}">+</div>
-            <span class="li-unit">× ${POS_SETTINGS.currency}${p.price.toFixed(2)}</span>
+            <span class="li-unit${editable ? ' editable' : ''}"${editable ? ` data-act="price" data-id="${p.id}" title="Tap to change this item's price for this sale" role="button" tabindex="0"` : ''}>× ${POS_SETTINGS.currency}${up.toFixed(2)}${changed ? ` <s>${POS_SETTINGS.currency}${p.price.toFixed(2)}</s>` : ''}</span>
             <span class="li-remove" data-act="rm" data-id="${p.id}">Remove</span>
           </div>
         </div>`;
@@ -1958,6 +1996,7 @@ async function aureumSignIn(email, password){
           if(act==='inc') changeQty(id, 1);
           if(act==='dec') changeQty(id, -1);
           if(act==='rm') removeItem(id);
+          if(act==='price') openPriceEdit(id);
         });
       });
     }
@@ -2074,8 +2113,7 @@ async function aureumSignIn(email, password){
     if(!Array.isArray(enabled)) return; // never configured in Back Office yet — leave all visible
     document.querySelectorAll('#payMethods .pay-btn[data-pay]').forEach(btn=>{
       const method = btn.dataset.pay;
-      if(method === 'other') return; // Other isn't gated by a Back Office toggle
-      const isEnabled = enabled.includes(method);
+      const isEnabled = enabled.includes(method === 'other' ? 'credit' : method);   // the "Other" button follows the Back Office's "Other (vouchers, store credit…)" switch
       btn.style.display = isEnabled ? '' : 'none';
       if(!isEnabled && btn.classList.contains('active')){
         // The currently-selected method just got disabled — fall back to Cash if it's on, else the first visible method.
@@ -2234,7 +2272,31 @@ async function aureumSignIn(email, password){
       btn.classList.add('active');
     });
   });
+  let priceEditId = null;
+  function openPriceEdit(id){
+    if(!cashierMay('editPrice')){ aureumToast("Changing prices isn't enabled for your role.", 'danger'); return; }
+    const p = PRODUCTS.find(x => x.id == id); if(!p) return;
+    priceEditId = p.id;
+    document.getElementById('priceEditName').textContent = p.name;
+    document.getElementById('priceEditList').textContent = 'List price: ' + POS_SETTINGS.currency + p.price.toFixed(2);
+    document.getElementById('priceEditField').value = unitPrice(p).toFixed(2);
+    document.getElementById('priceEditError').classList.remove('show'); document.getElementById('priceEditField').classList.remove('invalid');
+    openModal('priceOverlay');
+    setTimeout(() => { const f = document.getElementById('priceEditField'); f.focus(); f.select(); }, 60);
+  }
+  document.getElementById('priceApplyBtn').addEventListener('click', () => {
+    const p = PRODUCTS.find(x => x.id == priceEditId); if(!p || !cashierMay('editPrice')) { closeModal('priceOverlay'); return; }
+    const f = document.getElementById('priceEditField'), v = parseFloat(f.value);
+    if(!isFinite(v) || v < 0 || v > 1000000){ document.getElementById('priceEditError').classList.add('show'); f.classList.add('invalid'); f.focus(); return; }
+    const price = Math.round((v + Number.EPSILON) * 100) / 100;
+    if(price === p.price) delete priceOverride[p.id]; else priceOverride[p.id] = price;
+    tenderedAmt = 0; closeModal('priceOverlay'); renderTicket();
+  });
+  document.getElementById('priceResetBtn').addEventListener('click', () => { if(priceEditId != null) delete priceOverride[priceEditId]; tenderedAmt = 0; closeModal('priceOverlay'); renderTicket(); });
+  document.getElementById('priceEditField').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('priceApplyBtn').click(); });
+  document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.li-unit.editable')){ e.preventDefault(); e.target.click(); } });
   document.getElementById('discountChip').addEventListener('click', ()=>{
+    if(!cashierMay('discount')){ aureumToast('Discounts are not enabled for your role.', 'danger'); return; }
     document.querySelectorAll('#discountTypeToggle .seg-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.type === discount.type);
     });
@@ -2351,9 +2413,10 @@ async function aureumSignIn(email, password){
     const title = document.querySelector('#receiptOverlay .modal-head .title');
     if(title) title.textContent = fromHistory ? (sale.refund ? 'Refund receipt' : 'Receipt') : 'Sale Complete';
     document.getElementById('receiptCloseBtn').textContent = fromHistory ? 'Close' : 'New Sale';
+    document.getElementById('receiptEmailBtn').style.display = settingOn('stReceiptEmail', true) ? '' : 'none';
     // Refunding starts from the receipt itself — managers/admins pick WHICH items and how many
     const rb = document.getElementById('receiptRefundBtn');
-    const can = !!(fromHistory && sale && !sale.refund && sale.key && canManage() && sale.remainingQty > 0);
+    const can = !!(fromHistory && sale && !sale.refund && sale.key && canRefund() && sale.remainingQty > 0);
     rb.style.display = can ? '' : 'none';
     rb.dataset.key = can ? sale.key : '';
   }
@@ -2394,9 +2457,13 @@ async function aureumSignIn(email, password){
     items.forEach(i => {
       const left = i.qty - (rf.qty[i.productId] || 0);
       const q = Math.max(0, Math.min(Math.floor(qtyMap[i.productId] || 0), left));
-      if(q > 0) lines.push({ productId: i.productId, name: i.name, qty: q, price: i.price, cost: i.cost || 0 });
+      if(q > 0) lines.push({ productId: i.productId, name: i.name, qty: q, price: i.price, cost: i.cost || 0, taxable: i.taxable !== false });
     });
     const sub = lines.reduce((s,l)=> s + l.qty*l.price, 0);
+    // tax is only on the taxed lines (receipts from before the per-product switch are all taxed, so this reduces to the old formula)
+    const origTaxableSub = items.reduce((s,i)=> s + (i.taxable === false ? 0 : i.qty*i.price), 0);
+    const origTaxableBase = origSub > 0 ? origTaxableSub - origDisc * (origTaxableSub / origSub) : 0;
+    const subTaxable = lines.reduce((s,l)=> s + (l.taxable ? l.qty*l.price : 0), 0);
     const clearsEverything = lines.length > 0 && items.every(i => (qtyMap[i.productId] || 0) >= i.qty - (rf.qty[i.productId] || 0));
     let disc, tax, total;
     if(clearsEverything){
@@ -2405,7 +2472,8 @@ async function aureumSignIn(email, password){
     } else {
       disc = origSub > 0 ? r2(sub * origDisc / origSub) : 0;
       const base = sub - disc;
-      tax = origBase > 0 ? r2(origTax * base / origBase) : 0;
+      const refTaxableBase = sub > 0 ? subTaxable - disc * (subTaxable / sub) : 0;
+      tax = origTaxableBase > 0 ? r2(origTax * refTaxableBase / origTaxableBase) : 0;
       total = r.taxInclusive ? r2(base) : r2(base + tax);
     }
     return { lines, subtotal: r2(sub), discountAmount: disc, tax, total, clearsEverything, rf };
@@ -2413,7 +2481,7 @@ async function aureumSignIn(email, password){
 
   let refundDraft = null;
   function openRefundModal(key){
-    if(!canManage()){ aureumToast('Refunds are restricted to Shop Managers and Administrators.', 'danger'); return; }
+    if(!canRefund()){ aureumToast('Refunds are not enabled for your role. Ask a Shop Manager or Administrator.', 'danger'); return; }
     const r = RECEIPTS.find(x => receiptKey(x) === key && !x.refund);
     if(!r){ aureumToast('Receipt not found.', 'danger'); return; }
     if(remainingQty(r) === 0){ aureumToast('Everything on this receipt has already been refunded.', 'danger'); return; }
@@ -2460,7 +2528,7 @@ async function aureumSignIn(email, password){
   document.getElementById('receiptRefundBtn').addEventListener('click', e => openRefundModal(e.currentTarget.dataset.key));
   document.getElementById('refundConfirmBtn').addEventListener('click', ()=>{
     if(!refundDraft) return;
-    if(!canManage()){ aureumToast('Refunds are restricted to Shop Managers and Administrators.', 'danger'); return; }
+    if(!canRefund()){ aureumToast('Refunds are not enabled for your role. Ask a Shop Manager or Administrator.', 'danger'); return; }
     const sale = RECEIPTS.find(x => receiptKey(x) === refundDraft.key && !x.refund);
     if(!sale){ aureumToast('Receipt not found.', 'danger'); return; }
     const calc = computeRefund(sale, refundDraft.qty);
@@ -2499,6 +2567,7 @@ async function aureumSignIn(email, password){
     openReceiptByKey(refundUid);          // show the refund slip so it can be printed
   });
   document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
+    if(!cashierMay('reports')){ aureumToast("Today's Sales isn't enabled for your role.", 'danger'); return; }
     renderRecentSales();
     openModal('recentSalesOverlay');
   });
@@ -2566,6 +2635,35 @@ async function aureumSignIn(email, password){
     };
   }
 
+  // the messages typed in Back Office → Settings → Receipts (header under the business name, footer at the bottom)
+  const receiptHeaderText = () => (POS_SETTINGS.receiptText && POS_SETTINGS.receiptText.header) || '';
+  const receiptFooterText = () => (POS_SETTINGS.receiptText && POS_SETTINGS.receiptText.footer) || POS_SETTINGS.receiptFooter;
+  let shownSale = null;     // whichever receipt is on screen (used by Email)
+  function receiptPlainText(sale){
+    const cur = POS_SETTINGS.currency, L = [];
+    L.push(POS_SETTINGS.businessName); if(receiptHeaderText()) L.push(receiptHeaderText());
+    if(sale.refund) L.push('REFUND' + (sale.refundOf ? ' of No. ' + sale.refundOf : ''));
+    L.push('', `${sale.orderNo}  ${sale.date || ''} ${sale.time || ''}`.trim());
+    if(settingOn('stReceiptCashier', true)) L.push('Cashier: ' + (sale.employee || ''));
+    if(sale.shop && sale.shop !== 'All Shops') L.push('Shop: ' + sale.shop);
+    L.push('');
+    (sale.items || []).forEach(i => L.push(`${i.name}  ${i.qty} x ${cur}${i.price.toFixed(2)} = ${cur}${(i.qty * i.price).toFixed(2)}`));
+    L.push('', `Subtotal: ${cur}${sale.subtotal.toFixed(2)}`);
+    if(sale.discountAmount > 0) L.push(`Discount: -${cur}${sale.discountAmount.toFixed(2)}`);
+    L.push(`Tax${sale.taxInclusive ? ' (included)' : ''}: ${cur}${sale.tax.toFixed(2)}`, `${sale.refund ? 'Total refunded' : 'Total'}: ${sale.refund ? '-' : ''}${cur}${sale.total.toFixed(2)}`, `${sale.refund ? 'Refunded to' : 'Paid via'}: ${sale.payment}`, '', receiptFooterText());
+    return L.join('\n');
+  }
+  function receiptMailtoUrl(sale){
+    const c = sale.customer ? CUSTOMERS.find(x => x.name === sale.customer) : null;
+    const to = (c && c.email) ? c.email : '';
+    return `mailto:${encodeURIComponent(to).replace(/%40/g, '@')}?subject=${encodeURIComponent('Your receipt from ' + POS_SETTINGS.businessName + ' (' + sale.orderNo + ')')}&body=${encodeURIComponent(receiptPlainText(sale))}`;
+  }
+  function emailReceipt(){ if(shownSale) location.href = receiptMailtoUrl(shownSale); }
+  // "Print receipt automatically after sale": a paired USB printer if there is one, otherwise the browser's print
+  function maybeAutoPrint(){
+    if(!settingOn('stReceiptAutoPrint', false)) return;
+    setTimeout(() => { try{ if(usbPrinterDevice) printToThermalPrinter(lastSale); else window.print(); }catch(e){} }, 300);
+  }
   function buildReceipt(sale){
     const cur = POS_SETTINGS.currency;
     const cashier = sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier');
@@ -2582,6 +2680,7 @@ async function aureumSignIn(email, password){
         ${showLogo && POS_SETTINGS.logoImage ? `<img src="${POS_SETTINGS.logoImage}" style="max-width:140px; max-height:60px; object-fit:contain; margin:0 auto 8px; display:block;">` : ''}
         <div class="r-brand">${POS_SETTINGS.businessName}</div>
         <div class="r-sub">Point of Sale</div>
+        ${receiptHeaderText() ? `<div class="r-sub" style="margin-top:4px;">${escHtml(receiptHeaderText())}</div>` : ''}
         ${sale.refund ? `<div class="r-brand" style="margin-top:8px;">REFUND${sale.refundOf ? ' of No. ' + sale.refundOf : ''}</div>` : ''}
       </div>
       <div class="r-dash"></div>
@@ -2603,11 +2702,13 @@ async function aureumSignIn(email, password){
       ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||cur}${sale.change.toFixed(2)}</span></div>` : ''}
       ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${escHtml(sale.note)}</span></div>` : ''}
       ${(sale.refunds && sale.refunds.length) ? `<div class="r-dash"></div><div class="r-row" style="font-weight:700;"><span>Refunds on this receipt</span><span></span></div>` + sale.refunds.map(rf => `<div class="r-row"><span>${escHtml(rf.id)} · ${rf.items.map(i => i.qty + ' × ' + escHtml(i.name)).join(', ')}</span><span>-${cur}${rf.total.toFixed(2)}</span></div>`).join('') : ''}
-      <div class="receipt-thanks">${POS_SETTINGS.receiptFooter}</div>
+      <div class="receipt-thanks">${escHtml(receiptFooterText())}</div>
     `;
+    shownSale = sale;
   }
   document.getElementById('receiptCloseBtn').addEventListener('click', ()=> closeModal('receiptOverlay'));
   document.getElementById('receiptPrintBtn').addEventListener('click', ()=> window.print());
+  document.getElementById('receiptEmailBtn').addEventListener('click', emailReceipt);
   document.getElementById('thermalPrintBtn').addEventListener('click', ()=> printToThermalPrinter(lastSale));
   document.getElementById('thermalPrintBtnBt').addEventListener('click', ()=> printToThermalPrinterBluetooth(lastSale));
 
@@ -2629,10 +2730,11 @@ async function aureumSignIn(email, password){
     push(ESC, 0x61, 0x01); // center
     push(ESC, 0x45, 0x01); text(POS_SETTINGS.businessName + '\n'); push(ESC, 0x45, 0x00);
     text('Point of Sale\n');
+    if(receiptHeaderText()) text(receiptHeaderText() + '\n');
     text('--------------------------------\n');
     push(ESC, 0x61, 0x00); // left
     text(`${sale.orderNo}   ${sale.time}\n`);
-    text(`Cashier: ${sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier')}\n`);
+    if(settingOn('stReceiptCashier', true)) text(`Cashier: ${sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier')}\n`);
     { const shopName = sale.shop || activeShop; if(shopName && shopName !== 'All Shops') text(`Shop: ${shopName}\n`); }
     if(sale.customer) text(`Customer: ${sale.customer}\n`);
     text('--------------------------------\n');
@@ -2654,7 +2756,7 @@ async function aureumSignIn(email, password){
     text(`Paid via ${sale.payment}\n`);
     if(sale.change) text(`Change: ${sale.changeCurrencySymbol||POS_SETTINGS.currency}${sale.change.toFixed(2)}\n`);
     push(ESC, 0x61, 0x01); // center
-    text('\n' + POS_SETTINGS.receiptFooter + '\n\n\n');
+    text('\n' + receiptFooterText() + '\n\n\n');
     push(GS, 0x56, 0x41, 0x10); // feed + partial cut (most 80mm printers)
     return new Uint8Array(bytes);
   }
@@ -2806,7 +2908,8 @@ async function aureumSignIn(email, password){
 
     const lineItems = ids.map(id=>{
       const p = PRODUCTS.find(p=>p.id==id);
-      return { productId: p.id, name:p.name, qty:cart[id], price:p.price, cost:p.cost||0 };
+      const up = unitPrice(p);
+      return { productId: p.id, name:p.name, qty:cart[id], price:up, cost:p.cost||0, taxable: p.taxable !== false, ...(up !== p.price ? { listPrice: p.price } : {}) };
     });
 
     // Receipt number: next in sequence, computed from the synced receipts at the
@@ -2884,6 +2987,7 @@ async function aureumSignIn(email, password){
     buildReceipt(sale);
     setReceiptChrome(false, sale);
     openModal('receiptOverlay');
+    maybeAutoPrint();
   });
 
   searchInput.addEventListener('input', renderCatalog);
@@ -2899,6 +3003,11 @@ async function aureumSignIn(email, password){
 
   /* ===== CASHIER / SHOP ===== */
   const BACK_OFFICE_ROLES = ['Shop Manager', 'Administrator'];
+  function applyPermissionUI(){
+    const d = document.getElementById('discountChip'); if(d) d.style.display = (!activeEmployee || cashierMay('discount')) ? '' : 'none';
+    const r = document.getElementById('recentSalesBtn'); if(r) r.style.display = (!activeEmployee || cashierMay('reports')) ? '' : 'none';
+    if(Object.keys(cart).length) renderTicket();                       // shows / hides the tap-to-change-price hint
+  }
   function renderClerkUI(){
     document.getElementById('clerkName').textContent = activeEmployee ? activeEmployee.name : 'Cashier';
     document.getElementById('clerkAvatar').textContent = activeEmployee ? activeEmployee.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '--';
@@ -2908,6 +3017,7 @@ async function aureumSignIn(email, password){
     const canOpenBackOffice = activeEmployee && BACK_OFFICE_ROLES.includes(activeEmployee.role);
     document.getElementById('backOfficeBtn').style.display = canOpenBackOffice ? '' : 'none';
     renderShiftBtn();
+    applyPermissionUI();
   }
   function renderCashierList(){
     document.getElementById('cashierListBody').innerHTML = (EMPLOYEES.length ? EMPLOYEES : [{name:'Cashier'}]).map(e=>`
@@ -3150,7 +3260,16 @@ async function aureumSignIn(email, password){
   }
   setInterval(renderShiftBtn, 60000);
 
+  // Back Office → Settings → Users & Permissions → "Requires PIN to open till" (cashiers only; managers/admins always use a PIN)
+  const pinRequiredFor = emp => !emp || BACK_OFFICE_ROLES.includes(emp.role) || settingOn('stPermPin', true);
+  function updatePinVisibility(){
+    const emp = EMPLOYEES.find(e => e.id === parseInt(document.getElementById('shiftEmployeeSelect').value));
+    const inp = document.getElementById('shiftPin'), box = inp.closest('.pw-wrap') || inp, need = pinRequiredFor(emp);
+    box.style.display = need ? '' : 'none';
+    if(!need) inp.value = '';
+  }
   function updateGateShiftInfo(){
+    try{ updatePinVisibility(); }catch(e){}
     const shop = document.getElementById('shiftShopSelect').value;
     const emp = EMPLOYEES.find(e => e.id === parseInt(document.getElementById('shiftEmployeeSelect').value));
     const mine = (shop && emp) ? findOpenShift(shop, emp) : null;
@@ -3477,9 +3596,10 @@ async function aureumSignIn(email, password){
     errEl.textContent = '';
     if(!shop){ errEl.textContent = 'Add a shop in Back Office first — there\'s nothing to select yet.'; return; }
     if(!employeeId){ errEl.textContent = 'Select your name from the list.'; return; }
-    if(!pin){ errEl.textContent = 'Enter your PIN.'; return; }
     const employee = EMPLOYEES.find(e => e.id === employeeId);
-    if(!employee || employee.pin !== pin){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
+    const needPin = pinRequiredFor(employee);
+    if(needPin && !pin){ errEl.textContent = 'Enter your PIN.'; return; }
+    if(!employee || (needPin && employee.pin !== pin)){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
     startShift(shop, employee, parseFloat(document.getElementById('shiftOpeningFloat').value));
   });
   document.getElementById('shiftPin').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('shiftSubmitBtn').click(); });

@@ -601,6 +601,9 @@
   .imgf-selrow img{ width:64px; height:64px; object-fit:contain; background:#fff; border-radius:8px; flex:0 0 auto; }
   .imgf-selrow .t{ font-size:13px; font-weight:600; color:var(--ivory); } .imgf-selrow .m{ font-size:11.5px; color:var(--sage); margin:2px 0; } .imgf-selrow a{ font-size:11.5px; color:var(--gold-bright); }
   .imgf-more{ margin-top:14px; }
+  .settings-save-row .unsaved{ display:none; margin-left:12px; font-size:12px; color:#E3B04B; font-weight:600; }
+  .toggle-row .soon{ margin-left:8px; font-size:10.5px; padding:2px 7px; border-radius:999px; border:1px solid var(--line-strong); color:var(--sage); font-weight:600; letter-spacing:.03em; }
+  .toggle-row .lbl .hint{ display:block; font-size:11px; color:var(--sage); font-weight:400; margin-top:2px; }
   .alerts-more{ font-size:12px; color:var(--gold-bright); cursor:pointer; padding:4px 2px; display:inline-block; }
   .alerts-more:hover{ text-decoration:underline; }
   @media (max-width:760px){
@@ -1307,6 +1310,14 @@
         </div>
 
         <div class="line-table-wrap form-section" style="margin-bottom:16px;">
+            <div class="form-section-title">Tax</div>
+            <div class="toggle-row">
+              <div class="lbl">Charge tax on this product</div>
+              <div class="switch on" id="pfTaxableToggle" data-toggle="pfTaxable"></div>
+            </div>
+            <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">Turn off for tax-free items. The tax rate, and whether prices include tax, are set in Settings → Taxes.</div>
+          </div>
+          <div class="line-table-wrap form-section" style="margin-bottom:16px;">
           <div class="form-section-title">Inventory</div>
           <div class="toggle-row">
             <div class="lbl">Stock control</div>
@@ -2425,11 +2436,11 @@
                 </div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Prices include tax</div>
-                <div class="switch on" id="stTaxInclusive" data-toggle></div>
+                <div class="lbl">Prices include tax<span class="hint">On: the tax is already inside the listed prices (the total stays the same; tax is shown separately). Off: tax is added on top.</span></div>
+                <div class="switch" id="stTaxInclusive" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Apply tax to all new products by default</div>
+                <div class="lbl">Apply tax to all new products by default<span class="hint">Sets the starting position of the “Charge tax” switch on a new product. Each product can still be changed.</span></div>
                 <div class="switch on" id="stTaxDefault" data-toggle></div>
               </div>
             </div>
@@ -2471,11 +2482,11 @@
                 <div class="switch on" id="stReceiptLogo" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Print receipt automatically after sale</div>
+                <div class="lbl">Print receipt automatically after sale<span class="hint">Uses the USB printer if one is connected, otherwise the browser print window.</span></div>
                 <div class="switch" id="stReceiptAutoPrint" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Offer to email receipt to customer</div>
+                <div class="lbl">Show an “Email receipt” button on receipts<span class="hint">Opens your email app with the receipt already written in it.</span></div>
                 <div class="switch on" id="stReceiptEmail" data-toggle></div>
               </div>
               <div class="toggle-row">
@@ -2509,12 +2520,12 @@
                 <div class="switch on" id="stPayMobile" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Store credit / gift card</div>
-                <div class="switch" id="stPayCredit" data-toggle></div>
+                <div class="lbl">Other (vouchers, bank transfer, store credit…)<span class="hint">Shows the “Other” button at checkout, where the cashier types the payment type.</span></div>
+                <div class="switch on" id="stPayCredit" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Allow split payments (multiple methods per sale)</div>
-                <div class="switch on" id="stPaySplit" data-toggle></div>
+                <div class="lbl">Allow split payments (multiple methods per sale)<span class="soon">Coming soon</span><span class="hint">Not available yet — each sale is paid with one method.</span></div>
+                <div class="switch" id="stPaySplit" aria-disabled="true" style="opacity:.4;cursor:not-allowed;pointer-events:none;"></div>
               </div>
             </div>
             <div class="settings-save-row">
@@ -2527,27 +2538,27 @@
           <div class="settings-panel" id="settings-notifications">
             <div class="settings-panel-head">
               <div class="t">Notifications</div>
-              <div class="s">Stay on top of stock, sales, and staff activity.</div>
+              <div class="s">Alerts appear inside the Back Office while it is open on any computer or phone, and the dashboard follows the stock switch.</div>
             </div>
             <div class="form-section">
               <div class="toggle-row">
-                <div class="lbl">Low stock alerts</div>
+                <div class="lbl">Low stock alerts<span class="hint">Shows low-stock items in the dashboard Alerts. (Negative stock is always shown.)</span></div>
                 <div class="switch on" id="stNotifyLowStock" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Daily sales summary email</div>
-                <div class="switch on" id="stNotifyDailySummary" data-toggle></div>
+                <div class="lbl">Daily sales summary<span class="hint">A summary of yesterday’s sales, shown the first time you open the Back Office each day.</span></div>
+                <div class="switch" id="stNotifyDailySummary" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">New order / sale notifications</div>
+                <div class="lbl">New sale notifications<span class="hint">A pop-up each time a till completes a sale.</span></div>
                 <div class="switch" id="stNotifyNewOrder" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Refund and void alerts</div>
+                <div class="lbl">Refund alerts<span class="hint">A pop-up each time a till records a refund.</span></div>
                 <div class="switch on" id="stNotifyRefund" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Employee clock-in / clock-out alerts</div>
+                <div class="lbl">Shift opened / closed alerts<span class="hint">A pop-up when a cashier starts or closes a shift.</span></div>
                 <div class="switch" id="stNotifyClockInOut" data-toggle></div>
               </div>
             </div>
@@ -2566,23 +2577,23 @@
             <div class="form-section">
               <div class="page-sub" style="margin-bottom:14px;">Cashier permissions</div>
               <div class="toggle-row">
-                <div class="lbl">Can apply discounts</div>
+                <div class="lbl">Can apply discounts<span class="hint">Cashiers see the “+ Discount” button at the till.</span></div>
                 <div class="switch on" id="stPermDiscount" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Can process refunds</div>
+                <div class="lbl">Can process refunds<span class="hint">Cashiers can refund items. Managers and administrators always can.</span></div>
                 <div class="switch" id="stPermRefund" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Can view sales reports</div>
-                <div class="switch" id="stPermReports" data-toggle></div>
+                <div class="lbl">Can view Today’s Sales at the till<span class="hint">Cashiers can open the Today’s Sales list and its day total.</span></div>
+                <div class="switch on" id="stPermReports" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Can edit product prices at checkout</div>
+                <div class="lbl">Can change an item’s price at checkout<span class="hint">Cashiers can tap an item’s price on the ticket to change it for that sale only. Managers and administrators always can.</span></div>
                 <div class="switch" id="stPermEditPrice" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Requires PIN to open till</div>
+                <div class="lbl">Requires PIN to sign in at the till<span class="hint">Cashiers only — managers and administrators always use a PIN.</span></div>
                 <div class="switch on" id="stPermPin" data-toggle></div>
               </div>
             </div>
@@ -3188,7 +3199,7 @@ const AureumSync = (function(){
     app: 'bo',
     getSnapshot: () => aureumSnapshotData(),
     applyData: (d) => applyLoadedData(d),
-    onApplied: () => { try{ if(ensureProductCodes()) persistAureum(); }catch(e){} try{ renderAllData(); }catch(e){} },
+    onApplied: () => { try{ if(ensureProductCodes()) persistAureum(); }catch(e){} try{ runSettingsMigration(); }catch(e){} try{ renderAllData(); }catch(e){} try{ runNotifications(); }catch(e){} },
     onStatus: (state) => {
       try{ renderSyncStatus(); }catch(e){}
       if(state === 'synced-compat' && !window.__aureumCompatWarned){
@@ -4215,6 +4226,7 @@ const AureumSync = (function(){
   document.querySelectorAll('[data-toggle]').forEach(sw=>{
     sw.addEventListener('click', function(){
       this.classList.toggle('on');
+      markSettingsDirty(this);
       if(this.id === 'pfStockControlToggle'){
         document.getElementById('pfStockQtyWrap').style.display = this.classList.contains('on') ? 'block' : 'none';
       }
@@ -4286,6 +4298,7 @@ const AureumSync = (function(){
       document.getElementById('pfPrice').value = p.price;
       document.getElementById('pfCost').value = p.cost;
       setSwitchOn('pfStockControlToggle', p.stockControl !== false);
+      setSwitchOn('pfTaxableToggle', p.taxable !== false);        // products saved before this switch existed were always taxed
       document.getElementById('pfStockQtyWrap').style.display = p.stockControl !== false ? 'block' : 'none';
       document.getElementById('pfStock').value = p.stock;
       document.getElementById('pfLowStockThreshold').value = p.lowStockThreshold !== undefined ? p.lowStockThreshold : '';
@@ -4302,6 +4315,7 @@ const AureumSync = (function(){
       document.getElementById('pfPrice').value = '';
       document.getElementById('pfCost').value = '';
       setSwitchOn('pfStockControlToggle', false);
+      setSwitchOn('pfTaxableToggle', POS_SETTINGS.taxDefaultOnNewProducts !== false);   // Settings → Taxes → "Apply tax to all new products by default"
       document.getElementById('pfStockQtyWrap').style.display = 'none';
       document.getElementById('pfStock').value = '';
       document.getElementById('pfLowStockThreshold').value = '';
@@ -4596,6 +4610,7 @@ const AureumSync = (function(){
       name, cat: cat || 'Others', price: isNaN(price)?0:price, cost: isNaN(cost)?0:cost, stock, image: pendingImage, imageCredit: pendingImage ? pendingImageCredit : '',
       soldBy: document.getElementById('pfSoldBy').value,
       code,
+      taxable: document.getElementById('pfTaxableToggle').classList.contains('on'),
       barcode: document.getElementById('pfBarcode').value.trim(),
       description: document.getElementById('pfDescription').value.trim(),
       stockControl, shops, lowStockThreshold, safetyStock,
@@ -7075,7 +7090,7 @@ const AureumSync = (function(){
     let added = 0;
     plan.ready.forEach(r => {
       const shops = r.shops.length ? r.shops : [...SHOPS];
-      const prod = { id: nextProductId++, name: r.name, price: r.price, cost: r.cost, cat: r.category, stock: r.stock, image:null, code: r.code, barcode: r.barcode, soldBy:'each', description: r.description, shops, stockControl:true };
+      const prod = { id: nextProductId++, name: r.name, price: r.price, cost: r.cost, cat: r.category, stock: r.stock, image:null, code: r.code, barcode: r.barcode, soldBy:'each', description: r.description, shops, stockControl:true, taxable: POS_SETTINGS.taxDefaultOnNewProducts !== false };
       if(shops.length){                                   // stock belongs to ONE shop — the one chosen — not shared across them
         const ss = {}; shops.forEach(sh => { ss[sh] = 0; });
         const dest = shops.includes(shopFor) ? shopFor : shops[0];
@@ -7303,10 +7318,8 @@ const AureumSync = (function(){
   }
   renderSettingsNav();
 
-  // Generic toggle-switch wiring for every switch inside Settings
-  document.querySelectorAll('.settings-content [data-toggle]').forEach(sw=>{
-    sw.addEventListener('click', ()=> sw.classList.toggle('on'));
-  });
+  // (Settings switches are wired ONCE, by the generic handler near the product form. They used to be wired a second
+  // time here as well, so a single click flipped the switch on and straight back off — they looked frozen.)
   document.getElementById('stDualCurrency').addEventListener('click', function(){
     this.classList.toggle('on');
     document.getElementById('stDualCurrencyFields').style.display = this.classList.contains('on') ? 'block' : 'none';
@@ -7318,9 +7331,20 @@ const AureumSync = (function(){
     document.getElementById('stFxRateLabel').textContent = '1 ' + this.value + ' =';
   });
 
+  function markSettingsDirty(el){
+    const panel = el && el.closest && el.closest('.settings-panel'); if(!panel) return;
+    const row = panel.querySelector('.settings-save-row'); if(!row) return;
+    let hint = row.querySelector('.unsaved');
+    if(!hint){ hint = document.createElement('div'); hint.className = 'unsaved'; hint.textContent = 'Unsaved changes — press Save'; row.appendChild(hint); }
+    hint.style.display = 'block';
+  }
+  document.querySelectorAll('.settings-panel input:not([type=file]), .settings-panel select').forEach(el => {
+    el.addEventListener('input', () => markSettingsDirty(el)); el.addEventListener('change', () => markSettingsDirty(el));
+  });
   function flashSaveConfirm(id){
     const el = document.getElementById(id);
     if(!el) return;
+    const hint = el.closest('.settings-panel') && el.closest('.settings-panel').querySelector('.unsaved'); if(hint) hint.style.display = 'none';
     el.classList.add('show');
     clearTimeout(el._t);
     el._t = setTimeout(()=> el.classList.remove('show'), 2200);
@@ -7382,6 +7406,21 @@ const AureumSync = (function(){
       POS_SETTINGS.toggles[sw.id] = sw.classList.contains('on');
     });
     persistAureum();
+  }
+  const settingOn = (id, def) => (POS_SETTINGS.toggles && Object.prototype.hasOwnProperty.call(POS_SETTINGS.toggles, id)) ? !!POS_SETTINGS.toggles[id] : def;
+  // One-time: until now these switches did nothing (they couldn't even be moved), so whatever was "saved" was just the
+  // screen's starting positions. Put them back to how the till actually behaved, so nothing changes by surprise.
+  function migrateSettingsV2(){
+    if(POS_SETTINGS.settingsV2) return false;
+    if(!POS_SETTINGS.toggles) POS_SETTINGS.toggles = {};
+    Object.assign(POS_SETTINGS.toggles, { stPermDiscount:true, stPermRefund:false, stPermReports:true, stPermEditPrice:false, stPermPin:true,
+      stPayCredit:true, stReceiptAutoPrint:false, stNotifyLowStock:true, stNotifyDailySummary:false, stNotifyNewOrder:false, stNotifyRefund:true, stNotifyClockInOut:false });
+    POS_SETTINGS.settingsV2 = true;
+    return true;
+  }
+  // Runs AFTER the account's data has loaded (never on the cached copy, where the server's older values would win the merge).
+  function runSettingsMigration(){
+    if(migrateSettingsV2()){ persistAureum(); try{ applySettingsToForm(); }catch(e){} }
   }
   function restoreSettingsToggles(){
     document.querySelectorAll('.settings-content [data-toggle]').forEach(sw=>{
@@ -7668,7 +7707,8 @@ const AureumSync = (function(){
   }
   function renderAlerts(){
     const el = document.getElementById('alertsList');
-    const { shopCtx, DEFAULT_LOW_STOCK_THRESHOLD, negativeStock, lowItems } = computeStockAlerts();
+    const { shopCtx, DEFAULT_LOW_STOCK_THRESHOLD, negativeStock, lowItems: allLowItems } = computeStockAlerts();
+    const lowAlertsOn = settingOn('stNotifyLowStock', true), lowItems = lowAlertsOn ? allLowItems : [];
     const MAX_SHOWN = 5;
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
     const column = (cls, headHtml, itemsHtml, total, noneText) => `
@@ -7687,7 +7727,57 @@ const AureumSync = (function(){
       column('neg', `You have <b class="n neg">${negativeStock.length}</b> negative-stock ${negativeStock.length === 1 ? 'item' : 'items'}`, negHtml, negativeStock.length, `<span class="ok">&#10003; No negative stock</span>`) +
       column('low', `You have <b class="n low">${lowItems.length}</b> low-stock ${lowItems.length === 1 ? 'item' : 'items'}`, lowHtml, lowItems.length, `<span class="ok">&#10003; Nothing is low on stock</span>`) +
       `</div>`;
+    if(!lowAlertsOn){ const h = el.querySelector('.alerts-col.low .alerts-head'); if(h) h.innerHTML = '<span style="color:var(--sage)">Low-stock alerts are off (Settings → Notifications)</span>'; }
     el.querySelectorAll('[data-alert]').forEach(c => c.addEventListener('click', () => goToLowStockReport(c.dataset.alert === 'neg' ? 'negative' : 'low')));
+  }
+
+  /* ===== NOTIFICATIONS (Settings → Notifications) =====
+     Pop-ups for what the tills do while this Back Office is open: new sales, refunds, shifts opened/closed. The first
+     look at the data is only a baseline (it never announces old activity). */
+  const seenEvents = { ready:false, receipts:new Set(), shifts:new Set(), closures:new Set() };
+  function runNotifications(){
+    const rk = r => r.uid || ('id:' + r.id), fresh = [];
+    if(!seenEvents.ready){
+      RECEIPTS.forEach(r => seenEvents.receipts.add(rk(r))); OPEN_SHIFTS.forEach(x => seenEvents.shifts.add(x.uid || x.id)); SHIFT_CLOSURES.forEach(x => seenEvents.closures.add(x.uid || x.id));
+      seenEvents.ready = true; return;
+    }
+    const money = n => POS_SETTINGS.currency + Number(n || 0).toFixed(2);
+    RECEIPTS.forEach(r => { const k = rk(r); if(seenEvents.receipts.has(k)) return; seenEvents.receipts.add(k);
+      if(r.refund){ if(settingOn('stNotifyRefund', true)) fresh.push(`Refund of ${money(r.total)} (No. ${r.id}) at ${r.shop || 'a shop'}${r.employee ? ' by ' + r.employee : ''}`); }
+      else if(settingOn('stNotifyNewOrder', false)) fresh.push(`New sale ${money(r.total)} (No. ${r.id}) at ${r.shop || 'a shop'}${r.employee ? ' — ' + r.employee : ''}`); });
+    OPEN_SHIFTS.forEach(x => { const k = x.uid || x.id; if(seenEvents.shifts.has(k)) return; seenEvents.shifts.add(k);
+      if(settingOn('stNotifyClockInOut', false)) fresh.push(`${x.employeeName || x.openedBy || 'A cashier'} started a shift at ${x.shop}`); });
+    SHIFT_CLOSURES.forEach(x => { const k = x.uid || x.id; if(seenEvents.closures.has(k)) return; seenEvents.closures.add(k);
+      if(settingOn('stNotifyClockInOut', false)) fresh.push(`${x.employeeName || x.openedBy || x.employee || 'A cashier'} closed shift ${x.id}${typeof x.variance === 'number' && x.variance !== 0 ? ` (${x.variance < 0 ? 'short' : 'over'} ${money(Math.abs(x.variance))})` : ' (balanced)'}`); });
+    fresh.slice(0, 4).forEach(m => aureumToast(m, 'ok'));
+    if(fresh.length > 4) aureumToast(`…and ${fresh.length - 4} more`, 'ok');
+  }
+  function maybeShowDailySummary(){
+    if(!settingOn('stNotifyDailySummary', false)) return;
+    const today = new Date(), dayKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const store = 'aureum_daily_summary_' + (currentBusinessId || 'x');
+    try{ if(localStorage.getItem(store) === dayKey(today)) return; }catch(e){}
+    const y = new Date(today); y.setDate(y.getDate() - 1); const yk = dayKey(y);
+    const rs = RECEIPTS.filter(r => dayKey(new Date(r.dateTime)) === yk);
+    try{ localStorage.setItem(store, dayKey(today)); }catch(e){}
+    if(!rs.length) return;
+    const sales = rs.filter(r => !r.refund), refunds = rs.filter(r => r.refund);
+    const gross = sales.reduce((t, r) => t + r.total, 0), ref = refunds.reduce((t, r) => t + r.total, 0);
+    const byPay = {}; sales.forEach(r => { byPay[r.payment || 'Other'] = (byPay[r.payment || 'Other'] || 0) + r.total; });
+    const byProd = {}; sales.forEach(r => (r.items || []).forEach(i => { byProd[i.name] = (byProd[i.name] || 0) + i.qty; }));
+    const top = Object.entries(byProd).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const m = n => POS_SETTINGS.currency + Number(n).toFixed(2);
+    openDetailModal(`Yesterday’s sales — ${y.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' })}`, `
+      <div class="create-form-grid" style="margin-bottom:14px;">
+        <div class="detail-field"><div class="field-label">Sales</div><div class="v">${sales.length}</div></div>
+        <div class="detail-field"><div class="field-label">Takings</div><div class="v">${m(gross)}</div></div>
+        <div class="detail-field"><div class="field-label">Refunds</div><div class="v">${refunds.length} · ${m(ref)}</div></div>
+        <div class="detail-field"><div class="field-label">Net</div><div class="v">${m(gross - ref)}</div></div>
+      </div>
+      ${Object.keys(byPay).length ? `<div class="field-label">By payment method</div><div style="margin:4px 0 12px;font-size:13px;">${Object.entries(byPay).map(([k, v]) => `${escHtml(k)} ${m(v)}`).join(' · ')}</div>` : ''}
+      ${top.length ? `<div class="field-label">Top products</div><div style="margin-top:4px;font-size:13px;">${top.map(([n, q]) => `${escHtml(n)} (${q})`).join(' · ')}</div>` : ''}
+      <div style="margin-top:14px;font-size:11.5px;color:var(--sage);">Turn this off in Settings → Notifications.</div>`,
+      `<div class="modal-btn solid" data-close="detailModal">Close</div>`);
   }
 
   /* ===== DASHBOARD: TOP PERFORMERS ===== */
@@ -8358,6 +8448,8 @@ const AureumSync = (function(){
     const fxLabel = document.getElementById('stFxRateLabel');
     if(fxLabel) fxLabel.textContent = '1 ' + (POS_SETTINGS.currencyCode || 'USD') + ' =';
     restoreSettingsToggles();
+    setSwitchOn('stTaxInclusive', !!POS_SETTINGS.taxInclusive);                        // show what the till really does
+    setSwitchOn('stTaxDefault', POS_SETTINGS.taxDefaultOnNewProducts !== false);
     updateEnabledPaymentMethods();
     renderBilling();
     renderHelpFaq();
@@ -8607,7 +8699,10 @@ const AureumSync = (function(){
     // used to be mistaken for "new business" and saved an empty copy over the real data.
     await AureumSync.start();
     try{ if(ensureProductCodes()) persistAureum(); }catch(e){}      // old products with no code get one now, and it is saved
+    try{ runSettingsMigration(); }catch(e){}
     renderAllData();
+    try{ runNotifications(); }catch(e){}                          // first look = baseline only
+    try{ maybeShowDailySummary(); }catch(e){}
     window.addEventListener('beforeunload', persistAureum);
     renderSyncStatus();
     window.addEventListener('online', async ()=>{
