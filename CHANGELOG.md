@@ -1,5 +1,15 @@
 # Changelog
 
+## Phase 21 — Product pictures: far more to choose from
+- The **picture finder searches many more free-to-use sources at once**: Open Food Facts, **Open Beauty Facts, Open Pet Food Facts, Open Products Facts** and Wikimedia Commons. Openverse is still one tap away.
+- **Exact barcode match**: if the product has a barcode, the finder shows that exact product first.
+- **Show more pictures** pages through every source; a simpler wording of the name (without sizes) is tried automatically; results can be filtered by source.
+- **Optional stock libraries — Pixabay, Pexels, Unsplash** — when the owner adds their own free key (kept on that device only).
+- **Bring in a picture from anywhere**: paste a picture's web address, paste a copied picture (Ctrl+V), drag a picture or a picture from another web page onto the box, or use new **Bing** and **DuckDuckGo** shortcuts beside Google. If a website doesn't allow copying, **Try another way** (free image service wsrv.nl, sent only the picture's web address, only when asked).
+- Credits are saved with every picture; the owner is reminded that pictures from ordinary websites are usually copyrighted.
+- AUREUM Bot knows the new options (3 help entries). See IMPORT-AND-IMAGES.md.
+- Note: it is not possible to search "every image online" directly — there is no free, open image search an app can use, and most pictures online are copyrighted. This covers every free-to-reuse source that can be searched without a paid service, plus easy ways to bring in anything else.
+
 ## Phase 20 — AUREUM Bot replaces the live AI (no external service, no subscription)
 
 The Help screen's assistant is now **AUREUM Bot**, a built-in guide instead of a call to an AI service:

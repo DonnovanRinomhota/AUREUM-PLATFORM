@@ -600,7 +600,16 @@
   .imgf-sel{ margin-top:14px; } .imgf-selrow{ display:flex; gap:12px; align-items:center; padding:10px; border:1px solid var(--line-strong); border-radius:11px; }
   .imgf-selrow img{ width:64px; height:64px; object-fit:contain; background:#fff; border-radius:8px; flex:0 0 auto; }
   .imgf-selrow .t{ font-size:13px; font-weight:600; color:var(--ivory); } .imgf-selrow .m{ font-size:11.5px; color:var(--sage); margin:2px 0; } .imgf-selrow a{ font-size:11.5px; color:var(--gold-bright); }
-  .imgf-more{ margin-top:14px; }
+  .imgf-more{ margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .imgf-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .imgf-chip{ font:inherit; font-size:11px; color:var(--ivory-dim); background:transparent; border:1px solid var(--line-strong); border-radius:999px; padding:4px 10px; cursor:pointer; }
+  .imgf-chip.on, .imgf-chip:hover{ color:#1B140A; background:var(--gold-bright); border-color:var(--gold-bright); }
+  .imgf-src.exact{ background:#2F6B54; }
+  .imgf-h{ font-size:12px; font-weight:700; color:var(--ivory); margin:18px 0 6px; }
+  .imgf-keys{ margin-top:16px; font-size:12px; color:var(--ivory-dim); } .imgf-keys summary{ cursor:pointer; font-weight:600; }
+  .imgf-keys input{ width:100%; box-sizing:border-box; margin:6px 0; }
+  .img-hint{ font-size:11.5px; color:var(--sage); line-height:1.5; margin-top:8px; max-width:340px; }
+  .upload-zone.drag{ border-color:var(--gold-bright); background:rgba(231,199,102,.08); }
   .settings-save-row .unsaved{ display:none; margin-left:12px; font-size:12px; color:#E3B04B; font-weight:600; }
   .toggle-row .soon{ margin-left:8px; font-size:10.5px; padding:2px 7px; border-radius:999px; border:1px solid var(--line-strong); color:var(--sage); font-weight:600; letter-spacing:.03em; }
   .toggle-row .lbl .hint{ display:block; font-size:11px; color:var(--sage); font-weight:400; margin-top:2px; }
@@ -1396,13 +1405,16 @@
             <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
             <div id="uploadPrompt">
               <div class="uz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-4 4-2-2-6 6"/></svg></div>
-              <div class="uz-text">Click to upload a product photo<br>PNG or JPG · falls back to a category icon if left empty</div>
+              <div class="uz-text">Click to upload a product photo — or drag a picture here, or paste one (Ctrl+V)<br>PNG or JPG · falls back to a category icon if left empty</div>
             </div>
           </div>
           <div class="img-actions">
             <div class="btn-ghost-sm" id="pfFindImageBtn" role="button" tabindex="0">&#128269; Find a picture online</div>
-            <div class="btn-ghost-sm" id="pfGoogleImgBtn" role="button" tabindex="0">Search Google Images &#8599;</div>
+            <div class="btn-ghost-sm" id="pfGoogleImgBtn" role="button" tabindex="0">Google Images &#8599;</div>
+            <div class="btn-ghost-sm" id="pfBingImgBtn" role="button" tabindex="0">Bing Images &#8599;</div>
+            <div class="btn-ghost-sm" id="pfDdgImgBtn" role="button" tabindex="0">DuckDuckGo &#8599;</div>
           </div>
+          <div class="img-hint">Found a picture on any website? Right-click it → <b>Copy image</b>, then click here and press <b>Ctrl+V</b> — or drag it onto the box. Only use pictures you have the right to use.</div>
           <div class="img-credit" id="pfImageCredit"></div>
         </div>
 
@@ -4472,39 +4484,78 @@ const AureumSync = (function(){
     }catch(err){ aureumToast(err.message, 'danger'); }
   });
 
-  /* ----- "Find a picture online" -----
-     Searches only free-to-reuse picture libraries — Open Food Facts (packaged goods), Wikimedia Commons, and (on
-     request) Openverse — and never anything that isn't licensed for reuse. Google Images can't be read by an app (its
-     search API is closed to new customers), so a button opens Google in a new tab instead. Only the product name is
-     sent, and only when Search is pressed. The chosen picture is downloaded, shrunk and saved WITH its credit. */
+  /* ----- "Find a picture online" — expanded -----
+     SEARCHED TOGETHER: the Open Food Facts family (food, beauty, pet food and general products — also looked up by the
+     product's BARCODE for an exact match) and Wikimedia Commons; on request Openverse (which gathers free-to-reuse pictures
+     from many sites); and, if the owner adds their own free keys, Pixabay, Pexels and Unsplash. Every result is licensed for
+     reuse and its credit is saved with the picture. "Show more" pages through every source, and a simpler wording of the name
+     (without sizes like 500ml) is tried when the first finds little.
+     BROUGHT IN FROM ANYWHERE: paste a picture's web address, paste a copied picture (Ctrl+V), drag a picture onto the box,
+     or use the Google / Bing / DuckDuckGo shortcuts. Pictures on ordinary websites are usually copyrighted, so the owner is
+     reminded to use only what they may use. Only the product name (and barcode) is sent, only when Search is pressed. */
   const imgfEnc = encodeURIComponent;
-  async function imgfJson(url, ms){
+  async function imgfJson(url, ms, headers){
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms || 9000);
     try{
-      const r = await fetch(url, { signal: ctl.signal, headers: { Accept:'application/json' } });
+      const r = await fetch(url, { signal: ctl.signal, headers: Object.assign({ Accept:'application/json' }, headers || {}) });
       if(r.status === 429) throw Object.assign(new Error('rate limited'), { rateLimited:true });
+      if(r.status === 401 || r.status === 403) throw Object.assign(new Error('key refused'), { keyRefused:true });
       if(!r.ok) throw new Error('HTTP ' + r.status);
       return await r.json();
     } finally { clearTimeout(t); }
   }
   const imgfText = html => { try{ return (new DOMParser().parseFromString(String(html || ''), 'text/html').body.textContent || '').replace(/\s+/g, ' ').trim(); }catch(e){ return ''; } };
-  async function imgfOpenFoodFacts(q){
-    const map = p => {
-      const full = p.image_front_url || p.image_url || '', thumb = p.image_front_small_url || p.image_small_url || p.image_front_url || p.image_url || '';
-      if(!/^https:/.test(full)) return null;
-      return { source:'Open Food Facts', thumb, full, title: [p.product_name, p.brands].filter(Boolean).join(' — ') || 'Product photo', license:'CC BY-SA', credit:'Open Food Facts contributors (CC BY-SA)', page: p.code ? 'https://world.openfoodfacts.org/product/' + p.code : '' };
-    };
-    try{   // the current full-text search service…
-      const r = await imgfJson(`https://search.openfoodfacts.org/search?q=${imgfEnc(q)}&page_size=14&fields=code,product_name,brands,image_url,image_front_url,image_small_url`);
-      const hits = (r.hits || r.products || []).map(map).filter(Boolean);
-      if(hits.length) return hits;
-    }catch(e){ if(e.rateLimited) throw e; }
-    // …and the older one as a fallback
-    const r2 = await imgfJson(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${imgfEnc(q)}&search_simple=1&action=process&json=1&page_size=14&fields=code,product_name,brands,image_front_url,image_front_small_url`);
-    return (r2.products || []).map(map).filter(Boolean);
+  // the name as typed, then without sizes/brackets ("Coca-Cola 500ml" → "Coca-Cola"), then its first two words
+  function imgfVariants(q){
+    const out = [String(q).trim()];
+    const simple = String(q).replace(/\([^)]*\)/g, ' ').replace(/\b\d+([.,]\d+)?\s?(ml|l|cl|g|kg|mg|oz|lb|lbs|pcs|pc|pack|packs|ct)\b/gi, ' ').replace(/\bx\s?\d+\b/gi, ' ').replace(/\b\d+\s?x\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    if(simple.length >= 3 && simple.toLowerCase() !== out[0].toLowerCase()) out.push(simple);
+    const words = simple.split(' ').filter(Boolean);
+    if(words.length >= 3){ const two = words.slice(0, 2).join(' '); if(!out.some(o => o.toLowerCase() === two.toLowerCase())) out.push(two); }
+    return out.slice(0, 3);
   }
-  async function imgfCommons(q){
-    const r = await imgfJson(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=14&gsrsearch=${imgfEnc(q + ' filetype:bitmap')}&prop=imageinfo&iiprop=url|extmetadata|mime&iiurlwidth=640&iiextmetadatafilter=LicenseShortName|Artist|UsageTerms`);
+  async function imgfMulti(q, page, one){      // try each wording until enough is found
+    let out = [], lastErr = null, ok = false;
+    for(const v of imgfVariants(q)){
+      try{ out = out.concat(await one(v, page)); ok = true; }catch(e){ if(e.rateLimited || e.keyRefused) throw e; lastErr = e; }
+      if(out.length >= 8) break;
+    }
+    if(!ok && lastErr) throw lastErr;
+    return out;
+  }
+  const IMGF_FACTS = [
+    { host:'world.openfoodfacts.org', name:'Open Food Facts', search:'https://search.openfoodfacts.org/search' },
+    { host:'world.openbeautyfacts.org', name:'Open Beauty Facts' },
+    { host:'world.openpetfoodfacts.org', name:'Open Pet Food Facts' },
+    { host:'world.openproductsfacts.org', name:'Open Products Facts' }
+  ];
+  const IMGF_FIELDS = 'code,product_name,brands,image_url,image_front_url,image_small_url,image_front_small_url';
+  function imgfFactsMap(site, p, exact){
+    const full = p.image_front_url || p.image_url || '', thumb = p.image_front_small_url || p.image_small_url || p.image_front_url || p.image_url || '';
+    if(!/^https:/.test(full)) return null;
+    return { source: site.name, thumb, full, exact: !!exact, title: [p.product_name, p.brands].filter(Boolean).join(' — ') || 'Product photo', license:'CC BY-SA', credit: site.name + ' contributors (CC BY-SA)', page: p.code ? `https://${site.host}/product/${p.code}` : '' };
+  }
+  async function imgfFacts(site, q, page){
+    if(site.search){        // Open Food Facts' current full-text search service first…
+      try{
+        const r = await imgfJson(`${site.search}?q=${imgfEnc(q)}&page_size=14&page=${page}&fields=${IMGF_FIELDS}`);
+        const hits = (r.hits || r.products || []).map(p => imgfFactsMap(site, p)).filter(Boolean);
+        if(hits.length) return hits;
+      }catch(e){ if(e.rateLimited) throw e; }
+    }
+    // …and the classic search every database in the family has
+    const r2 = await imgfJson(`https://${site.host}/cgi/search.pl?search_terms=${imgfEnc(q)}&search_simple=1&action=process&json=1&page_size=14&page=${page}&fields=${IMGF_FIELDS}`);
+    return (r2.products || []).map(p => imgfFactsMap(site, p)).filter(Boolean);
+  }
+  async function imgfBarcode(code){       // the exact product, by barcode, in all four databases
+    const settled = await Promise.allSettled(IMGF_FACTS.map(async site => {
+      const r = await imgfJson(`https://${site.host}/api/v2/product/${imgfEnc(code)}.json?fields=${IMGF_FIELDS}`);
+      return r && r.status === 1 && r.product ? imgfFactsMap(site, Object.assign({ code }, r.product), true) : null;
+    }));
+    return settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
+  }
+  async function imgfCommons(q, page){
+    const r = await imgfJson(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=14&gsroffset=${(page - 1) * 14}&gsrsearch=${imgfEnc(q + ' filetype:bitmap')}&prop=imageinfo&iiprop=url|extmetadata|mime&iiurlwidth=640&iiextmetadatafilter=LicenseShortName|Artist|UsageTerms`);
     const pages = Object.values((r.query && r.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
     const out = [];
     for(const pg of pages){
@@ -4517,69 +4568,134 @@ const AureumSync = (function(){
     }
     return out;
   }
-  async function imgfOpenverse(q){
-    const r = await imgfJson(`https://api.openverse.org/v1/images/?q=${imgfEnc(q)}&license_type=commercial&page_size=14&mature=false`);
+  async function imgfOpenverse(q, page){
+    const r = await imgfJson(`https://api.openverse.org/v1/images/?q=${imgfEnc(q)}&license_type=commercial&page_size=14&page=${page}&mature=false`);
     return (r.results || []).filter(x => x.thumbnail || x.url).map(x => ({
       source:'Openverse', thumb: x.thumbnail || x.url, full: x.thumbnail || x.url, title: x.title || 'Picture',
       license: ((x.license || '').toUpperCase().replace(/-/g, ' ') + ' ' + (x.license_version || '')).trim(),
       credit: x.attribution ? imgfText(x.attribution) : `${x.title || 'Picture'} by ${x.creator || 'unknown'} (${(x.license || '').toUpperCase()}), via Openverse`, page: x.foreign_landing_url || '' }));
   }
+  // ----- stock-photo libraries: only when the owner adds their own free key (kept on THIS device only) -----
+  const imgfKeyOk = k => /^[A-Za-z0-9_\-]{8,100}$/.test(k || '');
+  function imgfKeys(){ try{ const k = JSON.parse(localStorage.getItem('aureum_imgkeys') || '{}'); return { pixabay: k.pixabay || '', pexels: k.pexels || '', unsplash: k.unsplash || '' }; }catch(e){ return { pixabay:'', pexels:'', unsplash:'' }; } }
+  async function imgfPixabay(q, page){
+    const r = await imgfJson(`https://pixabay.com/api/?key=${imgfEnc(imgfKeys().pixabay)}&q=${imgfEnc(q)}&image_type=photo&safesearch=true&per_page=14&page=${page}`);
+    return (r.hits || []).filter(h => /^https:/.test(h.webformatURL || '')).map(h => ({ source:'Pixabay', thumb:h.previewURL || h.webformatURL, full:h.webformatURL, title:h.tags || 'Picture', license:'Pixabay Content License', credit:`Image by ${h.user || 'a Pixabay contributor'} from Pixabay`, page:h.pageURL || '' }));
+  }
+  async function imgfPexels(q, page){
+    const r = await imgfJson(`https://api.pexels.com/v1/search?query=${imgfEnc(q)}&per_page=14&page=${page}`, 9000, { Authorization: imgfKeys().pexels });
+    return (r.photos || []).filter(x => x.src && /^https:/.test(x.src.large || '')).map(x => ({ source:'Pexels', thumb:x.src.medium || x.src.large, full:x.src.large, title:x.alt || 'Photo', license:'Pexels License', credit:`Photo by ${x.photographer || 'a Pexels contributor'} on Pexels`, page:x.url || '' }));
+  }
+  async function imgfUnsplash(q, page){
+    const h = { Authorization:'Client-ID ' + imgfKeys().unsplash };
+    const r = await imgfJson(`https://api.unsplash.com/search/photos?query=${imgfEnc(q)}&per_page=14&page=${page}`, 9000, h);
+    return (r.results || []).filter(x => x.urls && /^https:/.test(x.urls.regular || '')).map(x => ({ source:'Unsplash', thumb:x.urls.small || x.urls.regular, full:x.urls.regular, title:x.alt_description || x.description || 'Photo', license:'Unsplash License', credit:`Photo by ${(x.user && x.user.name) || 'an Unsplash photographer'} on Unsplash`, page:(x.links && x.links.html) || '', track:(x.links && x.links.download_location) || '', trackHeaders:h }));
+  }
 
   let imgf = null;
+  function imgfSources(){
+    const k = imgfKeys(), jobs = IMGF_FACTS.map(site => [site.name, (q, pg) => imgfFacts(site, q, pg)]);
+    jobs.push(['Wikimedia Commons', imgfCommons]);
+    if(imgfKeyOk(k.pixabay)) jobs.push(['Pixabay', imgfPixabay]);
+    if(imgfKeyOk(k.pexels)) jobs.push(['Pexels', imgfPexels]);
+    if(imgfKeyOk(k.unsplash)) jobs.push(['Unsplash', imgfUnsplash]);
+    if(imgf && imgf.openverseTried) jobs.push(['Openverse', imgfOpenverse]);
+    return jobs;
+  }
   function openImageFinder(){
     const nameEl = document.getElementById('pfName'), name = nameEl.value.trim();
     if(!name){
       nameEl.classList.add('invalid'); document.getElementById('pfNameError').classList.add('show'); nameEl.focus();
       aureumToast('Type the product name first — then we can look for its picture.', 'danger'); return;
     }
-    imgf = { q: name, results: [], selected: -1, busy:false, openverseTried:false, notes: [] };
+    const code = (document.getElementById('pfBarcode').value || '').replace(/\D/g, '');
+    imgf = { q: name, results: [], selected: -1, busy:false, openverseTried:false, notes: [], pages: {}, counts: {}, filter: 'all', barcode: /^\d{6,14}$/.test(code) ? code : '' };
+    const keys = imgfKeys();
     openDetailModal('Find a picture online', `
       <div class="imgf-bar"><input type="text" id="imgfQuery" class="modal-field" value="${escHtml(name)}" aria-label="What to search for" placeholder="Product name, e.g. Coca-Cola 500ml"><div class="modal-btn solid" id="imgfSearch" role="button" tabindex="0">Search</div></div>
-      <div class="imgf-note">Searches free-to-use pictures only (Open Food Facts and Wikimedia Commons). Only the product name is sent. Check that the picture really shows <b>your</b> product before using it.</div>
+      <div class="imgf-note">Searches free-to-use pictures: Open Food Facts, Open Beauty Facts, Open Pet Food Facts, Open Products Facts and Wikimedia Commons${imgf.barcode ? ' — and the exact product for barcode <b>' + escHtml(imgf.barcode) + '</b>' : ''}. Only the product name${imgf.barcode ? ' and barcode are' : ' is'} sent. Check that the picture really shows <b>your</b> product before using it.</div>
       <div id="imgfStatus" class="imgf-status" role="status" aria-live="polite"></div>
+      <div id="imgfChips" class="imgf-chips"></div>
       <div class="imgf-grid" id="imgfGrid"></div>
       <div id="imgfSel" class="imgf-sel"></div>
-      <div id="imgfMore" class="imgf-more"></div>`,
+      <div id="imgfMore" class="imgf-more"></div>
+      <div class="imgf-h">Already have a picture, or found one on another website?</div>
+      <div class="imgf-bar"><input type="text" id="imgfUrl" class="modal-field" aria-label="A picture's web address" placeholder="Paste a picture's web address (https://…)"><div class="modal-btn solid" id="imgfUrlBtn" role="button" tabindex="0">Get picture</div></div>
+      <div class="imgf-note">Or close this window, copy any picture (right-click → <b>Copy image</b>) and press <b>Ctrl+V</b> on the picture box — or drag a picture onto it. Pictures on ordinary websites are usually copyrighted: only use ones you have the right to use.</div>
+      <details class="imgf-keys" id="imgfKeysBox"${imgfKeyOk(keys.pixabay) || imgfKeyOk(keys.pexels) || imgfKeyOk(keys.unsplash) ? ' open' : ''}><summary>Search stock-photo libraries too (optional): Pixabay, Pexels, Unsplash</summary>
+        <div class="imgf-note">Each library gives a free key with a free account. Paste any you have and it is searched with the rest. Keys are kept on <b>this device only</b> and are never sent anywhere except to that library.</div>
+        <input type="text" id="imgfKeyPixabay" class="modal-field" placeholder="Pixabay key" value="${escHtml(keys.pixabay)}" autocomplete="off">
+        <input type="text" id="imgfKeyPexels" class="modal-field" placeholder="Pexels key" value="${escHtml(keys.pexels)}" autocomplete="off">
+        <input type="text" id="imgfKeyUnsplash" class="modal-field" placeholder="Unsplash access key" value="${escHtml(keys.unsplash)}" autocomplete="off">
+        <div class="btn-ghost-sm" id="imgfKeysSave" role="button" tabindex="0">Save keys and search again</div>
+      </details>`,
       `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid disabled" id="imgfUse" role="button" tabindex="0">Use this picture</div>`);
     const q = document.getElementById('imgfQuery');
-    document.getElementById('imgfSearch').addEventListener('click', () => imgfRun(false));
-    q.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); imgfRun(false); } });
-    document.getElementById('imgfUse').addEventListener('click', imgfUse);
-    imgfRun(false);
+    document.getElementById('imgfSearch').addEventListener('click', () => imgfRun('fresh'));
+    q.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); imgfRun('fresh'); } });
+    document.getElementById('imgfUse').addEventListener('click', () => imgfUse(false));
+    document.getElementById('imgfUrlBtn').addEventListener('click', () => imgfFromUrl(document.getElementById('imgfUrl').value, false));
+    document.getElementById('imgfUrl').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); imgfFromUrl(e.target.value, false); } });
+    document.getElementById('imgfKeysSave').addEventListener('click', () => {
+      const v = id => document.getElementById(id).value.trim(), bad = [];
+      const k = { pixabay: v('imgfKeyPixabay'), pexels: v('imgfKeyPexels'), unsplash: v('imgfKeyUnsplash') };
+      Object.entries(k).forEach(([n, x]) => { if(x && !imgfKeyOk(x)){ bad.push(n); k[n] = ''; } });
+      try{ localStorage.setItem('aureum_imgkeys', JSON.stringify(k)); }catch(e){}
+      if(bad.length) aureumToast('That doesn\'t look like a valid key for ' + bad.join(', ') + ' — keys use only letters, numbers, - and _.', 'danger'); else aureumToast('Saved on this device.', 'ok');
+      imgfRun('fresh');
+    });
+    imgfRun('fresh');
   }
-  async function imgfRun(withOpenverse){
+  async function imgfRun(mode){            // 'fresh' | 'more' | 'openverse'
     if(!imgf || imgf.busy) return;
     const q = document.getElementById('imgfQuery').value.trim();
-    if(!q){ document.getElementById('imgfStatus').textContent = 'Type what to search for.'; return; }
-    if(!withOpenverse){ imgf.results = []; imgf.selected = -1; imgf.openverseTried = false; imgf.notes = []; imgfSelect(-1); }
-    imgf.q = q; imgf.busy = true;
-    const status = document.getElementById('imgfStatus'); status.className = 'imgf-status'; status.textContent = 'Searching…';
+    const status = document.getElementById('imgfStatus');
+    if(!q){ status.textContent = 'Type what to search for.'; return; }
+    if(mode === 'fresh'){ imgf.results = []; imgf.selected = -1; imgf.openverseTried = false; imgf.notes = []; imgf.pages = {}; imgf.counts = {}; imgf.filter = 'all'; imgfSelect(-1); }
+    imgf.q = q; imgf.busy = true; imgf.notes = [];
+    status.className = 'imgf-status'; status.textContent = 'Searching…';
     document.getElementById('imgfMore').innerHTML = '';
     if(!navigator.onLine){ status.textContent = "You're offline — connect to the internet to search for pictures."; status.className = 'imgf-status warn'; imgf.busy = false; return; }
-    const jobs = withOpenverse ? [['Openverse', imgfOpenverse]] : [['Open Food Facts', imgfOpenFoodFacts], ['Wikimedia Commons', imgfCommons]];
-    if(withOpenverse) imgf.openverseTried = true;
-    const settled = await Promise.allSettled(jobs.map(([, fn]) => fn(q)));
-    const seen = new Set(imgf.results.map(r => r.thumb));
+    let jobs = mode === 'openverse' ? [['Openverse', imgfOpenverse]] : imgfSources();
+    if(mode === 'openverse') imgf.openverseTried = true;
+    const page = n => mode === 'fresh' ? 1 : (imgf.pages[n] || 0) + 1;
+    const runs = jobs.map(([n, fn]) => { const pg = page(n); imgf.pages[n] = pg; return imgfMulti(q, pg, fn); });
+    const names = jobs.map(j => j[0]);
+    if(mode === 'fresh' && imgf.barcode){ names.unshift('Barcode match'); runs.unshift(imgfBarcode(imgf.barcode)); }
+    const settled = await Promise.allSettled(runs);
+    const seen = new Set(imgf.results.flatMap(r => [r.thumb, r.full]));
+    let added = 0;
     settled.forEach((r, i) => {
-      if(r.status === 'fulfilled') r.value.forEach(x => { if(!seen.has(x.thumb)){ seen.add(x.thumb); imgf.results.push(x); } });
-      else imgf.notes.push(r.reason && r.reason.rateLimited ? `${jobs[i][0]}'s free limit was reached just now — try again in a while.` : `${jobs[i][0]} couldn't be reached.`);
+      if(r.status === 'fulfilled') r.value.forEach(x => { if(!seen.has(x.thumb) && !seen.has(x.full)){ seen.add(x.thumb); seen.add(x.full); imgf.results.push(x); imgf.counts[x.source] = (imgf.counts[x.source] || 0) + 1; added++; } });
+      else imgf.notes.push(r.reason && r.reason.rateLimited ? `${names[i]}'s free limit was reached just now — try again in a while.` : r.reason && r.reason.keyRefused ? `${names[i]} refused the key — check it under “Search stock-photo libraries too”.` : `${names[i]} couldn't be reached.`);
     });
+    imgf.results.sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0));
+    imgf.lastAdded = added; imgf.lastMode = mode;
     imgf.busy = false;
     imgfRenderResults();
   }
   function imgfRenderResults(){
-    const status = document.getElementById('imgfStatus'), grid = document.getElementById('imgfGrid'), more = document.getElementById('imgfMore');
+    const status = document.getElementById('imgfStatus'), grid = document.getElementById('imgfGrid'), more = document.getElementById('imgfMore'), chipsEl = document.getElementById('imgfChips');
     if(!status) return;
-    grid.innerHTML = imgf.results.map((r, i) => `<button type="button" class="imgf-tile" data-i="${i}" aria-label="${escHtml(r.title)} — ${escHtml(r.source)}, ${escHtml(r.license)}"><img src="${escHtml(r.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="imgf-src">${escHtml(r.source)}</span></button>`).join('');
+    const shown = imgf.results.map((r, i) => [r, i]).filter(([r]) => imgf.filter === 'all' || r.source === imgf.filter);
+    grid.innerHTML = shown.map(([r, i]) => `<button type="button" class="imgf-tile" data-i="${i}" aria-label="${escHtml(r.title)} — ${escHtml(r.source)}, ${escHtml(r.license)}"><img src="${escHtml(r.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="imgf-src${r.exact ? ' exact' : ''}">${r.exact ? 'Exact barcode match' : escHtml(r.source)}</span></button>`).join('');
     grid.querySelectorAll('.imgf-tile').forEach(t => {
       t.addEventListener('click', () => imgfSelect(parseInt(t.dataset.i, 10)));
       t.querySelector('img').addEventListener('error', () => t.classList.add('broken'));
     });
-    status.className = 'imgf-status' + (imgf.results.length ? '' : ' warn');
-    status.innerHTML = (imgf.results.length ? `${imgf.results.length} picture${imgf.results.length === 1 ? '' : 's'} found — tap one to choose it.` : 'No free pictures found for that. Try the brand + product (for example “Coca-Cola 500ml”), or fewer words.')
+    const srcs = Object.keys(imgf.counts);
+    chipsEl.innerHTML = srcs.length >= 2 ? [`<button type="button" class="imgf-chip${imgf.filter === 'all' ? ' on' : ''}" data-f="all">All (${imgf.results.length})</button>`].concat(srcs.map(n => `<button type="button" class="imgf-chip${imgf.filter === n ? ' on' : ''}" data-f="${escHtml(n)}">${escHtml(n)} (${imgf.counts[n]})</button>`)).join('') : '';
+    chipsEl.querySelectorAll('.imgf-chip').forEach(c => c.addEventListener('click', () => { imgf.filter = c.dataset.f; imgfRenderResults(); }));
+    const none = !imgf.results.length;
+    status.className = 'imgf-status' + (none ? ' warn' : '');
+    status.innerHTML = (none ? 'No free pictures found for that. Try the brand + product (for example “Coca-Cola 500ml”), or fewer words — or paste a picture\'s web address below, or use Google / Bing / DuckDuckGo from the product form.'
+      : `${imgf.results.length} picture${imgf.results.length === 1 ? '' : 's'} found — tap one to choose it.` + (imgf.lastMode === 'more' && !imgf.lastAdded ? ' No more were found.' : ''))
       + (imgf.notes.length ? `<div class="imgf-notes">${imgf.notes.map(n => escHtml(n)).join('<br>')}</div>` : '');
-    more.innerHTML = imgf.openverseTried ? '' : `<div class="btn-ghost-sm" id="imgfOpenverse" role="button" tabindex="0">Search more pictures (Openverse)</div><div class="imgf-note" style="margin-top:6px;">Openverse allows only a few free searches an hour, so it runs only when you ask.</div>`;
-    const om = document.getElementById('imgfOpenverse'); if(om) om.addEventListener('click', () => imgfRun(true));
+    const canMore = imgf.results.length && !(imgf.lastMode === 'more' && !imgf.lastAdded) && Math.max(0, ...Object.values(imgf.pages)) < 6;
+    more.innerHTML = (canMore ? '<div class="btn-ghost-sm" id="imgfMoreBtn" role="button" tabindex="0">Show more pictures</div>' : '')
+      + (imgf.openverseTried ? '' : '<div class="btn-ghost-sm" id="imgfOpenverse" role="button" tabindex="0">Also search Openverse</div><div class="imgf-note" style="flex-basis:100%;margin-top:0;">Openverse gathers free-to-reuse pictures from many sites, but allows only a few free searches an hour — so it runs only when you ask.</div>');
+    const mb = document.getElementById('imgfMoreBtn'); if(mb) mb.addEventListener('click', () => imgfRun('more'));
+    const om = document.getElementById('imgfOpenverse'); if(om) om.addEventListener('click', () => imgfRun('openverse'));
   }
   function imgfSelect(i){
     if(!imgf) return;
@@ -4590,36 +4706,99 @@ const AureumSync = (function(){
     if(!sel) return;
     sel.innerHTML = r ? `<div class="imgf-selrow"><img src="${escHtml(r.thumb)}" alt="" referrerpolicy="no-referrer"><div><div class="t">${escHtml(r.title)}</div><div class="m">${escHtml(r.source)} · ${escHtml(r.license)}</div>${r.page ? `<a href="${escHtml(r.page)}" target="_blank" rel="noopener noreferrer">View original page ↗</a>` : ''}</div></div>` : '';
   }
-  async function imgfUse(){
-    const r = imgf && imgf.results[imgf.selected]; if(!r) return;
-    const btn = document.getElementById('imgfUse'), status = document.getElementById('imgfStatus');
-    if(btn.classList.contains('busy')) return;
-    btn.classList.add('busy', 'disabled'); btn.textContent = 'Downloading…';
+  // ----- getting a picture into the product: one path for every source -----
+  async function imgfDownload(url){
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
     try{
-      const resp = await fetch(r.full, { mode:'cors', signal: ctl.signal, referrerPolicy:'no-referrer' });
+      const resp = await fetch(url, { mode:'cors', signal: ctl.signal, referrerPolicy:'no-referrer' });
       if(!resp.ok) throw new Error('HTTP ' + resp.status);
       const blob = await resp.blob();
       if(!/^image\//.test(blob.type)) throw new Error('not a picture');
-      pendingImage = await aureumCompressImage(blob);
-      pendingImageCredit = `Photo: ${r.credit}`;
-      setUploadPreview(pendingImage, document.getElementById('uploadZone'), document.getElementById('uploadPrompt'));
+      return blob;
+    } finally { clearTimeout(t); }
+  }
+  // many websites don't let other sites copy their pictures; a free image service can fetch it for us — only ever when the owner asks
+  const imgfProxyUrl = url => 'https://wsrv.nl/?w=800&output=jpg&url=' + imgfEnc(url);
+  async function imgfApply(blob, credit){
+    pendingImage = await aureumCompressImage(blob); pendingImageCredit = credit || '';
+    setUploadPreview(pendingImage, document.getElementById('uploadZone'), document.getElementById('uploadPrompt'));
+  }
+  function imgfMessage(html, warn){
+    const st = document.getElementById('imgfStatus');
+    if(st){ st.className = 'imgf-status' + (warn ? ' warn' : ''); st.innerHTML = html; } else aureumToast(html.replace(/<[^>]+>/g, ''), warn ? 'danger' : 'ok');
+  }
+  function imgfOfferProxy(onTry, already){
+    imgfMessage(already
+      ? `That picture still couldn't be downloaded. Open it on its own page, save it, then use <b>Upload</b> — or copy it and press <b>Ctrl+V</b> on the picture box.`
+      : `That picture couldn't be downloaded automatically (its website doesn't allow other sites to copy it).<div class="imgf-more" style="margin-top:8px;"><div class="btn-ghost-sm" id="imgfProxy" role="button" tabindex="0">Try another way</div></div><div class="imgf-note">“Try another way” asks the free image service <b>wsrv.nl</b> to fetch it for you. It is sent only the picture's web address — nothing about your business. Or save the picture and use <b>Upload</b>, or copy it and press <b>Ctrl+V</b> on the picture box.</div>`, true);
+    const b = document.getElementById('imgfProxy'); if(b) b.addEventListener('click', onTry);
+  }
+  async function imgfUse(viaProxy){
+    const r = imgf && imgf.results[imgf.selected]; if(!r) return;
+    const btn = document.getElementById('imgfUse');
+    if(btn.classList.contains('busy')) return;
+    btn.classList.add('busy', 'disabled'); btn.textContent = 'Downloading…';
+    try{
+      await imgfApply(await imgfDownload(viaProxy ? imgfProxyUrl(r.full) : r.full), `Photo: ${r.credit}`);
+      if(r.track) fetch(r.track, { headers: r.trackHeaders }).catch(() => {});     // Unsplash asks apps to report a download
       closeModal('detailModal');
       aureumToast('Picture added. Press Save product to keep it.', 'ok');
     }catch(err){
       btn.classList.remove('busy', 'disabled'); btn.textContent = 'Use this picture';
-      status.className = 'imgf-status warn';
-      status.innerHTML = `That picture couldn't be downloaded automatically (the site doesn't allow it). Choose another one, or open it with “View original page”, save it, and use <b>Upload</b> instead.`;
-    } finally { clearTimeout(t); }
+      imgfOfferProxy(() => imgfUse(true), viaProxy);
+    }
   }
+  async function imgfFromUrl(raw, viaProxy){
+    let u = String(raw || '').trim();
+    if(!u){ imgfMessage('Paste a picture\'s web address first.', true); return; }
+    if(/^http:\/\//i.test(u)) u = 'https://' + u.slice(7);
+    let host = '';
+    if(/^data:image\//i.test(u)) host = 'a copied picture';
+    else { try{ const x = new URL(u); if(x.protocol !== 'https:') throw 0; host = x.hostname.replace(/^www\./, ''); }catch(e){ imgfMessage('That doesn\'t look like a web address of a picture. It should start with https://', true); return; } }
+    imgfMessage('Getting the picture…');
+    try{
+      await imgfApply(await imgfDownload(viaProxy ? imgfProxyUrl(u) : u), `Picture from ${host} (added by the shop owner)`);
+      closeModal('detailModal'); aureumToast('Picture added. Press Save product to keep it.', 'ok');
+    }catch(err){ imgfOfferProxy(() => imgfFromUrl(u, true), viaProxy); }
+  }
+  async function imgfHandleFile(file){
+    if(!file || !/^image\//.test(file.type)){ aureumToast('That isn\'t a picture.', 'danger'); return; }
+    try{ await imgfApply(file, ''); aureumToast('Picture added. Press Save product to keep it.', 'ok'); }
+    catch(err){ aureumToast(err.message, 'danger'); }
+  }
+  // paste a copied picture (Ctrl+V) anywhere on the product form
+  document.addEventListener('paste', e => {
+    const nameEl = document.getElementById('pfName'); if(!nameEl || !nameEl.offsetParent) return;
+    const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => /^image\//.test(x.type));
+    if(f){ e.preventDefault(); imgfHandleFile(f); }
+  });
+  // drag a picture file — or a picture from another web page — onto the picture box
+  (function(){
+    const uz = document.getElementById('uploadZone');
+    ['dragenter', 'dragover'].forEach(ev => uz.addEventListener(ev, e => { e.preventDefault(); uz.classList.add('drag'); }));
+    uz.addEventListener('dragleave', e => { if(!uz.contains(e.relatedTarget)) uz.classList.remove('drag'); });
+    uz.addEventListener('drop', e => {
+      e.preventDefault(); uz.classList.remove('drag');
+      const dt = e.dataTransfer; if(!dt) return;
+      const f = [...(dt.files || [])].find(x => /^image\//.test(x.type));
+      if(f){ imgfHandleFile(f); return; }
+      let url = (dt.getData('text/uri-list') || '').split('\n').find(l => l && l[0] !== '#') || '';
+      if(!url){ const m = (dt.getData('text/html') || '').match(/<img[^>]+src=["']([^"']+)["']/i); url = m ? m[1] : ''; }
+      if(url) imgfFromUrl(url, false); else aureumToast('That wasn\'t a picture. Drag a picture file, or a picture from another web page.', 'danger');
+    });
+  })();
   document.getElementById('pfFindImageBtn').addEventListener('click', openImageFinder);
-  document.getElementById('pfGoogleImgBtn').addEventListener('click', () => {
+  function imgfShortcut(kind){
     const name = document.getElementById('pfName').value.trim();
     if(!name){ document.getElementById('pfName').focus(); aureumToast('Type the product name first.', 'danger'); return; }
-    window.open('https://www.google.com/search?tbm=isch&tbs=sur:fmc&q=' + imgfEnc(name), '_blank', 'noopener,noreferrer');
-    aureumToast('In Google, check Tools → Usage rights → Creative Commons licences, then save the picture and use Upload.', 'ok');
-  });
-  document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#pfFindImageBtn, #pfGoogleImgBtn, #imgfSearch, #imgfUse, #imgfOpenverse')){ e.preventDefault(); e.target.click(); } });
+    const url = { google: 'https://www.google.com/search?tbm=isch&tbs=sur:fmc&q=', bing: 'https://www.bing.com/images/search?q=', ddg: 'https://duckduckgo.com/?iax=images&ia=images&q=' }[kind] + imgfEnc(name);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    aureumToast('Found one? Right-click it → Copy image, then click the picture box here and press Ctrl+V (or drag it onto the box). Only use pictures you may use.', 'ok');
+  }
+  document.getElementById('pfGoogleImgBtn').addEventListener('click', () => imgfShortcut('google'));
+  document.getElementById('pfBingImgBtn').addEventListener('click', () => imgfShortcut('bing'));
+  document.getElementById('pfDdgImgBtn').addEventListener('click', () => imgfShortcut('ddg'));
+  document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#pfFindImageBtn, #pfGoogleImgBtn, #pfBingImgBtn, #pfDdgImgBtn, #imgfSearch, #imgfUse, #imgfOpenverse, #imgfMoreBtn, #imgfUrlBtn, #imgfKeysSave, #imgfProxy')){ e.preventDefault(); e.target.click(); } });
 
   document.getElementById('addProductBtn').addEventListener('click', ()=> openProductForm(null));
   document.getElementById('productBackLink').addEventListener('click', switchToProductList);
@@ -9492,10 +9671,20 @@ E('product-tax','Products','How do I make a product tax-free?',
   `Edit the product and switch **off** *Charge tax on this product* under **Tax**. The tax rate (and whether prices include tax) is set in **Settings → Taxes**. For new products, **Apply tax to all new products by default** sets the starting position. Older products are taxed unless you change them.`,
   ['taxes-settings','tax-wrong']),
 E('product-picture','Products','How do I add a picture to a product?',
-  ['how do i add a product picture','upload a photo for an item','find a picture online','search google images for product','download image for product','product image'],
-  'photo image upload picture online google free openverse wikimedia credit',
-  `In the product form, under the picture box you can:\n\n- **Click the box** to upload your own photo (it is shrunk automatically).\n- **Find a picture online** — type the product name first, then search free-to-use pictures (Open Food Facts and Wikimedia Commons; **Search more pictures** adds Openverse). Choose one and it is downloaded with its credit.\n- **Search Google Images** — opens Google in a new tab; save a picture and upload it. (AUREUM cannot read Google's results itself.)\n\nPress **Save product** to keep it.`,
-  ['add-product']),
+  ['how do i add a product picture','upload a photo for an item','find a picture online','search google images for product','download image for product','product image','how do i paste a picture from a website'],
+  'photo image upload picture online google bing duckduckgo free openverse wikimedia credit paste drag address barcode',
+  `Under the picture box in the product form:\n\n- **Click the box** to upload, **drag a picture onto it**, or copy any picture and press **Ctrl+V**.\n- **Find a picture online** searches several free picture libraries at once, with an **exact match** if the product has a **barcode**. **Show more pictures** goes further; **Also search Openverse** adds many more sites.\n- Inside the finder you can **paste a picture's web address** from any website.\n- **Google, Bing or DuckDuckGo** open in a new tab: right-click a picture → **Copy image**, then **Ctrl+V** on the box.\n\nPictures on ordinary websites are usually copyrighted — only use ones you may use. Press **Save product** to keep it.`,
+  ['product-picture-help','product-picture-stock','add-product']),
+E('product-picture-help','Products','The picture finder finds nothing, the wrong picture, or won\'t download',
+  ['picture finder found nothing','no pictures found for my product','the picture finder shows the wrong picture','cant download the picture from a website','picture could not be downloaded','how do i get a picture for any product'],
+  'picture image finder nothing wrong download problem barcode simpler wording try another way proxy',
+  `- Type the **barcode** on the product first — the finder then shows the **exact product** from the open product databases.\n- Try the **brand + product** ("Coca-Cola 500ml"), or fewer words. It also tries a simpler wording by itself.\n- Press **Show more pictures**, then **Also search Openverse**.\n- **"Couldn't be downloaded"** means that website doesn't let other sites copy its pictures. Press **Try another way**, or save the picture and **Upload** it, or copy it and press **Ctrl+V** on the picture box.\n- For anything else, paste the picture's **web address** into the finder.`,
+  ['product-picture','product-barcode']),
+E('product-picture-stock','Products','Can I search stock-photo sites like Pixabay, Pexels or Unsplash?',
+  ['can i search pixabay','use pexels for product pictures','unsplash product photos','search stock photos for my products','add a key for stock pictures'],
+  'stock photo library pixabay pexels unsplash free account generic',
+  `Yes. In **Find a picture online**, open **Search stock-photo libraries too (optional)**, paste your free key for **Pixabay**, **Pexels** and/or **Unsplash**, and press **Save keys and search again**. They are then searched together with everything else. Keys stay **on this device only**. Each library has its own licence, and the credit is saved with the picture. Stock libraries suit general goods (fruit, clothes) better than branded products.`,
+  ['product-picture','product-picture-help']),
 E('product-import','Products','How do I import products from Excel or CSV?',
   ['how do i import products','import from excel','upload a spreadsheet of products','bulk add products','import csv','add lots of products at once'],
   'import excel xlsx csv upload spreadsheet bulk template columns preview',
@@ -9798,9 +9987,9 @@ E('taxes-settings','Settings','How do I set up tax?',
   ['product-tax','till-tax'], { pages:['settings-taxes'] }),
 E('receipts-settings','Settings','How do I customise receipts (logo, header, footer)?',
   ['how do i add my logo to receipts','change receipt footer','receipt header message','customise receipt','put my business logo on the receipt','receipt text'],
-  'receipt logo header footer message cashier name customise design thank you',
-  `**Settings → Receipts**: type a **header** (under the business name) and **footer** message, upload your **logo** and keep **Show business logo on receipts** on. You can also control **Show cashier name on receipts**, **Print receipt automatically after sale** and **Show an "Email receipt" button on receipts**. Press **Save changes**.`,
-  ['receipt-auto-print','receipt-email','receipt-no-logo'], { pages:['settings-receipts'] }),
+  'receipt logo header footer message cashier name customise design thank you business name shop name',
+  `**Settings → Receipts**: type a **header** (under the business name) and **footer** message, upload your **logo** and keep **Show business logo on receipts** on. You can also control **Show cashier name on receipts**, **Print receipt automatically after sale** and **Show an "Email receipt" button on receipts**. The name at the top of the receipt is your business name from **Settings → Business Profile**. Press **Save changes**.`,
+  ['receipt-auto-print','receipt-email','receipt-no-logo','business-profile'], { pages:['settings-receipts'] }),
 E('payment-methods-settings','Settings','How do I choose which payment buttons show?',
   ['how do i hide card payments','turn off a payment method','which payment methods can cashiers use','disable mobile money','remove other payment button'],
   'payment methods cash card mobile other buttons hide show enable disable',
