@@ -38,7 +38,7 @@ Everything lives in `site-src/`. After any change run **`node tools/build-site.m
 ## Pictures (please read)
 Images are in `site/assets/img/`. Replace any picture by dropping a new file **with the same name** and keeping the proportions.
 - **`card-bakery/retail/grocery/fashion.webp` and `hero-bg.webp` are stand-ins**, cropped from the design mock-up you supplied (about 640 px wide). Replace them with your own photographs of real businesses — ideally about 1280 × 800 for the cards and 2400 × 1200 for the background.
-- **`screen-dashboard-*.webp`, `screen-pos-*.webp`, `screen-receipt-*.webp` are real, high-resolution screenshots of the application** with sample data. Each comes in two sizes — laptop 1280 and 2560 px wide, tablet 1100 and 2200, phone 780 and 1170 — and the page serves the light one to ordinary screens and the full-resolution one to sharp (high-density) displays. To refresh them, capture the real screen at 2× or 3× pixel density (laptop 1280 × 800 → 2560 × 1600; tablet 1100 × 800 → 2200 × 1600; phone 390 × 844 → 1170 × 2532), export as WebP at quality ~90, and keep the file names.
+- **`screen-dashboard.webp`, `screen-pos.webp`, `screen-receipt.webp` are real screenshots of the application** with sample data (a fictional "Demo Mini Mart" and illustrated sample products). Replace them with fresh screenshots whenever the app's look changes (about 1440 × 900, 1180 × 820 and 390 × 844 at double resolution).
 - `og-image.jpg` is the picture shown when a link is shared (1200 × 630).
 - Compress to WebP before adding.
 

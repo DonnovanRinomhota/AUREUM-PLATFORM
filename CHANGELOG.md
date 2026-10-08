@@ -1,10 +1,5 @@
 # Changelog
 
-## Phase 26 — Original design, with HD screens
-- The website is back to its original (Phase 22) design: the original serif headline typeface, the "POS & INVENTORY" tagline, the photo background and business cards, and the flag footer.
-- **Kept:** the high-resolution laptop, tablet and phone screens (2560 × 1600, 2200 × 1600, 1170 × 2532) re-captured from the real application, with higher-quality WebP and a lift in contrast and vibrancy. Each ships in two sizes and the browser picks the right one, so ordinary screens stay fast and sharp displays get full resolution. The Features page pictures and the social-share image are upgraded too.
-- 121 automatic checks (the original 111 plus 10 for the reset and the HD screens).
-
 ## Phase 22 — The public AUREUM website
 - New public website: **Home, Features, Pricing, About, Support** — static pages in the AUREUM forest-green and gold style, with the real Back Office dashboard, POS checkout and receipt shown on a laptop, tablet and phone. Source in `site-src/`, built by `node tools/build-site.mjs`. See `SITE-GUIDE.md`.
 - **Free Trial** opens the real Back Office on **Create Business**; **Log in** opens it on **Sign In**; Open POS and Back Office go to the real pages. `backoffice.html` now accepts `?mode=signup` / `?mode=signin` (no parameter = unchanged).

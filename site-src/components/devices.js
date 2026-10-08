@@ -1,15 +1,9 @@
 import { HERO } from '../config.js';
 import { esc } from './ui.js';
 
-/* How wide each picture is actually shown, so each screen downloads only the size it needs:
-   a light file on ordinary screens, the full-resolution file on sharp (high-density) displays. */
-const SIZES = {
-  hero: { laptop: '(min-width:1101px) 690px, (min-width:761px) 640px, 92vw', tablet: '(min-width:1101px) 600px, (min-width:761px) 520px, 70vw', phone: '(min-width:1101px) 160px, (min-width:761px) 140px, 34vw' },
-  show: { laptop: '(min-width:901px) 560px, 92vw', tablet: '(min-width:901px) 560px, 92vw', phone: '(min-width:901px) 290px, 70vw' }
-};
-const shot = (key, { eager = false, ctx = 'show' } = {}) => {
-  const d = HERO.devices[key], first = d.set[0][0];
-  return `<img src="${first}" srcset="${d.set.map(([u, w]) => `${u} ${w}w`).join(', ')}" sizes="${SIZES[ctx][key]}" width="${d.w}" height="${d.h}" alt="${esc(d.alt)}" ${eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"'}>`;
+const shot = (key, { eager = false } = {}) => {
+  const d = HERO.devices[key];
+  return `<img src="${d.src}" width="${d.w}" height="${d.h}" alt="${esc(d.alt)}" ${eager ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"'}>`;
 };
 
 /* Each frame is pure HTML/CSS around a REAL screenshot of the AUREUM application. */
@@ -20,7 +14,7 @@ export const deviceByKey = (key, opts) => ({ laptop, tablet, phone })[key](opts)
 
 /* The hero composition: laptop = dashboard, tablet = POS checkout, phone = receipt. */
 export const heroDevices = () => `<div class="devices" role="group" aria-label="AUREUM on a laptop, a tablet and a phone">
-  <div class="dev dev-laptop">${laptop({ eager: true, ctx: 'hero' })}</div>
-  <div class="dev dev-tablet">${tablet({ eager: true, ctx: 'hero' })}</div>
-  <div class="dev dev-phone">${phone({ eager: true, ctx: 'hero' })}</div>
+  <div class="dev dev-laptop">${laptop({ eager: true })}</div>
+  <div class="dev dev-tablet">${tablet({ eager: true })}</div>
+  <div class="dev dev-phone">${phone({ eager: true })}</div>
 </div>`;
