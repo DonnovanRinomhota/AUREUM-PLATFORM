@@ -3,7 +3,7 @@ import { hero, productAccess, builtFor, offer, steps } from '../components/secti
 
 export const home = {
   path: '/', file: 'index.html', active: 'home', title: SITE.title, description: SITE.description,
-  preload: ['/site/assets/img/hero-bg.webp', '/site/assets/img/screen-dashboard.webp'],
+  preload: ['/site/assets/img/hero-bg.webp'],
   software: true,
   body: () => hero() + productAccess() + builtFor() + offer() + steps()
 };
