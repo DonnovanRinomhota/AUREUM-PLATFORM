@@ -1,5 +1,16 @@
 # Changelog
 
+## Phase 23 — Website revision: institutional look
+- **Typography**: one upright sans-serif typeface (Inter) everywhere; no italics, no decorative serif; gradient gold text, glows, diamond dividers and rounded "pill" styling removed; squarer buttons and cards; the emerald-and-gold palette and layout are kept.
+- **Branding**: tagline "POS & INVENTORY MANAGEMENT" in the header and footer; titles and meta read "Point of Sale & Inventory Management" (no "for Zimbabwe").
+- **No people photos**: the hero background and the four cards are clean emerald placeholders with HTML comments marking where your images go (set a path in `config.js` to fill them).
+- **Business cards** are now Cosmetics, Groceries, Electronics, Clothes (label + placeholder). Headline: "Built for every kind of business".
+- **No Zimbabwe-specific wording** anywhere (hero, offer cards — now "Multi-Currency Ready" — footer, titles, About, structured data); the flag, skyline and "Proudly powering…" statement are removed. Footer: "Point of Sale & Inventory Management System."
+- **Screens recaptured** from the real application with neutral sample data: plain product tiles (name, price, stock only) — no illustrations.
+- **Features page**: new "See how it works" player (POS → dashboard analytics → reports → receipt) and the POS Checkout section now holds a player instead of a static screenshot. Each runs an animated walkthrough of real screens until you set a video file (one path in `config.js`), then becomes a normal video player.
+- **About page**: new headline and "What AUREUM is" wording; "Flexible payments and currencies" replaces the local-conditions section; no subheading.
+- 160 automatic checks. See `SITE-GUIDE.md`.
+
 ## Phase 22 — The public AUREUM website
 - New public website: **Home, Features, Pricing, About, Support** — static pages in the AUREUM forest-green and gold style, with the real Back Office dashboard, POS checkout and receipt shown on a laptop, tablet and phone. Source in `site-src/`, built by `node tools/build-site.mjs`. See `SITE-GUIDE.md`.
 - **Free Trial** opens the real Back Office on **Create Business**; **Log in** opens it on **Sign In**; Open POS and Back Office go to the real pages. `backoffice.html` now accepts `?mode=signup` / `?mode=signin` (no parameter = unchanged).

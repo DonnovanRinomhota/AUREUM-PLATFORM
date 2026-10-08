@@ -20,8 +20,8 @@ let assetV = crypto.createHash('sha1');
 for (const f of ['site.css', 'site.js']) { const buf = fs.readFileSync(src('assets/' + f)); assetV.update(buf); fs.writeFileSync(out('site/assets/' + f), buf); }
 assetV = assetV.digest('hex').slice(0, 8);
 
-const org = { '@context': 'https://schema.org', '@type': 'Organization', name: 'AUREUM', url: SITE.url, logo: SITE.url + '/icons/icon-512.png', areaServed: { '@type': 'Country', name: 'Zimbabwe' } };
-const web = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'AUREUM POS & Inventory', url: SITE.url };
+const org = { '@context': 'https://schema.org', '@type': 'Organization', name: 'AUREUM', url: SITE.url, logo: SITE.url + '/icons/icon-512.png' };
+const web = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'AUREUM POS & Inventory Management', url: SITE.url };
 const soft = { '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'AUREUM POS', applicationCategory: 'BusinessApplication', operatingSystem: 'Web browser; installable on phone, tablet and computer', description: SITE.description, url: SITE.url, offers: { '@type': 'Offer', price: PRICING.perShop.toFixed(2), priceCurrency: 'USD', description: `Per shop, per month. ${PRICING.trialDays}-day free trial.` } };
 
 const list = Object.values(pages);

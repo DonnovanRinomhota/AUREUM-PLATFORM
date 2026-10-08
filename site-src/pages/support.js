@@ -1,4 +1,4 @@
-import { APP, SUPPORT, FAQ_SUPPORT } from '../config.js';
+import { SITE, APP, SUPPORT, FAQ_SUPPORT } from '../config.js';
 import { pageHero, ctaBand } from '../components/sections.js';
 import { linkButton, faq, esc } from '../components/ui.js';
 import { icon } from '../components/icons.js';
@@ -13,7 +13,7 @@ const contact = () => {
 
 export const support = {
   path: '/support/', file: 'support/index.html', active: 'support',
-  title: 'Support | AUREUM POS & Inventory Management',
+  title: `Support | ${SITE.titleSuffix}`,
   description: 'Get help with AUREUM: signing in, staff PINs, using the POS and Back Office, and contacting the AUREUM team through Help & support.',
   body: () => pageHero('SUPPORT', 'Help with AUREUM', 'Sign-in help, how-to answers and a way to reach the AUREUM team.') + `
 <section class="support-sec"><div class="wrap sup-grid">
@@ -30,5 +30,5 @@ export const support = {
 </div>
 ${contact() ? `<div class="wrap narrow contact-box rv"><h2 class="side-title">Contact the AUREUM team</h2>${contact()}</div>` : ''}
 </section>
-<section class="faq-sec"><div class="wrap narrow"><h2 class="section-title with-rules"><span>Quick answers</span></h2>${faq(FAQ_SUPPORT)}</div></section>` + ctaBand()
+<section class="faq-sec"><div class="wrap narrow"><h2 class="section-title">Quick answers</h2>${faq(FAQ_SUPPORT)}</div></section>` + ctaBand()
 };

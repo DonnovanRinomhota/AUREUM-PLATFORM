@@ -1,23 +1,24 @@
-/* AUREUM public website — ONE place for every URL and every piece of copy.
+/* AUREUM public website — ONE place for every URL, every piece of copy, and every picture/video slot.
    Change a value here, run `node tools/build-site.mjs`, and every page is rebuilt. */
 
 export const SITE = {
   name: 'AUREUM',
-  tagline: 'POS & INVENTORY',
-  url: 'https://aureum-platform.vercel.app',          // used for canonical links, the sitemap and social previews
-  title: 'AUREUM POS | Point of Sale & Inventory Management for Zimbabwe',
-  description: 'Elegant point of sale and inventory management for Zimbabwean businesses. Manage sales, inventory, reports and your business from anywhere.',
+  tagline: 'POS & INVENTORY MANAGEMENT',
+  titleSuffix: 'AUREUM Point of Sale & Inventory Management',
+  url: 'https://aureum-platform.vercel.app',          // canonical links, sitemap and social previews
+  title: 'AUREUM POS | Point of Sale & Inventory Management',
+  description: 'Point of sale and inventory management for your business. Manage sales, inventory, reports and your business from anywhere.',
   ogImage: '/site/assets/img/og-image.jpg'
 };
 
-/* The real AUREUM application. APP_BASE '' means "the same website" (the normal case on Vercel).
-   If the website is ever hosted somewhere else, set it to 'https://aureum-platform.vercel.app'. */
+/* The real AUREUM application. APP_BASE '' = the same website (normal on Vercel).
+   If the website is ever hosted elsewhere, set it to 'https://aureum-platform.vercel.app'. */
 export const APP_BASE = '';
 export const APP = {
-  backOffice: APP_BASE + '/backoffice.html',                    // the Back Office (it was previously served at "/")
-  signIn: APP_BASE + '/backoffice.html?mode=signin',            // opens the Back Office on its "Sign In" tab
-  signUp: APP_BASE + '/backoffice.html?mode=signup',            // opens it on "Create Business" — the free-trial account creation
-  pos: APP_BASE + '/pos-checkout.html'                          // the POS checkout
+  backOffice: APP_BASE + '/backoffice.html',
+  signIn: APP_BASE + '/backoffice.html?mode=signin',     // Back Office on "Sign In"
+  signUp: APP_BASE + '/backoffice.html?mode=signup',     // Back Office on "Create Business" (the free trial)
+  pos: APP_BASE + '/pos-checkout.html'
 };
 
 export const NAV = [
@@ -28,17 +29,26 @@ export const NAV = [
   { id: 'support', label: 'Support', href: '/support/' }
 ];
 
-/* Real pricing, taken from the application's billing (US$5.00 per shop per month, card via Stripe). */
+/* Real pricing from the application's billing (US$5.00 per shop per month, card via Stripe). */
 export const PRICING = { perShop: 5, trialDays: 14, graceDays: 3, examples: [1, 2, 3, 5, 10] };
 
-/* Watch Demo: there is no demo video yet. When there is, set videoUrl to an .mp4/.webm file or a
-   YouTube / Vimeo link and rebuild — the button then plays it. Until then the dialog says it is coming. */
+/* Watch Demo dialog: set videoUrl to an .mp4/.webm file or a YouTube / Vimeo link and rebuild to play it there. */
 export const DEMO = { videoUrl: '', title: 'AUREUM demo' };
 
-/* Support contact details. Leave blank until real ones exist — nothing is invented. Anything filled in appears on the Support page. */
-export const SUPPORT = { email: '', phone: '', whatsapp: '' };
+/* ===== YOUR VIDEOS — drop a file in site/assets/media/ and change ONE path, then rebuild =====
+   While `mp4` is empty, the player shows an animated walkthrough built from the real app screens,
+   clearly labelled as a preview. Set `mp4` (and optionally `webm`) and the player becomes a normal video player. */
+export const VIDEOS = {
+  posCheckout: { mp4: '', webm: '', poster: '/site/assets/img/tour-pos-2.webp' },     // Features page → "POS Checkout"
+  howItWorks: { mp4: '', webm: '', poster: '/site/assets/img/tour-pos-2.webp' }       // Features page → "See how it works"
+};
 
-/* ---- Hero copy: EXACT wording, not to be paraphrased ---- */
+/* ===== YOUR IMAGES — leave `img` empty for the clean placeholder; set a path to show your picture ===== */
+export const HERO_BG = { img: '', slotName: 'hero-bg.webp' };                          // e.g. '/site/assets/img/hero-bg.webp'
+
+export const SUPPORT = { email: '', phone: '', whatsapp: '' };                         // shown on the Support page once filled in
+
+/* ---- Hero copy: EXACT wording ---- */
 export const HERO = {
   eyebrow: 'AUREUM POS',
   headline: ['Elegant Point Of Sale', 'System and Inventory', 'Management.'],
@@ -54,19 +64,19 @@ export const HERO = {
   ],
   devices: {
     laptop: { src: '/site/assets/img/screen-dashboard.webp', w: 1280, h: 800, alt: 'The AUREUM Back Office dashboard showing gross sales, net sales, cost of sales, gross profit, stock alerts and a sales summary chart.' },
-    tablet: { src: '/site/assets/img/screen-pos.webp', w: 1100, h: 764, alt: 'The AUREUM POS checkout on a tablet: a product catalogue with pictures, names and prices beside the current ticket and a Complete Sale button.' },
+    tablet: { src: '/site/assets/img/screen-pos.webp', w: 1100, h: 802, alt: 'The AUREUM POS checkout on a tablet: product tiles showing name, price and stock beside the current ticket and a Complete Sale button.' },
     phone: { src: '/site/assets/img/screen-receipt.webp', w: 560, h: 1212, alt: 'A completed sale on a phone: the AUREUM receipt with items, total, payment method and print and email options.' }
   }
 };
 
 export const BUILT_FOR = {
   eyebrow: 'BUILT FOR EVERY COUNTER',
-  heading: ['Empowering Business Owners', 'In Zimbabwe'],
+  heading: 'Built for every kind of business',
   cards: [
-    { id: 'bakery', icon: 'bread', title: 'Bakery', text: 'Fresh bread, cakes & more', img: '/site/assets/img/card-bakery.webp', alt: 'A smiling bakery owner in an apron and hairnet standing in front of shelves of fresh bread.' },
-    { id: 'retail', icon: 'store', title: 'Retail Shop', text: 'Everyday products, better sales', img: '/site/assets/img/card-retail.webp', alt: 'A shopkeeper smiling as he serves customers at the till of a well-stocked retail shop.' },
-    { id: 'grocery', icon: 'basket', title: 'Grocery Shop', text: 'Fresh food, daily essentials', img: '/site/assets/img/card-grocery.webp', alt: 'A grocery shop assistant in a green apron smiling beside shelves and fresh produce.' },
-    { id: 'fashion', icon: 'hanger', title: 'Clothes & Fashion', text: 'Trendy styles, happy customers', img: '/site/assets/img/card-fashion.webp', alt: 'A clothes shop owner arranging shirts on a rail in his fashion store.' }
+    { id: 'cosmetics', title: 'Cosmetics', img: '', slotName: 'card-cosmetics.webp', alt: 'A cosmetics business using AUREUM' },
+    { id: 'groceries', title: 'Groceries', img: '', slotName: 'card-groceries.webp', alt: 'A grocery business using AUREUM' },
+    { id: 'electronics', title: 'Electronics', img: '', slotName: 'card-electronics.webp', alt: 'An electronics business using AUREUM' },
+    { id: 'clothes', title: 'Clothes', img: '', slotName: 'card-clothes.webp', alt: 'A clothing business using AUREUM' }
   ]
 };
 
@@ -76,8 +86,8 @@ export const OFFER = {
     { icon: 'cart', title: 'Easy Checkout', lines: ['Quick and seamless sales', 'for a better customer experience.'] },
     { icon: 'cube', title: 'Track Inventory', lines: ['Know what you have,', "what's low, and what to order."] },
     { icon: 'chart', title: 'Insightful Reports', lines: ['Make smarter decisions', 'with real-time data.'] },
-    { icon: 'cloud', title: 'Access Anywhere', lines: ['Run your business from', 'any device, anywhere in Zimbabwe.'] },
-    { icon: 'shieldCheck', title: 'Built for Zimbabwe', lines: ['Local support, local currency,', 'local business needs.'] }
+    { icon: 'cloud', title: 'Access Anywhere', lines: ['Run your business from', 'any device, anywhere.'] },
+    { icon: 'coins', title: 'Multi-Currency Ready', lines: ['Add a second currency and', 'record every payment type.'] }
   ]
 };
 
@@ -90,11 +100,36 @@ export const STEPS = {
   ]
 };
 
+/* ---- The animated walkthrough: real screens from the application, in order ---- */
+const F = (n, title, text, chapter) => ({ img: `/site/assets/img/${n}.webp`, title, text, chapter });
+export const TOUR_POS = [
+  F('tour-pos-1', 'Add items', 'Tap products to put them on the ticket.', 0),
+  F('tour-pos-2', 'Build the ticket', 'Change quantities with − and +. The total updates as you go.', 0),
+  F('tour-pos-3', 'Apply a discount', 'A percent or an amount, when the cashier is allowed to.', 1),
+  F('tour-pos-4', 'Add a customer', 'Attach a customer to the sale.', 2),
+  F('tour-pos-5', 'Take payment', 'Choose cash, card, mobile or other, and enter the amount received.', 3),
+  F('tour-pos-6', 'Complete the sale', 'The receipt appears straight away.', 4)
+];
+export const TOUR_POS_CHAPTERS = [{ label: 'Add items', start: 0 }, { label: 'Discount', start: 2 }, { label: 'Customer', start: 3 }, { label: 'Payment', start: 4 }, { label: 'Complete sale', start: 5 }];
+export const TOUR_FULL = [
+  F('tour-pos-1', 'The POS: add items', 'Tap products to put them on the ticket.', 0),
+  F('tour-pos-3', 'The POS: discount', 'Apply a percent or amount discount.', 0),
+  F('tour-pos-4', 'The POS: customer', 'Attach a customer to the sale.', 0),
+  F('tour-pos-5', 'The POS: payment', 'Choose how the customer pays and enter the amount received.', 0),
+  F('tour-pos-6', 'The POS: complete the sale', 'Finish the sale and the receipt appears.', 0),
+  F('tour-dash-1', 'Dashboard analytics', 'Gross sales, net sales, cost of sales and gross profit, with stock alerts.', 1),
+  F('tour-dash-2', 'Dashboard analytics', 'Sales over time, by payment type and by employee.', 1),
+  F('tour-report-1', 'Reports: inventory valuation', 'See the value of your stock and the potential margin.', 2),
+  F('tour-report-2', 'Reports: staff snapshot', 'See your team and their status at a glance.', 2),
+  F('tour-receipt', 'The receipt', 'Print by browser, USB or Bluetooth printer, or email it.', 3)
+];
+export const TOUR_FULL_CHAPTERS = [{ label: '1 · The POS', start: 0 }, { label: '2 · Dashboard analytics', start: 5 }, { label: '3 · Reports', start: 7 }, { label: '4 · The receipt', start: 9 }];
+
 /* ---- Features: ONLY things the application really does ---- */
 export const SHOWCASE = [
   {
-    id: 'checkout', icon: 'cart', title: 'POS Checkout', device: 'tablet',
-    lead: 'A fast, touch-friendly till that works on a phone, tablet or laptop — and keeps selling when the internet drops.',
+    id: 'checkout', icon: 'cart', title: 'POS Checkout', player: 'pos',
+    lead: 'A fast, touch-friendly till that works on a phone, tablet or laptop, and keeps selling when the internet drops.',
     points: [
       'Tap products or search by name, code or barcode',
       'Percent or amount discounts, with cashier permissions you control',
@@ -105,7 +140,7 @@ export const SHOWCASE = [
   },
   {
     id: 'dashboard', icon: 'chart', title: 'Dashboard & Reports', device: 'laptop', flip: true,
-    lead: 'See how your business is doing — for one shop or all of them.',
+    lead: 'See how your business is doing, for one shop or all of them.',
     points: [
       'Gross sales, net sales, cost of sales and gross profit',
       'Low-stock and negative-stock alerts',
@@ -121,7 +156,7 @@ export const SHOWCASE = [
       'Print by browser, USB printer or Bluetooth printer, or email a receipt',
       'Your business name, header, footer and logo on every receipt',
       'Refund item by item, with tax and discount reversed in proportion',
-      'Today\'s Sales at the till for reprints and refunds'
+      "Today's Sales at the till for reprints and refunds"
     ]
   }
 ];
