@@ -1,5 +1,12 @@
 # Changelog
 
+## Phase 22 — The public AUREUM website
+- New public website: **Home, Features, Pricing, About, Support** — static pages in the AUREUM forest-green and gold style, with the real Back Office dashboard, POS checkout and receipt shown on a laptop, tablet and phone. Source in `site-src/`, built by `node tools/build-site.mjs`. See `SITE-GUIDE.md`.
+- **Free Trial** opens the real Back Office on **Create Business**; **Log in** opens it on **Sign In**; Open POS and Back Office go to the real pages. `backoffice.html` now accepts `?mode=signup` / `?mode=signin` (no parameter = unchanged).
+- **`/` is now the website** (the redirect to the Back Office is removed; the Back Office is `/backoffice.html`). `sw.js` v22. Emailed sign-up/reset links that land on the home page are forwarded to the Back Office.
+- Pricing page uses the application's real billing (US$5 per shop per month, 14-day trial, 3-day grace). Support points to the in-app AUREUM Bot and tickets; contact details are left blank until real ones exist.
+- Photos in the business cards and hero are stand-ins to be replaced. Watch Demo says "Coming soon" until a video is configured.
+
 ## Phase 21 — Product pictures: far more to choose from
 - The **picture finder searches many more free-to-use sources at once**: Open Food Facts, **Open Beauty Facts, Open Pet Food Facts, Open Products Facts** and Wikimedia Commons. Openverse is still one tap away.
 - **Exact barcode match**: if the product has a barcode, the finder shows that exact product first.

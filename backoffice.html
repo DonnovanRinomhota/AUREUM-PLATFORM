@@ -9411,6 +9411,15 @@ const AureumSync = (function(){
   document.getElementById('authForgotLink').addEventListener('click', ()=> setAuthMode('forgot'));
   document.getElementById('authBackToSignIn').addEventListener('click', ()=> setAuthMode('signin'));
   setAuthMode('signin');
+  // The public website links here: ?mode=signup opens "Create Business" (the free trial), ?mode=signin the sign-in tab.
+  // With no parameter nothing changes. A signed-in visitor goes straight into the app as before.
+  (function(){
+    try{
+      const m = new URLSearchParams(window.location.search).get('mode');
+      if(m === 'signup' || m === 'signin') setAuthMode(m);
+      if(m === 'signup') document.getElementById('authGateMsg').textContent = 'Create your business account to start your 14-day free trial.';
+    }catch(e){}
+  })();
 
   document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
     const email = document.getElementById('authEmail').value.trim();

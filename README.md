@@ -13,6 +13,7 @@ sw.js, offline.html    → offline support (apps open with no internet once load
 manifest*.webmanifest  → makes the Back Office and POS installable as apps
 icons/, vendor/        → app icons; fonts and libraries hosted by AUREUM (see vendor/LICENSES.md)
 supabase/              → database SQL files + edge functions
+site-src/              → source of the public website (build with node tools/build-site.mjs); output: index.html + features/ pricing/ about/ support/ + site/assets/
 help-bot/              → AUREUM Bot: kb.js (the help library) + engine.js (the search engine); no AI, no internet
 tools/                 → build-bot.mjs (copies the Bot into backoffice.html after you edit help-bot/)
 vercel.json            → redirects, /admin route, headers
@@ -23,6 +24,7 @@ vercel.json            → redirects, /admin route, headers
 
 ## Guides
 - `SETUP-INSTRUCTIONS.md` — first-time setup
+- `SITE-GUIDE.md` — the public website (pages, buttons, editing, pictures)
 - `SETUP-HELP.md` — AUREUM Bot (built-in help) and support tickets
 - `SETUP-BILLING.md`, `SETUP-ADMIN.md`, `SETUP-DATA-SAFETY.md`, `SETUP-EMAIL-TEMPLATE.md`
 - `SETTINGS-GUIDE.md` — what every Settings switch does

@@ -7,7 +7,7 @@
      • it never touches your data. Anything going to Supabase, Stripe, Paynow or any other site (and every
        non-GET request) is left completely alone — data is kept offline by the app itself, not by this file.
    Bump VERSION on each release so old copies are cleared. */
-const VERSION = 'aureum-v21';
+const VERSION = 'aureum-v22';
 const SHELL = [
   '/offline.html', '/backoffice.html', '/pos-checkout.html',
   '/manifest.webmanifest', '/manifest-pos.webmanifest',
@@ -49,8 +49,7 @@ async function networkFirst(request, url){
     if(response && response.ok && !response.redirected) cache.put(keyFor(url), response.clone());
     return response;
   }catch(err){
-    const path = url.pathname === '/' ? '/backoffice.html' : url.pathname;
-    const saved = await cache.match(url.origin + path);
+    const saved = (await cache.match(url.origin + url.pathname)) || (url.pathname === '/' ? await cache.match(url.origin + '/backoffice.html') : null);
     if(saved) return saved;
     if(request.mode === 'navigate') return (await cache.match('/offline.html')) || Response.error();
     return Response.error();

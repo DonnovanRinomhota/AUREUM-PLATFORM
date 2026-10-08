@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /backoffice.html
+Disallow: /pos-checkout.html
+
+Sitemap: https://aureum-platform.vercel.app/sitemap.xml
