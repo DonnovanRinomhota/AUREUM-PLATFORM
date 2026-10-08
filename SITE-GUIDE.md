@@ -38,7 +38,7 @@ Everything lives in `site-src/`. After any change run **`node tools/build-site.m
 ## Pictures (please read)
 Images are in `site/assets/img/`. Replace any picture by dropping a new file **with the same name** and keeping the proportions.
 - **`card-bakery/retail/grocery/fashion.webp` and `hero-bg.webp` are stand-ins**, cropped from the design mock-up you supplied (about 640 px wide). Replace them with your own photographs of real businesses — ideally about 1280 × 800 for the cards and 2400 × 1200 for the background.
-- **`screen-dashboard.webp`, `screen-pos.webp`, `screen-receipt.webp` are real screenshots of the application** with sample data (a fictional "Demo Mini Mart" and illustrated sample products). Replace them with fresh screenshots whenever the app's look changes (about 1440 × 900, 1180 × 820 and 390 × 844 at double resolution).
+- **`screen-dashboard-*.webp`, `screen-pos-*.webp`, `screen-receipt-*.webp` are real, high-resolution screenshots of the application** with sample data. Each comes in two sizes — the laptop 1280 and 2560 px wide, the tablet 1100 and 2200, the phone 780 and 1170 — and the page serves the light one to ordinary screens and the full-resolution one to sharp (high-density) displays. To refresh them, capture the real screen at 2× or 3× pixel density (laptop 1280 × 800 → 2560 × 1600; tablet 1100 × 800 → 2200 × 1600; phone 390 × 844 → 1170 × 2532), export as WebP at quality ~90, and keep the file names.
 - `og-image.jpg` is the picture shown when a link is shared (1200 × 630).
 - Compress to WebP before adding.
 
@@ -46,6 +46,9 @@ Images are in `site/assets/img/`. Replace any picture by dropping a new file **w
 - **Privacy policy and terms pages.** None exist, so none are linked. You will need them before a commercial launch or an app-store release.
 - **Analytics.** None, by design.
 - **A "contact us" form.** Support runs through in-app tickets; add contact details above if you want visitors to reach you another way.
+
+## Typography
+Every heading, number and the logo use **Inter** in bold (the same family as the application), so the whole site is one clean, upright sans-serif. There is no serif or italic font anywhere. To change the look, edit `--ff-head` and `--ff-sans` at the top of `site-src/assets/site.css`.
 
 ## What was tested
 111 automatic checks in real Chrome, including: every link on every page resolves and no link is empty or "#"; Free Trial, Log in, Open POS and Back Office each go to the right real destination; the hero wording is word-for-word; four business cards and five "What We Offer" items; sign-up/sign-in deep links open the right tab in the real Back Office; no sideways scrolling at 11 screen widths (360–1920) on all pages; the mobile menu and the demo dialog (including with a real video configured); keyboard access, reduced-motion and no-JavaScript behaviour; titles, descriptions, canonical links, social tags and structured data; no outside requests; no unsupported claims; prices and features match the real application; and that emailed sign-up/reset links reach the Back Office.

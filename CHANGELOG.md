@@ -1,5 +1,14 @@
 # Changelog
 
+## Phase 25 — Tagline, professional typeface, HD screens
+- **Tagline** under the AUREUM logo (header and footer) now reads **"POS & Inventory Management"**.
+- **Typeface:** the decorative serif is replaced everywhere (headings, logo, prices, step numbers, FAQ, footer line) by bold **Inter**, a clean professional sans in the style of Loyverse's headings. No serif or italic font is loaded any more.
+- **HD screens:** the laptop, tablet and phone pictures are re-captured from the real application at 2×–3× pixel density (2560 × 1600, 2200 × 1600, 1170 × 2532) with higher-quality WebP and a lift in contrast and vibrancy. Each ships in two sizes and the browser picks the right one (`srcset`), so ordinary screens stay fast and sharp displays get full resolution. The Features page pictures are upgraded too.
+- 131 automatic checks.
+
+## Phase 24 — Website returned to its Phase 22 design
+The Phase 23 website revision (plain look, placeholders instead of photos, the new business types, the video player) was not used. The website is back exactly as it was in Phase 22. Nothing else in the application changed.
+
 ## Phase 22 — The public AUREUM website
 - New public website: **Home, Features, Pricing, About, Support** — static pages in the AUREUM forest-green and gold style, with the real Back Office dashboard, POS checkout and receipt shown on a laptop, tablet and phone. Source in `site-src/`, built by `node tools/build-site.mjs`. See `SITE-GUIDE.md`.
 - **Free Trial** opens the real Back Office on **Create Business**; **Log in** opens it on **Sign In**; Open POS and Back Office go to the real pages. `backoffice.html` now accepts `?mode=signup` / `?mode=signin` (no parameter = unchanged).

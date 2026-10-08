@@ -87,12 +87,11 @@ export function page({ path, title, description, active, body, jsonLd = [], prel
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/fraunces-latin-600-normal.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/inter-latin-700-normal.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/inter-latin-400-normal.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/inter-latin-600-normal.woff2" crossorigin>
 ${preload.map(p => `<link rel="preload" as="image" href="${p}" fetchpriority="high">`).join('\n')}
 <link rel="stylesheet" href="/vendor/fonts/fonts.css">
-<link rel="stylesheet" href="/vendor/fonts/fonts-serif.css">
 <link rel="stylesheet" href="/site/assets/site.css?v=${assetV}">
 <script>document.documentElement.classList.add('js')</script>
 ${path === '/' ? `<script>/* emailed sign-up / password-reset links may land here: pass them on to the Back Office with their tokens */if(/[#&](access_token|error_code|type=(recovery|signup|invite|magiclink|email_change))/.test(location.hash))location.replace('${'/backoffice.html'}'+location.hash)</script>` : ''}
