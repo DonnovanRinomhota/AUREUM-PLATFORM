@@ -1,13 +1,9 @@
 # Changelog
 
-## Phase 25 — Tagline, professional typeface, HD screens
-- **Tagline** under the AUREUM logo (header and footer) now reads **"POS & Inventory Management"**.
-- **Typeface:** the decorative serif is replaced everywhere (headings, logo, prices, step numbers, FAQ, footer line) by bold **Inter**, a clean professional sans in the style of Loyverse's headings. No serif or italic font is loaded any more.
-- **HD screens:** the laptop, tablet and phone pictures are re-captured from the real application at 2×–3× pixel density (2560 × 1600, 2200 × 1600, 1170 × 2532) with higher-quality WebP and a lift in contrast and vibrancy. Each ships in two sizes and the browser picks the right one (`srcset`), so ordinary screens stay fast and sharp displays get full resolution. The Features page pictures are upgraded too.
-- 131 automatic checks.
-
-## Phase 24 — Website returned to its Phase 22 design
-The Phase 23 website revision (plain look, placeholders instead of photos, the new business types, the video player) was not used. The website is back exactly as it was in Phase 22. Nothing else in the application changed.
+## Phase 26 — Original design, with HD screens
+- The website is back to its original (Phase 22) design: the original serif headline typeface, the "POS & INVENTORY" tagline, the photo background and business cards, and the flag footer.
+- **Kept:** the high-resolution laptop, tablet and phone screens (2560 × 1600, 2200 × 1600, 1170 × 2532) re-captured from the real application, with higher-quality WebP and a lift in contrast and vibrancy. Each ships in two sizes and the browser picks the right one, so ordinary screens stay fast and sharp displays get full resolution. The Features page pictures and the social-share image are upgraded too.
+- 121 automatic checks (the original 111 plus 10 for the reset and the HD screens).
 
 ## Phase 22 — The public AUREUM website
 - New public website: **Home, Features, Pricing, About, Support** — static pages in the AUREUM forest-green and gold style, with the real Back Office dashboard, POS checkout and receipt shown on a laptop, tablet and phone. Source in `site-src/`, built by `node tools/build-site.mjs`. See `SITE-GUIDE.md`.
