@@ -1,10 +1,10 @@
-import { SITE, PRICING, FAQ_PRICING, APP } from '../config.js';
+import { PRICING, FAQ_PRICING, APP } from '../config.js';
 import { pageHero, ctaBand } from '../components/sections.js';
 import { linkButton, ticks, faq } from '../components/ui.js';
 
 export const pricing = {
   path: '/pricing/', file: 'pricing/index.html', active: 'pricing', software: true,
-  title: `Pricing | ${SITE.titleSuffix}`,
+  title: 'Pricing | AUREUM POS & Inventory Management',
   description: `AUREUM costs $${PRICING.perShop} per shop, per month, with a ${PRICING.trialDays}-day free trial that includes every shop. All features are included.`,
   body: () => pageHero('PRICING', 'Simple, per-shop pricing', `$${PRICING.perShop} per shop, per month — with a ${PRICING.trialDays}-day free trial.`) + `
 <section class="pricing-sec"><div class="wrap price-grid">
@@ -25,5 +25,5 @@ export const pricing = {
     <p class="small">Prices are in US dollars. The price is $${PRICING.perShop} multiplied by the number of shops you run.</p>
   </div>
 </div></section>
-<section class="faq-sec"><div class="wrap narrow"><h2 class="section-title">Pricing questions</h2>${faq(FAQ_PRICING)}</div></section>` + ctaBand()
+<section class="faq-sec"><div class="wrap narrow"><h2 class="section-title with-rules"><span>Pricing questions</span></h2>${faq(FAQ_PRICING)}</div></section>` + ctaBand()
 };

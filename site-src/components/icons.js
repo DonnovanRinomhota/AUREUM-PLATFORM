@@ -7,8 +7,10 @@ const P = {
   shieldCheck: '<path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
   cart: '<path d="M3 4h2l2.4 11h10.2l2-8H6.2"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
   chart: '<path d="M5 20V12M12 20V5M19 20v-9"/><path d="M3 20h18"/>',
+  bread: '<path d="M5 11c0-3 3-5 7-5s7 2 7 5c0 1-.6 1.8-1.5 2.2V18a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-4.8C5.6 12.8 5 12 5 11z"/>',
   store: '<path d="M4 9l1.6-5h12.8L20 9"/><path d="M4 9c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3"/><path d="M5 12v8h14v-8"/>',
-  coins: '<circle cx="9" cy="9" r="6"/><path d="M15 9.2a6 6 0 1 1-5.8 5.8M7.5 9h3M9 7.5v3"/>',
+  basket: '<path d="M3 10h18l-2 9H5z"/><path d="M8 10l3-6M16 10l-3-6"/>',
+  hanger: '<path d="M12 8V6.5a2 2 0 1 0-2-2"/><path d="M12 8l9 6.2a1 1 0 0 1-.6 1.8H3.6A1 1 0 0 1 3 14.2z"/>',
   receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   truck: '<path d="M2 6h11v10H2zM13 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
@@ -18,9 +20,6 @@ const P = {
   play: '<path d="M7 4.5v15l12-7.5z" fill="currentColor"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
-  pause: '<path d="M8 5v14M16 5v14"/>',
-  prev: '<path d="M15 6l-6 6 6 6"/>',
-  next: '<path d="M9 6l6 6-6 6"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>'
 };

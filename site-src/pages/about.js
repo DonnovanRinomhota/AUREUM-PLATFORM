@@ -1,4 +1,3 @@
-import { SITE } from '../config.js';
 import { pageHero, ctaBand } from '../components/sections.js';
 import { icon } from '../components/icons.js';
 import { esc } from '../components/ui.js';
@@ -12,19 +11,19 @@ const PRINCIPLES = [
 
 export const about = {
   path: '/about/', file: 'about/index.html', active: 'about',
-  title: `About | ${SITE.titleSuffix}`,
-  description: 'AUREUM is a point of sale and inventory management platform that helps you manage sales, stock, staff and reports across one or more shops.',
-  body: () => pageHero('ABOUT AUREUM', 'Point Of Sale System &amp; Inventory Management System for smoother business flow') + `
+  title: 'About | AUREUM POS & Inventory Management',
+  description: 'AUREUM is a point of sale and inventory management platform for businesses in Zimbabwe, from a single counter to several shops.',
+  body: () => pageHero('ABOUT AUREUM', 'A POS and inventory platform for Zimbabwean businesses', 'From a single bakery counter to several shops under one owner.') + `
 <section class="about-sec"><div class="wrap narrow prose rv">
   <h2>What AUREUM is</h2>
-  <p>AUREUM is a point of sale and inventory management platform that helps you manage your business. At the counter it is a fast POS that works on a phone, tablet or laptop. Behind the counter, the Back Office tracks stock for every shop, records purchases and deliveries, manages staff and shifts, and turns each day's sales into clear reports.</p>
+  <p>AUREUM is a point of sale and inventory management platform built for businesses in Zimbabwe. At the counter it is a fast POS that works on a phone, a tablet or a laptop. Behind the counter, the Back Office tracks stock for every shop, records purchases and deliveries, manages staff and shifts, and turns each day's sales into clear reports.</p>
   <h2>Where it runs</h2>
   <p>AUREUM runs in a web browser and can be installed like an app on phones, tablets and computers. Sign in once and your business is available on every device you use.</p>
-  <h2>Flexible payments and currencies</h2>
-  <p>AUREUM supports an optional second currency, with an exchange rate you set, and records how each sale was paid: cash, card, mobile money or other payment types.</p>
+  <h2>Built for local conditions</h2>
+  <p>Shops work with more than one currency and with payments that happen outside the till, so AUREUM supports an optional second currency and records how each sale was paid — cash, card, mobile money or other.</p>
 </div></section>
 <section class="principles"><div class="wrap">
-  <h2 class="section-title">How AUREUM is built</h2>
+  <h2 class="section-title with-rules"><span>How AUREUM is built</span></h2>
   <div class="fg-grid fg-4">${PRINCIPLES.map(p => `<article class="fg-card rv"><span class="ic-ring">${icon(p.icon, 24)}</span><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>
 </div></section>` + ctaBand()
 };

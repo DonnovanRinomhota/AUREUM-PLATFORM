@@ -1,6 +1,6 @@
 # The AUREUM public website
 
-The website is the front door to the application. It is neutral and institutional: one upright sans-serif typeface (Inter), no italics, no decorative effects, and no country-specific wording. It is five plain static pages — **Home, Features, Pricing, About, Support** — built from small components, with almost no JavaScript (about 5.3 KB) and no outside services (no analytics, no external fonts).
+The website is the front door to the application. It is five plain static pages — **Home, Features, Pricing, About, Support** — built from small components, with almost no JavaScript (under 4 KB) and no outside services (no analytics, no external fonts).
 
 ```
 VISITOR → website (/) → Start Free Trial → Back Office "Create Business" → Back Office → POS Checkout
@@ -35,22 +35,12 @@ Everything lives in `site-src/`. After any change run **`node tools/build-site.m
 - **Colours, spacing, animation** → `site-src/assets/site.css`.
 - **Pages / sections** → `site-src/pages/` and `site-src/components/`.
 
-## Pictures and videos — where to add yours (all in `site-src/config.js`)
-**The site contains no photos of people and no stock or AI-generated images.** Where a photograph belongs there is a clean dark-emerald placeholder with an HTML comment marking the exact spot.
-
-| Where | What to do |
-|---|---|
-| **Hero background** | Set `HERO_BG.img` (for example `'/site/assets/img/hero-bg.webp'`), put the file there, rebuild. The placeholder is replaced by your image. |
-| **The four cards** (Cosmetics, Groceries, Electronics, Clothes) | Set each card's `img` in `BUILT_FOR.cards` (suggested names: `card-cosmetics.webp`, `card-groceries.webp`, `card-electronics.webp`, `card-clothes.webp`; about 1280 × 960), rebuild. The label stays; your picture fills the card. |
-| **"POS Checkout" video** (Features page) | Set `VIDEOS.posCheckout.mp4` (and optionally `.webm`) and `.poster`, put the files in `site/assets/media/`, rebuild. |
-| **"See how it works" video** (Features page) | Same, with `VIDEOS.howItWorks`. |
-| **Watch Demo (home page button)** | Set `DEMO.videoUrl` to an `.mp4`/`.webm` or a YouTube/Vimeo link. |
-
-**Until you add a video**, each player runs an animated walkthrough built from real screens of the application (POS → discount → customer → payment → complete sale; dashboard analytics; reports; the receipt), clearly labelled "Preview walkthrough · your video goes here". The moment a video path is set, that player becomes a normal video player (controls, your poster) and the animation is removed.
-
-**The screenshots are real, with sample data.** `screen-*.webp` (the hero devices) and `tour-*.webp` (the walkthrough) were captured from the actual application with a fictional "Demo Store", neutral products in your four categories, and plain product tiles showing only name, price and stock. Replace them with fresh captures whenever the application changes (walkthrough frames are 1180 × 860, the hero laptop 1440 × 900, the phone 390 × 844 at double resolution). Compress to WebP.
-
-`og-image.jpg` (1200 × 630) is the picture shown when a link is shared.
+## Pictures (please read)
+Images are in `site/assets/img/`. Replace any picture by dropping a new file **with the same name** and keeping the proportions.
+- **`card-bakery/retail/grocery/fashion.webp` and `hero-bg.webp` are stand-ins**, cropped from the design mock-up you supplied (about 640 px wide). Replace them with your own photographs of real businesses — ideally about 1280 × 800 for the cards and 2400 × 1200 for the background.
+- **`screen-dashboard.webp`, `screen-pos.webp`, `screen-receipt.webp` are real screenshots of the application** with sample data (a fictional "Demo Mini Mart" and illustrated sample products). Replace them with fresh screenshots whenever the app's look changes (about 1440 × 900, 1180 × 820 and 390 × 844 at double resolution).
+- `og-image.jpg` is the picture shown when a link is shared (1200 × 630).
+- Compress to WebP before adding.
 
 ## Not on the website yet
 - **Privacy policy and terms pages.** None exist, so none are linked. You will need them before a commercial launch or an app-store release.
@@ -58,4 +48,4 @@ Everything lives in `site-src/`. After any change run **`node tools/build-site.m
 - **A "contact us" form.** Support runs through in-app tickets; add contact details above if you want visitors to reach you another way.
 
 ## What was tested
-160 automatic checks in real Chrome, including: every link on every page resolves and no link is empty or "#"; Free Trial, Log in, Open POS and Back Office each go to the right real destination; the hero wording is word-for-word; four business cards and five "What We Offer" items; sign-up/sign-in deep links open the right tab in the real Back Office; no sideways scrolling at 11 screen widths (360–1920) on all pages; the mobile menu and the demo dialog (including with a real video configured); keyboard access, reduced-motion and no-JavaScript behaviour; titles, descriptions, canonical links, social tags and structured data; no outside requests; no unsupported claims; prices and features match the real application; and that emailed sign-up/reset links reach the Back Office.
+111 automatic checks in real Chrome, including: every link on every page resolves and no link is empty or "#"; Free Trial, Log in, Open POS and Back Office each go to the right real destination; the hero wording is word-for-word; four business cards and five "What We Offer" items; sign-up/sign-in deep links open the right tab in the real Back Office; no sideways scrolling at 11 screen widths (360–1920) on all pages; the mobile menu and the demo dialog (including with a real video configured); keyboard access, reduced-motion and no-JavaScript behaviour; titles, descriptions, canonical links, social tags and structured data; no outside requests; no unsupported claims; prices and features match the real application; and that emailed sign-up/reset links reach the Back Office.
