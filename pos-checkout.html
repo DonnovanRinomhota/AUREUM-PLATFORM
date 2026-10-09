@@ -2246,10 +2246,13 @@ async function aureumSignIn(email, password){
     const tag = (e.target.tagName || '').toLowerCase();
     const typing = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
     const now = performance.now();
-    if(e.key === 'Enter'){
+    if(e.key === 'Enter' || e.key === 'Tab'){      // scanners end a scan with Enter (most) or Tab
       if(scanBuffer.length >= 4 && (now - scanLastTime) < SCAN_GAP_MS + 20){
-        tryHandleBarcode(scanBuffer);
-        if(typing) e.preventDefault();
+        const code = scanBuffer;
+        tryHandleBarcode(code);
+        e.preventDefault();
+        // the scanner "typed" the code into the search box too — clear it so the catalogue isn't left filtered
+        if(typing && e.target === searchInput && searchInput.value.includes(code)){ searchInput.value = ''; renderCatalog(); }
       }
       scanBuffer = '';
       return;
@@ -2903,9 +2906,10 @@ async function aureumSignIn(email, password){
       const data = escposEncode(sale);
       // BLE write characteristics usually cap out around 20 bytes per
       // write on older stacks — chunk the receipt so nothing gets dropped.
-      const CHUNK = 180;
+      const CHUNK = 100;
       for(let i=0; i<data.length; i+=CHUNK){
         await characteristic.writeValue(data.slice(i, i+CHUNK));
+        await new Promise(r => setTimeout(r, 25));
       }
       btn.textContent = 'Printed ✓';
     }catch(err){
