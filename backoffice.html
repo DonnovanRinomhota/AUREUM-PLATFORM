@@ -1657,9 +1657,9 @@
           <div class="filter-field" style="max-width:200px; margin-left:auto; margin-bottom:12px;">
             <select class="cat-select" id="poCatFilter"><option>All categories</option></select>
           </div>
-          <table class="line-table">
+          <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>In stock</th><th>Incoming</th><th>Quantity</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>In stock</th><th>Incoming</th><th>Quantity</th><th>Unit cost</th><th>Price</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="poLineBody"></tbody>
           </table>
@@ -1768,7 +1768,7 @@
           </div>
           <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>In stock</th><th>Received quantity</th><th>Unit</th><th>Cost</th><th>Total cost</th><th>Expiry date</th><th></th></tr>
+              <tr><th>Product</th><th>In stock</th><th>Received quantity</th><th>Unit</th><th>Cost</th><th>Price</th><th>Total cost</th><th>Expiry date</th><th></th></tr>
             </thead>
             <tbody id="grnLineBody"></tbody>
           </table>
@@ -1875,7 +1875,7 @@
         <div class="line-table-wrap">
           <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>Current stock</th><th id="saQtyColHead">Counted stock</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>Current stock</th><th id="saQtyColHead">Counted stock</th><th>Unit cost</th><th>Price</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="saLineBody"></tbody>
           </table>
@@ -2213,7 +2213,7 @@
             <div class="btn-outline add-line-btn" id="trAddLineBtn">+ Add product</div>
           </div>
           <table class="line-table stack-sm">
-            <thead><tr><th>Product</th><th style="width:110px;">Stock (From)</th><th style="width:110px;">Stock (To)</th><th style="width:120px;">Quantity</th><th style="width:50px;"></th></tr></thead>
+            <thead><tr><th>Product</th><th style="width:100px;">Stock (From)</th><th style="width:100px;">Stock (To)</th><th style="width:110px;">Quantity</th><th style="width:80px;">Cost</th><th style="width:80px;">Price</th><th style="width:44px;"></th></tr></thead>
             <tbody id="trLineBody"></tbody>
           </table>
           <div class="field-error" id="trLinesError">Add at least one product with a quantity greater than 0</div>
@@ -3701,12 +3701,15 @@ const AureumSync = (function(){
     document.body.appendChild(list);
     let hi = -1, shown = [], closeT = null;
     const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    // "shower caps", "Shower_caps" and "shower-caps" all find the same product: spaces, underscores, dashes and slashes count alike
+    const norm = v => String(v == null ? '' : v).toLowerCase().replace(/[\u00a0\u2000-\u200b\u202f\u3000_\-\u2010-\u2015\/\\.,]+/g, ' ').replace(/\s+/g, ' ').trim();
     function match(){
-      const q = (input.value || '').trim().toLowerCase();
+      const q = norm(input.value);
       const all = cfg.getProducts() || [];
-      if(!q || (cfg.selectedName && q === String(cfg.selectedName()).toLowerCase())) return all.slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
-      return all.filter(p => String(p.name||'').toLowerCase().includes(q) || String(p.code||'').toLowerCase().includes(q) || String(p.barcode||'').toLowerCase().includes(q))
-                .sort((a,b)=>{ const as = String(a.name).toLowerCase().startsWith(q) ? 0 : 1, bs = String(b.name).toLowerCase().startsWith(q) ? 0 : 1; return as - bs || String(a.name).localeCompare(String(b.name)); });
+      if(!q || (cfg.selectedName && q === norm(cfg.selectedName()))) return all.slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+      const words = q.split(' ');
+      return all.filter(p => { const hay = norm(p.name) + ' ' + norm(p.code) + ' ' + norm(p.barcode); return words.every(w => hay.includes(w)); })
+                .sort((a,b)=>{ const as = norm(a.name).startsWith(q) ? 0 : 1, bs = norm(b.name).startsWith(q) ? 0 : 1; return as - bs || String(a.name).localeCompare(String(b.name)); });
     }
     function place(){
       if(list.hidden) return;
@@ -3744,7 +3747,7 @@ const AureumSync = (function(){
       else if(e.key === 'Enter'){
         e.preventDefault();
         const q = (input.value || '').trim().toLowerCase();
-        const exact = shown.find(p => String(p.name||'').toLowerCase() === q);
+        const exact = shown.find(p => norm(p.name) === norm(q));
         const chosen = exact || (hi >= 0 ? shown[hi] : (shown.length === 1 ? shown[0] : null));
         if(chosen) pick(chosen);
       }
@@ -3770,6 +3773,16 @@ const AureumSync = (function(){
     return input._ppApi;
   }
   function productUnitLabel(p){ return (p && p.soldBy === 'weight') ? 'By weight' : 'Each'; }
+  // selling price shown next to the cost on purchase orders, GRNs, adjustments and transfers
+  const money2 = n => (Number(n) || 0).toFixed(2);
+  function linePrice(it, p){ return (it && it.price != null && !isNaN(it.price)) ? Number(it.price) : (p ? (Number(p.price) || 0) : 0); }
+  function lineCost(it, p){ return (it && it.cost != null && !isNaN(it.cost)) ? Number(it.cost) : (p ? (Number(p.cost) || 0) : 0); }
+  function whoCreated(){ try{ return (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || ''; }catch(e){ return ''; } }
+  function docBusiness(){ try{ return (POS_SETTINGS && POS_SETTINGS.businessName && POS_SETTINGS.businessName !== 'AUREUM') ? POS_SETTINGS.businessName : ''; }catch(e){ return ''; } }
+  function openDocPdf(spec, filename){
+    spec.business = docBusiness(); if(!spec.createdBy) spec.createdBy = whoCreated();
+    downloadPdfBytes(buildDocumentPdf(spec), filename);
+  }
   document.querySelectorAll('[data-close]').forEach(el=>{
     el.addEventListener('click', ()=> closeModal(el.dataset.close));
   });
@@ -5002,7 +5015,7 @@ const AureumSync = (function(){
   document.getElementById('productCancelBtn').addEventListener('click', switchToProductList);
 
   document.getElementById('productSaveBtn').addEventListener('click', ()=>{
-    const name = document.getElementById('pfName').value.trim();
+    const name = document.getElementById('pfName').value.replace(/[\u00a0\u2000-\u200b\u202f\u3000]/g, ' ').replace(/\s+/g, ' ').trim();
     document.getElementById('pfPriceError').classList.remove('show');
     document.getElementById('pfPrice').classList.remove('invalid');
     document.getElementById('pfCostError').classList.remove('show');
@@ -5377,160 +5390,208 @@ const AureumSync = (function(){
     XLSX.utils.book_append_sheet(wb, ws, (sheetName || 'Sheet1').slice(0,31));
     XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : filename + '.xlsx');
   }
-  /* ===== SELF-CONTAINED PDF WRITER (no external libraries/CDN — works fully offline) ===== */
-  function pdfSanitizeAscii(s){
-    s = String(s == null ? '' : s);
-    s = s.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
-         .replace(/[\u2013\u2014]/g, '-').replace(/\u2026/g, '...');
-    s = s.replace(/[^\x20-\x7E]/g, '?');
-    return s;
+  /* ===== AUREUM PDF WRITER (self-contained, no libraries — works fully offline) =====
+     Clean A4 documents: brand header, large document number, a details grid, a table whose long product names
+     WRAP (nothing is ever cut off), totals, signature lines and a footer with page numbers.
+     Text is set in Helvetica with real character widths, so columns line up exactly. */
+  const PDF_WIDTHS = { R:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,350,556,350,222,556,333,1000,556,556,333,1000,667,333,1000,350,611,350,350,222,222,333,333,350,556,1000,333,1000,500,333,944,350,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500], B:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,350,556,350,278,556,500,1000,556,556,333,1000,667,333,1000,350,611,350,350,278,278,500,500,350,556,1000,333,1000,556,333,944,350,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556] };
+  const PDF_COL = { ink:[.07,.08,.08], mute:[.40,.43,.42], faint:[.60,.62,.61], rule:[.86,.88,.86], gold:[.72,.56,.23], green:[.055,.231,.169], white:[1,1,1], tint:[.955,.965,.95] };
+  function pdfByte(ch){
+    const c = ch.charCodeAt(0);
+    if(c === 9 || c === 10 || c === 13 || c === 0xA0 || c === 0x202F || c === 0x2009 || c === 0x200A || c === 0x2002 || c === 0x2003) return 32;   // tabs, line breaks and special spaces become a normal space
+    if(c >= 0x80 && c <= 0x9F) return c;                                                                                                          // already converted to a Windows-1252 byte
+    if(c === 0x200B || c === 0xFEFF || c === 0xAD || c < 32) return -1;                                                                         // invisible characters are dropped
+    if(c >= 32 && c <= 126) return c;
+    if(c >= 0xA1 && c <= 0xFF) return c;                                                                                                          // accented letters (é, ñ, ü …) are kept
+    const m = { 0x20AC:0x80, 0x2026:0x85, 0x2018:0x91, 0x2019:0x92, 0x201C:0x93, 0x201D:0x94, 0x2022:0x95, 0x2013:0x96, 0x2014:0x97, 0x2122:0x99, 0x2192:62, 0x2212:45 };
+    return m[c] != null ? m[c] : 63;
   }
-  function pdfEscapeString(s){
-    return s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-  }
-  function pdfPadTrunc(s, w){
-    if(s.length > w) return w <= 1 ? s.slice(0, w) : s.slice(0, w - 1) + '.';
-    return s + ' '.repeat(w - s.length);
-  }
-  function buildTablePdfBytes(opts){
-    const title = pdfSanitizeAscii(opts.title || 'Export');
-    const subtitle = pdfSanitizeAscii(opts.subtitle || '');
-    const head = (opts.head || []).map(pdfSanitizeAscii);
-    const rows = (opts.rows || []).map(r => r.map(pdfSanitizeAscii));
-    const colCount = head.length;
-
-    const isWide = colCount > 6;
-    const pageW = isWide ? 842 : 595;
-    const pageH = isWide ? 595 : 842;
-    const marginX = 36, marginBottom = 40;
-    const gap = 2;
-
-    let widths = head.map((h, i) => {
-      let m = h.length;
-      rows.forEach(r => { if((r[i]||'').length > m) m = (r[i]||'').length; });
-      return Math.min(Math.max(m, 3), 26);
+  function pdfText(s){ s = String(s == null ? '' : s); let o = ''; for(const ch of s){ const b = pdfByte(ch); if(b >= 0) o += String.fromCharCode(b); } return o.replace(/ {2,}/g, ' ').trim(); }
+  function pdfEsc(s){ return s.replace(/[\\()]/g, '\\$&'); }
+  function pdfW(s, bold, size, tc){ const t = PDF_WIDTHS[bold ? 'B' : 'R']; let w = 0; for(let i = 0; i < s.length; i++) w += t[s.charCodeAt(i) & 255]; return w * size / 1000 + (tc || 0) * s.length; }
+  function pdfWrap(s, bold, size, maxW){
+    s = pdfText(s); if(!s) return [''];
+    const out = []; let line = '';
+    s.split(' ').forEach(word => {
+      const cand = line ? line + ' ' + word : word;
+      if(pdfW(cand, bold, size) <= maxW + .05){ line = cand; return; }
+      if(line) out.push(line);
+      if(pdfW(word, bold, size) <= maxW + .05){ line = word; return; }
+      let part = '';                                              // a single very long word: break it
+      for(const c of word){ if(part && pdfW(part + c, bold, size) > maxW){ out.push(part); part = c; } else part += c; }
+      line = part;
     });
+    if(line) out.push(line);
+    return out;
+  }
+  const pdfRg = c => c.map(v => v.toFixed(3)).join(' ');
 
-    const maxContentWidth = pageW - marginX * 2;
-    const totalChars = widths.reduce((a,b)=>a+b,0) + gap * Math.max(0, colCount - 1);
-    let fontSize = 8;
-    let neededWidth = totalChars * fontSize * 0.6;
-    if(neededWidth > maxContentWidth){
-      fontSize = Math.max(6, Math.floor((maxContentWidth / (totalChars * 0.6)) * 10) / 10);
+  function buildDocumentPdf(o){
+    const cols = o.columns || [], rows = (o.rows || []).map(r => r.map(c => pdfText(c)));
+    const landscape = !!o.landscape || cols.length > 9;
+    const PW = landscape ? 842 : 595, PH = landscape ? 595 : 842, M = 42, CW = PW - M * 2, FOOT = M + 4;
+    const padX = 5, hdrSize = 8, baseBody = 9.2;
+
+    // ---- column widths (text columns share what is left; long names wrap instead of being cut) ----
+    let bodySize = baseBody, widths = [];
+    for(const scale of [1, .92, .84, .78]){
+      bodySize = baseBody * scale;
+      const nat = cols.map((c, i) => { let m = pdfW(pdfText(c.h), true, hdrSize * scale); rows.forEach(r => { m = Math.max(m, pdfW(r[i] || '', false, bodySize)); }); return m + padX * 2; });
+      const minW = cols.map((c, i) => c.wrap ? Math.max(86, pdfW(pdfText(c.h), true, hdrSize * scale) + padX * 2) : nat[i]);
+      let total = nat.reduce((a, b) => a + b, 0); widths = nat.slice();
+      if(total <= CW){
+        const wrapIdx = cols.map((c, i) => c.wrap ? i : -1).filter(i => i >= 0);
+        const targets = wrapIdx.length ? wrapIdx : cols.map((c, i) => i);
+        const extra = CW - total; targets.forEach(i => { widths[i] += extra / targets.length; });
+        break;
+      }
+      const need = total - CW, room = cols.reduce((a, c, i) => a + (c.wrap ? nat[i] - minW[i] : 0), 0);
+      if(room >= need){ cols.forEach((c, i) => { if(c.wrap) widths[i] = nat[i] - (nat[i] - minW[i]) * need / room; }); break; }
+      if(scale === .78){ const k = CW / total; widths = nat.map(w => w * k); }
     }
-    neededWidth = totalChars * fontSize * 0.6;
-    if(neededWidth > maxContentWidth){
-      const scale = maxContentWidth / neededWidth;
-      widths = widths.map(w => Math.max(3, Math.floor(w * scale)));
+    const lineH = bodySize * 1.3, rowPadY = 5.6;
+
+    // ---- pages ----
+    const pages = []; let ops, y, pageNo = 0;
+    const T = (x, yy, str, size, o2) => {
+      o2 = o2 || {}; const bold = !!o2.bold, tc = o2.tc || 0; str = pdfText(str); if(!str) return;
+      const w = pdfW(str, bold, size, tc); const px = o2.align === 'r' ? x - w : o2.align === 'c' ? x - w / 2 : x;
+      ops.push('BT', `/${bold ? 'F2' : 'F1'} ${size} Tf`, `${pdfRg(o2.col || PDF_COL.ink)} rg`, tc ? `${tc} Tc` : '0 Tc', `${px.toFixed(2)} ${yy.toFixed(2)} Td`, `(${pdfEsc(str)}) Tj`, 'ET');
+    };
+    const R = (x, yy, w, h, col) => ops.push(`${pdfRg(col)} rg`, `${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f`);
+    const L = (x1, y1, x2, y2, wd, col) => ops.push(`${pdfRg(col)} RG`, `${wd} w`, `${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
+    const circle = (cx, cy, r, fill, stroke, sw) => {
+      const k = .5523 * r;
+      ops.push(`${pdfRg(fill)} rg`, `${pdfRg(stroke)} RG`, `${sw} w`, `${cx + r} ${cy} m`, `${cx + r} ${cy + k} ${cx + k} ${cy + r} ${cx} ${cy + r} c`, `${cx - k} ${cy + r} ${cx - r} ${cy + k} ${cx - r} ${cy} c`,
+        `${cx - r} ${cy - k} ${cx - k} ${cy - r} ${cx} ${cy - r} c`, `${cx + k} ${cy - r} ${cx + r} ${cy - k} ${cx + r} ${cy} c`, 'B');
+    };
+    const printed = (() => { try{ return new Date().toLocaleString('en-US', { month:'short', day:'2-digit', year:'numeric', hour:'numeric', minute:'2-digit' }).replace(',', ''); }catch(e){ return ''; } })();
+
+    function brand(){
+      circle(M + 15, PH - M - 12, 14, PDF_COL.green, PDF_COL.gold, 1.3);
+      T(M + 15, PH - M - 17.4, 'A', 15, { bold:true, col:PDF_COL.gold, align:'c' });
+      T(M + 38, PH - M - 9, 'AUREUM', 15, { bold:true, col:PDF_COL.gold, tc:2.6 });
+      T(M + 38.5, PH - M - 21, 'POS & INVENTORY MANAGEMENT', 5.6, { col:PDF_COL.mute, tc:1.15 });
+      T(PW - M, PH - M - 6, String(o.docType || 'Document').toUpperCase(), 8.5, { bold:true, col:PDF_COL.mute, tc:1.6, align:'r' });
+      if(o.business) T(PW - M, PH - M - 20, o.business, 9, { col:PDF_COL.ink, align:'r' });
+      L(M, PH - M - 33, PW - M, PH - M - 33, 1.1, PDF_COL.gold);
     }
-
-    function rowLine(cells){
-      return cells.map((c,i)=> pdfPadTrunc(c, widths[i])).join(' '.repeat(gap));
-    }
-
-    const lineHeight = Math.round(fontSize * 1.6 * 10) / 10;
-    const titleY = pageH - 40;
-    const subtitleY = pageH - 55;
-    const firstTableTop = pageH - 78;
-    const contTableTop = pageH - 50;
-    const footerY = 24;
-
-    const usableFirst = Math.max(1, Math.floor((firstTableTop - marginBottom - lineHeight * 2) / lineHeight));
-    const usableCont = Math.max(1, Math.floor((contTableTop - marginBottom - lineHeight * 2) / lineHeight));
-
-    const pages = [];
-    let idx = 0, first = true;
-    if(rows.length === 0){
-      pages.push({ rows: [], first: true });
-    } else {
-      while(idx < rows.length){
-        const cap = first ? usableFirst : usableCont;
-        pages.push({ rows: rows.slice(idx, idx + cap), first });
-        idx += cap;
-        first = false;
+    function footer(){ pages.forEach((p, i) => { ops = p.ops;
+      L(M, FOOT + 14, PW - M, FOOT + 14, .5, PDF_COL.rule);
+      T(M, FOOT + 3, 'AUREUM' + (o.number ? '  ·  ' + o.number : '') + '  ·  Printed ' + printed + (o.createdBy ? '  ·  ' + o.createdBy : ''), 7.2, { col:PDF_COL.faint });
+      T(PW - M, FOOT + 3, 'Page ' + (i + 1) + ' of ' + pages.length, 7.2, { col:PDF_COL.faint, align:'r' });
+    }); }
+    function newPage(first){
+      ops = []; pages.push({ ops }); pageNo++;
+      if(first){ brand(); y = PH - M - 33; }
+      else {
+        T(M, PH - M - 10, String(o.docType || 'Document').toUpperCase() + (o.number ? '  ·  ' + o.number : ''), 8, { bold:true, col:PDF_COL.mute, tc:1.2 });
+        T(PW - M, PH - M - 10, 'AUREUM', 8.5, { bold:true, col:PDF_COL.gold, tc:1.8, align:'r' });
+        L(M, PH - M - 18, PW - M, PH - M - 18, .8, PDF_COL.gold); y = PH - M - 18;
       }
     }
-    const pageCount = pages.length;
-    const esc = (s) => pdfEscapeString(s);
-
-    function pageContentStream(page, pageIndex){
-      let y = page.first ? firstTableTop : contTableTop;
-      const ops = [];
-      ops.push('BT');
-      if(page.first){
-        ops.push('/F2 16 Tf', '0 0 0 rg', `${marginX} ${titleY} Td`, `(${esc(title)}) Tj`, 'ET');
-        ops.push('BT', '/F1 9 Tf', '0.4 0.4 0.4 rg', `${marginX} ${subtitleY} Td`, `(${esc(subtitle)}) Tj`, 'ET');
-        ops.push('BT');
-      }
-      ops.push(`/F2 ${fontSize} Tf`, '0 0 0 rg', `${marginX} ${y} Td`, `(${esc(rowLine(head))}) Tj`, 'ET');
-      const ruleY = y - lineHeight * 0.35;
-      ops.push('0.55 0.55 0.55 rg', `${marginX} ${ruleY.toFixed(1)} ${(pageW - marginX*2)} 0.75 re f`);
-      y -= lineHeight;
-
-      ops.push('BT', `/F1 ${fontSize} Tf`, '0.12 0.12 0.12 rg');
-      if(page.rows.length === 0){
-        ops.push(`${marginX} ${y.toFixed(1)} Td`, `(No data to export.) Tj`);
-      } else {
-        ops.push(`${marginX} ${y.toFixed(1)} Td`);
-        page.rows.forEach((r, ri) => {
-          if(ri > 0) ops.push(`0 -${lineHeight} Td`);
-          ops.push(`(${esc(rowLine(r))}) Tj`);
-        });
-      }
-      ops.push('ET');
-
-      ops.push('BT', '/F1 8 Tf', '0.45 0.45 0.45 rg');
-      const footer = `Page ${pageIndex+1} of ${pageCount}`;
-      const fx = pageW - marginX - footer.length * 8 * 0.6;
-      ops.push(`${fx.toFixed(1)} ${footerY} Td`, `(${esc(footer)}) Tj`, 'ET');
-
-      return ops.join('\n');
+    function tableHeader(){
+      const h = 20; y -= 4;
+      R(M, y - h, CW, h, PDF_COL.tint);
+      let x = M; cols.forEach((c, i) => { const tx = c.align === 'r' ? x + widths[i] - padX : x + padX;
+        pdfWrap(c.h, true, hdrSize, widths[i] - padX * 2).slice(0, 2).forEach((ln, k, arr) => T(tx, y - 8.5 - k * 9 - (arr.length > 1 ? 0 : 3.2) + (arr.length > 1 ? 0 : 0), ln, hdrSize, { bold:true, col:PDF_COL.green, align:c.align === 'r' ? 'r' : 'l' }));
+        x += widths[i]; });
+      L(M, y - h, PW - M, y - h, 1.3, PDF_COL.green);
+      y -= h;
     }
 
+    newPage(true);
+    // ---- title block ----
+    y -= 40; T(M, y, o.number || o.title || 'Document', 27, { bold:true });
+    if(o.subtitle){ y -= 18; pdfWrap(o.subtitle, false, 10, CW).forEach(ln => { T(M, y, ln, 10, { col:PDF_COL.mute }); y -= 13; }); y += 13; }
+    y -= 22;
+    // ---- details grid ----
+    const meta = (o.meta || []).filter(m => m && m[1] != null && String(m[1]).trim() !== '');
+    const mc = landscape ? 4 : 3, cellW = CW / mc;
+    for(let i = 0; i < meta.length; i += mc){
+      const rowItems = meta.slice(i, i + mc);
+      const wrapped = rowItems.map(m => pdfWrap(m[1], false, 10, cellW - 14).slice(0, 3));
+      const rh = 12 + Math.max(...wrapped.map(w => w.length)) * 13 + 8;
+      if(y - rh < FOOT + 60){ newPage(false); y -= 24; }
+      rowItems.forEach((m, k) => { const x = M + k * cellW;
+        T(x, y, pdfText(m[0]).toUpperCase(), 6.8, { bold:true, col:PDF_COL.faint, tc:.9 });
+        wrapped[k].forEach((ln, j) => T(x, y - 13 - j * 13, ln, 10, { col:PDF_COL.ink })); });
+      y -= rh;
+    }
+    y -= 10;
+    // ---- table ----
+    if(o.tableTitle){ if(y < FOOT + 120){ newPage(false); y -= 22; } T(M, y, o.tableTitle, 12.5, { bold:true }); R(M, y - 7, 26, 2.2, PDF_COL.gold); y -= 14; }
+    if(y - 70 < FOOT + 20){ newPage(false); y -= 22; }
+    tableHeader();
+    if(!rows.length){ T(M + padX, y - 20, o.emptyText || 'No items recorded.', 9.5, { col:PDF_COL.mute }); y -= 36; }
+    rows.forEach((r, ri) => {
+      const cells = cols.map((c, i) => pdfWrap(r[i] || '', !!(c.bold), bodySize, widths[i] - padX * 2));
+      const lines = Math.max(...cells.map(c => c.length));
+      const rh = lines * lineH + rowPadY * 2;
+      if(y - rh < FOOT + 24){ newPage(false); y -= 22; tableHeader(); }
+      let x = M;
+      cols.forEach((c, i) => { const tx = c.align === 'r' ? x + widths[i] - padX : x + padX;
+        cells[i].forEach((ln, k) => T(tx, y - rowPadY - bodySize * .92 - k * lineH, ln, bodySize, { bold:!!c.bold, col:c.mute ? PDF_COL.mute : PDF_COL.ink, align:c.align === 'r' ? 'r' : 'l' }));
+        x += widths[i]; });
+      y -= rh; L(M, y, PW - M, y, .5, PDF_COL.rule);
+    });
+    // ---- totals ----
+    const totals = o.totals || [];
+    if(totals.length){
+      y -= 6;
+      const need = totals.length * 20 + 14; if(y - need < FOOT + 24){ newPage(false); y -= 24; }
+      totals.forEach(t => {
+        if(t[2]){ L(PW - M - 230, y - 2, PW - M, y - 2, 1.1, PDF_COL.green); y -= 17; T(PW - M - 230, y, t[0], 11.5, { bold:true }); T(PW - M - 4, y, t[1], 12.5, { bold:true, col:PDF_COL.green, align:'r' }); y -= 6; }
+        else { y -= 15; T(PW - M - 230, y, t[0], 9.2, { col:PDF_COL.mute }); T(PW - M - 4, y, t[1], 9.5, { align:'r' }); }
+      });
+      y -= 10;
+    }
+    if(o.notes){ pdfWrap(o.notes, false, 8.5, CW).forEach(ln => { if(y < FOOT + 40){ newPage(false); y -= 24; } y -= 12; T(M, y, ln, 8.5, { col:PDF_COL.mute }); }); y -= 6; }
+    // ---- signatures ----
+    const sigs = o.signatures || [];
+    if(sigs.length){
+      if(y < FOOT + 120){ newPage(false); y -= 24; }
+      const sy = Math.max(FOOT + 56, Math.min(y - 70, FOOT + 120)), sw = CW / sigs.length;
+      sigs.forEach((s, i) => { const cx = M + sw * i + sw / 2; L(cx - 64, sy, cx + 64, sy, .8, PDF_COL.ink); T(cx, sy - 12, s, 8.5, { col:PDF_COL.mute, align:'c' }); });
+    }
+    footer();
+
+    // ---- assemble the PDF file ----
     const objs = [];
-    objs[0] = `<< /Type /Catalog /Pages 2 0 R >>`;
-    const kids = [];
-    for(let i=0;i<pageCount;i++) kids.push(`${5 + i*2} 0 R`);
-    objs[1] = `<< /Type /Pages /Kids [ ${kids.join(' ')} ] /Count ${pageCount} >>`;
-    objs[2] = `<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>`;
-    objs[3] = `<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>`;
-    pages.forEach((page, i) => {
-      const pageObjNum = 5 + i*2;
-      const contentObjNum = 6 + i*2;
-      objs[pageObjNum - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjNum} 0 R >>`;
-      objs[contentObjNum - 1] = { stream: pageContentStream(page, i) };
+    objs[0] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objs[1] = `<< /Type /Pages /Kids [ ${pages.map((p, i) => `${5 + i * 2} 0 R`).join(' ')} ] /Count ${pages.length} >>`;
+    objs[2] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    pages.forEach((p, i) => {
+      objs[5 + i * 2 - 1] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`;
+      objs[6 + i * 2 - 1] = { stream: p.ops.join('\n') };
     });
-
-    const chunks = [];
-    let offset = 0;
-    const push = (s) => { chunks.push(s); offset += s.length; };
-    push('%PDF-1.4\n');
-    push(String.fromCharCode(0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A));
-
-    const objOffsets = [];
-    objs.forEach((body, i) => {
-      objOffsets[i] = offset;
-      const n = i + 1;
-      if(body && typeof body === 'object' && body.stream != null){
-        push(`${n} 0 obj\n<< /Length ${body.stream.length} >>\nstream\n`);
-        push(body.stream);
-        push(`\nendstream\nendobj\n`);
-      } else {
-        push(`${n} 0 obj\n${body}\nendobj\n`);
-      }
-    });
-
-    const xrefOffset = offset;
-    const count = objs.length + 1;
-    push(`xref\n0 ${count}\n`);
-    push('0000000000 65535 f \r\n');
-    objOffsets.forEach(o => push(`${String(o).padStart(10,'0')} 00000 n \r\n`));
-    push(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
-
-    const full = chunks.join('');
-    const bytes = new Uint8Array(full.length);
-    for(let i=0;i<full.length;i++) bytes[i] = full.charCodeAt(i) & 0xFF;
+    const chunks = []; let offset = 0; const push = s => { chunks.push(s); offset += s.length; };
+    push('%PDF-1.4\n'); push(String.fromCharCode(0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A));
+    const offs = [];
+    objs.forEach((body, i) => { offs[i] = offset; const n = i + 1;
+      if(body && typeof body === 'object' && body.stream != null){ push(`${n} 0 obj\n<< /Length ${body.stream.length} >>\nstream\n`); push(body.stream); push('\nendstream\nendobj\n'); }
+      else push(`${n} 0 obj\n${body}\nendobj\n`); });
+    const xref = offset;
+    push(`xref\n0 ${objs.length + 1}\n`); push('0000000000 65535 f \r\n'); offs.forEach(v => push(`${String(v).padStart(10, '0')} 00000 n \r\n`));
+    push(`trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+    const full = chunks.join(''), bytes = new Uint8Array(full.length);
+    for(let i = 0; i < full.length; i++) bytes[i] = full.charCodeAt(i) & 0xFF;
     return bytes;
+  }
+
+  /* The list / report exports (Products, Receipts, Reports …) use the same clean design. */
+  function buildTablePdfBytes(opts){
+    const head = (opts.head || []).map(h => pdfText(h)), rows = opts.rows || [];
+    const numeric = i => { if(/code|barcode|sku|phone|mobile|\bid\b|^no\.?$|number|#|date|time|ref/i.test(head[i])) return false; let any = false; for(const r of rows){ const v = pdfText(r[i] || ''); if(!v || v === '-') continue; if(!/^[-+$€£()%\d.,:\s\/]+$/.test(v) || !/\d/.test(v)) return false; any = true; } return any; };
+    const columns = head.map((h, i) => ({ h, align: numeric(i) ? 'r' : 'l', wrap: !numeric(i) && i < 3 }));
+    if(!columns.some(c => c.wrap) && columns.length) columns[0].wrap = true;
+    return buildDocumentPdf({
+      docType: opts.docType || 'Report', number: opts.title || 'Export', subtitle: opts.subtitle || '',
+      business: (typeof POS_SETTINGS !== 'undefined' && POS_SETTINGS && POS_SETTINGS.businessName && POS_SETTINGS.businessName !== 'AUREUM') ? POS_SETTINGS.businessName : '',
+      createdBy: (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '',
+      columns, rows, emptyText: 'No data to export.'
+    });
   }
   function downloadPdfBytes(bytes, filename){
     const blob = new Blob([bytes], { type: 'application/pdf' });
@@ -5571,12 +5632,12 @@ const AureumSync = (function(){
 
   function renderPODetailBody(po){
     const itemsSubtotal = (po.items||[]).reduce((s,it)=> s + ((it.qty*it.unitCost)||0), 0);
-    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="3" style="color:var(--sage);">${c.name}</td><td style="text-align:right;">$${(c.amount||0).toFixed(2)}</td></tr>`).join('');
+    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="4" style="color:var(--sage);">${escHtml(c.name)}</td><td style="text-align:right;">$${(c.amount||0).toFixed(2)}</td></tr>`).join('');
     const rows = (po.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${itemLabel(it,p)}</td><td style="text-align:right;">${it.qty}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
-    }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this order.</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${it.qty}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+    }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this order.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${po.supplier}</div></div>
@@ -5587,8 +5648,8 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Delivery instruction</div><div class="v">${po.delivery||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
-        <tbody>${rows}${costRows ? `<tr><td colspan="3" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">$${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
+        <tbody>${rows}${costRows ? `<tr><td colspan="4" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">$${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${po.total.toFixed(2)}</span></div>
     `;
@@ -5646,15 +5707,19 @@ const AureumSync = (function(){
   function poPdf(po){
     const rows = (po.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), String(it.qty), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+      return [itemLabel(it,p), String(it.qty), money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0))];
     });
-    const bytes = buildTablePdfBytes({
-      title: `Purchase Order ${po.id}`,
-      subtitle: `${fmtDisplay(po.date)}  ·  ${po.shop}  ·  Supplier: ${po.supplier}  ·  Status: ${po.status}  ·  Total: $${po.total.toFixed(2)}`,
-      head: ['Product','Qty','Unit Cost','Line Total'],
-      rows
-    });
-    downloadPdfBytes(bytes, `${po.id}.pdf`);
+    const sub = (po.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
+    const totals = [];
+    if((po.costs||[]).length){ totals.push(['Items subtotal', '$' + money2(sub)]); po.costs.forEach(c=> totals.push([c.name || 'Additional cost', '$' + money2(c.amount)])); }
+    totals.push(['Total', '$' + money2(po.total), true]);
+    openDocPdf({
+      docType:'Purchase Order', number: po.id, subtitle: `Status: ${po.status || '—'}`, createdBy: po.createdBy || '',
+      meta:[['Supplier', po.supplier], ['Shop', po.shop], ['PO date', po.date ? fmtDisplay(po.date) : ''], ['Expected date', po.expected ? fmtDisplay(po.expected) : ''], ['Payment method', po.payment], ['Delivery instruction', po.delivery], ['Created by', po.createdBy]],
+      tableTitle:'Products',
+      columns:[{h:'Product', wrap:true}, {h:'Quantity', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
+      rows, totals, signatures:['Prepared by','Approved by','Supplier acknowledgement']
+    }, `${po.id}.pdf`);
   }
 
   function switchToPOList(){ document.getElementById('purchasesListView').classList.add('active'); document.getElementById('purchaseCreateView').classList.remove('active'); }
@@ -5690,7 +5755,7 @@ const AureumSync = (function(){
      unit cost, line total) so history stays correct even if the product is later renamed or deleted. */
   function snapshotLine(r){
     const p = PRODUCTS.find(x => x.id === r.productId);
-    return { ...r, name: p ? p.name : (r.name || ''), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
+    return { ...r, name: p ? p.name : (r.name || ''), price: p ? (Number(p.price) || 0) : (r.price || 0), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
   }
   function itemLabel(it, p){ return it.name || (p && p.name) || (PRODUCTS.find(x => x.id === it.productId) || {}).name || 'Deleted product'; }
   function renderPOLines(){
@@ -5699,13 +5764,14 @@ const AureumSync = (function(){
       const p = PRODUCTS.find(x=>x.id===row.productId);
       const total = (row.qty * row.unitCost) || 0;
       return `<tr>
-        <td>${p ? p.name : '—'}</td>
-        <td class="mono">${p ? getStock(p, document.getElementById('poShop').value) : '—'}</td>
-        <td class="mono">0</td>
-        <td><input type="number" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
-        <td><input type="number" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="po-cost"></td>
-        <td class="mono po-line-total" data-idx="${i}">${total.toFixed(2)}</td>
-        <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
+        <td class="full" data-label="Product"><div class="pn">${p ? escHtml(p.name) : '—'}</div></td>
+        <td class="mono" data-label="In stock">${p ? getStock(p, document.getElementById('poShop').value) : '—'}</td>
+        <td class="mono" data-label="Incoming">0</td>
+        <td data-label="Quantity"><input type="number" inputmode="decimal" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
+        <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="po-cost"></td>
+        <td class="mono" data-label="Price">${p ? money2(p.price) : '—'}</td>
+        <td class="mono po-line-total" data-label="Total cost" data-idx="${i}">${total.toFixed(2)}</td>
+        <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
     updatePOTotal();
@@ -5798,14 +5864,21 @@ const AureumSync = (function(){
       costs: validCosts.map(c=>({...c})),
       total
     };
+    let savedPO;
+    const wasEdit = !!editingPOId;
     if(editingPOId){
-      Object.assign(PURCHASE_ORDERS.find(p=>p.id===editingPOId), data);
+      savedPO = PURCHASE_ORDERS.find(p=>p.id===editingPOId);
+      Object.assign(savedPO, data);
     } else {
-      PURCHASE_ORDERS.unshift({ uid: AureumSync.uid(), id: "PO-" + AureumSync.nextDocNumber(PURCHASE_ORDERS, 'PO-', 1042), createdAt: new Date().toISOString(), status:"Pending", ...data });
+      savedPO = { uid: AureumSync.uid(), id: "PO-" + AureumSync.nextDocNumber(PURCHASE_ORDERS, 'PO-', 1042), createdAt: new Date().toISOString(), createdBy: whoCreated(), status:"Pending", ...data };
+      PURCHASE_ORDERS.unshift(savedPO);
     }
     persistAureum();
     renderPOTable();
-    switchToPOList();
+    confirmSaved(`Purchase Order ${savedPO.id}`, renderPODetailBody(savedPO), switchToPOList,
+      wasEdit ? 'Your changes to this purchase order are saved.' : 'The purchase order has been created.',
+      `<div class="modal-btn ghost" id="poSavedPdfBtn">Download PDF</div>`);
+    const poPdfBtn = document.getElementById('poSavedPdfBtn'); if(poPdfBtn) poPdfBtn.addEventListener('click', ()=> poPdf(savedPO));
   });
 
   /* ===== GOODS RECEIVED NOTE ===== */
@@ -5820,8 +5893,8 @@ const AureumSync = (function(){
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${itemLabel(it,p)}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${it.unit || productUnitLabel(p)}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${it.unit || productUnitLabel(p)}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td></tr>`;
+    }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${g.supplier}</div></div>
@@ -5832,7 +5905,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Additional info</div><div class="v">${g.additional||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th>Unit</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Total cost</th><th class="exp">Expiry date</th></tr></thead>
+        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th>Unit</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total cost</th><th class="exp">Expiry date</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
@@ -5859,17 +5932,21 @@ const AureumSync = (function(){
     el.value = ["All", ...suppliers].includes(prev) ? prev : "All";
   }
   function grnPdf(g){
-    const rows = (g.items||[]).map(it=>{
+    const rows = (g.items||[]).filter(it=>it.productId || it.name).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '—', String(it.qty), it.unit || productUnitLabel(p), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2), it.expiry ? fmtDisplay(it.expiry) : '—'];
+      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '-', String(it.qty), it.unit || productUnitLabel(p), money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0)), it.expiry ? fmtDisplay(it.expiry) : '-'];
     });
-    const bytes = buildTablePdfBytes({
-      title: `Goods Received Note ${g.id}`,
-      subtitle: `${fmtDisplay(g.date)}  ·  ${g.shop}  ·  Supplier: ${g.supplier}  ·  ${g.po ? 'From PO '+g.po : g.type}  ·  Total: $${g.total.toFixed(2)}`,
-      head: ['Product','In stock','Received','Unit','Cost','Total cost','Expiry date'],
-      rows
-    });
-    downloadPdfBytes(bytes, `${g.id}.pdf`);
+    const sub = (g.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
+    const totals = [];
+    if((g.costs||[]).length){ totals.push(['Items subtotal', '$' + money2(sub)]); g.costs.forEach(c=> totals.push([c.name || 'Additional cost', '$' + money2(c.amount)])); }
+    totals.push(['Total', '$' + money2(g.total), true]);
+    openDocPdf({
+      docType:'Goods Received Note', number: g.id, subtitle: g.po ? `Received against ${g.po}` : (g.type || ''), createdBy: g.createdBy || '',
+      meta:[['Supplier', g.supplier], ['Shop', g.shop], ['GRN date', g.date ? fmtDisplay(g.date) : ''], ['Payment method', g.payment], ['Supplier invoice no.', g.invoice], ['Additional information', g.additional], ['Created by', g.createdBy]],
+      tableTitle:'Products',
+      columns:[{h:'Product', wrap:true}, {h:'In stock', align:'r'}, {h:'Received qty', align:'r'}, {h:'Unit'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}, {h:'Expiry date'}],
+      rows, totals, signatures:['Store keeper signature','Approved by','Received by']
+    }, `${g.id}.pdf`);
   }
   let grnPageState = { page:1, pageSize:10 };
   function renderGRNTable(){
@@ -5950,6 +6027,7 @@ const AureumSync = (function(){
         <td data-label="Received quantity"><input type="number" inputmode="decimal" min="0" step="${p.soldBy==='weight'?'0.01':'1'}" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Received quantity"></td>
         <td data-label="Unit">${productUnitLabel(p)}</td>
         <td data-label="Cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost" aria-label="Cost per unit"></td>
+        <td data-label="Price" class="mono">${money2(p.price)}</td>
         <td data-label="Total cost" class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
         <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
@@ -6061,10 +6139,12 @@ const AureumSync = (function(){
       const p = PRODUCTS.find(x=>x.id===row.productId);
       row.beforeStock = p ? getStock(p, grnShopVal) : 0;              // "in stock" as it was just before this GRN
       row.unit = productUnitLabel(p);
+      row.price = p ? (Number(p.price) || 0) : 0;
       if(p) addStock(p, grnShopVal, row.qty || 0);
     });
     GRN_RECORDS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(),
+      createdBy: whoCreated(),
       id: "GRN-" + AureumSync.nextDocNumber(GRN_RECORDS, 'GRN-', 11223),
       date: document.getElementById('grnDate').value || todayStr(),
       type: "Direct GRN", po: "",
@@ -6105,8 +6185,8 @@ const AureumSync = (function(){
       if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
       else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
       else { delta = it.counted - before; after = it.counted; } // Override
-      return `<tr><td>${itemLabel(it,p)}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td></tr>`;
-    }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td><td style="text-align:right;">$${money2(it.unitCost)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Type</div><div class="v">${a.type}</div></div>
@@ -6116,7 +6196,7 @@ const AureumSync = (function(){
         <div class="detail-field" style="grid-column:1/-1;"><div class="field-label">Notes</div><div class="v">${a.notes||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Before</th><th style="text-align:right;">${qtyLabel}</th><th style="text-align:right;">After</th><th style="text-align:right;">Change</th></tr></thead>
+        <thead><tr><th>Product</th><th style="text-align:right;">Before</th><th style="text-align:right;">${qtyLabel}</th><th style="text-align:right;">After</th><th style="text-align:right;">Change</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Stock adjustments are locked from editing once saved to keep the audit trail accurate — delete it to reverse the stock change.</div>
@@ -6180,22 +6260,25 @@ const AureumSync = (function(){
     renderPaginationControls('saPagination', totalFiltered, saPageState, renderStockAdjTable);
   }
   function saPdf(a){
+    let total = 0;
     const rows = (a.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const before = it.beforeStock||0;
-      let delta, after;
-      if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
-      else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
-      else { delta = it.counted - before; after = it.counted; }
-      return [itemLabel(it,p), String(before), String(it.counted), String(after), (delta>=0?'+':'')+delta];
+      let after, line;
+      if(a.type === 'Add'){ after = before + it.counted; line = (it.counted||0) * (it.unitCost||0); }
+      else if(a.type === 'Reduce'){ after = before - it.counted; line = (it.counted||0) * (it.unitCost||0); }
+      else { after = it.counted; line = ((it.counted||0) - before) * (it.unitCost||0); }
+      total += line;
+      return [itemLabel(it,p), String(before), String(it.counted), String(after), money2(it.unitCost), money2(linePrice(it,p)), money2(line)];
     });
-    const bytes = buildTablePdfBytes({
-      title: `Stock Adjustment ${a.id}`,
-      subtitle: `${fmtDisplay(a.date)}  ·  ${a.shop}  ·  ${a.type} — ${a.reason}`,
-      head: ['Product','Before','Counted/Qty','After','Change'],
-      rows
-    });
-    downloadPdfBytes(bytes, `${a.id}.pdf`);
+    const qtyLabel = SA_QTY_LABEL_BY_TYPE[a.type] || 'Quantity';
+    openDocPdf({
+      docType:'Stock Adjustment', number: a.id, subtitle: `${a.type} - ${a.reason}`, createdBy: a.createdBy || '',
+      meta:[['Supplier', a.supplier], ['Shop', a.shop], ['Adjustment type', a.type], ['Adjustment reason', a.reason], ['Created date', a.date ? fmtDisplay(a.date) : ''], ['Created by', a.createdBy], ['Notes', a.notes]],
+      tableTitle:'Products',
+      columns:[{h:'Product', wrap:true}, {h:'Current stock', align:'r'}, {h:qtyLabel, align:'r'}, {h:'Stock after', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
+      rows, totals:[['Total', '$' + money2(total), true]], signatures:['Store keeper signature','Approved by','Received by']
+    }, `${a.id}.pdf`);
   }
 
   function switchToSAList(){ document.getElementById('stockAdjListView').classList.add('active'); document.getElementById('stockAdjCreateView').classList.remove('active'); }
@@ -6258,6 +6341,7 @@ const AureumSync = (function(){
         <td data-label="Current stock" class="mono">${getStock(p, shopVal)}</td>
         <td data-label="${qtyLabel}"><input type="number" inputmode="decimal" min="0" step="1" value="${row.counted}" data-idx="${i}" class="sa-counted"></td>
         <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="sa-cost"></td>
+        <td data-label="Price" class="mono">${money2(p.price)}</td>
         <td data-label="Total cost" class="mono sa-line-total" data-idx="${i}">${total.toFixed(2)}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
@@ -6353,10 +6437,10 @@ const AureumSync = (function(){
         else if(type === 'Reduce') addStock(p, saShopVal, -row.counted);
         else if(type === 'Override') setStock(p, saShopVal, row.counted);
       }
-      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitCost: row.unitCost, beforeStock };
+      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitCost: row.unitCost, price: p ? (Number(p.price) || 0) : 0, beforeStock };
     });
     STOCK_ADJUSTMENTS.unshift({
-      uid: AureumSync.uid(), createdAt: new Date().toISOString(),
+      uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
       id: "SA-" + AureumSync.nextDocNumber(STOCK_ADJUSTMENTS, 'SA-', 10956),
       date: todayStr(), type, reason,
       supplier: document.getElementById('saSupplier').value,
@@ -8420,6 +8504,8 @@ const AureumSync = (function(){
         <td class="mono" data-label="Stock (${escHtml(fromShop || 'From')})" style="text-align:right;">${fromStock}</td>
         <td class="mono" data-label="Stock (${escHtml(toShop || 'To')})" style="text-align:right;">${toStock}</td>
         <td data-label="Quantity"><input type="number" inputmode="numeric" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
+        <td class="mono" data-label="Cost">${p ? money2(p.cost) : '—'}</td>
+        <td class="mono" data-label="Price">${p ? money2(p.price) : '—'}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
@@ -8457,31 +8543,29 @@ const AureumSync = (function(){
   document.getElementById('trToShop').addEventListener('change', renderTrLines);
 
   function transferPdf(t){
-    const rows = t.items.map(it=>{
+    const rows = (t.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [
-        itemLabel(it,p),
-        String(it.qty),
-        String(it.beforeFrom ?? '—'), String(it.afterFrom ?? '—'),
-        String(it.beforeTo ?? '—'), String(it.afterTo ?? '—')
-      ];
+      return [itemLabel(it,p), String(it.qty), money2(lineCost(it,p)), money2(linePrice(it,p)),
+        String(it.beforeFrom ?? '-'), String(it.afterFrom ?? '-'), String(it.beforeTo ?? '-'), String(it.afterTo ?? '-')];
     });
-    const bytes = buildTablePdfBytes({
-      title: `Stock Transfer ${t.id}`,
-      subtitle: `${fmtDisplay(t.date)}  ·  ${t.from} -> ${t.to}`,
-      head: ['Product','Qty', `Before (${t.from})`, `After (${t.from})`, `Before (${t.to})`, `After (${t.to})`],
-      rows
-    });
-    downloadPdfBytes(bytes, `${t.id}.pdf`);
+    const totalQty = (t.items||[]).reduce((s2, it)=> s2 + (it.qty||0), 0);
+    openDocPdf({
+      docType:'Stock Transfer', number: t.id, subtitle: `${t.from} to ${t.to}`, createdBy: t.createdBy || '',
+      meta:[['From shop', t.from], ['To shop', t.to], ['Transfer date', t.date ? fmtDisplay(t.date) : ''], ['Status', t.status], ['Total quantity moved', String(totalQty)], ['Created by', t.createdBy]],
+      tableTitle:'Products',
+      columns:[{h:'Product', wrap:true}, {h:'Qty', align:'r'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:`${t.from} before`, align:'r'}, {h:`${t.from} after`, align:'r'}, {h:`${t.to} before`, align:'r'}, {h:`${t.to} after`, align:'r'}],
+      rows, totals:[['Total quantity moved', String(totalQty), true]], signatures:['Sent by','Approved by','Received by']
+    }, `${t.id}.pdf`);
   }
 
   function renderTransferDetailBody(t){
     const rows = (t.items || []).map(it => {
       const p = PRODUCTS.find(x => x.id === it.productId);
-      return `<tr><td>${itemLabel(it, p)}</td><td style="text-align:right;">${it.qty}</td>
+      return `<tr><td>${escHtml(itemLabel(it, p))}</td><td style="text-align:right;">${it.qty}</td>
+        <td style="text-align:right;" class="mono">${money2(lineCost(it, p))}</td><td style="text-align:right;" class="mono">${money2(linePrice(it, p))}</td>
         <td style="text-align:right;" class="mono">${it.beforeFrom ?? '—'} → ${it.afterFrom ?? '—'}</td>
         <td style="text-align:right;" class="mono">${it.beforeTo ?? '—'} → ${it.afterTo ?? '—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this transfer.</td></tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this transfer.</td></tr>`;
     const totalQty = (t.items || []).reduce((s, it) => s + (it.qty || 0), 0);
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -8493,7 +8577,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Total quantity moved</div><div class="v">${totalQty}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Stock at ${t.from}<br><span style="font-weight:400;opacity:.7;">before → after</span></th><th style="text-align:right;">Stock at ${t.to}<br><span style="font-weight:400;opacity:.7;">before → after</span></th></tr></thead>
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Stock at ${t.from}<br><span style="font-weight:400;opacity:.7;">before → after</span></th><th style="text-align:right;">Stock at ${t.to}<br><span style="font-weight:400;opacity:.7;">before → after</span></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Completed transfers have already moved the stock, so they are kept as a permanent record. To correct a mistake, make a new transfer the other way.</div>`;
@@ -8566,10 +8650,10 @@ const AureumSync = (function(){
       const beforeFrom = getStock(p, from), beforeTo = getStock(p, to);
       addStock(p, from, -r.qty);
       addStock(p, to, r.qty);
-      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
+      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, cost: p ? (Number(p.cost) || 0) : 0, price: p ? (Number(p.price) || 0) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
     });
     TRANSFERS.unshift({
-      uid: AureumSync.uid(), createdAt: new Date().toISOString(),
+      uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
       id: 'TR-' + AureumSync.nextDocNumber(TRANSFERS, 'TR-', 1001),
       date: document.getElementById('trDate').value || `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`,
       from, to,
