@@ -859,6 +859,35 @@
     background: linear-gradient(135deg, var(--gold-bright), var(--gold));
     color:#1B140A; font-weight:700; padding:11px; border-radius:9px; cursor:pointer; font-size:13px;
   }
+  /* ===== PRODUCT PICKER (drops DOWN, says "Product not found") + KEYBOARD-SAFE ENTRY ===== */
+  .pp-list{ position:fixed; z-index:700; background:var(--panel-raised, #11261d); border:1px solid var(--line-strong); border-radius:10px;
+    box-shadow:0 14px 34px rgba(0,0,0,.45); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:4px; }
+  .pp-list[hidden]{ display:none; }
+  .pp-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 10px; border-radius:7px; cursor:pointer; font-size:13px; color:var(--ivory); }
+  .pp-item.hi, .pp-item:hover{ background:rgba(212,175,95,.14); }
+  .pp-name{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pp-meta{ flex-shrink:0; font-size:11px; color:var(--sage); }
+  .pp-empty{ padding:14px 12px; font-size:13px; color:var(--sage); text-align:center; }
+  .line-table .pn{ font-weight:600; color:var(--ivory); }
+  .saved-banner{ display:flex; align-items:center; gap:10px; background:rgba(60,170,110,.12); border:1px solid rgba(60,170,110,.35); color:var(--ivory); border-radius:10px; padding:10px 12px; margin-bottom:16px; font-size:13px; }
+  .saved-banner b{ color:#8ee3b4; }
+  .app{ height:var(--vvh, 100vh); }
+  .main{ height:var(--vvh, 100vh); }
+  .kb-open .main{ padding-bottom:calc(var(--vvh, 100vh) * .55); }
+  @media (max-width:720px){
+    .line-table.stack-sm thead{ display:none; }
+    .line-table.stack-sm, .line-table.stack-sm tbody{ display:block; width:100%; }
+    .line-table.stack-sm tr{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; padding:14px 0; border-bottom:1px solid var(--line); position:relative; }
+    .line-table.stack-sm td{ display:block; padding:0; min-width:0; }
+    .line-table.stack-sm td::before{ content:attr(data-label); display:block; font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--sage); margin-bottom:4px; }
+    .line-table.stack-sm td.full{ grid-column:1 / -1; padding-right:34px; }
+    .line-table.stack-sm td.rm{ position:absolute; top:12px; right:0; }
+    .line-table.stack-sm td.rm::before{ display:none; }
+    .line-table.stack-sm input, .line-table.stack-sm select{ font-size:16px; padding:10px 10px; }   /* 16px stops iPhone zooming in on focus */
+    #grnProductSearch, #saProductSearch, #poProductSearch{ font-size:16px; max-width:none !important; flex:1; }
+    .detail-table th, .detail-table td{ padding-left:8px; padding-right:8px; }
+    .detail-table .exp{ padding-left:8px; }
+  }
 </style>
 <meta name="description" content="AUREUM Back Office — manage products, stock, staff, purchases and reports for your shops.">
 <meta name="theme-color" content="#0A1B16">
@@ -889,15 +918,22 @@
     <div id="authForgotFields" style="display:none;">
       <div style="font-size:12px;color:var(--sage);margin-bottom:10px;">Enter the email on your account and we'll send you a link to reset your password.</div>
     </div>
-    <input class="auth-field" id="authEmail" type="email" placeholder="Email">
-    <input class="auth-field" id="authPassword" type="password" placeholder="Password">
+    <form id="authForm" autocomplete="on" novalidate>
+    <input class="auth-field" id="authEmail" name="email" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <input class="auth-field" id="authPassword" name="password" type="password" placeholder="Password" autocomplete="current-password">
     <div class="auth-error" id="authError"></div>
+    <label id="authRememberRow" style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--sage);margin:2px 0 12px;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="authRemember" checked style="width:17px;height:17px;margin:0;accent-color:var(--gold-bright);flex-shrink:0;">
+      <span>Remember me <span style="opacity:.65;">&middot; stay signed in and remember my email on this device</span></span>
+    </label>
     <div id="authPayBlock" style="display:none; margin-bottom:10px;">
       <div class="auth-btn" id="authPayStripeBtn">Subscribe with card — $5 per shop / month</div>
       <div id="authPayError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;text-align:center;"></div>
       <div style="font-size:11px;color:var(--sage);text-align:center;margin:4px 0 6px;">After paying, wait a few seconds and refresh this page.</div>
     </div>
-    <div class="auth-btn" id="authSubmitBtn">Sign In</div>
+    <div class="auth-btn" id="authSubmitBtn" role="button" tabindex="0">Sign In</div>
+    <input type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+    </form>
     <div id="authForgotLinkRow" style="text-align:center;margin-top:12px;">
       <span id="authForgotLink" style="font-size:12px;color:var(--sage);cursor:pointer;text-decoration:underline;">Forgot password?</span>
     </div>
@@ -968,7 +1004,7 @@
       </div>
       <div class="nav-item" data-page="purchases">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="7" width="13" height="9" rx="1.4"/><path d="M15.5 10h3.2l2.8 3v3h-6V10Z"/><circle cx="7" cy="18.5" r="1.6"/><circle cx="17" cy="18.5" r="1.6"/></svg>
-        Purchases
+        Purchase Orders
       </div>
       <div class="nav-item" data-page="goods-received">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7.5 12 3l8 4.5-8 4.5-8-4.5Z"/><path d="M4 7.5V16l8 4.5 8-4.5V7.5"/><path d="m8 10 4 2.2 4-2.2"/></svg>
@@ -1534,7 +1570,7 @@
           <table>
             <thead>
               <tr>
-                <th>Product name</th><th>Product code</th><th>Category</th><th>Sub category</th>
+                <th>Product name</th><th>Product code</th><th>Category</th>
                 <th style="text-align:right;">Sold qty</th><th style="text-align:right;">Gross sale</th>
                 <th style="text-align:right;">Refunds</th><th style="text-align:right;">Discounts</th>
                 <th style="text-align:right;">Net sales</th><th style="text-align:right;">Cost</th>
@@ -1551,7 +1587,7 @@
     <div class="page" data-page="purchases">
       <div class="list-view active" id="purchasesListView">
         <div class="main-top">
-          <div><div class="page-title">Purchases</div><div class="page-sub">Purchase orders, receiving, and suppliers.</div></div>
+          <div><div class="page-title">Purchase Orders</div><div class="page-sub">Create purchase orders, track receiving, and manage suppliers.</div></div>
         </div>
         <div class="data-toolbar">
           <div class="btn-gold" id="addPurchaseBtn">
@@ -1628,8 +1664,7 @@
             <tbody id="poLineBody"></tbody>
           </table>
           <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
-            <input type="text" class="modal-select" id="poProductSearch" list="poProductDatalist" placeholder="Search product name…" style="max-width:280px;" autocomplete="off">
-            <datalist id="poProductDatalist"></datalist>
+            <input type="text" class="modal-select" id="poProductSearch" placeholder="Search product name…" style="max-width:280px;" autocomplete="off">
             <div class="pc-btn" id="poAddProductBtn" title="Add product" style="width:30px;height:30px;border-radius:8px;background:var(--gold-bright);color:#20160A;font-size:16px;text-align:center;line-height:28px;cursor:pointer;">+</div>
           </div>
           <div id="poCostBody" style="margin:10px 0;"></div>
@@ -1731,15 +1766,14 @@
           <div class="filter-field" style="max-width:200px; margin-left:auto; margin-bottom:12px;">
             <select class="cat-select" id="grnCatFilter"><option>All categories</option></select>
           </div>
-          <table class="line-table">
+          <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>Quantity</th><th>Expiry date</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>In stock</th><th>Received quantity</th><th>Unit</th><th>Cost</th><th>Total cost</th><th>Expiry date</th><th></th></tr>
             </thead>
             <tbody id="grnLineBody"></tbody>
           </table>
           <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
-            <input type="text" class="modal-select" id="grnProductSearch" list="grnProductDatalist" placeholder="Search product name…" style="max-width:280px;" autocomplete="off">
-            <datalist id="grnProductDatalist"></datalist>
+            <input type="text" class="modal-select" id="grnProductSearch" placeholder="Search product name…" style="max-width:280px;" autocomplete="off">
             <div class="pc-btn" id="grnAddProductBtn" title="Add product" style="width:30px;height:30px;border-radius:8px;background:var(--gold-bright);color:#20160A;font-size:16px;text-align:center;line-height:28px;cursor:pointer;">+</div>
           </div>
           <div id="grnCostBody" style="margin:10px 0;"></div>
@@ -1839,15 +1873,14 @@
         </div>
 
         <div class="line-table-wrap">
-          <table class="line-table">
+          <table class="line-table stack-sm">
             <thead>
               <tr><th>Product</th><th>Current stock</th><th id="saQtyColHead">Counted stock</th><th>Unit cost</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="saLineBody"></tbody>
           </table>
           <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
-            <input type="text" class="modal-select" id="saProductSearch" list="saProductDatalist" placeholder="Search product name…" style="max-width:280px;" autocomplete="off">
-            <datalist id="saProductDatalist"></datalist>
+            <input type="text" class="modal-select" id="saProductSearch" placeholder="Search product name…" style="max-width:280px;" autocomplete="off">
             <div class="pc-btn" id="saAddRowBtn" title="Add product" style="width:30px;height:30px;border-radius:8px;background:var(--gold-bright);color:#20160A;font-size:16px;">+</div>
           </div>
           <div class="grand-total-row"><span class="gt-label">Total</span><span class="gt-val" id="saTotal">0.00</span></div>
@@ -2179,7 +2212,7 @@
             <div class="form-section-title" style="margin:0;">Items to transfer</div>
             <div class="btn-outline add-line-btn" id="trAddLineBtn">+ Add product</div>
           </div>
-          <table class="line-table">
+          <table class="line-table stack-sm">
             <thead><tr><th>Product</th><th style="width:110px;">Stock (From)</th><th style="width:110px;">Stock (To)</th><th style="width:120px;">Quantity</th><th style="width:50px;"></th></tr></thead>
             <tbody id="trLineBody"></tbody>
           </table>
@@ -2800,7 +2833,35 @@
   };
 
   const supaReady = SUPABASE_CONFIG.url.startsWith('http');
-  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
+  /* "Remember me": ticked = the sign-in is kept on this device (and the email pre-filled next time).
+     Unticked = the sign-in lasts only until this browser tab/window is closed. The password itself is never
+     stored by AUREUM — the browser's own password manager offers to save it. */
+  const AUREUM_AUTH_STORAGE = (function(){
+    const sessOnly = () => { try{ return sessionStorage.getItem('aureum_session_only') === '1'; }catch(e){ return false; } };
+    const st = () => sessOnly() ? sessionStorage : localStorage;
+    return {
+      getItem: k => { try{ return st().getItem(k); }catch(e){ return null; } },
+      setItem: (k,v) => { try{ st().setItem(k,v); }catch(e){} },
+      removeItem: k => { try{ st().removeItem(k); }catch(e){} }
+    };
+  })();
+  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth:{ storage: AUREUM_AUTH_STORAGE, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }) : null;
+  function applyRememberChoice(email){
+    const box = document.getElementById('authRemember');
+    const remember = !box || box.checked;
+    try{
+      if(remember){
+        sessionStorage.removeItem('aureum_session_only');
+        localStorage.setItem('aureum_remember', '1');
+        localStorage.setItem('aureum_remember_email', email);
+      } else {
+        sessionStorage.setItem('aureum_session_only', '1');
+        localStorage.setItem('aureum_remember', '0');
+        localStorage.removeItem('aureum_remember_email');
+        Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));   // forget any older saved sign-in
+      }
+    }catch(e){}
+  }
   let currentUser = null, currentBusinessId = null, currentRole = null;
 
 /* ==== AUREUM SYNC CORE (identical in backoffice.html and pos-checkout.html) ====
@@ -3566,8 +3627,13 @@ const AureumSync = (function(){
 
   /* ===== MODAL HELPERS ===== */
   function openModal(id){ document.getElementById(id).classList.add('open'); }
-  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+  let detailCloseHook = null;      // runs once when the detail pop-up is closed (any way: button, outside click)
+  function closeModal(id){
+    document.getElementById(id).classList.remove('open');
+    if(id === 'detailModal' && detailCloseHook){ const h = detailCloseHook; detailCloseHook = null; try{ h(); }catch(e){ console.error(e); } }
+  }
   function openDetailModal(title, bodyHtml, actionsHtml){
+    detailCloseHook = null;
     document.getElementById('detailModalTitle').textContent = title;
     document.getElementById('detailModalBody').innerHTML = bodyHtml;
     document.getElementById('detailModalActions').innerHTML = actionsHtml || `<div class="modal-btn solid" data-close="detailModal">Close</div>`;
@@ -3576,6 +3642,134 @@ const AureumSync = (function(){
     });
     openModal('detailModal');
   }
+
+  /* After saving a GRN / stock adjustment / transfer: stay on screen and show the saved entries in the same
+     pop-up as clicking a saved record. Closing it (Done, outside click) takes you back to the list. */
+  function confirmSaved(title, bodyHtml, onClose, message, extraActionsHtml){
+    openDetailModal(title,
+      `<div class="saved-banner"><span style="font-size:18px;">&#10003;</span><div><b>Saved.</b> ${message || ''} Please check the entries below.</div></div>` + bodyHtml,
+      (extraActionsHtml || '') + `<div class="modal-btn solid" data-close="detailModal">Done</div>`);
+    detailCloseHook = onClose || null;
+  }
+
+  /* Keyboard-safe entry: keep the working area exactly as tall as what is visible above the phone keyboard
+     and scroll the field being typed in to the upper part of that area, so it is never hidden. */
+  (function keyboardSafeEntry(){
+    const vv = window.visualViewport, root = document.documentElement;
+    const isField = el => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !/^(checkbox|radio|button|file|submit)$/.test(el.type || '');
+    function sync(){
+      if(!vv) return;
+      if(vv.scale && vv.scale > 1.05) return;                       // pinch-zoomed: leave alone
+      root.style.setProperty('--vvh', Math.round(vv.height) + 'px');
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.classList.toggle('kb-open', kb > 80);
+      if(kb > 80 && (window.scrollY || vv.offsetTop)) window.scrollTo(0, 0);
+    }
+    function bring(el){
+      const sc = el && el.closest && el.closest('.main'); if(!sc) return;
+      const topV = vv ? vv.offsetTop : 0, hV = vv ? vv.height : window.innerHeight;
+      const sr = sc.getBoundingClientRect(), r = el.getBoundingClientRect();
+      const visTop = Math.max(sr.top, topV), visBot = Math.min(sr.bottom, topV + hV), h = visBot - visTop;
+      if(h <= 0) return;
+      if(r.top < visTop + 72 || r.bottom > visTop + h * 0.62){
+        sc.scrollTo({ top: sc.scrollTop + (r.top - (visTop + h * 0.22)), behavior: 'auto' });
+      }
+    }
+    if(vv){
+      vv.addEventListener('resize', ()=>{ sync(); const a = document.activeElement; if(isField(a)) setTimeout(()=>bring(a), 60); });
+      vv.addEventListener('scroll', sync);
+    }
+    sync();
+    document.addEventListener('focusin', e=>{
+      if(!isField(e.target)) return;
+      const el = e.target;
+      setTimeout(()=>{ sync(); bring(el); }, 60);
+      setTimeout(()=>{ sync(); bring(el); }, 380);                   // again once the keyboard has finished sliding up
+    });
+    window.aureumBringIntoView = bring;
+  })();
+
+  /* Product picker: our own list, always opens BELOW the box, never behind the keyboard, and says
+     "Product not found" instead of showing an empty box. */
+  function attachProductPicker(input, cfg){
+    if(!input || input._pp) return;
+    input._pp = true;
+    input.removeAttribute('list');
+    input.setAttribute('autocomplete','off'); input.setAttribute('autocapitalize','off'); input.setAttribute('autocorrect','off');
+    input.setAttribute('spellcheck','false'); input.setAttribute('enterkeyhint','search');
+    const list = document.createElement('div'); list.className = 'pp-list'; list.setAttribute('role','listbox'); list.hidden = true;
+    document.body.appendChild(list);
+    let hi = -1, shown = [], closeT = null;
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function match(){
+      const q = (input.value || '').trim().toLowerCase();
+      const all = cfg.getProducts() || [];
+      if(!q || (cfg.selectedName && q === String(cfg.selectedName()).toLowerCase())) return all.slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+      return all.filter(p => String(p.name||'').toLowerCase().includes(q) || String(p.code||'').toLowerCase().includes(q) || String(p.barcode||'').toLowerCase().includes(q))
+                .sort((a,b)=>{ const as = String(a.name).toLowerCase().startsWith(q) ? 0 : 1, bs = String(b.name).toLowerCase().startsWith(q) ? 0 : 1; return as - bs || String(a.name).localeCompare(String(b.name)); });
+    }
+    function place(){
+      if(list.hidden) return;
+      const r = input.getBoundingClientRect(), vv = window.visualViewport;
+      const vTop = vv ? vv.offsetTop : 0, vH = vv ? vv.height : window.innerHeight, vW = vv ? vv.width : window.innerWidth;
+      const width = Math.min(Math.max(r.width, 280), vW - 16);
+      list.style.width = width + 'px';
+      list.style.left = Math.max(8, Math.min(r.left, vW - width - 8)) + 'px';
+      list.style.top = (r.bottom + 4) + 'px';
+      list.style.maxHeight = Math.max(130, Math.min(300, vTop + vH - r.bottom - 12)) + 'px';
+    }
+    function render(){
+      const all = cfg.getProducts() || [];
+      shown = match().slice(0, 60);
+      if(!all.length) list.innerHTML = '<div class="pp-empty">No products yet. Add products first.</div>';
+      else if(!shown.length) list.innerHTML = '<div class="pp-empty">Product not found</div>';
+      else {
+        if(hi >= shown.length) hi = shown.length - 1;
+        list.innerHTML = shown.map((p,i)=>`<div class="pp-item${i===hi?' hi':''}" role="option" data-i="${i}"><span class="pp-name">${esc(p.name)}</span><span class="pp-meta">${esc(cfg.meta ? cfg.meta(p) : (p.code || ''))}</span></div>`).join('');
+      }
+      place();
+    }
+    function open(){ clearTimeout(closeT); list.hidden = false; render(); }
+    function close(){ list.hidden = true; hi = -1; }
+    function pick(p){
+      close(); input.value = '';
+      cfg.onPick(p);
+    }
+    input.addEventListener('focus', ()=>{ if(cfg.selectedName) input.select(); open(); setTimeout(place, 120); setTimeout(place, 400); });
+    input.addEventListener('click', open);
+    input.addEventListener('input', ()=>{ hi = 0; open(); });
+    input.addEventListener('keydown', e=>{
+      if(e.key === 'ArrowDown'){ e.preventDefault(); if(list.hidden) open(); hi = Math.min(shown.length - 1, hi + 1); render(); const el = list.querySelector('.pp-item.hi'); if(el) el.scrollIntoView({block:'nearest'}); }
+      else if(e.key === 'ArrowUp'){ e.preventDefault(); hi = Math.max(0, hi - 1); render(); const el = list.querySelector('.pp-item.hi'); if(el) el.scrollIntoView({block:'nearest'}); }
+      else if(e.key === 'Enter'){
+        e.preventDefault();
+        const q = (input.value || '').trim().toLowerCase();
+        const exact = shown.find(p => String(p.name||'').toLowerCase() === q);
+        const chosen = exact || (hi >= 0 ? shown[hi] : (shown.length === 1 ? shown[0] : null));
+        if(chosen) pick(chosen);
+      }
+      else if(e.key === 'Escape'){ close(); }
+    });
+    input.addEventListener('blur', ()=>{
+      closeT = setTimeout(()=>{ close(); if(cfg.restore) input.value = cfg.restore(); }, 220);
+    });
+    list.addEventListener('mousedown', e=> e.preventDefault());       // tapping the list must not blur the box (keeps keyboard steady)
+    list.addEventListener('click', e=>{
+      const it = e.target.closest('.pp-item'); if(!it) return;
+      const pr = shown[parseInt(it.dataset.i)]; if(pr) pick(pr);
+    });
+    window.addEventListener('resize', place);
+    if(window.visualViewport){ window.visualViewport.addEventListener('resize', place); window.visualViewport.addEventListener('scroll', place); }
+    document.addEventListener('scroll', place, true);
+    input._ppApi = { open, close, place, refresh: ()=>{ if(!list.hidden) render(); }, destroy: ()=>{
+      clearTimeout(closeT); list.remove();
+      window.removeEventListener('resize', place);
+      if(window.visualViewport){ window.visualViewport.removeEventListener('resize', place); window.visualViewport.removeEventListener('scroll', place); }
+      document.removeEventListener('scroll', place, true);
+    } };
+    return input._ppApi;
+  }
+  function productUnitLabel(p){ return (p && p.soldBy === 'weight') ? 'By weight' : 'Each'; }
   document.querySelectorAll('[data-close]').forEach(el=>{
     el.addEventListener('click', ()=> closeModal(el.dataset.close));
   });
@@ -4059,13 +4253,16 @@ const AureumSync = (function(){
 
   function productShopLabel(p){
     if(p.shops === 'all') return 'All Shops';
-    if(Array.isArray(p.shops)) return p.shops.length ? `${p.shops.length} shop${p.shops.length!==1?'s':''}` : '—';
+    if(Array.isArray(p.shops)){
+      const live = p.shops.filter(s=>SHOPS.includes(s));      // ignore shops that have since been deleted
+      return live.length ? `${live.length} shop${live.length!==1?'s':''}` : '—';
+    }
     return '—';
   }
   function productInShop(p, shop){
     if(shop === 'All Shops') return true;
     if(p.shops === 'all') return true;
-    return Array.isArray(p.shops) && p.shops.includes(shop);
+    return Array.isArray(p.shops) && p.shops.includes(shop) && SHOPS.includes(shop);
   }
 
   /* ===== PRODUCTS — LIST (table, matches reference) ===== */
@@ -4132,7 +4329,7 @@ const AureumSync = (function(){
       });
     });
   }
-  let productPageState = { page:1, pageSize:20 };
+  let productPageState = { page:1, pageSize:10 };
   // Negative stock (more sold than recorded) is shown in red wherever stock is listed.
   function fmtStockVal(v){ return v < 0 ? `<span style="color:var(--danger);font-weight:700;" title="Negative stock — more was sold than recorded">${v}</span>` : String(v); }
 
@@ -4973,7 +5170,7 @@ const AureumSync = (function(){
   const PIE_COLORS = ["var(--gold-bright)","var(--emerald-light)","var(--blue)","var(--purple)","var(--sage-dim)","var(--danger)"];
 
   let sbpTopNValue = 5;
-  let sbpPageState = { page:1, pageSize:20 };
+  let sbpPageState = { page:1, pageSize:10 };
   function renderSalesByProduct(){
     const tbody = document.getElementById('sbpBody');
     if(!tbody) return;
@@ -5053,7 +5250,7 @@ const AureumSync = (function(){
     }
 
     if(sorted.length === 0){
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:48px 20px;color:var(--sage);">No sales data for this selection. Try widening the date range, time, shop, or category filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:48px 20px;color:var(--sage);">No sales data for this selection. Try widening the date range, time, shop, or category filters.</td></tr>`;
       const pg=document.getElementById('sbpPagination'); if(pg) pg.innerHTML='';
       return;
     }
@@ -5065,7 +5262,6 @@ const AureumSync = (function(){
         <td><div class="name-cell"><div class="row-thumb">${productThumb(p)}</div><div class="nm">${p.name}</div></div></td>
         <td class="mono">${p.code || '—'}</td>
         <td>${p.cat || 'Uncategorized'}</td>
-        <td>—</td>
         <td class="mono" style="text-align:right;">${s.qty}</td>
         <td class="mono" style="text-align:right; color:var(--green-bright);">${s.gross.toFixed(2)}</td>
         <td class="mono" style="text-align:right;">${s.refunds.toFixed(2)}</td>
@@ -5408,7 +5604,7 @@ const AureumSync = (function(){
     document.getElementById('detailEditPOBtn').addEventListener('click', ()=>{ closeModal('detailModal'); switchToPOCreate(id); });
   }
 
-  let poPageState = { page:1, pageSize:20 };
+  let poPageState = { page:1, pageSize:10 };
   let poDateRangeFilter = null;
   const dateInFilter = (iso, f) => { if(!f) return true; const d = new Date(String(iso).slice(0,10) + 'T00:00:00').getTime(); return isNaN(d) || (d >= f.start.getTime() && d <= f.end.getTime()); };
   function renderPOTable(){
@@ -5532,15 +5728,13 @@ const AureumSync = (function(){
     if(cell) cell.textContent = ((row.qty*row.unitCost)||0).toFixed(2);
     updatePOTotal();
   }
-  function populatePOProductDatalist(){
+  function poPickableProducts(){
     const catFilterEl = document.getElementById('poCatFilter');
     const catFilter = catFilterEl ? catFilterEl.value : 'All';
-    const options = PRODUCTS.filter(pp=> catFilter==='All' || pp.cat===catFilter);
-    document.getElementById('poProductDatalist').innerHTML = options.map(pp=>`<option value="${pp.name}">`).join('');
+    return PRODUCTS.filter(pp=> catFilter==='All' || catFilter==='All categories' || pp.cat===catFilter);
   }
-  function addPOProductByName(name){
-    const match = PRODUCTS.find(pp=> pp.name.toLowerCase() === name.trim().toLowerCase());
-    if(!match) return false;
+  function populatePOProductDatalist(){ const a = document.getElementById('poProductSearch'); if(a && a._ppApi) a._ppApi.refresh(); }
+  function addPOProduct(match){
     let idx = poLineItems.findIndex(r=>r.productId===match.id);
     if(idx === -1){
       poLineItems.push({ productId: match.id, qty: 1, unitCost: match.cost });
@@ -5551,19 +5745,14 @@ const AureumSync = (function(){
     if(qtyInput){ qtyInput.focus(); qtyInput.select(); }
     return true;
   }
-  document.getElementById('poProductSearch').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){
-      e.preventDefault();
-      if(addPOProductByName(this.value)) this.value = '';
-    }
-  });
-  document.getElementById('poProductSearch').addEventListener('change', function(){
-    if(addPOProductByName(this.value)) this.value = '';
+  attachProductPicker(document.getElementById('poProductSearch'), {
+    getProducts: poPickableProducts,
+    meta: p => 'In stock: ' + getStock(p, document.getElementById('poShop').value),
+    onPick: addPOProduct
   });
   document.getElementById('poAddProductBtn').addEventListener('click', ()=>{
     const input = document.getElementById('poProductSearch');
-    if(addPOProductByName(input.value)) input.value = '';
-    else input.focus();
+    input.focus(); if(input._ppApi) input._ppApi.open();
   });
 
   document.getElementById('addPurchaseBtn').addEventListener('click', ()=> switchToPOCreate());
@@ -5631,8 +5820,8 @@ const AureumSync = (function(){
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${itemLabel(it,p)}</td><td class="num">${it.qty}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
-    }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
+      return `<tr><td>${itemLabel(it,p)}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${it.unit || productUnitLabel(p)}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${total.toFixed(2)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${g.supplier}</div></div>
@@ -5643,7 +5832,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Additional info</div><div class="v">${g.additional||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th class="num">Quantity</th><th class="exp">Expiry</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Total</th></tr></thead>
+        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th>Unit</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Total cost</th><th class="exp">Expiry date</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
@@ -5672,17 +5861,17 @@ const AureumSync = (function(){
   function grnPdf(g){
     const rows = (g.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), String(it.qty), it.expiry ? fmtDisplay(it.expiry) : '—', (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2)];
+      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '—', String(it.qty), it.unit || productUnitLabel(p), (it.unitCost||0).toFixed(2), ((it.qty||0)*(it.unitCost||0)).toFixed(2), it.expiry ? fmtDisplay(it.expiry) : '—'];
     });
     const bytes = buildTablePdfBytes({
       title: `Goods Received Note ${g.id}`,
       subtitle: `${fmtDisplay(g.date)}  ·  ${g.shop}  ·  Supplier: ${g.supplier}  ·  ${g.po ? 'From PO '+g.po : g.type}  ·  Total: $${g.total.toFixed(2)}`,
-      head: ['Product','Quantity','Expiry','Unit Cost','Line Total'],
+      head: ['Product','In stock','Received','Unit','Cost','Total cost','Expiry date'],
       rows
     });
     downloadPdfBytes(bytes, `${g.id}.pdf`);
   }
-  let grnPageState = { page:1, pageSize:20 };
+  let grnPageState = { page:1, pageSize:10 };
   function renderGRNTable(){
     const tbody = document.getElementById('grnTableBody');
     populateSupplierFilter('grnSupplierFilter', GRN_RECORDS);
@@ -5747,18 +5936,23 @@ const AureumSync = (function(){
     document.getElementById('grnCreateView').classList.add('active');
   }
 
+  function grnShopValue(){ return document.getElementById('grnShop').value; }
   function renderGRNLines(){
     const tbody = document.getElementById('grnLineBody');
+    const shop = grnShopValue();
     tbody.innerHTML = grnLineItems.map((row,i)=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
+      if(!p) return '';
       const total = (row.qty * row.unitCost) || 0;
       return `<tr>
-        <td>${p ? p.name : '—'}</td>
-        <td><input type="number" min="0" step="1" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Quantity received"></td>
-        <td><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
-        <td><input type="number" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost"></td>
-        <td class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
-        <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
+        <td class="full" data-label="Product"><div class="pn">${escHtml(p.name)}</div></td>
+        <td data-label="In stock" class="mono">${getStock(p, shop)}</td>
+        <td data-label="Received quantity"><input type="number" inputmode="decimal" min="0" step="${p.soldBy==='weight'?'0.01':'1'}" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Received quantity"></td>
+        <td data-label="Unit">${productUnitLabel(p)}</td>
+        <td data-label="Cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost" aria-label="Cost per unit"></td>
+        <td data-label="Total cost" class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
+        <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
+        <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
     updateGRNTotal();
@@ -5782,15 +5976,13 @@ const AureumSync = (function(){
     if(cell) cell.textContent = ((row.qty*row.unitCost)||0).toFixed(2);
     updateGRNTotal();
   }
-  function populateGRNProductDatalist(){
+  function grnPickableProducts(){
     const catFilterEl = document.getElementById('grnCatFilter');
     const catFilter = catFilterEl ? catFilterEl.value : 'All';
-    const options = PRODUCTS.filter(pp=> catFilter==='All' || pp.cat===catFilter);
-    document.getElementById('grnProductDatalist').innerHTML = options.map(pp=>`<option value="${pp.name}">`).join('');
+    return PRODUCTS.filter(pp=> catFilter==='All' || catFilter==='All categories' || pp.cat===catFilter);
   }
-  function addGRNProductByName(name){
-    const match = PRODUCTS.find(pp=> pp.name.toLowerCase() === name.trim().toLowerCase());
-    if(!match) return false;
+  function populateGRNProductDatalist(){ const a = document.getElementById('grnProductSearch'); if(a && a._ppApi) a._ppApi.refresh(); }
+  function addGRNProduct(match){
     let idx = grnLineItems.findIndex(r=>r.productId===match.id);
     if(idx === -1){
       grnLineItems.push({ productId: match.id, qty: 1, unitCost: match.cost, expiry: '' });
@@ -5801,26 +5993,21 @@ const AureumSync = (function(){
     if(qtyInput){ qtyInput.focus(); qtyInput.select(); }
     return true;
   }
-  document.getElementById('grnProductSearch').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){
-      e.preventDefault();
-      if(addGRNProductByName(this.value)) this.value = '';
-    }
-  });
-  document.getElementById('grnProductSearch').addEventListener('change', function(){
-    if(addGRNProductByName(this.value)) this.value = '';
+  attachProductPicker(document.getElementById('grnProductSearch'), {
+    getProducts: grnPickableProducts,
+    meta: p => 'In stock: ' + getStock(p, grnShopValue()),
+    onPick: addGRNProduct
   });
   document.getElementById('grnAddProductBtn').addEventListener('click', ()=>{
     const input = document.getElementById('grnProductSearch');
-    if(addGRNProductByName(input.value)) input.value = '';
-    else input.focus();
+    input.focus(); if(input._ppApi) input._ppApi.open();
   });
+  document.getElementById('grnShop').addEventListener('change', renderGRNLines);
 
   document.getElementById('addGrnBtn').addEventListener('click', switchToGRNCreate);
   document.getElementById('grnCatFilter').addEventListener('change', populateGRNProductDatalist);
   document.getElementById('grnBackLink').addEventListener('click', switchToGRNList);
   document.getElementById('grnCancelBtn').addEventListener('click', switchToGRNList);
-  document.getElementById('grnAddProductBtn').addEventListener('click', ()=>{ grnLineItems.push({productId:null, qty:1, unitCost:0, expiry:''}); renderGRNLines(); });
   let grnCostItems = [];
   function updateGRNTotal(){
     const lines = grnLineItems.reduce((s,r)=>s+((r.qty*r.unitCost)||0),0);
@@ -5872,6 +6059,8 @@ const AureumSync = (function(){
     const grnShopVal = document.getElementById('grnShop').value;
     validLines.forEach(row=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
+      row.beforeStock = p ? getStock(p, grnShopVal) : 0;              // "in stock" as it was just before this GRN
+      row.unit = productUnitLabel(p);
       if(p) addStock(p, grnShopVal, row.qty || 0);
     });
     GRN_RECORDS.unshift({
@@ -5892,7 +6081,11 @@ const AureumSync = (function(){
     persistAureum();
     renderGRNTable();
     renderProducts();
-    switchToGRNList();
+    const savedGrn = GRN_RECORDS[0];
+    confirmSaved(`Goods Received Note ${savedGrn.id}`, renderGRNDetailBody(savedGrn), switchToGRNList,
+      `Stock at ${savedGrn.shop} has been increased.`,
+      `<div class="modal-btn ghost" id="grnSavedPdfBtn">Download PDF</div>`);
+    const pdfBtn = document.getElementById('grnSavedPdfBtn'); if(pdfBtn) pdfBtn.addEventListener('click', ()=> grnPdf(savedGrn));
   });
 
   /* ===== STOCK ADJUSTMENTS ===== */
@@ -5941,7 +6134,7 @@ const AureumSync = (function(){
   // opposite adjustment instead so both are visible in the audit trail.
 
   let saDateRangeFilter = null;
-  let saPageState = { page:1, pageSize:20 };
+  let saPageState = { page:1, pageSize:10 };
   function renderStockAdjTable(){
     const tbody = document.getElementById('stockAdjTableBody');
     populateSupplierFilter('saSupplierFilter', STOCK_ADJUSTMENTS);
@@ -6039,9 +6232,7 @@ const AureumSync = (function(){
     document.getElementById('stockAdjCreateView').classList.add('active');
   }
 
-  function populateSAProductDatalist(){
-    document.getElementById('saProductDatalist').innerHTML = PRODUCTS.map(p=>`<option value="${p.name}">`).join('');
-  }
+  function populateSAProductDatalist(){ const a = document.getElementById('saProductSearch'); if(a && a._ppApi) a._ppApi.refresh(); }
 
   // A line's "counted" field means different things by type: for Add/Reduce
   // it's a delta quantity being added to or subtracted from current stock;
@@ -6061,13 +6252,14 @@ const AureumSync = (function(){
       const p = PRODUCTS.find(x=>x.id===row.productId);
       if(!p) return '';
       const total = saLineTotal(row, p);
+      const qtyLabel = SA_QTY_LABEL_BY_TYPE[document.getElementById('saType').value] || 'Counted stock';
       return `<tr>
-        <td>${p.name}</td>
-        <td class="mono">${getStock(p, shopVal)}</td>
-        <td><input type="number" min="0" step="1" value="${row.counted}" data-idx="${i}" class="sa-counted"></td>
-        <td><input type="number" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="sa-cost"></td>
-        <td class="mono sa-line-total" data-idx="${i}">${total.toFixed(2)}</td>
-        <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
+        <td class="full" data-label="Product"><div class="pn">${escHtml(p.name)}</div></td>
+        <td data-label="Current stock" class="mono">${getStock(p, shopVal)}</td>
+        <td data-label="${qtyLabel}"><input type="number" inputmode="decimal" min="0" step="1" value="${row.counted}" data-idx="${i}" class="sa-counted"></td>
+        <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="sa-cost"></td>
+        <td data-label="Total cost" class="mono sa-line-total" data-idx="${i}">${total.toFixed(2)}</td>
+        <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
     updateSATotal();
@@ -6110,9 +6302,7 @@ const AureumSync = (function(){
     saPageState.page = 1;
     renderStockAdjTable();
   }, true, 'All time', { allTime:true });
-  function addSAProductByName(name){
-    const match = PRODUCTS.find(pp=> pp.name.toLowerCase() === name.trim().toLowerCase());
-    if(!match) return false;
+  function addSAProduct(match){
     let idx = saLineItems.findIndex(r=>r.productId===match.id);
     if(idx === -1){
       const type = document.getElementById('saType').value;
@@ -6127,22 +6317,18 @@ const AureumSync = (function(){
     if(countedInput){ countedInput.focus(); countedInput.select(); }
     return true;
   }
-  document.getElementById('saProductSearch').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){
-      e.preventDefault();
+  attachProductPicker(document.getElementById('saProductSearch'), {
+    getProducts: ()=> PRODUCTS,
+    meta: p => 'In stock: ' + getStock(p, document.getElementById('saShop').value),
+    onPick: p => {
       if(!document.getElementById('saType').value){ alert('Choose a type (Add/Reduce/Override) first.'); return; }
-      if(addSAProductByName(this.value)) this.value = '';
+      addSAProduct(p);
     }
-  });
-  document.getElementById('saProductSearch').addEventListener('change', function(){
-    if(!document.getElementById('saType').value) return;
-    if(addSAProductByName(this.value)) this.value = '';
   });
   document.getElementById('saAddRowBtn').addEventListener('click', ()=>{
     if(!document.getElementById('saType').value){ alert('Choose a type (Add/Reduce/Override) first.'); return; }
     const input = document.getElementById('saProductSearch');
-    if(addSAProductByName(input.value)) input.value = '';
-    else input.focus();
+    input.focus(); if(input._ppApi) input._ppApi.open();
   });
   document.getElementById('saSaveBtn').addEventListener('click', ()=>{
     const type = document.getElementById('saType').value;
@@ -6181,7 +6367,11 @@ const AureumSync = (function(){
     persistAureum();
     renderStockAdjTable();
     renderProducts();
-    switchToSAList();
+    const savedSa = STOCK_ADJUSTMENTS[0];
+    confirmSaved(`Stock Adjustment ${savedSa.id}`, renderSADetailBody(savedSa), switchToSAList,
+      `Stock at ${savedSa.shop} has been updated.`,
+      `<div class="modal-btn ghost" id="saSavedPdfBtn">Download PDF</div>`);
+    const saPdfBtn = document.getElementById('saSavedPdfBtn'); if(saPdfBtn) saPdfBtn.addEventListener('click', ()=> saPdf(savedSa));
   });
 
   /* ===== RECEIPTS ===== */
@@ -6273,7 +6463,12 @@ const AureumSync = (function(){
     const items = filteredReceiptsForPage();
     const total = items.filter(r=>!r.refund).length;
     const refunds = items.filter(r=>r.refund).length;
-    const uniqueCustomers = new Set(items.filter(r=>!r.refund).map(r=>r.customer).filter(c=>c && c!=='N/A')).size;
+    // Count each real person once: ignore blanks / "N/A" / walk-ins, treat "Jane  Doe" and "jane doe" as the
+    // same person, and use the saved customer record (when there is one) as the identity.
+    const NOT_A_CUSTOMER = new Set(['','n/a','na','n.a','none','null','undefined','-','—','walk-in','walk in','walkin','walk-in customer','guest','anonymous']);
+    const normName = v => String(v==null?'':v).replace(/\s+/g,' ').trim().toLowerCase();
+    const customerKey = new Map(); (typeof CUSTOMERS!=='undefined' ? CUSTOMERS : []).forEach(c=>{ const k=normName(c.name); if(k && !customerKey.has(k)) customerKey.set(k, 'c'+c.id); });
+    const uniqueCustomers = new Set(items.filter(r=>!r.refund).map(r=>normName(r.customer)).filter(k=>!NOT_A_CUSTOMER.has(k)).map(k=>customerKey.get(k) || 'n:'+k)).size;
     // net of refunds: refund receipts are stored with a positive total, so they
     // must be SUBTRACTED, not added (they used to inflate this figure)
     const amount = items.reduce((s,r)=> s + (r.refund ? -r.total : r.total), 0);
@@ -6348,7 +6543,7 @@ const AureumSync = (function(){
     });
   }
 
-  let receiptsPageState = { page:1, pageSize:20 };
+  let receiptsPageState = { page:1, pageSize:10 };
   function renderReceiptsTable(){
     const tbody = document.getElementById('rcpTableBody');
     if(!tbody) return;
@@ -6850,8 +7045,8 @@ const AureumSync = (function(){
   }
 
   // Every report list is paged (no endless scrolling); KPI cards still total the FULL list.
-  const repInvPage = { page:1, pageSize:20 }, repValPage = { page:1, pageSize:20 }, repSumPage = { page:1, pageSize:20 },
-        repLowPage = { page:1, pageSize:20 }, repStaffPage = { page:1, pageSize:20 };
+  const repInvPage = { page:1, pageSize:10 }, repValPage = { page:1, pageSize:10 }, repSumPage = { page:1, pageSize:10 },
+        repLowPage = { page:1, pageSize:10 }, repStaffPage = { page:1, pageSize:10 };
   function clearPager(id){ const el = document.getElementById(id); if(el) el.innerHTML = ''; }
   function renderReportInventory(){
     const shopFilter = document.getElementById('repInvShopFilter').value || 'All Shops';
@@ -7028,7 +7223,7 @@ const AureumSync = (function(){
   }
 
   /* ===== REPORTS → SHIFTS ===== */
-  const repShiftPage = { page:1, pageSize:15 };
+  const repShiftPage = { page:1, pageSize:10 };
   const usd = n => '$' + Number(n || 0).toFixed(2);
   // Each cashier has their own shift. Receipts carry the id of the shift they were rung up in; older ones
   // are matched by shop + cashier + time.
@@ -7796,12 +7991,14 @@ const AureumSync = (function(){
           if(!val || !val.trim() || SHOPS.includes(val.trim())) return;
           SHOPS[idx] = val.trim();
           POS_DEVICES.forEach(d=>{ if(d.store === current) d.store = val.trim(); });
+          PRODUCTS.forEach(p=>{ if(Array.isArray(p.shops)) p.shops = p.shops.map(s=>s===current ? val.trim() : s); });
           if(viewingShop === current) setViewingShop(val.trim());
           refreshAllShopUI(); renderSettingsStores(); renderSettingsPos();
         } else {
           if(!confirm(`Remove store "${current}"? This can't be undone.`)) return;
           SHOPS.splice(idx,1);
           POS_DEVICES = POS_DEVICES.filter(d=>d.store !== current);
+          PRODUCTS.forEach(p=>{ if(Array.isArray(p.shops)) p.shops = p.shops.filter(s=>s !== current); });   // products stop pointing at the removed shop
           if(viewingShop === current) setViewingShop('All Shops');
           refreshAllShopUI(); renderSettingsStores(); renderSettingsPos();
           scheduleShopReconcile();                          // a paid plan drops to the new shop count from the next invoice
@@ -8205,7 +8402,9 @@ const AureumSync = (function(){
     document.getElementById('transferCreateView').classList.add('active');
   }
 
+  let trPickers = [];
   function renderTrLines(){
+    trPickers.forEach(a=>{ try{ a && a.destroy(); }catch(e){} }); trPickers = [];
     const tbody = document.getElementById('trLineBody');
     const fromShop = document.getElementById('trFromShop').value;
     const toShop = document.getElementById('trToShop').value;
@@ -8215,22 +8414,33 @@ const AureumSync = (function(){
       const toStock = p ? getStock(p, toShop) : '—';
       return `
       <tr>
-        <td>
-          <select class="tr-product" data-idx="${i}">
-            <option value="">Select product</option>
-            ${PRODUCTS.map(p=>`<option value="${p.id}" ${row.productId===p.id?'selected':''}>${p.name}</option>`).join('')}
-          </select>
+        <td class="full" data-label="Product">
+          <input type="text" class="tr-product" data-idx="${i}" placeholder="Search product…" value="${p ? escHtml(p.name) : ''}" autocomplete="off">
         </td>
-        <td class="mono" style="text-align:right;">${fromStock}</td>
-        <td class="mono" style="text-align:right;">${toStock}</td>
-        <td><input type="number" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
-        <td><span class="line-rm" data-idx="${i}">&#10005;</span></td>
+        <td class="mono" data-label="Stock (${escHtml(fromShop || 'From')})" style="text-align:right;">${fromStock}</td>
+        <td class="mono" data-label="Stock (${escHtml(toShop || 'To')})" style="text-align:right;">${toStock}</td>
+        <td data-label="Quantity"><input type="number" inputmode="numeric" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
+        <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
-    tbody.querySelectorAll('.tr-product').forEach(sel=> sel.addEventListener('change', function(){
-      trLineItems[this.dataset.idx].productId = parseInt(this.value) || null;
-      renderTrLines();
-    }));
+    tbody.querySelectorAll('.tr-product').forEach(inp=>{
+      const i = parseInt(inp.dataset.idx);
+      trPickers.push(attachProductPicker(inp, {
+        getProducts: ()=> PRODUCTS,
+        meta: p => 'In stock: ' + getStock(p, document.getElementById('trFromShop').value),
+        selectedName: ()=>{ const q = PRODUCTS.find(x=>x.id===(trLineItems[i]||{}).productId); return q ? q.name : ''; },
+        restore: ()=>{ const q = PRODUCTS.find(x=>x.id===(trLineItems[i]||{}).productId); return q ? q.name : ''; },
+        onPick: p => {
+          const other = trLineItems.findIndex((r,k)=> k!==i && r.productId===p.id);
+          let target = i;
+          if(other !== -1){ trLineItems.splice(i,1); target = other > i ? other - 1 : other; }   // already in the list: reuse that line
+          else trLineItems[i].productId = p.id;
+          renderTrLines();
+          const q = document.querySelector(`.tr-qty[data-idx="${target}"]`);
+          if(q){ q.focus(); q.select(); }
+        }
+      }));
+    });
     tbody.querySelectorAll('.tr-qty').forEach(inp=> inp.addEventListener('input', function(){
       trLineItems[this.dataset.idx].qty = parseInt(this.value) || 0;
     }));
@@ -8239,7 +8449,10 @@ const AureumSync = (function(){
       renderTrLines();
     }));
   }
-  document.getElementById('trAddLineBtn').addEventListener('click', ()=>{ trLineItems.push({productId:null, qty:1}); renderTrLines(); });
+  document.getElementById('trAddLineBtn').addEventListener('click', ()=>{
+    trLineItems.push({productId:null, qty:1}); renderTrLines();
+    const inputs = document.querySelectorAll('.tr-product'); const last = inputs[inputs.length-1]; if(last) last.focus();
+  });
   document.getElementById('trFromShop').addEventListener('change', renderTrLines);
   document.getElementById('trToShop').addEventListener('change', renderTrLines);
 
@@ -8292,7 +8505,7 @@ const AureumSync = (function(){
       `<div class="modal-btn ghost" id="trDetailPdfBtn">Download PDF</div><div class="modal-btn solid" data-close="detailModal">Close</div>`);
     document.getElementById('trDetailPdfBtn').addEventListener('click', () => transferPdf(t));
   }
-  let transferPageState = { page:1, pageSize:20 };
+  let transferPageState = { page:1, pageSize:10 };
   let transferDateRangeFilter = null;
   function renderTransfers(){
     const tbody = document.getElementById('transferTableBody');
@@ -8366,7 +8579,11 @@ const AureumSync = (function(){
     persistAureum();
     renderTransfers();
     renderProducts();
-    switchToTransferList();
+    const savedTr = TRANSFERS[0];
+    confirmSaved(`Stock Transfer ${savedTr.id}`, renderTransferDetailBody(savedTr), switchToTransferList,
+      `${savedTr.items.length} product${savedTr.items.length!==1?'s':''} moved from ${savedTr.from} to ${savedTr.to}.`,
+      `<div class="modal-btn ghost" id="trSavedPdfBtn">Download PDF</div>`);
+    const trPdfBtn = document.getElementById('trSavedPdfBtn'); if(trPdfBtn) trPdfBtn.addEventListener('click', ()=> transferPdf(savedTr));
   });
 
   /* ===== ACCOUNTING ===== */
@@ -9298,7 +9515,7 @@ const AureumSync = (function(){
     // ones added later" — that's what caused new shops to silently inherit
     // old products with zero stock (false low-stock alerts). Freeze it to
     // the shops that exist right now instead, same as any new save does.
-    PRODUCTS.forEach(p=>{ if(p.shops === 'all') p.shops = [...SHOPS]; });
+    PRODUCTS.forEach(p=>{ if(p.shops === 'all') p.shops = [...SHOPS]; else if(Array.isArray(p.shops) && SHOPS.length) p.shops = p.shops.filter(s=>SHOPS.includes(s)); });
     nextProductId = Math.max(0, ...PRODUCTS.map(p=>p.id)) + 1;
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
     nextEmployeeId = Math.max(0, ...EMPLOYEES.map(e=>e.id)) + 1;
@@ -9400,6 +9617,8 @@ const AureumSync = (function(){
     document.getElementById('authSignupFields').style.display = mode==='signup' ? 'block' : 'none';
     document.getElementById('authForgotFields').style.display = mode==='forgot' ? 'block' : 'none';
     document.getElementById('authPassword').style.display = mode==='forgot' ? 'none' : 'block';
+    document.getElementById('authPassword').setAttribute('autocomplete', mode==='signup' ? 'new-password' : 'current-password');
+    document.getElementById('authRememberRow').style.display = mode==='signin' ? 'flex' : 'none';
     document.getElementById('authForgotLinkRow').style.display = mode==='signin' ? 'block' : 'none';
     document.getElementById('authBackToSignInRow').style.display = mode==='forgot' ? 'block' : 'none';
     document.getElementById('authSubmitBtn').textContent = mode==='signup' ? 'Create Business' : mode==='forgot' ? 'Send reset link' : 'Sign In';
@@ -9421,7 +9640,21 @@ const AureumSync = (function(){
     }catch(e){}
   })();
 
-  document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
+  document.getElementById('authSubmitBtn').addEventListener('click', ()=>{
+    const f = document.getElementById('authForm');
+    if(f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('authgo'));
+  });
+  document.getElementById('authSubmitBtn').addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); document.getElementById('authSubmitBtn').click(); } });
+  ['authBizName','authFullName'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('authSubmitBtn').click(); } }); });
+  document.getElementById('authForm').addEventListener('submit', e=>{ e.preventDefault(); e.currentTarget.dispatchEvent(new Event('authgo')); });
+  (function(){   // pre-fill the email + tick state from last time
+    try{
+      const rem = localStorage.getItem('aureum_remember') !== '0', em = localStorage.getItem('aureum_remember_email');
+      document.getElementById('authRemember').checked = rem;
+      if(rem && em && !document.getElementById('authEmail').value) document.getElementById('authEmail').value = em;
+    }catch(e){}
+  })();
+  document.getElementById('authForm').addEventListener('authgo', async ()=>{
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     const errEl = document.getElementById('authError');
@@ -9446,6 +9679,7 @@ const AureumSync = (function(){
         if(!bizName){ errEl.textContent = 'Business name is required.'; return; }
         await aureumSignUp(email, password, bizName, fullName);
       } else {
+        applyRememberChoice(email);
         await aureumSignIn(email, password);
       }
       boot();
@@ -9707,7 +9941,7 @@ E('import-problems','Products','My import has problems or skipped rows',
 E('product-export','Products','How do I export my products?',
   ['how do i export products','download my product list','save products to excel','print product list','export to pdf'],
   'export csv excel pdf download list print backup',
-  `On **Products** press **Export** and choose **CSV, Excel or PDF**. Most lists in AUREUM (receipts, customers, employees, purchases, reports…) have the same Export button.`,
+  `On **Products** press **Export** and choose **CSV, Excel or PDF**. Most lists in AUREUM (receipts, customers, employees, purchase orders, reports…) have the same Export button.`,
   ['export-data']),
 E('product-shops','Products','How do I sell a product in several shops?',
   ['how do i assign products to shops','product in all shops','stock per shop','different stock in each shop','make a product available in another shop','item not in my second shop'],
@@ -9729,7 +9963,7 @@ E('product-not-at-till','Products','A product isn\'t showing at the till',
 E('po-create','Stock','How do I create a purchase order?',
   ['how do i create a purchase order','order stock from a supplier','make a po','purchase order','how do i order goods'],
   'purchase order po supplier order buy stock lines unit cost pdf',
-  `Open **Purchases** and press **New purchase order**: choose the supplier and shop, add product lines with **quantity** and **unit cost**, and save. Saved orders keep an exact copy of their lines and can be downloaded as a **PDF**. Use the date filter (default *All time*) to find old ones. When the goods arrive, record them in **Goods Received**.`,
+  `Open **Purchase Orders** and press **New purchase order**: choose the supplier and shop, add product lines with **quantity** and **unit cost**, and save. Saved orders keep an exact copy of their lines and can be downloaded as a **PDF**. Use the date filter (default *All time*) to find old ones. When the goods arrive, record them in **Goods Received**.`,
   ['grn-receive','supplier-add'], { pages:['purchases'] }),
 E('grn-receive','Stock','How do I receive stock (Goods Received)?',
   ['how do i receive stock','how do i record a delivery','goods received note','add stock when goods arrive','grn','receive goods from supplier'],

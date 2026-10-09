@@ -742,10 +742,17 @@
     <div class="auth-seal">A</div>
     <div class="auth-title">AUREUM Point of Sale</div>
     <div class="auth-sub" id="authGateMsg">Sign in with your business account to open this terminal.</div>
-    <input class="auth-field" id="authEmail" type="email" placeholder="Email">
-    <input class="auth-field" id="authPassword" type="password" placeholder="Password">
+    <form id="authForm" autocomplete="on" novalidate>
+    <input class="auth-field" id="authEmail" name="email" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <input class="auth-field" id="authPassword" name="password" type="password" placeholder="Password" autocomplete="current-password">
     <div class="auth-error" id="authError"></div>
-    <div class="auth-btn" id="authSubmitBtn">Sign In</div>
+    <label id="authRememberRow" style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--sage);margin:2px 0 12px;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="authRemember" checked style="width:17px;height:17px;margin:0;accent-color:var(--gold-bright);flex-shrink:0;">
+      <span>Remember me <span style="opacity:.65;">&middot; stay signed in and remember my email on this device</span></span>
+    </label>
+    <div class="auth-btn" id="authSubmitBtn" role="button" tabindex="0">Sign In</div>
+    <input type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+    </form>
   </div>
 </div>
 <div class="auth-gate" id="shiftGate">
@@ -1165,7 +1172,35 @@
   };
 
   const supaReady = SUPABASE_CONFIG.url.startsWith('http');
-  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
+  /* "Remember me": ticked = the sign-in is kept on this device (and the email pre-filled next time).
+     Unticked = the sign-in lasts only until this browser tab/window is closed. The password itself is never
+     stored by AUREUM — the browser's own password manager offers to save it. */
+  const AUREUM_AUTH_STORAGE = (function(){
+    const sessOnly = () => { try{ return sessionStorage.getItem('aureum_session_only') === '1'; }catch(e){ return false; } };
+    const st = () => sessOnly() ? sessionStorage : localStorage;
+    return {
+      getItem: k => { try{ return st().getItem(k); }catch(e){ return null; } },
+      setItem: (k,v) => { try{ st().setItem(k,v); }catch(e){} },
+      removeItem: k => { try{ st().removeItem(k); }catch(e){} }
+    };
+  })();
+  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth:{ storage: AUREUM_AUTH_STORAGE, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }) : null;
+  function applyRememberChoice(email){
+    const box = document.getElementById('authRemember');
+    const remember = !box || box.checked;
+    try{
+      if(remember){
+        sessionStorage.removeItem('aureum_session_only');
+        localStorage.setItem('aureum_remember', '1');
+        localStorage.setItem('aureum_remember_email', email);
+      } else {
+        sessionStorage.setItem('aureum_session_only', '1');
+        localStorage.setItem('aureum_remember', '0');
+        localStorage.removeItem('aureum_remember_email');
+        Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));   // forget any older saved sign-in
+      }
+    }catch(e){}
+  }
   let currentUser = null, currentBusinessId = null, currentRole = null;
 
 /* ==== AUREUM SYNC CORE (identical in backoffice.html and pos-checkout.html) ====
@@ -3604,13 +3639,27 @@ async function aureumSignIn(email, password){
   });
   document.getElementById('shiftPin').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('shiftSubmitBtn').click(); });
 
-  document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
+  document.getElementById('authSubmitBtn').addEventListener('click', ()=>{
+    const f = document.getElementById('authForm');
+    if(f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('authgo'));
+  });
+  document.getElementById('authSubmitBtn').addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); document.getElementById('authSubmitBtn').click(); } });
+  document.getElementById('authForm').addEventListener('submit', e=>{ e.preventDefault(); e.currentTarget.dispatchEvent(new Event('authgo')); });
+  (function(){   // pre-fill the email + tick state from last time
+    try{
+      const rem = localStorage.getItem('aureum_remember') !== '0', em = localStorage.getItem('aureum_remember_email');
+      document.getElementById('authRemember').checked = rem;
+      if(rem && em && !document.getElementById('authEmail').value) document.getElementById('authEmail').value = em;
+    }catch(e){}
+  })();
+  document.getElementById('authForm').addEventListener('authgo', async ()=>{
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     const errEl = document.getElementById('authError');
     errEl.textContent = '';
     if(!email || !password){ errEl.textContent = 'Email and password are required.'; return; }
     try{
+      applyRememberChoice(email);
       await aureumSignIn(email, password);
       boot();
     }catch(err){
