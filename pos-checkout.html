@@ -807,6 +807,7 @@
       <div class="section-label" id="sectionLabel">All Products</div>
       <label class="sort-wrap"><span class="sort-lbl">Sort</span>
         <select id="catalogSort" title="Sort products">
+          <option value="sales">Best selling</option>
           <option value="az">A – Z</option>
           <option value="za">Z – A</option>
           <option value="cat">Category</option>
@@ -1889,10 +1890,27 @@ async function aureumSignIn(email, password){
   }
   /* Catalogue: sorted and paged (no endless scroll). The page resets whenever the search,
      category, sort or shop changes; a stock change or a sale keeps you on the same page. */
-  let catalogPage = 1, catalogSort = 'az', _catalogKey = '', _catalogTotalPages = 1;
+  let catalogPage = 1, catalogSort = 'sales', _catalogKey = '', _catalogTotalPages = 1;
   let catalogPageSize = (() => { try{ const n = parseInt(localStorage.getItem('aureum_pos_pagesize')); return [12,24,48].includes(n) ? n : 12; }catch(e){ return 12; } })();
   const byName = (a,b) => a.name.localeCompare(b.name, undefined, { sensitivity:'base', numeric:true });
+  /* units sold per product at the active shop (refunds subtract), cached until receipts or shop change */
+  let _salesMemo = { n:-1, shop:null, map:null };
+  function salesRank(){
+    const n = RECEIPTS.length;
+    if(_salesMemo.map && _salesMemo.n === n && _salesMemo.shop === activeShop) return _salesMemo.map;
+    const map = new Map();
+    RECEIPTS.forEach(r => {
+      if(activeShop && activeShop !== 'All Shops' && r.shop !== activeShop) return;
+      (r.items || []).forEach(i => {
+        const k = i.productId != null ? i.productId : null; if(k === null) return;
+        map.set(k, (map.get(k) || 0) + (r.refund ? -1 : 1) * (+i.qty || 0));
+      });
+    });
+    _salesMemo = { n, shop: activeShop, map };
+    return map;
+  }
   const CATALOG_SORTS = {
+    sales: (a,b) => { const m = salesRank(); return (m.get(b.id)||0) - (m.get(a.id)||0) || byName(a,b); },
     az:    (a,b) => byName(a,b),
     za:    (a,b) => byName(b,a),
     cat:   (a,b) => (a.cat||'').localeCompare(b.cat||'', undefined, { sensitivity:'base' }) || byName(a,b),
