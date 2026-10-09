@@ -4166,9 +4166,11 @@ const AureumSync = (function(){
     if(p.stockControl === false) return 0;
     ensureShopStock(p);
     if(!shopName || shopName === 'All Shops'){
-      return Object.values(p.shopStock).reduce((s,v)=>s+(v||0),0);
+      // only count stock held in shops the product is actually sold in (not unticked / deleted shops)
+      const live = productLiveShops(p);
+      return Object.keys(p.shopStock).reduce((s,k)=> s + (live.includes(k) ? (p.shopStock[k]||0) : 0), 0);
     }
-    return p.shopStock[shopName] || 0;
+    return productLiveShops(p).includes(shopName) ? (p.shopStock[shopName] || 0) : 0;
   }
   function setStock(p, shopName, value){
     if(!p || !shopName || shopName === 'All Shops'){
@@ -4176,6 +4178,8 @@ const AureumSync = (function(){
       return;
     }
     ensureShopStock(p);
+    // stock arriving at / leaving a real shop means the product is sold there
+    if(Array.isArray(p.shops) && SHOPS.includes(shopName) && !p.shops.includes(shopName)) p.shops.push(shopName);
     // NOT clamped at zero: a sale made at zero stock must still be deducted
     // (stock goes negative and the dashboard flags it) — clamping silently
     // threw the deduction away and let inventory drift from reality.
@@ -4264,18 +4268,21 @@ const AureumSync = (function(){
     document.getElementById('categoryOptions').innerHTML = getProductCategories().map(c => `<option value="${c}">`).join('');
   }
 
+  /* The shops a product is really sold in: only shops that still exist, in shop order. */
+  function productLiveShops(p){
+    if(p.shops === 'all') return [...SHOPS];
+    if(Array.isArray(p.shops)) return SHOPS.filter(s=> p.shops.includes(s));
+    return [];
+  }
   function productShopLabel(p){
-    if(p.shops === 'all') return 'All Shops';
-    if(Array.isArray(p.shops)){
-      const live = p.shops.filter(s=>SHOPS.includes(s));      // ignore shops that have since been deleted
-      return live.length ? `${live.length} shop${live.length!==1?'s':''}` : '—';
-    }
-    return '—';
+    const live = productLiveShops(p);   // ignore shops that were unticked or have since been deleted
+    if(!live.length) return '—';
+    if(SHOPS.length > 1 && live.length === SHOPS.length) return 'All Shops';
+    return live.length === 1 ? live[0] : `${live.length} shops`;
   }
   function productInShop(p, shop){
     if(shop === 'All Shops') return true;
-    if(p.shops === 'all') return true;
-    return Array.isArray(p.shops) && p.shops.includes(shop) && SHOPS.includes(shop);
+    return productLiveShops(p).includes(shop);
   }
 
   /* ===== PRODUCTS — LIST (table, matches reference) ===== */
@@ -4386,11 +4393,7 @@ const AureumSync = (function(){
         <td data-col="category">${p.cat || 'Uncategorized'}</td>
         <td class="gold" data-col="price" style="text-align:right;">${p.price.toFixed(2)}</td>
         <td class="mono" data-col="cost" style="text-align:right;">${p.cost.toFixed(2)}</td>
-        <td class="mono" data-col="stock" style="text-align:right;" ${p.stockControl!==false && shopFilter!=='All Shops' ? `onclick="event.stopPropagation()"` : ''}>
-          ${p.stockControl===false ? '—' : (shopFilter==='All Shops'
-            ? fmtStockVal(getStock(p, shopFilter))
-            : `<span class="stock-editable" data-id="${p.id}" title="Click to edit stock at ${shopFilter}" style="cursor:pointer; border-bottom:1px dashed var(--sage-dim);">${fmtStockVal(getStock(p, shopFilter))}</span>`)}
-        </td>
+        <td class="mono" data-col="stock" style="text-align:right;">${p.stockControl===false ? '—' : fmtStockVal(getStock(p, shopFilter))}</td>
         <td data-col="shops" style="text-align:right;">${productShopLabel(p)}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
@@ -4415,34 +4418,6 @@ const AureumSync = (function(){
         toggleProductSelection(parseInt(el.dataset.select));
       });
     });
-    // Click-to-edit stock inline — only when a specific shop is selected
-    // (editing "All Shops" wouldn't know which shop's stock to change).
-    tbody.querySelectorAll('.stock-editable').forEach(span=>{
-      span.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const id = parseInt(span.dataset.id);
-        const p = PRODUCTS.find(x=>x.id===id);
-        if(!p) return;
-        const current = getStock(p, shopFilter);
-        const input = document.createElement('input');
-        input.type = 'number'; input.min = '0'; input.step = '1'; input.value = current;
-        input.style.cssText = 'width:70px; text-align:right; background:var(--panel-raised); border:1px solid var(--gold-bright); border-radius:6px; color:var(--sand); font-family:inherit; font-size:inherit; padding:2px 6px;';
-        span.replaceWith(input);
-        input.focus(); input.select();
-        const commit = ()=>{
-          const val = Math.max(0, parseInt(input.value) || 0);
-          setStock(p, shopFilter, val);
-          persistAureum();
-          renderProducts();
-        };
-        input.addEventListener('keydown', ev=>{
-          if(ev.key === 'Enter') commit();
-          if(ev.key === 'Escape') renderProducts();
-        });
-        input.addEventListener('blur', commit);
-      });
-    });
-
     // Long-press (touch or mouse) enters selection mode and selects the
     // pressed row; once in selection mode, a plain tap on any row toggles
     // its selection instead of opening the edit form.
@@ -4547,7 +4522,7 @@ const AureumSync = (function(){
     if(!wrap) return;
     const allChecked = document.getElementById('pfAllShops').checked;
     wrap.innerHTML = SHOPS.map(s=>{
-      const checked = allChecked || !p || (Array.isArray(p.shops) && p.shops.includes(s));
+      const checked = !p ? allChecked : productLiveShops(p).includes(s);
       const stockVal = (p && p.shopStock && p.shopStock[s] !== undefined) ? p.shopStock[s] : '';
       return `
       <div class="shop-table-row">
@@ -4570,6 +4545,12 @@ const AureumSync = (function(){
   }
   document.getElementById('pfAllShops').addEventListener('change', function(){
     document.querySelectorAll('.pf-shop-cb').forEach(cb => cb.checked = this.checked);
+  });
+  // unticking (or ticking) a single shop must keep the "available in all shops" box honest — otherwise save still used every shop
+  document.getElementById('pfShopTable').addEventListener('change', function(e){
+    if(!e.target.classList.contains('pf-shop-cb')) return;
+    const cbs = [...document.querySelectorAll('.pf-shop-cb')];
+    document.getElementById('pfAllShops').checked = cbs.length>0 && cbs.every(c=>c.checked);
   });
   document.getElementById('pfShopShowToggle').addEventListener('click', function(){
     shopTableExpanded = !shopTableExpanded;
@@ -4610,7 +4591,7 @@ const AureumSync = (function(){
       document.getElementById('pfStock').value = p.stock;
       document.getElementById('pfLowStockThreshold').value = p.lowStockThreshold !== undefined ? p.lowStockThreshold : '';
       document.getElementById('pfSafetyStock').value = p.safetyStock !== undefined ? p.safetyStock : '';
-      document.getElementById('pfAllShops').checked = Array.isArray(p.shops) ? (SHOPS.length>0 && SHOPS.every(s=>p.shops.includes(s))) : p.shops === 'all';
+      document.getElementById('pfAllShops').checked = SHOPS.length>0 && productLiveShops(p).length === SHOPS.length;
       pendingImage = p.image || null; pendingImageCredit = p.imageCredit || '';
     } else {
       document.getElementById('pfName').value = '';
@@ -5054,7 +5035,7 @@ const AureumSync = (function(){
     const existing = editingProductId ? PRODUCTS.find(p=>p.id===editingProductId) : null;
     const usePerShop = !existing || shopStockTouched || (existing && existing.shopStock);
     const stockRaw = document.getElementById('pfStock').value;
-    const stock = stockControl ? (usePerShop ? shopStockSum : Math.max(0, parseInt(stockRaw) || 0)) : 0;
+    let stock = stockControl ? (usePerShop ? shopStockSum : Math.max(0, parseInt(stockRaw) || 0)) : 0;
     const thresholdRaw = document.getElementById('pfLowStockThreshold').value;
     const lowStockThreshold = thresholdRaw !== '' ? Math.max(0, parseInt(thresholdRaw) || 0) : undefined;
     const safetyStockRaw = document.getElementById('pfSafetyStock').value;
@@ -5065,7 +5046,11 @@ const AureumSync = (function(){
     // would silently inherit every such product with zero stock entered
     // for it, which is exactly what was causing false low-stock alerts at
     // new shops for products the owner never actually stocked there.
-    const shops = allShops ? [...SHOPS] : [...document.querySelectorAll('.pf-shop-cb')].filter(cb=>cb.checked).map(cb=>cb.value);
+    const shops = [...document.querySelectorAll('.pf-shop-cb')].filter(cb=>cb.checked).map(cb=>cb.value);
+    if(SHOPS.length && !shops.length){ alert('Tick at least one shop where this product is sold.'); return; }
+    // stock is only kept for shops the product is sold in
+    Object.keys(shopStock).forEach(k=>{ if(!shops.includes(k)) delete shopStock[k]; });
+    if(stockControl && usePerShop) stock = Object.values(shopStock).reduce((a,v)=>a+v,0);
     // the code: blank is never saved (one is generated); a code another product already has is refused
     const codeEl = document.getElementById('pfCode'), codeErr = document.getElementById('pfCodeError');
     codeErr.classList.remove('show'); codeEl.classList.remove('invalid');
@@ -5365,17 +5350,34 @@ const AureumSync = (function(){
     if(field.length || row.length){ row.push(field); rows.push(row); }
     return rows.filter(r=> !(r.length===1 && r[0]===''));
   }
-  function gatherTableRows(tbodyId){
+  /* The grid behind every export: the visible columns only, never the Edit pen / delete X (or any other button column). */
+  function tableExportGrid(tbodyId){
     const tbody = document.getElementById(tbodyId);
     const table = tbody.closest('table');
-    const headerCells = Array.from(table.querySelectorAll('thead th')).filter(th=> th.style.display !== 'none');
-    const rows = [headerCells.map(th=>th.textContent.trim())];
-    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
-      const cells = Array.from(tr.children).filter(td=> td.style.display !== 'none');
-      if(cells.length === 1 && cells[0].hasAttribute('colspan')) return; // empty-state placeholder row
-      rows.push(cells.map(td=> td.textContent.trim()));
+    const ths = Array.from(table.querySelectorAll('thead th'));
+    const keep = [];
+    ths.forEach((th,i)=>{
+      if(th.style.display === 'none') return;
+      if(!th.textContent.trim()) return;          // header-less column = the action buttons
+      keep.push(i);
     });
-    return rows;
+    const head = keep.map(i=> ths[i].textContent.trim());
+    const body = [];
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
+      const cells = Array.from(tr.children);
+      if(cells.length === 1 && cells[0].hasAttribute('colspan')) return; // empty-state placeholder row
+      body.push(keep.map(i=>{
+        const td = cells[i]; if(!td) return '';
+        const c = td.cloneNode(true);
+        c.querySelectorAll('.icon-btn-row,.icon-btn-sm,.row-select-check,button,svg').forEach(n=>n.remove());
+        return c.textContent.replace(/\s+/g,' ').trim();
+      }));
+    });
+    return { head, body };
+  }
+  function gatherTableRows(tbodyId){
+    const g = tableExportGrid(tbodyId);
+    return [g.head, ...g.body];
   }
   function exportTableToCSV(tbodyId, filename){
     const rows = gatherTableRows(tbodyId);
@@ -5609,16 +5611,7 @@ const AureumSync = (function(){
     const rowCount = tbody.querySelectorAll('tr').length;
     if(rowCount === 0 || (rowCount===1 && tbody.querySelector('td[colspan]'))){ alert('There is no data to export.'); return; }
 
-    // Reuse the same header/row extraction as the CSV export so both formats
-    // always show identical, up-to-date data — including any live filters/search.
-    const headerCells = Array.from(table.querySelectorAll('thead th')).filter(th=> th.style.display !== 'none');
-    const head = headerCells.map(th=> th.textContent.trim());
-    const body = [];
-    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
-      const cells = Array.from(tr.children).filter(td=> td.style.display !== 'none');
-      if(cells.length === 1 && cells[0].hasAttribute('colspan')) return; // empty-state placeholder row
-      body.push(cells.map(td=> td.textContent.trim()));
-    });
+    const { head, body } = tableExportGrid(tbodyId);
     if(body.length === 0){ alert('There is no data to export.'); return; }
 
     const bytes = buildTablePdfBytes({ title, subtitle: `Exported ${new Date().toLocaleString()}`, head, rows: body });
