@@ -1269,6 +1269,7 @@
             </div>
           </div>
           <div class="btn-ghost-sm" id="productImportBtn">Import</div>
+          <div class="btn-ghost-sm" id="productFixNamesBtn" title="Restore spaces in names that were saved with _ or - instead">Fix names</div>
           <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls,.xlsm,.txt,.tsv,text/csv" style="display:none;">
           <div class="icon-btn-sm" title="More">&#8942;</div>
           <div class="icon-btn-row">
@@ -7496,7 +7497,7 @@ const AureumSync = (function(){
   }
   const impColName = i => { let n = '', k = i; do { n = String.fromCharCode(65 + (k % 26)) + n; k = Math.floor(k / 26) - 1; } while(k >= 0); return 'Column ' + n; };
   const impClean = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
-  const impNameKey = v => impClean(v).toLowerCase();
+  const impNameKey = v => impClean(v).toLowerCase().replace(/[_\-\u2013\u2014]+/g,' ').replace(/\s+/g,' ').trim();   // Bath_Soap, Bath-Soap and Bath Soap are the same product
 
   let imp = null;   // the file being imported + the choices made about it
   function impLoadRows(rows, fileName, sheetName){
@@ -7648,6 +7649,41 @@ const AureumSync = (function(){
   }
 
   document.getElementById('productImportBtn').addEventListener('click', () => impRenderStart());
+  /* ===== FIX NAMES: restore spaces in product names that carry _ or - instead (e.g. from an import) ===== */
+  function suggestSpacedName(name){
+    const n = String(name||'');
+    if(n.includes('_')) return { fixed: n.replace(/_+/g,' ').replace(/\s+/g,' ').trim(), sure:true };
+    if(!/\s/.test(n) && n.includes('-')){
+      const hy = (n.match(/-/g)||[]).length;
+      return { fixed: n.replace(/-+/g,' ').trim(), sure: hy >= 2 };   // a single hyphen (Coca-Cola) is left unticked
+    }
+    return null;
+  }
+  document.getElementById('productFixNamesBtn').addEventListener('click', ()=>{
+    const taken = new Set(PRODUCTS.map(p=>impNameKey(p.name)));
+    const cands = PRODUCTS.map(p=>({p, s:suggestSpacedName(p.name)})).filter(x=>x.s && x.s.fixed && x.s.fixed !== x.p.name);
+    if(!cands.length){ openDetailModal('Fix product names', '<div style="padding:8px 0;color:var(--sage);">All product names are fine — none have an underscore or hyphen standing in for a space.</div>'); return; }
+    const rows = cands.map((x,i)=>`<label style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer;">
+      <input type="checkbox" class="cb fixname-cb" data-i="${i}" ${x.s.sure?'checked':''}>
+      <span style="flex:1;min-width:0;word-break:break-word;"><span style="color:var(--sage);">${escHtml(x.p.name)}</span> &rarr; <b>${escHtml(x.s.fixed)}</b></span></label>`).join('');
+    openDetailModal('Fix product names', `<div style="font-size:13px;color:var(--sage);margin-bottom:10px;">These names have a _ or - where a space should be. Tick the ones to correct (names with a single hyphen, like Coca-Cola, are left unticked). Past documents are updated to match.</div><div style="max-height:46vh;overflow:auto;">${rows}</div>`,
+      `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid" id="fixNamesApply">Fix selected</div>`);
+    document.getElementById('fixNamesApply').addEventListener('click', ()=>{
+      let done = 0, skipped = 0;
+      document.querySelectorAll('.fixname-cb').forEach(cb=>{
+        if(!cb.checked) return;
+        const {p, s:sg} = cands[+cb.dataset.i];
+        const key = impNameKey(sg.fixed);
+        if(PRODUCTS.some(o=>o.id!==p.id && impNameKey(o.name)===key)){ skipped++; return; }   // would clash with another product
+        const old = p.name; p.name = sg.fixed; done++;
+        [PURCHASE_ORDERS, GRN_RECORDS, STOCK_ADJUSTMENTS, TRANSFERS].forEach(list=> (list||[]).forEach(d=> (d.items||[]).forEach(it=>{ if(it.productId===p.id && it.name===old) it.name = p.name; })));
+      });
+      persistAureum(); renderProducts(); renderSalesByProduct(); renderAlerts();
+      closeModal('detailModal');
+      alert(`${done} product name${done!==1?'s':''} corrected.` + (skipped ? ` ${skipped} skipped because another product already has that name.` : ''));
+    });
+  });
+
   document.getElementById('productImportInput').addEventListener('change', function(){
     const file = this.files[0]; this.value = '';
     if(!file) return;
