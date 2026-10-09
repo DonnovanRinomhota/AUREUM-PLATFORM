@@ -14,7 +14,8 @@ const shot = (key, { eager = false, ctx = 'show' } = {}) => {
 
 /* Each frame is pure HTML/CSS around a REAL screenshot of the AUREUM application. */
 export const laptop = opts => `<div class="frame frame-laptop"><div class="lp-screen">${shot('laptop', opts)}</div><div class="lp-base" aria-hidden="true"></div></div>`;
-export const tablet = opts => `<div class="frame frame-tablet"><div class="tb-screen">${shot('tablet', opts)}</div></div>`;
+/* The tablet is a ready-made picture of the POS in its own gold tablet frame, so it is shown as is (no CSS frame around it). */
+export const tablet = opts => `<div class="frame frame-tablet frame-photo">${shot('tablet', opts)}</div>`;
 export const phone = opts => `<div class="frame frame-phone"><span class="ph-island" aria-hidden="true"></span><div class="ph-screen">${shot('phone', opts)}</div></div>`;
 export const deviceByKey = (key, opts) => ({ laptop, tablet, phone })[key](opts);
 

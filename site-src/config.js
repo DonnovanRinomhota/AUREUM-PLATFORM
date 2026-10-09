@@ -3,7 +3,7 @@
 
 export const SITE = {
   name: 'AUREUM',
-  tagline: 'POS & INVENTORY',
+  tagline: 'POS & INVENTORY MANAGEMENT',
   url: 'https://aureum-platform.vercel.app',          // used for canonical links, the sitemap and social previews
   title: 'AUREUM POS | Point of Sale & Inventory Management for Zimbabwe',
   description: 'Elegant point of sale and inventory management for Zimbabwean businesses. Manage sales, inventory, reports and your business from anywhere.',
@@ -54,7 +54,7 @@ export const HERO = {
   ],
   devices: {
     laptop: { set: [['/site/assets/img/screen-dashboard-1280.webp', 1280], ['/site/assets/img/screen-dashboard-2560.webp', 2560]], w: 2560, h: 1600, alt: 'The AUREUM Back Office dashboard showing gross sales, net sales, cost of sales, gross profit, stock alerts and a sales summary chart.' },
-    tablet: { set: [['/site/assets/img/screen-pos-1100.webp', 1100], ['/site/assets/img/screen-pos-2200.webp', 2200]], w: 2200, h: 1600, alt: 'The AUREUM POS checkout on a tablet: a product catalogue with pictures, names and prices beside the current ticket and a Complete Sale button.' },
+    tablet: { photo: true, set: [['/site/assets/img/screen-pos-tablet.webp', 1431]], w: 1431, h: 1099, alt: 'The AUREUM POS checkout on a tablet: a product catalogue with pictures, names and prices beside the current ticket and a Complete Sale button.' },
     phone: { set: [['/site/assets/img/screen-receipt-780.webp', 780], ['/site/assets/img/screen-receipt-1170.webp', 1170]], w: 1170, h: 2532, alt: 'A completed sale on a phone: the AUREUM receipt with items, total, payment method and print and email options.' }
   }
 };
@@ -63,10 +63,10 @@ export const BUILT_FOR = {
   eyebrow: 'BUILT FOR EVERY COUNTER',
   heading: ['Empowering Business Owners', 'In Zimbabwe'],
   cards: [
-    { id: 'bakery', icon: 'bread', title: 'Bakery', text: 'Fresh bread, cakes & more', img: '/site/assets/img/card-bakery.webp', alt: 'A smiling bakery owner in an apron and hairnet standing in front of shelves of fresh bread.' },
-    { id: 'retail', icon: 'store', title: 'Retail Shop', text: 'Everyday products, better sales', img: '/site/assets/img/card-retail.webp', alt: 'A shopkeeper smiling as he serves customers at the till of a well-stocked retail shop.' },
-    { id: 'grocery', icon: 'basket', title: 'Grocery Shop', text: 'Fresh food, daily essentials', img: '/site/assets/img/card-grocery.webp', alt: 'A grocery shop assistant in a green apron smiling beside shelves and fresh produce.' },
-    { id: 'fashion', icon: 'hanger', title: 'Clothes & Fashion', text: 'Trendy styles, happy customers', img: '/site/assets/img/card-fashion.webp', alt: 'A clothes shop owner arranging shirts on a rail in his fashion store.' }
+    { id: 'bakery', icon: 'bread', title: 'Bakery', text: 'Fresh bread, cakes & more', img: '/site/assets/img/card-bakery-v2.webp', alt: 'A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars.' },
+    { id: 'retail', icon: 'store', title: 'Retail Shop', text: 'Everyday products, better sales', img: '/site/assets/img/card-retail-v2.webp', alt: 'A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing.' },
+    { id: 'grocery', icon: 'basket', title: 'Grocery Shop', text: 'Fresh food, daily essentials', img: '/site/assets/img/card-grocery-v2.webp', alt: 'A bright grocery shop aisle with curved wooden displays of fresh fruit and vegetables under a timber ceiling.' },
+    { id: 'fashion', icon: 'hanger', title: 'Clothes & Fashion', text: 'Trendy styles, happy customers', img: '/site/assets/img/card-fashion-v2.webp', alt: 'A collage of dark green fashion and lifestyle pieces: knitwear, caps, sneakers, a watch and a classic car.' }
   ]
 };
 
