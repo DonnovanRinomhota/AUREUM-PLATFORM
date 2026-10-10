@@ -233,6 +233,51 @@
   .pg-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
   .pg-btn[data-disabled]{ opacity:0.3; cursor:not-allowed; pointer-events:none; }
   .pg-page-label{ font-size:12px; color:var(--sage); white-space:nowrap; }
+  /* employee schedule calendar */
+  .ec-legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:11.5px; color:var(--sage); margin:-4px 0 12px; }
+  .ec-legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .ec-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .ec-dot.past{ background:var(--gold-bright); } .ec-dot.today{ background:#fff; box-shadow:0 0 0 2px var(--gold-bright); } .ec-dot.future{ background:#5aa9a3; }
+  .ec-layout{ display:grid; grid-template-columns: minmax(300px, 420px) 1fr; gap:18px; align-items:start; }
+  .ec-cal-card, .ec-day-card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .ec-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .ec-dow{ text-align:center; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--sage-dim); padding-bottom:4px; }
+  .ec-day{ position:relative; min-height:54px; border:1px solid var(--line); border-radius:9px; background:var(--panel-raised); padding:5px 6px; cursor:pointer; display:flex; flex-direction:column; gap:3px; }
+  .ec-day:hover{ border-color:var(--gold-bright); }
+  .ec-day.empty{ background:transparent; border-color:transparent; cursor:default; }
+  .ec-day .n{ font-size:12px; font-weight:700; color:var(--ivory-dim); }
+  .ec-day .c{ font-size:9.5px; line-height:1.2; border-radius:5px; padding:1px 4px; align-self:flex-start; }
+  .ec-day.past .c{ color:var(--gold-bright); background:rgba(201,162,39,.14); }
+  .ec-day.future .c{ color:#7fd0ca; background:rgba(90,169,163,.16); }
+  .ec-day.today .c{ color:#20160A; background:var(--gold-bright); }
+  .ec-day.today{ border-color:var(--gold-bright); }
+  .ec-day.sel{ outline:2px solid var(--gold-bright); outline-offset:1px; background:rgba(201,162,39,.10); }
+  .ec-day-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .ec-day-title{ font-size:17px; font-weight:700; color:var(--ivory); }
+  .ec-day-sub{ font-size:12.5px; color:var(--sage); margin-top:2px; }
+  .ec-day-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .ec-row{ border:1px solid var(--line); background:var(--panel-raised); border-radius:12px; padding:12px; margin-bottom:10px; position:relative; }
+  .ec-row-grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px 12px; padding-right:26px; }
+  .ec-row .field-label{ font-size:10.5px; margin-bottom:4px; }
+  .ec-row .modal-field, .ec-row .modal-select{ width:100%; padding:8px 10px; font-size:13px; }
+  .ec-rm{ position:absolute; top:10px; right:10px; width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--danger); cursor:pointer; }
+  .ec-rm:hover{ background:rgba(193,88,74,.14); }
+  .ec-hrs{ font-size:12px; color:var(--gold-bright); margin-top:8px; }
+  .ec-day-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .ec-total{ font-size:13px; color:var(--sage); }
+  .ec-empty{ border:1px dashed var(--line-strong); border-radius:12px; padding:22px; text-align:center; color:var(--sage); font-size:13px; }
+  .ec-kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:12px; margin-top:18px; }
+  .ec-kpi{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .ec-kpi .l{ font-size:11px; color:var(--sage); margin-bottom:4px; } .ec-kpi .v{ font-size:20px; font-weight:700; color:var(--gold-bright); }
+  .ec-ag-day{ border:1px solid var(--line); border-radius:12px; background:var(--panel); margin-bottom:10px; overflow:hidden; cursor:pointer; }
+  .ec-ag-day:hover{ border-color:var(--gold-bright); }
+  .ec-ag-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 14px; background:var(--panel-raised); font-size:13px; font-weight:700; }
+  .ec-chip{ font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; font-weight:700; }
+  .ec-chip.past{ color:var(--gold-bright); background:rgba(201,162,39,.14); } .ec-chip.today{ color:#20160A; background:var(--gold-bright); } .ec-chip.future{ color:#7fd0ca; background:rgba(90,169,163,.16); }
+  .ec-ag-row{ display:flex; justify-content:space-between; gap:10px; padding:7px 14px; font-size:12.5px; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .ec-ag-row .sub{ color:var(--sage); }
+  @media (max-width: 900px){ .ec-layout{ grid-template-columns:1fr; } .ec-row-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 480px){ .ec-row-grid{ grid-template-columns:1fr; } .ec-day{ min-height:46px; padding:4px; } .ec-day .c{ font-size:9px; } }
   .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
   .cal-dow{ text-align:center; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--sage-dim); padding-bottom:6px; }
   .cal-day{
@@ -672,6 +717,10 @@
   .segment-badge{ padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; letter-spacing:.02em; }
   .segment-badge.new{ background: rgba(90,169,163,0.14); color:#5aa9a3; }
   .segment-badge.regular{ background: rgba(201,162,39,0.14); color: var(--gold-bright); }
+  .name-cell .nm[data-dup]::after{ content:'DUPLICATE'; margin-left:8px; padding:2px 7px; border-radius:999px; font-size:9.5px; font-weight:700; letter-spacing:.06em; color:#E39A4B; background:rgba(227,154,75,0.16); }
+  .segment-badge.occasional{ background: rgba(150,170,160,0.16); color:#9fb5aa; }
+  .segment-badge.atrisk{ background: rgba(227,154,75,0.16); color:#E39A4B; }
+  .segment-badge.lost, .segment-badge.inactive{ background: rgba(193,88,74,0.14); color: var(--danger); }
   .segment-badge.vip{ background: linear-gradient(135deg, rgba(201,162,39,0.28), rgba(201,162,39,0.1)); color: var(--gold-bright); border:1px solid var(--gold-dim); }
 
   /* Settings page */
@@ -1769,7 +1818,7 @@
           </div>
           <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>In stock</th><th>Received quantity</th><th>Unit</th><th>Cost</th><th>Price</th><th>Total cost</th><th>Expiry date</th><th></th></tr>
+              <tr><th>Product</th><th>In stock</th><th>Received quantity</th><th>Expiry date</th><th>Unit</th><th>Cost</th><th>Price</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="grnLineBody"></tbody>
           </table>
@@ -1939,6 +1988,8 @@
           <div><div style="font-size:11px; color:var(--sage); margin-bottom:3px;">Lifetime value</div><div class="gold" style="font-weight:700;" id="cfLtv">$0.00</div></div>
           <div><div style="font-size:11px; color:var(--sage); margin-bottom:3px;">Loyalty points</div><div class="mono" id="cfLoyalty">0</div></div>
           <div><div style="font-size:11px; color:var(--sage); margin-bottom:3px;">Store credit</div><div class="mono" id="cfCredit">$0.00</div></div>
+          <div><div style="font-size:11px; color:var(--sage); margin-bottom:3px;">Last order</div><div class="mono" id="cfLastOrder">—</div></div>
+          <div><div style="font-size:11px; color:var(--sage); margin-bottom:3px;">Orders (last 90 days)</div><div class="mono" id="cfOrders90">0</div></div>
         </div>
         <div class="line-table-wrap">
           <div class="create-form-grid">
@@ -2018,22 +2069,51 @@
 
         <div id="employeeCalendarTab" style="display:none;">
           <div class="data-toolbar">
-            <div class="icon-btn-sm" id="calPrevMonth" title="Previous month">&#8249;</div>
-            <div style="font-weight:700; font-size:15px; min-width:150px;" id="calMonthLabel"></div>
-            <div class="icon-btn-sm" id="calNextMonth" title="Next month">&#8250;</div>
+            <div class="icon-btn-sm" id="ecPrev" title="Previous month">&#8249;</div>
+            <div style="font-weight:700; font-size:15px; min-width:150px; text-align:center;" id="ecMonthLabel"></div>
+            <div class="icon-btn-sm" id="ecNext" title="Next month">&#8250;</div>
+            <div class="btn-ghost-sm" id="ecToday">Today</div>
             <div class="filter-field" style="margin-left:auto; min-width:180px;">
-              <select class="cat-select" id="calEmployeeFilter"><option value="">All employees</option></select>
+              <select class="cat-select" id="ecEmployeeFilter"><option value="">All employees</option></select>
             </div>
           </div>
-          <div id="calGrid" class="cal-grid"></div>
+          <div class="ec-legend"><span><i class="ec-dot past"></i>Worked (past)</span><span><i class="ec-dot today"></i>Today</span><span><i class="ec-dot future"></i>Upcoming</span></div>
+          <div class="ec-layout">
+            <div class="ec-cal-card"><div id="ecGrid" class="ec-grid"></div></div>
+            <div class="ec-day-card">
+              <div class="ec-day-head">
+                <div>
+                  <div class="ec-day-title" id="ecDayTitle">Schedule</div>
+                  <div class="ec-day-sub" id="ecDaySub"></div>
+                </div>
+                <div class="ec-day-actions">
+                  <div class="btn-ghost-sm" id="ecCopyPrev" title="Copy the previous day's schedule into this day">Copy previous day</div>
+                  <div class="btn-gold" id="ecAddRow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>Add employee</div>
+                </div>
+              </div>
+              <div id="ecRows"></div>
+              <div class="field-label" style="margin-top:14px;">Notes</div>
+              <textarea id="ecNotes" class="modal-field" rows="2" placeholder="Additional notes for this day…"></textarea>
+              <div class="ec-day-foot"><div id="ecDayTotal" class="ec-total"></div><div class="btn-gold" id="ecSave">Save schedule</div></div>
+            </div>
+          </div>
+
+          <div class="ec-kpis" id="ecKpis"></div>
+
           <div class="form-section" style="margin-top:20px;">
-            <div class="form-section-title" style="margin-bottom:10px;">Hours this month</div>
+            <div class="form-section-title" style="margin-bottom:10px;">Hours worked this month</div>
             <div class="table-panel">
               <table>
-                <thead><tr><th>Employee</th><th style="text-align:right;">Days worked</th><th style="text-align:right;">Total hours</th></tr></thead>
-                <tbody id="calSummaryBody"></tbody>
+                <thead><tr><th>Employee</th><th>Role</th><th style="text-align:right;">Days worked</th><th style="text-align:right;">Hours worked</th><th style="text-align:right;">Upcoming days</th><th style="text-align:right;">Upcoming hours</th><th style="text-align:right;">Till clocked hours</th></tr></thead>
+                <tbody id="ecSummaryBody"></tbody>
               </table>
             </div>
+            <div style="font-size:11.5px;color:var(--sage);margin-top:8px;">“Hours worked” counts scheduled shifts up to and including today. “Till clocked hours” is the time each person was signed in to a shift at the till.</div>
+          </div>
+
+          <div class="form-section" style="margin-top:20px;">
+            <div class="form-section-title" style="margin-bottom:10px;">Day-by-day — past and upcoming</div>
+            <div id="ecAgenda"></div>
           </div>
         </div>
       </div>
@@ -2051,8 +2131,10 @@
             <div>
               <div class="field-label">Role</div>
               <select id="efRole" class="modal-select">
-                <option>Cashier</option><option>Shop Manager</option><option>Inventory Clerk</option><option>Administrator</option>
+                <option>Cashier</option><option>Shop Manager</option><option>Inventory Clerk</option><option>Administrator</option><option value="__other">Other…</option>
               </select>
+              <input type="text" id="efRoleOther" class="modal-field" placeholder="Type the role, e.g. Driver, Cleaner, Security" maxlength="40" style="display:none; margin-top:8px;">
+              <div id="efRoleOtherNote" style="display:none; font-size:11.5px; color:var(--sage); margin-top:6px;">Other roles are staff records only — they have <b>no access to POS Checkout</b> and won't appear on the till's sign-in list.</div>
             </div>
             <div>
               <div class="field-label">Assigned shop</div>
@@ -3784,6 +3866,27 @@ const AureumSync = (function(){
     spec.business = docBusiness(); if(!spec.createdBy) spec.createdBy = whoCreated();
     downloadPdfBytes(buildDocumentPdf(spec), filename);
   }
+
+  /* Enter in a quantity box jumps straight to the next "add product" search (GRN, Stock Adjustment, Purchase Order, Transfer),
+     so a whole list can be entered from the keyboard without touching the screen. */
+  document.addEventListener('keydown', e=>{
+    if(e.key !== 'Enter' || e.isComposing) return;
+    const t = e.target; if(!t || !t.matches) return;
+    let search = null;
+    if(t.matches('.grn-qty')) search = document.getElementById('grnProductSearch');
+    else if(t.matches('.sa-counted')) search = document.getElementById('saProductSearch');
+    else if(t.matches('.po-qty')) search = document.getElementById('poProductSearch');
+    else if(t.matches('.tr-qty')){
+      e.preventDefault();
+      let blank = [...document.querySelectorAll('.tr-product')].find(inp => !trLineItems[+inp.dataset.idx] || !trLineItems[+inp.dataset.idx].productId);
+      if(!blank){ document.getElementById('trAddLineBtn').click(); const all = document.querySelectorAll('.tr-product'); blank = all[all.length-1]; }
+      if(blank){ blank.focus(); if(blank._ppApi) blank._ppApi.open(); }
+      return;
+    }
+    if(!search) return;
+    e.preventDefault();
+    search.focus(); search.select && search.select(); if(search._ppApi) search._ppApi.open();
+  });
   document.querySelectorAll('[data-close]').forEach(el=>{
     el.addEventListener('click', ()=> closeModal(el.dataset.close));
   });
@@ -4378,6 +4481,7 @@ const AureumSync = (function(){
 
     const totalFiltered = items.length;
     items = paginateSlice(items, productPageState);
+    const dupCount = new Map(); PRODUCTS.forEach(p => { const k = prodNameKey(p.name); dupCount.set(k, (dupCount.get(k) || 0) + 1); });
 
     tbody.innerHTML = items.map(p => `
       <tr data-id="${p.id}" style="cursor:pointer; ${selectedProductIds.has(p.id)?'background:rgba(201,162,39,0.08);':''}">
@@ -4387,7 +4491,7 @@ const AureumSync = (function(){
               ${selectedProductIds.has(p.id) ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#20160A" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>' : ''}
             </div>
             <div class="row-thumb">${productThumb(p)}</div>
-            <div class="nm">${p.name}</div>
+            <div class="nm"${dupCount.get(prodNameKey(p.name)) > 1 ? ' data-dup="1" title="Another product has exactly this name"' : ''}>${p.name}</div>
           </div>
         </td>
         <td class="mono" data-col="code">${p.code || '—'}</td>
@@ -4567,7 +4671,7 @@ const AureumSync = (function(){
     shopStockTouched = false;
     renderCategoryDatalist();
     document.getElementById('productFormTitle').textContent = id ? 'Edit products' : 'Add products';
-    document.getElementById('pfNameError').classList.remove('show');
+    document.getElementById('pfNameError').classList.remove('show'); document.getElementById('pfNameError').textContent = 'Product name is required';
     document.getElementById('pfName').classList.remove('invalid');
     document.getElementById('pfPriceError').classList.remove('show');
     document.getElementById('pfPrice').classList.remove('invalid');
@@ -4996,6 +5100,23 @@ const AureumSync = (function(){
   document.getElementById('productBackLink').addEventListener('click', switchToProductList);
   document.getElementById('productCancelBtn').addEventListener('click', switchToProductList);
 
+  /* ===== DUPLICATE PRODUCT NAMES: two products can't share exactly the same name (capitals and extra spaces ignored) ===== */
+  const prodNameKey = v => String(v == null ? '' : v).replace(/[\u00a0\u2000-\u200b\u202f\u3000]/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+  function findDuplicateProduct(name, exceptId){
+    const k = prodNameKey(name); if(!k) return null;
+    return PRODUCTS.find(p => p.id !== exceptId && prodNameKey(p.name) === k) || null;
+  }
+  function showProductNameDuplicate(dup){
+    const err = document.getElementById('pfNameError');
+    err.textContent = `A product called "${dup.name}" already exists${dup.code ? ' (code ' + dup.code + ')' : ''}. Change this name, or edit the existing product instead.`;
+    err.classList.add('show'); document.getElementById('pfName').classList.add('invalid');
+  }
+  document.getElementById('pfName').addEventListener('input', function(){
+    const err = document.getElementById('pfNameError');
+    const dup = findDuplicateProduct(this.value, editingProductId);
+    if(dup) showProductNameDuplicate(dup);
+    else { err.classList.remove('show'); this.classList.remove('invalid'); err.textContent = 'Product name is required'; }
+  });
   document.getElementById('productSaveBtn').addEventListener('click', ()=>{
     const name = document.getElementById('pfName').value.replace(/[\u00a0\u2000-\u200b\u202f\u3000]/g, ' ').replace(/\s+/g, ' ').trim();
     document.getElementById('pfPriceError').classList.remove('show');
@@ -5003,11 +5124,14 @@ const AureumSync = (function(){
     document.getElementById('pfCostError').classList.remove('show');
     document.getElementById('pfCost').classList.remove('invalid');
     if(!name){
+      document.getElementById('pfNameError').textContent = 'Product name is required';
       document.getElementById('pfNameError').classList.add('show');
       document.getElementById('pfName').classList.add('invalid');
       document.getElementById('pfName').focus();
       return;
     }
+    { const dup = findDuplicateProduct(name, editingProductId);
+      if(dup){ showProductNameDuplicate(dup); document.getElementById('pfName').focus(); return; } }
     const priceRaw = document.getElementById('pfPrice').value;
     const price = parseFloat(priceRaw);
     if(priceRaw !== '' && (isNaN(price) || price < 0)){
@@ -5398,7 +5522,7 @@ const AureumSync = (function(){
      WRAP (nothing is ever cut off), totals, signature lines and a footer with page numbers.
      Text is set in Helvetica with real character widths, so columns line up exactly. */
   const PDF_WIDTHS = { R:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,350,556,350,222,556,333,1000,556,556,333,1000,667,333,1000,350,611,350,350,222,222,333,333,350,556,1000,333,1000,500,333,944,350,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500], B:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,350,556,350,278,556,500,1000,556,556,333,1000,667,333,1000,350,611,350,350,278,278,500,500,350,556,1000,333,1000,556,333,944,350,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556] };
-  const PDF_COL = { ink:[.07,.08,.08], mute:[.40,.43,.42], faint:[.60,.62,.61], rule:[.86,.88,.86], gold:[.72,.56,.23], green:[.055,.231,.169], white:[1,1,1], tint:[.955,.965,.95] };
+  const PDF_COL = { ink:[.07,.08,.08], mute:[.40,.43,.42], faint:[.60,.62,.61], rule:[.86,.88,.86], gold:[.72,.56,.23], green:[.055,.231,.169], white:[1,1,1], pos:[.184,.420,.329], neg:[.757,.345,.290], tint:[.955,.965,.95] };
   function pdfByte(ch){
     const c = ch.charCodeAt(0);
     if(c === 9 || c === 10 || c === 13 || c === 0xA0 || c === 0x202F || c === 0x2009 || c === 0x200A || c === 0x2002 || c === 0x2003) return 32;   // tabs, line breaks and special spaces become a normal space
@@ -5430,7 +5554,7 @@ const AureumSync = (function(){
   const pdfRg = c => c.map(v => v.toFixed(3)).join(' ');
 
   function buildDocumentPdf(o){
-    const cols = o.columns || [], rows = (o.rows || []).map(r => r.map(c => pdfText(c)));
+    const cols = o.columns || [], rows = (o.rows || []).map(r => r.map(c => (c && typeof c === 'object') ? { t: pdfText(c.t), c: c.c } : pdfText(c)));
     const landscape = !!o.landscape || cols.length > 9;
     const PW = landscape ? 842 : 595, PH = landscape ? 595 : 842, M = 42, CW = PW - M * 2, FOOT = M + 4;
     const padX = 5, hdrSize = 8, baseBody = 9.2;
@@ -5439,7 +5563,7 @@ const AureumSync = (function(){
     let bodySize = baseBody, widths = [];
     for(const scale of [1, .92, .84, .78]){
       bodySize = baseBody * scale;
-      const nat = cols.map((c, i) => { let m = pdfW(pdfText(c.h), true, hdrSize * scale); rows.forEach(r => { m = Math.max(m, pdfW(r[i] || '', false, bodySize)); }); return m + padX * 2; });
+      const nat = cols.map((c, i) => { let m = pdfW(pdfText(c.h), true, hdrSize * scale); rows.forEach(r => { m = Math.max(m, pdfW((r[i] && typeof r[i] === 'object') ? r[i].t : (r[i] || ''), false, bodySize)); }); return m + padX * 2; });
       const minW = cols.map((c, i) => c.wrap ? Math.max(86, pdfW(pdfText(c.h), true, hdrSize * scale) + padX * 2) : nat[i]);
       let total = nat.reduce((a, b) => a + b, 0); widths = nat.slice();
       if(total <= CW){
@@ -5528,13 +5652,14 @@ const AureumSync = (function(){
     tableHeader();
     if(!rows.length){ T(M + padX, y - 20, o.emptyText || 'No items recorded.', 9.5, { col:PDF_COL.mute }); y -= 36; }
     rows.forEach((r, ri) => {
-      const cells = cols.map((c, i) => pdfWrap(r[i] || '', !!(c.bold), bodySize, widths[i] - padX * 2));
+      const cellTxt = i => { const v = r[i]; return (v && typeof v === 'object') ? (v.t || '') : (v || ''); };
+      const cells = cols.map((c, i) => pdfWrap(cellTxt(i), !!(c.bold), bodySize, widths[i] - padX * 2));
       const lines = Math.max(...cells.map(c => c.length));
       const rh = lines * lineH + rowPadY * 2;
       if(y - rh < FOOT + 24){ newPage(false); y -= 22; tableHeader(); }
       let x = M;
       cols.forEach((c, i) => { const tx = c.align === 'r' ? x + widths[i] - padX : x + padX;
-        cells[i].forEach((ln, k) => T(tx, y - rowPadY - bodySize * .92 - k * lineH, ln, bodySize, { bold:!!c.bold, col:c.mute ? PDF_COL.mute : PDF_COL.ink, align:c.align === 'r' ? 'r' : 'l' }));
+        cells[i].forEach((ln, k) => T(tx, y - rowPadY - bodySize * .92 - k * lineH, ln, bodySize, { bold:!!c.bold, col:(r[i] && typeof r[i] === 'object' && r[i].c) ? PDF_COL[r[i].c] : (c.mute ? PDF_COL.mute : PDF_COL.ink), align:c.align === 'r' ? 'r' : 'l' }));
         x += widths[i]; });
       y -= rh; L(M, y, PW - M, y, .5, PDF_COL.rule);
     });
@@ -5887,8 +6012,8 @@ const AureumSync = (function(){
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${it.unit || productUnitLabel(p)}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${g.supplier}</div></div>
@@ -5899,7 +6024,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Additional info</div><div class="v">${g.additional||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th>Unit</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total cost</th><th class="exp">Expiry date</th></tr></thead>
+        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th class="exp">Expiry date</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total cost</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
@@ -5928,7 +6053,7 @@ const AureumSync = (function(){
   function grnPdf(g){
     const rows = (g.items||[]).filter(it=>it.productId || it.name).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '-', String(it.qty), it.unit || productUnitLabel(p), money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0)), it.expiry ? fmtDisplay(it.expiry) : '-'];
+      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '-', String(it.qty), it.expiry ? fmtDisplay(it.expiry) : '-', money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0))];
     });
     const sub = (g.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
     const totals = [];
@@ -5938,7 +6063,7 @@ const AureumSync = (function(){
       docType:'Goods Received Note', number: g.id, subtitle: g.po ? `Received against ${g.po}` : (g.type || ''), createdBy: g.createdBy || '',
       meta:[['Supplier', g.supplier], ['Shop', g.shop], ['GRN date', g.date ? fmtDisplay(g.date) : ''], ['Payment method', g.payment], ['Supplier invoice no.', g.invoice], ['Additional information', g.additional], ['Created by', g.createdBy]],
       tableTitle:'Products',
-      columns:[{h:'Product', wrap:true}, {h:'In stock', align:'r'}, {h:'Received qty', align:'r'}, {h:'Unit'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}, {h:'Expiry date'}],
+      columns:[{h:'Product', wrap:true}, {h:'In stock', align:'r'}, {h:'Received qty', align:'r'}, {h:'Expiry date'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
       rows, totals, signatures:['Store keeper signature','Approved by','Received by']
     }, `${g.id}.pdf`);
   }
@@ -6019,11 +6144,11 @@ const AureumSync = (function(){
         <td class="full" data-label="Product"><div class="pn">${escHtml(p.name)}</div></td>
         <td data-label="In stock" class="mono">${getStock(p, shop)}</td>
         <td data-label="Received quantity"><input type="number" inputmode="decimal" min="0" step="${p.soldBy==='weight'?'0.01':'1'}" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Received quantity"></td>
+        <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
         <td data-label="Unit">${productUnitLabel(p)}</td>
         <td data-label="Cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost" aria-label="Cost per unit"></td>
         <td data-label="Price" class="mono">${money2(p.price)}</td>
         <td data-label="Total cost" class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
-        <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
@@ -6258,19 +6383,19 @@ const AureumSync = (function(){
     const rows = (a.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const before = it.beforeStock||0;
-      let after, line;
-      if(a.type === 'Add'){ after = before + it.counted; line = (it.counted||0) * (it.unitCost||0); }
-      else if(a.type === 'Reduce'){ after = before - it.counted; line = (it.counted||0) * (it.unitCost||0); }
-      else { after = it.counted; line = ((it.counted||0) - before) * (it.unitCost||0); }
+      let after, line, delta;
+      if(a.type === 'Add'){ after = before + it.counted; delta = it.counted; line = (it.counted||0) * (it.unitCost||0); }
+      else if(a.type === 'Reduce'){ after = before - it.counted; delta = -it.counted; line = (it.counted||0) * (it.unitCost||0); }
+      else { after = it.counted; delta = it.counted - before; line = ((it.counted||0) - before) * (it.unitCost||0); }
       total += line;
-      return [itemLabel(it,p), String(before), String(it.counted), String(after), money2(it.unitCost), money2(linePrice(it,p)), money2(line)];
+      return [itemLabel(it,p), String(before), String(it.counted), String(after), { t:(delta>=0?'+':'') + delta, c: delta>=0 ? 'pos' : 'neg' }, money2(it.unitCost), money2(linePrice(it,p)), money2(line)];
     });
     const qtyLabel = SA_QTY_LABEL_BY_TYPE[a.type] || 'Quantity';
     openDocPdf({
       docType:'Stock Adjustment', number: a.id, subtitle: `${a.type} - ${a.reason}`, createdBy: a.createdBy || '',
       meta:[['Supplier', a.supplier], ['Shop', a.shop], ['Adjustment type', a.type], ['Adjustment reason', a.reason], ['Created date', a.date ? fmtDisplay(a.date) : ''], ['Created by', a.createdBy], ['Notes', a.notes]],
       tableTitle:'Products',
-      columns:[{h:'Product', wrap:true}, {h:'Current stock', align:'r'}, {h:qtyLabel, align:'r'}, {h:'Stock after', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
+      columns:[{h:'Product', wrap:true}, {h:'Current stock', align:'r'}, {h:qtyLabel, align:'r'}, {h:'Stock after', align:'r'}, {h:'Change', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
       rows, totals:[['Total', '$' + money2(total), true]], signatures:['Store keeper signature','Approved by','Received by']
     }, `${a.id}.pdf`);
   }
@@ -6689,11 +6814,64 @@ const AureumSync = (function(){
   function switchToCustomerList(){ document.getElementById('customersListView').classList.add('active'); document.getElementById('customerCreateView').classList.remove('active'); }
   function switchToCustomerCreate(){ document.getElementById('customersListView').classList.remove('active'); document.getElementById('customerCreateView').classList.add('active'); }
 
-  function customerLoyaltyPoints(c){ return Math.floor(c.spent); }
+  /* ===== LOYALTY POINTS — one fixed rule, worked out from each order's size =====
+     1 point for every whole $1 of the order (after any refund on it), plus a fixed bonus for a bigger order:
+       order of $25+  → +5     order of $50+ → +15     order of $100+ → +40
+     Nothing random and nothing manual: the same order always earns the same points. */
+  const LOYALTY_BONUS = [ { min:100, pts:40 }, { min:50, pts:15 }, { min:25, pts:5 } ];
+  function pointsForOrder(total){
+    const t = Math.max(0, Number(total) || 0);
+    const bonus = (LOYALTY_BONUS.find(b => t >= b.min) || { pts:0 }).pts;
+    return t > 0 ? Math.floor(t) + bonus : 0;
+  }
+  /* ===== SEGMENTS — they move with the calendar, from how recently and how often someone buys =====
+     VIP        8+ orders in the last 90 days            Regular   3+ orders in the last 90 days
+     New        first order in the last 30 days          Occasional  bought within 60 days, less often
+     At risk    last order 61–120 days ago               Lost      last order over 120 days ago
+     Inactive   no orders yet (and joined over 30 days ago) */
+  const CUSTOMER_NOT_NAMED = new Set(['','n/a','na','n.a','none','null','undefined','-','—','walk-in','walk in','walkin','walk-in customer','guest','anonymous']);
+  const custNorm = v => String(v == null ? '' : v).replace(/\s+/g,' ').trim().toLowerCase();
+  let _custIdx = { n:-1, day:'', map:null };
+  function customerIndex(){
+    const day = new Date().toDateString();
+    if(_custIdx.map && _custIdx.n === RECEIPTS.length && _custIdx.day === day) return _custIdx.map;
+    const refunded = new Map();
+    RECEIPTS.forEach(r => { if(r.refund && r.refundOfKey) refunded.set(r.refundOfKey, (refunded.get(r.refundOfKey) || 0) + (Number(r.total) || 0)); });
+    const map = new Map();
+    RECEIPTS.forEach(r => {
+      if(r.refund) return;
+      const k = custNorm(r.customer); if(CUSTOMER_NOT_NAMED.has(k)) return;
+      const net = Math.max(0, (Number(r.total) || 0) - (refunded.get(receiptKey(r)) || 0));
+      (map.get(k) || map.set(k, []).get(k)).push({ t: new Date(r.dateTime).getTime(), net });
+    });
+    _custIdx = { n: RECEIPTS.length, day, map };
+    return map;
+  }
+  function customerStats(c){
+    const list = customerIndex().get(custNorm(c.name)) || [];
+    const DAY = 86400000, now = Date.now();
+    const times = list.map(o => o.t).filter(t => !isNaN(t));
+    const last = times.length ? Math.max(...times) : null, first = times.length ? Math.min(...times) : null;
+    return {
+      orders: list.length, last, first,
+      in90: times.filter(t => now - t <= 90 * DAY).length,
+      daysSinceLast: last == null ? null : Math.floor((now - last) / DAY),
+      points: list.reduce((sum, o) => sum + pointsForOrder(o.net), 0),
+    };
+  }
+  function customerLoyaltyPoints(c){ return customerStats(c).points; }
   function customerSegment(c){
-    if(c.spent >= 200 || c.orders >= 15) return { key:'vip', label:'VIP' };
-    if(c.spent >= 50 || c.orders >= 3) return { key:'regular', label:'Regular' };
-    return { key:'new', label:'New' };
+    const st = customerStats(c), DAY = 86400000, now = Date.now();
+    if(!st.orders){
+      const joinedDays = c.joined ? (now - new Date(c.joined + 'T00:00:00').getTime()) / DAY : 0;
+      return joinedDays <= 30 ? { key:'new', label:'New' } : { key:'inactive', label:'Inactive' };
+    }
+    if(st.daysSinceLast > 120) return { key:'lost', label:'Lost' };
+    if(st.daysSinceLast > 60) return { key:'atrisk', label:'At risk' };
+    if(st.in90 >= 8) return { key:'vip', label:'VIP' };
+    if(st.in90 >= 3) return { key:'regular', label:'Regular' };
+    if((now - st.first) / DAY <= 30) return { key:'new', label:'New' };
+    return { key:'occasional', label:'Occasional' };
   }
   function renderCustomers(){
     const tbody = document.getElementById('customerTableBody');
@@ -6786,6 +6964,7 @@ const AureumSync = (function(){
       segBadge.className = 'segment-badge ' + seg.key;
       document.getElementById('cfLtv').textContent = '$' + c.spent.toFixed(2);
       document.getElementById('cfLoyalty').textContent = customerLoyaltyPoints(c);
+      { const st = customerStats(c); document.getElementById('cfLastOrder').textContent = st.last ? new Date(st.last).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' (' + (st.daysSinceLast === 0 ? 'today' : st.daysSinceLast + ' days ago') + ')' : 'No orders yet'; document.getElementById('cfOrders90').textContent = st.in90; }
       document.getElementById('cfCredit').textContent = '$' + (c.credit||0).toFixed(2);
     } else {
       document.getElementById('cfCrmSummary').style.display = 'none';
@@ -6847,10 +7026,30 @@ const AureumSync = (function(){
   function switchToEmployeeList(){ document.getElementById('employeesListView').classList.add('active'); document.getElementById('employeeCreateView').classList.remove('active'); }
   function switchToEmployeeCreate(){ document.getElementById('employeesListView').classList.remove('active'); document.getElementById('employeeCreateView').classList.add('active'); }
 
-  /* ===== EMPLOYEE CALENDAR (tracks working days & hours) ===== */
-  let EMPLOYEE_HOURS = []; // { id, employeeId, date:'YYYY-MM-DD', hours, notes }
+  /* ===== EMPLOYEE SCHEDULE CALENDAR =====
+     Pick a day → add who is working (role, shop, start, end, shift) → Save. Past days are the hours worked,
+     future days are the upcoming roster. Records are EMPLOYEE_HOURS { id, uid, employeeId, date, hours, start, end, shift, shop, notes }. */
+  let EMPLOYEE_HOURS = [];
   let nextHoursId = 1;
-  let calMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  let ecMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  let ecSelected = todayStr();
+  let ecRows = [];            // working copy of the selected day's rows
+  const EC_SHIFTS = { 'Full Day':['08:00','17:00'], 'Morning':['06:00','14:00'], 'Afternoon':['14:00','22:00'], 'Evening':['17:00','23:00'], 'Night':['22:00','06:00'] };
+  const ecPad = n => String(n).padStart(2,'0');
+  const ecDateStr = (y,m,d) => `${y}-${ecPad(m+1)}-${ecPad(d)}`;
+  const ecWhen = ds => { const t = todayStr(); return ds < t ? 'past' : (ds === t ? 'today' : 'future'); };
+  const ecHrsFmt = h => { const r = Math.round((+h||0)*100)/100; return (r % 1 === 0 ? String(r) : r.toFixed(2).replace(/0$/,'')) + 'h'; };
+  const ecEsc = v => escHtml(v == null ? '' : String(v));
+  function ecHours(start, end){
+    if(!/^\d\d:\d\d$/.test(start||'') || !/^\d\d:\d\d$/.test(end||'')) return 0;
+    const a = (+start.slice(0,2))*60 + (+start.slice(3)), b = (+end.slice(0,2))*60 + (+end.slice(3));
+    let m = b - a; if(m <= 0) m += 1440;          // an end time before the start means the shift runs past midnight
+    return Math.round(m / 60 * 100) / 100;
+  }
+  const ecTime12 = t => { if(!/^\d\d:\d\d$/.test(t||'')) return ''; let h = +t.slice(0,2); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${t.slice(3)}${ap}`; };
+  const ecLongDate = ds => new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const ecEmpName = id => { const e = EMPLOYEES.find(x => String(x.id) === String(id)); return e ? e.name : 'Unknown (removed)'; };
+  const ecEmpRole = id => { const e = EMPLOYEES.find(x => String(x.id) === String(id)); return e ? e.role : ''; };
 
   document.querySelectorAll('#employeeTabs .auth-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
@@ -6862,108 +7061,168 @@ const AureumSync = (function(){
     });
   });
 
-  function populateCalEmployeeFilter(){
-    const el = document.getElementById('calEmployeeFilter');
-    const prev = el.value;
-    el.innerHTML = '<option value="">All employees</option>' + EMPLOYEES.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  function populateEcEmployeeFilter(){
+    const el = document.getElementById('ecEmployeeFilter'), prev = el.value;
+    el.innerHTML = '<option value="">All employees</option>' + EMPLOYEES.map(e=>`<option value="${e.id}">${ecEsc(e.name)}</option>`).join('');
     el.value = EMPLOYEES.some(e=>String(e.id)===prev) ? prev : '';
   }
-  document.getElementById('calPrevMonth').addEventListener('click', ()=>{ calMonth.setMonth(calMonth.getMonth()-1); renderEmployeeCalendar(); });
-  document.getElementById('calNextMonth').addEventListener('click', ()=>{ calMonth.setMonth(calMonth.getMonth()+1); renderEmployeeCalendar(); });
-  document.getElementById('calEmployeeFilter').addEventListener('change', renderEmployeeCalendar);
+  function ecLoadDay(ds){
+    ecSelected = ds;
+    ecRows = EMPLOYEE_HOURS.filter(h => h.date === ds).sort((a,b)=> (a.start||'').localeCompare(b.start||'') || a.id - b.id).map(h => ({
+      uid: h.uid, employeeId: h.employeeId, shop: h.shop || '', start: h.start || '', end: h.end || '',
+      shift: h.shift || (h.start ? 'Custom' : 'Custom'), hoursOnly: (!h.start && !h.end) ? h.hours : null, notes: h.notes || ''
+    }));
+    const first = EMPLOYEE_HOURS.find(h => h.date === ds && h.dayNotes);
+    document.getElementById('ecNotes').value = first ? first.dayNotes : '';
+  }
+  document.getElementById('ecPrev').addEventListener('click', ()=>{ ecMonth = new Date(ecMonth.getFullYear(), ecMonth.getMonth()-1, 1); renderEmployeeCalendar(); });
+  document.getElementById('ecNext').addEventListener('click', ()=>{ ecMonth = new Date(ecMonth.getFullYear(), ecMonth.getMonth()+1, 1); renderEmployeeCalendar(); });
+  document.getElementById('ecToday').addEventListener('click', ()=>{ ecMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1); ecLoadDay(todayStr()); renderEmployeeCalendar(); });
+  document.getElementById('ecEmployeeFilter').addEventListener('change', renderEmployeeCalendar);
 
   function renderEmployeeCalendar(){
-    populateCalEmployeeFilter();
-    const label = document.getElementById('calMonthLabel');
-    label.textContent = `${MONTH_NAMES[calMonth.getMonth()]} ${calMonth.getFullYear()}`;
-    const empFilter = document.getElementById('calEmployeeFilter').value;
-
-    const year = calMonth.getFullYear(), month = calMonth.getMonth();
-    const firstDow = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-    const todayStr2 = todayStr();
-
-    const dowLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
-    let cells = '';
-    for(let i=0;i<firstDow;i++) cells += `<div class="cal-day empty"></div>`;
-    for(let d=1; d<=daysInMonth; d++){
-      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const dayEntries = EMPLOYEE_HOURS.filter(h=> h.date===dateStr && (!empFilter || String(h.employeeId)===empFilter));
-      const totalHrs = dayEntries.reduce((s,h)=>s+h.hours,0);
-      cells += `
-        <div class="cal-day ${dateStr===todayStr2?'today':''}" data-date="${dateStr}">
-          <div class="dnum">${d}</div>
-          ${dayEntries.length ? `<div class="dentry">${dayEntries.length} logged · ${totalHrs}h</div><div class="dcount">${dayEntries.length}·${totalHrs}h</div>` : ''}
-        </div>`;
+    populateEcEmployeeFilter();
+    if(!document.getElementById('ecGrid')._init){ ecLoadDay(ecSelected); document.getElementById('ecGrid')._init = true; }
+    const empFilter = document.getElementById('ecEmployeeFilter').value;
+    const year = ecMonth.getFullYear(), month = ecMonth.getMonth();
+    document.getElementById('ecMonthLabel').textContent = `${MONTH_NAMES[month]} ${year}`;
+    const firstDow = new Date(year, month, 1).getDay(), dim = new Date(year, month+1, 0).getDate();
+    let cells = ['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<div class="ec-dow">${d}</div>`).join('');
+    for(let i=0;i<firstDow;i++) cells += '<div class="ec-day empty"></div>';
+    for(let d=1; d<=dim; d++){
+      const ds = ecDateStr(year, month, d), when = ecWhen(ds);
+      const ent = EMPLOYEE_HOURS.filter(h => h.date === ds && (!empFilter || String(h.employeeId) === empFilter));
+      const hrs = ent.reduce((t,h)=> t + (+h.hours||0), 0);
+      cells += `<div class="ec-day ${when} ${ds===ecSelected?'sel':''}" data-date="${ds}"><div class="n">${d}</div>${ent.length ? `<div class="c">${ent.length} · ${ecHrsFmt(hrs)}</div>` : ''}</div>`;
     }
-    document.getElementById('calGrid').innerHTML = dowLabels + cells;
-    document.querySelectorAll('.cal-day[data-date]').forEach(el=>{
-      el.addEventListener('click', ()=> openCalDayModal(el.dataset.date));
-    });
-
-    // Monthly summary per employee
-    const monthPrefix = `${year}-${String(month+1).padStart(2,'0')}`;
-    const monthEntries = EMPLOYEE_HOURS.filter(h=> h.date.startsWith(monthPrefix));
-    const byEmp = {};
-    monthEntries.forEach(h=>{
-      if(!byEmp[h.employeeId]) byEmp[h.employeeId] = { days:new Set(), hours:0 };
-      byEmp[h.employeeId].days.add(h.date);
-      byEmp[h.employeeId].hours += h.hours;
-    });
-    const summaryBody = document.getElementById('calSummaryBody');
-    const rows = Object.entries(byEmp).map(([empId, v])=>{
-      const emp = EMPLOYEES.find(e=>String(e.id)===String(empId));
-      return { name: emp ? emp.name : 'Unknown', days: v.days.size, hours: v.hours };
-    }).sort((a,b)=> b.hours-a.hours);
-    summaryBody.innerHTML = rows.length === 0
-      ? `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--sage);">No hours logged this month yet.</td></tr>`
-      : rows.map(r=>`<tr><td>${r.name}</td><td class="mono" style="text-align:right;">${r.days}</td><td class="mono" style="text-align:right;">${r.hours}</td></tr>`).join('');
+    const grid = document.getElementById('ecGrid'); grid.innerHTML = cells;
+    grid.querySelectorAll('.ec-day[data-date]').forEach(el => el.addEventListener('click', ()=>{ ecLoadDay(el.dataset.date); renderEmployeeCalendar(); }));
+    renderEcDay(); renderEcSummary(empFilter, year, month);
   }
 
-  function openCalDayModal(dateStr){
-    const entries = EMPLOYEE_HOURS.filter(h=>h.date===dateStr);
-    const renderList = () => entries.map(h=>{
-      const emp = EMPLOYEES.find(e=>String(e.id)===String(h.employeeId));
-      return `<div class="dl-row" data-hid="${h.id}"><div class="name">${emp?emp.name:'Unknown'} — ${h.hours}h${h.notes?' · '+h.notes:''}</div><span class="cal-del-entry" data-hid="${h.id}" style="color:var(--danger);cursor:pointer;font-size:11px;">Remove</span></div>`;
-    }).join('') || `<div style="color:var(--sage);font-size:12.5px;padding:6px 0;">No hours logged for this day yet.</div>`;
-
-    const body = `
-      <div id="calDayEntries">${renderList()}</div>
-      <div class="form-section" style="margin-top:14px;">
-        <div class="field-label">Employee</div>
-        <select class="modal-select" id="calAddEmployee">${EMPLOYEES.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</select>
-        <div class="field-label" style="margin-top:10px;">Hours worked</div>
-        <input type="number" min="0" max="24" step="0.5" class="modal-field" id="calAddHours" placeholder="8">
-        <div class="field-label" style="margin-top:10px;">Notes (optional)</div>
-        <input type="text" class="modal-field" id="calAddNotes" placeholder="e.g. covered morning shift">
-      </div>
-    `;
-    const actions = `
-      <div class="modal-btn ghost" data-close="detailModal">Close</div>
-      <div class="modal-btn solid" id="calAddEntryBtn">Add hours</div>
-    `;
-    openDetailModal(`Hours — ${fmtDisplay(dateStr)}`, body, actions);
-
-    document.getElementById('calAddEntryBtn').addEventListener('click', ()=>{
-      const employeeId = parseInt(document.getElementById('calAddEmployee').value);
-      const hours = parseFloat(document.getElementById('calAddHours').value);
-      if(!employeeId || isNaN(hours) || hours<=0){ alert('Select an employee and enter hours greater than 0.'); return; }
-      const notes = document.getElementById('calAddNotes').value.trim();
-      EMPLOYEE_HOURS.push({ uid: AureumSync.uid(), id: nextHoursId++, employeeId, date: dateStr, hours, notes });
-      persistAureum();
-      closeModal('detailModal');
-      renderEmployeeCalendar();
+  function renderEcDay(){
+    const when = ecWhen(ecSelected);
+    document.getElementById('ecDayTitle').textContent = 'Schedule for ' + new Date(ecSelected + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    document.getElementById('ecDaySub').textContent = ({ past:'Past day — hours worked', today:'Today', future:'Upcoming day — planned shifts' })[when] + (ecRows.length ? '' : ' · Add employees working on this day');
+    const shops = SHOPS.length ? SHOPS : [];
+    const staff = EMPLOYEES.filter(e => e.active !== false);
+    const rowsHtml = ecRows.map((r,i)=>{
+      const pool = staff.some(e => String(e.id) === String(r.employeeId)) || !r.employeeId ? staff : [...staff, EMPLOYEES.find(e => String(e.id) === String(r.employeeId))].filter(Boolean);
+      const hrs = r.hoursOnly != null ? r.hoursOnly : ecHours(r.start, r.end);
+      return `<div class="ec-row" data-i="${i}">
+        <div class="ec-row-grid">
+          <div><div class="field-label">Name</div><select class="modal-select ec-f" data-k="employeeId"><option value="">Select employee</option>${pool.map(e=>`<option value="${e.id}" ${String(e.id)===String(r.employeeId)?'selected':''}>${ecEsc(e.name)}</option>`).join('')}</select></div>
+          <div><div class="field-label">Role</div><input class="modal-field" value="${ecEsc(ecEmpRole(r.employeeId))}" placeholder="Role / position" readonly tabindex="-1"></div>
+          <div><div class="field-label">Shop name</div><select class="modal-select ec-f" data-k="shop"><option value="">${shops.length ? 'Select shop' : 'No shops yet'}</option>${shops.map(s=>`<option ${s===r.shop?'selected':''}>${ecEsc(s)}</option>`).join('')}${r.shop && !shops.includes(r.shop) ? `<option selected>${ecEsc(r.shop)}</option>` : ''}</select></div>
+          <div><div class="field-label">Start time</div><input type="time" class="modal-field ec-f" data-k="start" value="${ecEsc(r.start)}"></div>
+          <div><div class="field-label">End time</div><input type="time" class="modal-field ec-f" data-k="end" value="${ecEsc(r.end)}"></div>
+          <div><div class="field-label">Shift</div><select class="modal-select ec-f" data-k="shift">${[...Object.keys(EC_SHIFTS), 'Custom'].map(n=>`<option ${n===r.shift?'selected':''}>${n}</option>`).join('')}</select></div>
+        </div>
+        <div class="ec-hrs" data-hrs="${i}">${hrs ? ecHrsFmt(hrs) + (r.start && r.end ? ` · ${ecTime12(r.start)} – ${ecTime12(r.end)}` : ' (hours only)') : 'Set the start and end time'}</div>
+        <div class="ec-rm" data-rm="${i}" title="Remove from this day"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></div>
+      </div>`;
+    }).join('') || `<div class="ec-empty">No one is scheduled for this day yet.<br>Press <b>Add employee</b> to start.</div>`;
+    const box = document.getElementById('ecRows'); box.innerHTML = rowsHtml;
+    updateEcTotal();
+    box.querySelectorAll('.ec-f').forEach(el => el.addEventListener('change', onEcField));
+    box.querySelectorAll('.ec-f[type=time]').forEach(el => el.addEventListener('input', onEcField));
+    box.querySelectorAll('[data-rm]').forEach(el => el.addEventListener('click', ()=>{ ecRows.splice(+el.dataset.rm, 1); renderEcDay(); }));
+  }
+  function onEcField(e){
+    const el = e.target, i = +el.closest('.ec-row').dataset.i, k = el.dataset.k, r = ecRows[i];
+    r[k] = el.value;
+    if(k === 'shift' && EC_SHIFTS[r.shift]){ [r.start, r.end] = EC_SHIFTS[r.shift]; r.hoursOnly = null; renderEcDay(); return; }
+    if(k === 'start' || k === 'end'){
+      r.hoursOnly = null;
+      const match = Object.entries(EC_SHIFTS).find(([n,t]) => t[0] === r.start && t[1] === r.end);
+      r.shift = match ? match[0] : 'Custom';
+      el.closest('.ec-row').querySelector('[data-k=shift]').value = r.shift;
+      const h = ecHours(r.start, r.end);
+      el.closest('.ec-row').querySelector('[data-hrs]').textContent = h ? ecHrsFmt(h) + ` · ${ecTime12(r.start)} – ${ecTime12(r.end)}` : 'Set the start and end time';
+    }
+    if(k === 'employeeId'){
+      const emp = EMPLOYEES.find(x => String(x.id) === String(r.employeeId));
+      if(emp && !r.shop && emp.shop) r.shop = emp.shop;
+      renderEcDay(); return;
+    }
+    updateEcTotal();
+  }
+  function updateEcTotal(){
+    const total = ecRows.reduce((t,r)=> t + (r.hoursOnly != null ? r.hoursOnly : ecHours(r.start, r.end)), 0);
+    document.getElementById('ecDayTotal').textContent = ecRows.length ? `${ecRows.length} employee${ecRows.length===1?'':'s'} · ${ecHrsFmt(total)} in total` : '';
+  }
+  document.getElementById('ecAddRow').addEventListener('click', ()=>{
+    ecRows.push({ uid: null, employeeId: '', shop: (SHOPS.length === 1 ? SHOPS[0] : ''), start: '08:00', end: '17:00', shift: 'Full Day', hoursOnly: null, notes: '' });
+    renderEcDay();
+    const sel = document.querySelectorAll('#ecRows .ec-row'); const last = sel[sel.length-1]; if(last) last.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  });
+  document.getElementById('ecCopyPrev').addEventListener('click', ()=>{
+    const d = new Date(ecSelected + 'T00:00:00'); d.setDate(d.getDate()-1);
+    const prev = ecDateStr(d.getFullYear(), d.getMonth(), d.getDate());
+    const src = EMPLOYEE_HOURS.filter(h => h.date === prev && h.start);
+    if(!src.length){ alert('There is no schedule on the previous day to copy.'); return; }
+    src.forEach(h => { if(!ecRows.some(r => String(r.employeeId) === String(h.employeeId))) ecRows.push({ uid:null, employeeId:h.employeeId, shop:h.shop||'', start:h.start, end:h.end, shift:h.shift||'Custom', hoursOnly:null, notes:'' }); });
+    renderEcDay();
+  });
+  document.getElementById('ecSave').addEventListener('click', ()=>{
+    const seen = new Set();
+    for(const r of ecRows){
+      if(!r.employeeId){ alert('Choose an employee for every row (or remove the empty row).'); return; }
+      if(seen.has(String(r.employeeId))){ alert(`${ecEmpName(r.employeeId)} is on this day twice. Keep one row per person (use the start and end time for the full shift).`); return; }
+      seen.add(String(r.employeeId));
+      const h = r.hoursOnly != null ? r.hoursOnly : ecHours(r.start, r.end);
+      if(!(h > 0) || h > 24){ alert(`Set a valid start and end time for ${ecEmpName(r.employeeId)}.`); return; }
+    }
+    const dayNotes = document.getElementById('ecNotes').value.trim();
+    const keepUids = new Set(ecRows.map(r => r.uid).filter(Boolean));
+    EMPLOYEE_HOURS = EMPLOYEE_HOURS.filter(h => h.date !== ecSelected || keepUids.has(h.uid));
+    ecRows.forEach(r => {
+      const hours = r.hoursOnly != null ? r.hoursOnly : ecHours(r.start, r.end);
+      const rec = { employeeId: parseInt(r.employeeId), date: ecSelected, hours, start: r.start || '', end: r.end || '', shift: r.shift, shop: r.shop || '', notes: r.notes || '', dayNotes };
+      const old = r.uid ? EMPLOYEE_HOURS.find(h => h.uid === r.uid) : null;
+      if(old) Object.assign(old, rec);
+      else { const nu = { uid: AureumSync.uid(), id: nextHoursId++, ...rec }; EMPLOYEE_HOURS.push(nu); r.uid = nu.uid; }
     });
-    document.querySelectorAll('.cal-del-entry').forEach(el=>{
-      el.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const hid = parseInt(el.dataset.hid);
-        EMPLOYEE_HOURS = EMPLOYEE_HOURS.filter(h=>h.id!==hid);
-        persistAureum();
-        closeModal('detailModal');
-        renderEmployeeCalendar();
-      });
-    });
+    persistAureum();
+    ecLoadDay(ecSelected);
+    renderEmployeeCalendar();
+    aureumToast ? aureumToast('Schedule saved', 'ok') : null;
+  });
+
+  // time each person was signed in to a shift at the till, per month
+  function tillHoursFor(empId, prefix){
+    let ms = 0;
+    SHIFT_CLOSURES.forEach(c => { const id = c.employeeId != null ? c.employeeId : (EMPLOYEES.find(e => e.name === (c.employeeName || c.employee)) || {}).id; const o = c.openedAt || c.shiftStart, e2 = c.closedAt || c.shiftEnd;
+      if(String(id) === String(empId) && o && e2 && String(o).slice(0,7) === prefix) ms += Math.max(0, new Date(e2) - new Date(o)); });
+    OPEN_SHIFTS.forEach(c => { const id = c.employeeId != null ? c.employeeId : (EMPLOYEES.find(e => e.name === (c.employeeName || c.openedBy)) || {}).id;
+      if(String(id) === String(empId) && c.openedAt && String(c.openedAt).slice(0,7) === prefix) ms += Math.max(0, Date.now() - new Date(c.openedAt)); });
+    return ms / 3600000;
+  }
+  function renderEcSummary(empFilter, year, month){
+    const prefix = `${year}-${ecPad(month+1)}`, t = todayStr();
+    const all = EMPLOYEE_HOURS.filter(h => h.date.startsWith(prefix) && (!empFilter || String(h.employeeId) === empFilter));
+    const worked = all.filter(h => h.date <= t), upcoming = all.filter(h => h.date > t);
+    const sum = a => a.reduce((x,h)=> x + (+h.hours||0), 0);
+    const todayCount = EMPLOYEE_HOURS.filter(h => h.date === t).length;
+    document.getElementById('ecKpis').innerHTML = [
+      ['Hours worked this month', ecHrsFmt(sum(worked))], ['Days worked', new Set(worked.map(h=>h.date)).size], ['Upcoming hours', ecHrsFmt(sum(upcoming))], ['Staff scheduled today', todayCount]
+    ].map(([l,v]) => `<div class="ec-kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+    const by = {};
+    all.forEach(h => { const o = by[h.employeeId] || (by[h.employeeId] = { wd:new Set(), wh:0, ud:new Set(), uh:0 }); if(h.date <= t){ o.wd.add(h.date); o.wh += +h.hours||0; } else { o.ud.add(h.date); o.uh += +h.hours||0; } });
+    EMPLOYEES.forEach(e => { if(!by[e.id] && (!empFilter || String(e.id) === empFilter) && tillHoursFor(e.id, prefix) > 0) by[e.id] = { wd:new Set(), wh:0, ud:new Set(), uh:0 }; });
+    const rows = Object.entries(by).map(([id,o]) => ({ id, name: ecEmpName(id), role: ecEmpRole(id), ...o, till: tillHoursFor(id, prefix) })).sort((a,b)=> b.wh - a.wh || a.name.localeCompare(b.name));
+    document.getElementById('ecSummaryBody').innerHTML = rows.length ? rows.map(r => `<tr><td style="font-weight:600;">${ecEsc(r.name)}</td><td>${ecEsc(r.role) || '—'}</td><td class="mono" style="text-align:right;">${r.wd.size}</td><td class="mono" style="text-align:right;">${ecHrsFmt(r.wh)}</td><td class="mono" style="text-align:right;">${r.ud.size}</td><td class="mono" style="text-align:right;">${ecHrsFmt(r.uh)}</td><td class="mono" style="text-align:right;">${r.till ? ecHrsFmt(r.till) : '—'}</td></tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--sage);">Nothing scheduled or worked this month yet. Pick a day above and add who is working.</td></tr>`;
+    // agenda: every day of the month that has someone on it, newest first for past, soonest first for upcoming
+    const days = [...new Set(all.map(h => h.date))];
+    const up = days.filter(d => d >= t).sort(), past = days.filter(d => d < t).sort().reverse();
+    const dayCard = d => { const ent = all.filter(h => h.date === d).sort((a,b)=> (a.start||'').localeCompare(b.start||'')); const w = ecWhen(d);
+      return `<div class="ec-ag-day" data-date="${d}"><div class="ec-ag-head"><span>${ecLongDate(d)}</span><span><span class="ec-chip ${w}">${w==='past'?'Worked':w==='today'?'Today':'Upcoming'}</span> &nbsp;<span class="mono">${ecHrsFmt(sum(ent))}</span></span></div>`
+        + ent.map(h => `<div class="ec-ag-row"><span><b>${ecEsc(ecEmpName(h.employeeId))}</b> <span class="sub">${ecEsc(ecEmpRole(h.employeeId))}${h.shop ? ' · ' + ecEsc(h.shop) : ''}</span></span><span class="mono">${h.start ? ecTime12(h.start) + ' – ' + ecTime12(h.end) + ' · ' : ''}${ecHrsFmt(h.hours)}${h.shift && h.shift !== 'Custom' ? ' · ' + ecEsc(h.shift) : ''}</span></div>`).join('') + '</div>'; };
+    const ag = document.getElementById('ecAgenda');
+    ag.innerHTML = days.length ? (up.length ? `<div class="field-label" style="margin:0 0 8px;">Today &amp; upcoming</div>` + up.map(dayCard).join('') : '') + (past.length ? `<div class="field-label" style="margin:14px 0 8px;">Past</div>` + past.map(dayCard).join('') : '')
+      : `<div class="ec-empty">No schedule or hours recorded in ${MONTH_NAMES[month]} ${year}.</div>`;
+    ag.querySelectorAll('.ec-ag-day').forEach(el => el.addEventListener('click', ()=>{ ecLoadDay(el.dataset.date); renderEmployeeCalendar(); document.querySelector('.ec-day-card').scrollIntoView({ behavior:'smooth', block:'start' }); }));
   }
 
   function renderEmployees(){
@@ -7015,7 +7274,7 @@ const AureumSync = (function(){
     if(id){
       const e = EMPLOYEES.find(x=>x.id===id);
       document.getElementById('efName').value = e.name;
-      document.getElementById('efRole').value = e.role;
+      setEmployeeRoleField(e.role);
       document.getElementById('efShop').value = e.shop || '';
       document.getElementById('efPhone').value = e.phone || '';
       document.getElementById('efEmail').value = e.email || '';
@@ -7023,7 +7282,7 @@ const AureumSync = (function(){
       setSwitchOn('efActiveToggle', e.active !== false);
     } else {
       document.getElementById('efName').value = '';
-      document.getElementById('efRole').value = 'Cashier';
+      setEmployeeRoleField('Cashier');
       document.getElementById('efShop').value = '';
       document.getElementById('efPhone').value = '';
       document.getElementById('efEmail').value = '';
@@ -7033,6 +7292,19 @@ const AureumSync = (function(){
     switchToEmployeeCreate();
   }
 
+  const STANDARD_ROLES = ['Cashier','Shop Manager','Inventory Clerk','Administrator'];
+  function syncRoleOtherVisibility(){
+    const other = document.getElementById('efRole').value === '__other';
+    document.getElementById('efRoleOther').style.display = other ? '' : 'none';
+    document.getElementById('efRoleOtherNote').style.display = other ? '' : 'none';
+  }
+  function setEmployeeRoleField(role){
+    const std = STANDARD_ROLES.includes(role);
+    document.getElementById('efRole').value = std ? role : '__other';
+    document.getElementById('efRoleOther').value = std ? '' : (role || '');
+    syncRoleOtherVisibility();
+  }
+  document.getElementById('efRole').addEventListener('change', ()=>{ syncRoleOtherVisibility(); if(document.getElementById('efRole').value === '__other') document.getElementById('efRoleOther').focus(); });
   document.getElementById('addEmployeeBtn').addEventListener('click', ()=> openEmployeeForm(null));
   document.getElementById('employeeBackLink').addEventListener('click', switchToEmployeeList);
   document.getElementById('employeeCancelBtn').addEventListener('click', switchToEmployeeList);
@@ -7048,6 +7320,12 @@ const AureumSync = (function(){
       document.getElementById('efName').classList.add('invalid');
       document.getElementById('efName').focus();
       return;
+    }
+    let roleVal = document.getElementById('efRole').value;
+    if(roleVal === '__other'){
+      roleVal = document.getElementById('efRoleOther').value.replace(/\s+/g,' ').trim();
+      if(!roleVal){ alert('Type the role for this employee (for example Driver or Cleaner).'); document.getElementById('efRoleOther').focus(); return; }
+      if(STANDARD_ROLES.some(r => r.toLowerCase() === roleVal.toLowerCase())) roleVal = STANDARD_ROLES.find(r => r.toLowerCase() === roleVal.toLowerCase());
     }
     const email = document.getElementById('efEmail').value.trim();
     if(email && !emailRegex.test(email)){
@@ -7069,7 +7347,7 @@ const AureumSync = (function(){
     }
     const data = {
       name,
-      role: document.getElementById('efRole').value,
+      role: roleVal,
       shop: document.getElementById('efShop').value,
       phone: document.getElementById('efPhone').value.trim(),
       email,
@@ -9950,7 +10228,7 @@ E('forgot-password','Getting started','I forgot my password',
 E('roles','Getting started','What roles are there and what can each do?',
   ['what roles are there','what is the difference between cashier and manager','what can a shop manager do','what can an administrator do','employee roles','what is inventory clerk'],
   'cashier shop manager administrator inventory clerk permissions access rights',
-  `Roles: **Cashier**, **Shop Manager**, **Inventory Clerk** and **Administrator**.\n\nAt the till, **Shop Manager** and **Administrator** are managers: they can always give discounts, change prices, refund, view Today's Sales, close anyone's shift and open the closed-shifts list. Cashiers and Inventory Clerks are limited by the switches in **Settings → Users & Permissions**.`,
+  `Roles: **Cashier**, **Shop Manager**, **Inventory Clerk** and **Administrator** — or **Other…** to type your own (Driver, Cleaner…). Other roles have **no access to POS Checkout**.\n\nAt the till, **Shop Manager** and **Administrator** are managers: they can always give discounts, change prices, refund, view Today's Sales, close anyone's shift and open the closed-shifts list. Cashiers and Inventory Clerks are limited by the switches in **Settings → Users & Permissions**.`,
   ['permissions-settings','add-employee']),
 
 /* ============ DASHBOARD ============ */
@@ -10123,12 +10401,12 @@ E('add-customer','People','How do I add a customer?',
 E('customer-segments','People','What are customer segments (New, Regular, VIP)?',
   ['what is a vip customer','customer segments','how are customers classified','what makes a customer regular','vip customers'],
   'vip regular new segment spent orders lifetime classify',
-  `Segments are automatic: **VIP** = spent **$200 or more**, or **15 or more orders**; **Regular** = spent **$50 or more**, or **3 or more orders**; otherwise **New**.`,
+  `Segments are automatic and change with time: **VIP** = **8+ orders in the last 90 days**; **Regular** = **3+ orders in the last 90 days**; **New** = first order in the last 30 days; **Occasional** = bought within 60 days but less often; **At risk** = last order 61–120 days ago; **Lost** = over 120 days ago; **Inactive** = no orders yet.`,
   ['loyalty-points']),
 E('loyalty-points','People','How do loyalty points work?',
   ['how do loyalty points work','can customers redeem points','loyalty programme','reward points','how do customers earn points'],
   'loyalty points rewards redeem earn spent',
-  `Customers show **one loyalty point per dollar spent**. This is for information only — AUREUM does **not** let customers redeem points at the till.`,
+  `Points follow a fixed rule per order: **1 point per whole $1**, plus a bonus of **+5** for an order of $25+, **+15** for $50+ and **+40** for $100+ (refunded amounts are taken off). This is for information only — AUREUM does **not** let customers redeem points at the till.`,
   ['store-credit','not-available']),
 E('store-credit','People','How does store credit work?',
   ['how does store credit work','add credit to a customer','customer credit balance','gift card','voucher balance','can customers pay with store credit'],
@@ -10242,7 +10520,7 @@ E('shift-left-open','Shifts','A cashier left their shift open',
 E('shift-who-closes','Shifts','Who can close a shift?',
   ['who can close a shift','can a cashier close their shift','manager close shift','permission to close shift'],
   'close permission cashier manager administrator own anyone',
-  `A cashier can close **their own** shift. **Shop Managers and Administrators** can close anyone's shift and can open the **Closed shifts** list.`,
+  `Closing a shift always needs the **PIN of a Shop Manager or Administrator** — a cashier can't close their own shift alone. Managers and Administrators can also close anyone's shift and open the **Closed shifts** list.`,
   ['shift-close']),
 E('sell-basic','The till','How do I make a sale?',
   ['how do i make a sale','how do i sell','ring up a customer','how does checkout work','process a sale','how to use the till'],
