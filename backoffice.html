@@ -237,7 +237,7 @@
   .ec-legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:11.5px; color:var(--sage); margin:-4px 0 12px; }
   .ec-legend span{ display:inline-flex; align-items:center; gap:6px; }
   .ec-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
-  .ec-dot.past{ background:var(--gold-bright); } .ec-dot.today{ background:#fff; box-shadow:0 0 0 2px var(--gold-bright); } .ec-dot.future{ background:#5aa9a3; }
+  .ec-dot.gold{ background:var(--gold-bright); } .ec-dot.past{ background:var(--gold-bright); } .ec-dot.today{ background:#fff; box-shadow:0 0 0 2px var(--gold-bright); } .ec-dot.future{ background:#5aa9a3; }
   .ec-layout{ display:grid; grid-template-columns: minmax(300px, 420px) 1fr; gap:18px; align-items:start; }
   .ec-cal-card, .ec-day-card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
   .ec-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
@@ -247,6 +247,9 @@
   .ec-day.empty{ background:transparent; border-color:transparent; cursor:default; }
   .ec-day .n{ font-size:12px; font-weight:700; color:var(--ivory-dim); }
   .ec-day .c{ font-size:9.5px; line-height:1.2; border-radius:5px; padding:1px 4px; align-self:flex-start; }
+  .ec-day.has{ background:linear-gradient(160deg, #E7C766, #C9A227); border-color:#E7C766; }
+  .ec-day.has .n{ color:#20160A; }
+  .ec-day.has:hover{ filter:brightness(1.08); }
   .ec-day.past .c{ color:var(--gold-bright); background:rgba(201,162,39,.14); }
   .ec-day.future .c{ color:#7fd0ca; background:rgba(90,169,163,.16); }
   .ec-day.today .c{ color:#20160A; background:var(--gold-bright); }
@@ -256,6 +259,9 @@
   .ec-day-title{ font-size:17px; font-weight:700; color:var(--ivory); }
   .ec-day-sub{ font-size:12.5px; color:var(--sage); margin-top:2px; }
   .ec-day-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .ec-agfilter{ display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; }
+  .ec-agfilter .modal-field{ padding:8px 10px; font-size:13px; }
+  .ec-agpresets{ display:flex; gap:8px; flex-wrap:wrap; }
   .ec-row{ border:1px solid var(--line); background:var(--panel-raised); border-radius:12px; padding:12px; margin-bottom:10px; position:relative; }
   .ec-row-grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px 12px; padding-right:26px; }
   .ec-row .field-label{ font-size:10.5px; margin-bottom:4px; }
@@ -2077,7 +2083,7 @@
               <select class="cat-select" id="ecEmployeeFilter"><option value="">All employees</option></select>
             </div>
           </div>
-          <div class="ec-legend"><span><i class="ec-dot past"></i>Worked (past)</span><span><i class="ec-dot today"></i>Today</span><span><i class="ec-dot future"></i>Upcoming</span></div>
+          <div class="ec-legend"><span><i class="ec-dot gold"></i>Team scheduled — tap a gold day to see who works and when</span><span><i class="ec-dot today"></i>Today</span></div>
           <div class="ec-layout">
             <div class="ec-cal-card"><div id="ecGrid" class="ec-grid"></div></div>
             <div class="ec-day-card">
@@ -2113,6 +2119,16 @@
 
           <div class="form-section" style="margin-top:20px;">
             <div class="form-section-title" style="margin-bottom:10px;">Day-by-day — past and upcoming</div>
+            <div class="ec-agfilter">
+              <div><div class="field-label">From</div><input type="date" id="ecAgFrom" class="modal-field"></div>
+              <div><div class="field-label">To</div><input type="date" id="ecAgTo" class="modal-field"></div>
+              <div class="ec-agpresets">
+                <div class="btn-ghost-sm" data-agp="past7">Past 7 days</div>
+                <div class="btn-ghost-sm" data-agp="next7">Next 7 days</div>
+                <div class="btn-ghost-sm" data-agp="month">This month</div>
+                <div class="btn-ghost-sm" data-agp="clear">Shown month</div>
+              </div>
+            </div>
             <div id="ecAgenda"></div>
           </div>
         </div>
@@ -2195,7 +2211,7 @@
         <div class="table-panel">
           <table>
             <thead>
-              <tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th style="text-align:right;">Open POs</th><th style="width:70px;"></th></tr>
+              <tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th style="width:70px;"></th></tr>
             </thead>
             <tbody id="supplierTableBody"></tbody>
           </table>
@@ -2315,6 +2331,10 @@
 
       <div class="filters-bar">
         <div id="acctDateSlot"></div>
+        <div class="filter-field" style="margin-left:auto;">
+          <div class="fl-label">Income tax (%)</div>
+          <input type="number" class="modal-field" id="acctTaxPct" min="0" max="100" step="0.1" value="0" style="width:110px; padding:8px 10px;" title="Used to work out Profit After Tax">
+        </div>
       </div>
 
       <div class="kpi-row" id="acctKpiRow"></div>
@@ -2354,7 +2374,17 @@
         <div><div class="page-title">Reports</div><div class="page-sub">Deeper sales, inventory, and staff analytics.</div></div>
       </div>
 
-      <div class="data-toolbar" id="reportTabs" style="margin-bottom:18px;"></div>
+      <div class="data-toolbar" id="reportTabs" style="margin-bottom:12px;"></div>
+      <div class="data-toolbar" style="margin-bottom:14px;">
+        <div class="btn-ghost-sm popover-anchor" id="reportExportBtn">Export <span class="car">&#9662;</span>
+          <div class="popover export-popover align-left">
+            <div class="shop-opt export-opt" data-fmt="csv" data-source="repInventoryBody" data-filename="report" data-title="Report">Export as CSV</div>
+            <div class="shop-opt export-opt" data-fmt="excel" data-source="repInventoryBody" data-filename="report" data-title="Report">Export as Excel</div>
+            <div class="shop-opt export-opt" data-fmt="pdf" data-source="repInventoryBody" data-filename="report" data-title="Report">Export as PDF</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--sage);">Exports the report you are viewing — every row, not just this page.</div>
+      </div>
 
       <!-- Available inventory -->
       <div class="report-panel active" id="report-inventory">
@@ -4403,7 +4433,9 @@ const AureumSync = (function(){
   let selectedProductIds = new Set();
 
   /* ===== GENERIC PAGINATION (reusable across any long list) ===== */
+  let EXPORT_ALL_ROWS = false;   // while true, lists render every row (used by the exports so they aren't cut to one page)
   function paginateSlice(items, state){
+    if(EXPORT_ALL_ROWS) return items;
     // keep the page number valid FIRST (a filter can shrink the list while you're on a later page)
     const pages = Math.max(1, Math.ceil(items.length / state.pageSize));
     if(state.page > pages) state.page = pages;
@@ -7079,6 +7111,16 @@ const AureumSync = (function(){
   document.getElementById('ecNext').addEventListener('click', ()=>{ ecMonth = new Date(ecMonth.getFullYear(), ecMonth.getMonth()+1, 1); renderEmployeeCalendar(); });
   document.getElementById('ecToday').addEventListener('click', ()=>{ ecMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1); ecLoadDay(todayStr()); renderEmployeeCalendar(); });
   document.getElementById('ecEmployeeFilter').addEventListener('change', renderEmployeeCalendar);
+  ['ecAgFrom','ecAgTo'].forEach(id => document.getElementById(id).addEventListener('change', renderEmployeeCalendar));
+  document.querySelectorAll('[data-agp]').forEach(b => b.addEventListener('click', ()=>{
+    const d0 = new Date(), iso = d => `${d.getFullYear()}-${ecPad(d.getMonth()+1)}-${ecPad(d.getDate())}`, add = n => { const d = new Date(); d.setDate(d.getDate()+n); return d; };
+    const p = b.dataset.agp, from = document.getElementById('ecAgFrom'), to = document.getElementById('ecAgTo');
+    if(p === 'past7'){ from.value = iso(add(-7)); to.value = iso(d0); }
+    else if(p === 'next7'){ from.value = iso(d0); to.value = iso(add(7)); }
+    else if(p === 'month'){ from.value = iso(new Date(d0.getFullYear(), d0.getMonth(), 1)); to.value = iso(new Date(d0.getFullYear(), d0.getMonth()+1, 0)); }
+    else { from.value = ''; to.value = ''; }
+    renderEmployeeCalendar();
+  }));
 
   function renderEmployeeCalendar(){
     populateEcEmployeeFilter();
@@ -7093,11 +7135,26 @@ const AureumSync = (function(){
       const ds = ecDateStr(year, month, d), when = ecWhen(ds);
       const ent = EMPLOYEE_HOURS.filter(h => h.date === ds && (!empFilter || String(h.employeeId) === empFilter));
       const hrs = ent.reduce((t,h)=> t + (+h.hours||0), 0);
-      cells += `<div class="ec-day ${when} ${ds===ecSelected?'sel':''}" data-date="${ds}"><div class="n">${d}</div>${ent.length ? `<div class="c">${ent.length} · ${ecHrsFmt(hrs)}</div>` : ''}</div>`;
+      cells += `<div class="ec-day ${when} ${ent.length?'has':''} ${ds===ecSelected?'sel':''}" data-date="${ds}" title="${ent.length ? ent.length + ' scheduled' : 'Nobody scheduled'}"><div class="n">${d}</div></div>`;
     }
     const grid = document.getElementById('ecGrid'); grid.innerHTML = cells;
-    grid.querySelectorAll('.ec-day[data-date]').forEach(el => el.addEventListener('click', ()=>{ ecLoadDay(el.dataset.date); renderEmployeeCalendar(); }));
+    grid.querySelectorAll('.ec-day[data-date]').forEach(el => el.addEventListener('click', ()=>{ ecLoadDay(el.dataset.date); renderEmployeeCalendar(); showEcDayList(el.dataset.date); }));
     renderEcDay(); renderEcSummary(empFilter, year, month);
+  }
+
+  /* tap a day → who is working and when */
+  function showEcDayList(ds){
+    const empFilter = document.getElementById('ecEmployeeFilter').value;
+    const ent = EMPLOYEE_HOURS.filter(h => h.date === ds && (!empFilter || String(h.employeeId) === empFilter)).sort((a,b)=> (a.start||'').localeCompare(b.start||'') || a.id - b.id);
+    const when = ecWhen(ds);
+    const body = ent.length ? `<div style="font-size:12.5px;color:var(--sage);margin-bottom:10px;">${when==='past'?'Worked':when==='today'?'Today':'Upcoming'} · ${ent.length} ${ent.length===1?'person':'people'} · ${ecHrsFmt(ent.reduce((t,h)=>t+(+h.hours||0),0))} in total</div>`
+      + ent.map(h => `<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);">
+          <div><div style="font-weight:700;">${ecEsc(ecEmpName(h.employeeId))}</div><div style="font-size:12px;color:var(--sage);">${ecEsc(ecEmpRole(h.employeeId))}${h.shop ? ' · ' + ecEsc(h.shop) : ''}</div></div>
+          <div class="mono" style="text-align:right;white-space:nowrap;"><div>${h.start ? ecTime12(h.start) + ' – ' + ecTime12(h.end) : 'Hours only'}</div><div style="font-size:12px;color:var(--gold-bright);">${ecHrsFmt(h.hours)}${h.shift && h.shift !== 'Custom' ? ' · ' + ecEsc(h.shift) : ''}</div></div></div>`).join('')
+      + ((ent.find(h => h.dayNotes) || {}).dayNotes ? `<div style="margin-top:10px;font-size:12.5px;color:var(--sage);">Notes: ${ecEsc(ent.find(h => h.dayNotes).dayNotes)}</div>` : '')
+      : `<div style="padding:8px 0;color:var(--sage);">Nobody is scheduled on this day yet.</div>`;
+    openDetailModal(ecLongDate(ds), body, `<div class="modal-btn ghost" data-close="detailModal">Close</div><div class="modal-btn solid" id="ecEditFromList">${ent.length ? 'Edit schedule' : 'Add schedule'}</div>`);
+    document.getElementById('ecEditFromList').addEventListener('click', ()=>{ closeModal('detailModal'); const c = document.querySelector('.ec-day-card'); if(c) c.scrollIntoView({ behavior:'smooth', block:'start' }); if(!ent.length) document.getElementById('ecAddRow').click(); });
   }
 
   function renderEcDay(){
@@ -7111,7 +7168,7 @@ const AureumSync = (function(){
       const hrs = r.hoursOnly != null ? r.hoursOnly : ecHours(r.start, r.end);
       return `<div class="ec-row" data-i="${i}">
         <div class="ec-row-grid">
-          <div><div class="field-label">Name</div><select class="modal-select ec-f" data-k="employeeId"><option value="">Select employee</option>${pool.map(e=>`<option value="${e.id}" ${String(e.id)===String(r.employeeId)?'selected':''}>${ecEsc(e.name)}</option>`).join('')}</select></div>
+          <div><div class="field-label">Name</div><input type="text" class="modal-field ec-name" list="ecStaffList" autocomplete="off" placeholder="Type or pick a name" value="${ecEsc(r.employeeId ? ecEmpName(r.employeeId) : (r.nameText || ''))}"></div>
           <div><div class="field-label">Role</div><input class="modal-field" value="${ecEsc(ecEmpRole(r.employeeId))}" placeholder="Role / position" readonly tabindex="-1"></div>
           <div><div class="field-label">Shop name</div><select class="modal-select ec-f" data-k="shop"><option value="">${shops.length ? 'Select shop' : 'No shops yet'}</option>${shops.map(s=>`<option ${s===r.shop?'selected':''}>${ecEsc(s)}</option>`).join('')}${r.shop && !shops.includes(r.shop) ? `<option selected>${ecEsc(r.shop)}</option>` : ''}</select></div>
           <div><div class="field-label">Start time</div><input type="time" class="modal-field ec-f" data-k="start" value="${ecEsc(r.start)}"></div>
@@ -7122,8 +7179,23 @@ const AureumSync = (function(){
         <div class="ec-rm" data-rm="${i}" title="Remove from this day"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></div>
       </div>`;
     }).join('') || `<div class="ec-empty">No one is scheduled for this day yet.<br>Press <b>Add employee</b> to start.</div>`;
-    const box = document.getElementById('ecRows'); box.innerHTML = rowsHtml;
+    const box = document.getElementById('ecRows'); box.innerHTML = `<datalist id="ecStaffList">${staff.map(e=>`<option value="${ecEsc(e.name)}">${ecEsc(e.role)}</option>`).join('')}</datalist>` + rowsHtml;
     updateEcTotal();
+    box.querySelectorAll('.ec-name').forEach(el => {
+      const apply = commit => {
+        const i = +el.closest('.ec-row').dataset.i, r = ecRows[i], q = el.value.replace(/\s+/g,' ').trim().toLowerCase();
+        const exact = staff.filter(e => e.name.toLowerCase() === q);
+        const part = q ? staff.filter(e => e.name.toLowerCase().includes(q)) : [];
+        const m = exact.length === 1 ? exact[0] : (commit && part.length === 1 ? part[0] : null);   // a unique partial match is accepted when you leave the box
+        r.nameText = el.value;
+        if(m){ r.employeeId = m.id; if(!r.shop && m.shop) r.shop = m.shop; el.value = m.name; el.classList.remove('invalid');
+          const row = el.closest('.ec-row'); row.querySelector('input[readonly]').value = m.role || ''; const sh = row.querySelector('[data-k=shop]'); if(sh && r.shop) sh.value = r.shop; }
+        else { r.employeeId = ''; el.classList.toggle('invalid', commit && !!q); }
+      };
+      el.addEventListener('input', ()=> apply(false));
+      el.addEventListener('change', ()=> apply(true));
+      el.addEventListener('blur', ()=> apply(true));
+    });
     box.querySelectorAll('.ec-f').forEach(el => el.addEventListener('change', onEcField));
     box.querySelectorAll('.ec-f[type=time]').forEach(el => el.addEventListener('input', onEcField));
     box.querySelectorAll('[data-rm]').forEach(el => el.addEventListener('click', ()=>{ ecRows.splice(+el.dataset.rm, 1); renderEcDay(); }));
@@ -7167,7 +7239,7 @@ const AureumSync = (function(){
   document.getElementById('ecSave').addEventListener('click', ()=>{
     const seen = new Set();
     for(const r of ecRows){
-      if(!r.employeeId){ alert('Choose an employee for every row (or remove the empty row).'); return; }
+      if(!r.employeeId){ alert(r.nameText ? `“${r.nameText}” isn't in your employee list. Pick a name from the list (add them under Employee List first).` : 'Type or choose an employee for every row (or remove the empty row).'); return; }
       if(seen.has(String(r.employeeId))){ alert(`${ecEmpName(r.employeeId)} is on this day twice. Keep one row per person (use the start and end time for the full shift).`); return; }
       seen.add(String(r.employeeId));
       const h = r.hoursOnly != null ? r.hoursOnly : ecHours(r.start, r.end);
@@ -7213,16 +7285,18 @@ const AureumSync = (function(){
     const rows = Object.entries(by).map(([id,o]) => ({ id, name: ecEmpName(id), role: ecEmpRole(id), ...o, till: tillHoursFor(id, prefix) })).sort((a,b)=> b.wh - a.wh || a.name.localeCompare(b.name));
     document.getElementById('ecSummaryBody').innerHTML = rows.length ? rows.map(r => `<tr><td style="font-weight:600;">${ecEsc(r.name)}</td><td>${ecEsc(r.role) || '—'}</td><td class="mono" style="text-align:right;">${r.wd.size}</td><td class="mono" style="text-align:right;">${ecHrsFmt(r.wh)}</td><td class="mono" style="text-align:right;">${r.ud.size}</td><td class="mono" style="text-align:right;">${ecHrsFmt(r.uh)}</td><td class="mono" style="text-align:right;">${r.till ? ecHrsFmt(r.till) : '—'}</td></tr>`).join('')
       : `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--sage);">Nothing scheduled or worked this month yet. Pick a day above and add who is working.</td></tr>`;
-    // agenda: every day of the month that has someone on it, newest first for past, soonest first for upcoming
-    const days = [...new Set(all.map(h => h.date))];
+    // agenda: its own date range (From/To) — blank means the month shown above
+    const agFrom = document.getElementById('ecAgFrom').value, agTo = document.getElementById('ecAgTo').value;
+    const agRange = (agFrom || agTo) ? EMPLOYEE_HOURS.filter(h => (!agFrom || h.date >= agFrom) && (!agTo || h.date <= agTo) && (!empFilter || String(h.employeeId) === empFilter)) : all;
+    const days = [...new Set(agRange.map(h => h.date))];
     const up = days.filter(d => d >= t).sort(), past = days.filter(d => d < t).sort().reverse();
-    const dayCard = d => { const ent = all.filter(h => h.date === d).sort((a,b)=> (a.start||'').localeCompare(b.start||'')); const w = ecWhen(d);
+    const dayCard = d => { const ent = agRange.filter(h => h.date === d).sort((a,b)=> (a.start||'').localeCompare(b.start||'')); const w = ecWhen(d);
       return `<div class="ec-ag-day" data-date="${d}"><div class="ec-ag-head"><span>${ecLongDate(d)}</span><span><span class="ec-chip ${w}">${w==='past'?'Worked':w==='today'?'Today':'Upcoming'}</span> &nbsp;<span class="mono">${ecHrsFmt(sum(ent))}</span></span></div>`
         + ent.map(h => `<div class="ec-ag-row"><span><b>${ecEsc(ecEmpName(h.employeeId))}</b> <span class="sub">${ecEsc(ecEmpRole(h.employeeId))}${h.shop ? ' · ' + ecEsc(h.shop) : ''}</span></span><span class="mono">${h.start ? ecTime12(h.start) + ' – ' + ecTime12(h.end) + ' · ' : ''}${ecHrsFmt(h.hours)}${h.shift && h.shift !== 'Custom' ? ' · ' + ecEsc(h.shift) : ''}</span></div>`).join('') + '</div>'; };
     const ag = document.getElementById('ecAgenda');
     ag.innerHTML = days.length ? (up.length ? `<div class="field-label" style="margin:0 0 8px;">Today &amp; upcoming</div>` + up.map(dayCard).join('') : '') + (past.length ? `<div class="field-label" style="margin:14px 0 8px;">Past</div>` + past.map(dayCard).join('') : '')
-      : `<div class="ec-empty">No schedule or hours recorded in ${MONTH_NAMES[month]} ${year}.</div>`;
-    ag.querySelectorAll('.ec-ag-day').forEach(el => el.addEventListener('click', ()=>{ ecLoadDay(el.dataset.date); renderEmployeeCalendar(); document.querySelector('.ec-day-card').scrollIntoView({ behavior:'smooth', block:'start' }); }));
+      : `<div class="ec-empty">${(agFrom || agTo) ? 'No schedule or hours recorded in that date range.' : `No schedule or hours recorded in ${MONTH_NAMES[month]} ${year}.`}</div>`;
+    ag.querySelectorAll('.ec-ag-day').forEach(el => el.addEventListener('click', ()=>{ ecLoadDay(el.dataset.date); renderEmployeeCalendar(); showEcDayList(el.dataset.date); }));
   }
 
   function renderEmployees(){
@@ -7388,7 +7462,10 @@ const AureumSync = (function(){
       });
     });
   }
+  const REPORT_EXPORT = { inventory:['repInventoryBody','available-inventory','Available Inventory'], valuation:['repValuationBody','inventory-valuation','Inventory Valuation'], summary:['repSummaryBody','inventory-summary','Inventory Summary'], lowstock:['repLowStockBody','low-stock','Low Stock'], staff:['repStaffBody','staff-snapshot','Staff Snapshot'], shifts:['repClosedShiftsBody','closed-shifts','Closed Shifts'] };
   function showReportPanel(){
+    const ex = REPORT_EXPORT[activeReportTab];
+    if(ex) document.querySelectorAll('#reportExportBtn .export-opt').forEach(o=>{ o.dataset.source = ex[0]; o.dataset.filename = ex[1]; o.dataset.title = ex[2]; });
     document.querySelectorAll('.report-panel').forEach(p=> p.classList.toggle('active', p.id === 'report-' + activeReportTab));
   }
   function renderActiveReport(){
@@ -7689,14 +7766,24 @@ const AureumSync = (function(){
   });
 
   /* ===== EXPORT / IMPORT WIRING ===== */
+  const EXPORT_RENDERERS = { productTableBody:()=>renderProducts(), sbpBody:()=>renderSalesByProduct(), rcpTableBody:()=>renderReceiptsTable(), poTableBody:()=>renderPOTable(), grnTableBody:()=>renderGRNTable(), stockAdjTableBody:()=>renderStockAdjTable(), transferTableBody:()=>renderTransfers(),
+    repInventoryBody:()=>renderReportInventory(), repValuationBody:()=>renderReportValuation(), repSummaryBody:()=>renderReportSummary(), repLowStockBody:()=>renderReportLowStock(), repClosedShiftsBody:()=>renderReportShifts(), repStaffBody:()=>renderReportStaff() };
+  function withAllRows(source, fn){
+    const r = EXPORT_RENDERERS[source];
+    if(!r){ fn(); return; }
+    EXPORT_ALL_ROWS = true;
+    try{ r(); fn(); } finally { EXPORT_ALL_ROWS = false; try{ r(); }catch(e){} }
+  }
   document.querySelectorAll('.export-opt').forEach(opt=>{
     opt.addEventListener('click', (e)=>{
       e.stopPropagation();
       try{
         const { source, filename, fmt, title } = opt.dataset;
-        if(fmt === 'csv') exportTableToCSV(source, filename + '.csv');
-        else if(fmt === 'excel') exportTableToExcel(source, filename, title || filename);
-        else exportTableToPDF(source, filename, title || filename);
+        withAllRows(source, ()=>{
+          if(fmt === 'csv') exportTableToCSV(source, filename + '.csv');
+          else if(fmt === 'excel') exportTableToExcel(source, filename, title || filename);
+          else exportTableToPDF(source, filename, title || filename);
+        });
       }catch(err){
         console.error('Export failed:', err);
         alert('Export failed: ' + err.message + '\n\nPlease screenshot this and send it to support.');
@@ -8685,17 +8772,15 @@ const AureumSync = (function(){
     const q = (document.getElementById('supplierSearch').value||'').trim().toLowerCase();
     const items = SUPPLIERS.filter(s=> q==='' || s.name.toLowerCase().includes(q));
     if(items.length===0){
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:48px 20px;color:var(--sage);">No suppliers yet. Add your first supplier to link them to purchase orders.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:48px 20px;color:var(--sage);">No suppliers yet. Add your first supplier to link them to purchase orders.</td></tr>`;
       return;
     }
     tbody.innerHTML = items.map(s=>{
-      const openPOs = PURCHASE_ORDERS.filter(po=>po.supplier===s.name && po.status!=='Completed').length;
       return `<tr data-id="${s.id}" style="cursor:pointer;">
         <td style="font-weight:600;">${s.name}</td>
         <td>${s.phone||'—'}</td>
         <td>${s.email||'—'}</td>
         <td>${s.address||'—'}</td>
-        <td class="mono" style="text-align:right;">${openPOs}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
             <div class="icon-btn-sm" data-act="edit" data-id="${s.id}" title="Edit">&#9998;</div>
@@ -9031,13 +9116,18 @@ const AureumSync = (function(){
     const grossProfit = revenue - cogs;
     const rangeExpenses = expensesInRange(acctDateState);
     const totalOpex = rangeExpenses.reduce((s,e)=>s+e.amount,0);
-    const netIncome = grossProfit - totalOpex;
+    const netIncome = grossProfit - totalOpex;              // profit before tax
+    const taxPct = Math.max(0, Math.min(100, Number(POS_SETTINGS.incomeTaxPercent) || 0));
+    const incomeTax = netIncome > 0 ? netIncome * taxPct / 100 : 0;   // no tax is charged on a loss
+    const profitAfterTax = netIncome - incomeTax;
+    { const ti = document.getElementById('acctTaxPct'); if(ti && document.activeElement !== ti) ti.value = taxPct; }
 
     document.getElementById('acctKpiRow').innerHTML = `
       <div class="kpi-card"><div class="lbl"><span>Revenue</span></div><div class="val green">$${revenue.toFixed(2)}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Cost of revenue</span></div><div class="val red">$${cogs.toFixed(2)}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Operating expenses</span></div><div class="val">$${totalOpex.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Net income</span></div><div class="val" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Profit before tax</span></div><div class="val" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Profit after tax${taxPct ? ' (' + taxPct + '%)' : ''}</span></div><div class="val" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">$${profitAfterTax.toFixed(2)}</div></div>
     `;
 
     document.getElementById('acctIncomeStatement').innerHTML = `
@@ -9045,7 +9135,9 @@ const AureumSync = (function(){
       <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Cost of revenue</div><div class="pct" style="color:var(--danger);">-$${cogs.toFixed(2)}</div></div>
       <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Gross profit</div><div class="pct" style="color:var(--blue);">$${grossProfit.toFixed(2)}</div></div>
       <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Operating expenses</div><div class="pct">-$${totalOpex.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Net income</div><div class="pct" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Profit before tax</div><div class="pct" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Income tax (${taxPct}%)</div><div class="pct">-$${incomeTax.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Profit after tax</div><div class="pct" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">$${profitAfterTax.toFixed(2)}</div></div>
     `;
 
     const tbody = document.getElementById('expenseTableBody');
@@ -9163,6 +9255,12 @@ const AureumSync = (function(){
   // Note: expenses can no longer be deleted — see the edit-only handler above.
 
   document.getElementById('addExpenseBtn').addEventListener('click', ()=> openExpenseModal(null));
+  document.getElementById('acctTaxPct').addEventListener('input', function(){
+    let v = parseFloat(this.value); if(isNaN(v) || v < 0) v = 0; if(v > 100) v = 100;
+    POS_SETTINGS.incomeTaxPercent = v;
+    persistAureum();
+    renderAccountingData();
+  });
 
   /* ===== DASHBOARD: SALES BY EMPLOYEE & PAYMENT TYPE ===== */
   function receiptsForDashboardPeriod(){
@@ -9583,7 +9681,7 @@ const AureumSync = (function(){
      internet and no subscription. It can't see or change the business's data. When it isn't sure, it says so and offers a
      support ticket. Tickets go to the AUREUM team through database functions that check who you are. */
   const HELP_WELCOME = "Hi! I'm **AUREUM Bot**, the built-in guide. Ask me how to do something in AUREUM, or pick a topic below. I'm not a live AI and I can't see or change your shop's data — if I can't answer, I'll help you send a ticket to the AUREUM team.";
-  let helpChat = { messages:[], busy:false, lastId:null, topic:null }, helpFromPage = '', helpFromKey = '';
+  let helpChat = { messages:[], busy:false, lastId:null, topic:null, lastType:null, misses:0 }, helpFromPage = '', helpFromKey = '';
   const helpKey = () => 'aureum_help_chat_' + (currentBusinessId || 'x');
   function loadHelpChat(){ try{ const j = JSON.parse(sessionStorage.getItem(helpKey()) || 'null'); if(j && Array.isArray(j.messages)){ helpChat.messages = j.messages.slice(-40); helpChat.lastId = j.lastId || null; } }catch(e){} }
   function saveHelpChat(){ try{ sessionStorage.setItem(helpKey(), JSON.stringify({ messages: helpChat.messages.slice(-40), lastId: helpChat.lastId })); }catch(e){} }
@@ -9619,7 +9717,7 @@ const AureumSync = (function(){
     log.innerHTML = `<div class="chat-msg bot">${chatHtml(HELP_WELCOME)}</div>` + msgs.map((m, i) => {
       if(m.role === 'user') return `<div class="chat-msg me">${escHtml(m.content)}</div>`;
       const showFb = (m.type === 'answer' || m.type === 'maybe') && !m.fb && i === msgs.length - 1;
-      return `<div class="chat-msg ${m.type === 'none' || m.type === 'human' || m.type === 'sorry' ? 'err' : 'bot'}">${chatHtml(m.content)}
+      return `<div class="chat-msg ${m.type === 'none' || m.type === 'human' ? 'err' : 'bot'}">${chatHtml(m.content)}
         ${m.choices && m.choices.length ? `<div class="chips">${chips(m.choices, 'data-ask')}</div>` : ''}
         ${m.related && m.related.length ? `<div class="rel">Related:</div><div class="chips">${chips(m.related, 'data-ask')}</div>` : ''}
         ${showFb ? '<div class="fb">Did this answer your question? <button type="button" class="fb-btn fb-yes">Yes, thanks</button><button type="button" class="fb-btn fb-no">Not really</button></div>' : ''}
@@ -9646,6 +9744,8 @@ const AureumSync = (function(){
     setTimeout(() => {
       helpChat.messages.push({ role:'assistant', content:r.text, type:r.type, id:r.id || null, related:r.related || [], choices:r.choices || [], ticket:!!r.ticket });
       if(r.id && (r.type === 'answer' || r.type === 'maybe' || r.type === 'related')) helpChat.lastId = r.id;
+      helpChat.lastType = r.type;
+      helpChat.misses = (r.type === 'none' || r.type === 'sorry') ? (helpChat.misses || 0) + 1 : 0;   // two misses in a row → then offer the team
       helpChat.busy = false; saveHelpChat(); renderChat();
     }, 380);
   }
@@ -9654,7 +9754,7 @@ const AureumSync = (function(){
     if(!text || helpChat.busy) return;
     helpChat.messages.push({ role:'user', content:text }); helpChat.topic = null; saveHelpChat();
     document.getElementById('chatInput').value = '';
-    botSays(getBot().reply(text, { page: helpFromKey || currentPageKey(), lastId: helpChat.lastId }));
+    botSays(getBot().reply(text, { page: helpFromKey || currentPageKey(), lastId: helpChat.lastId, lastType: helpChat.lastType, misses: helpChat.misses }));
   }
   function askEntry(id, title){
     if(helpChat.busy) return;
@@ -9665,12 +9765,12 @@ const AureumSync = (function(){
     if(helpChat.busy) return;
     const last = helpChat.messages[helpChat.messages.length - 1]; if(last) last.fb = kind;
     helpChat.messages.push({ role:'user', content: kind === 'yes' ? 'Yes, thanks' : 'Not really' });
-    botSays(getBot().reply(kind, { lastId: helpChat.lastId }));
+    botSays(getBot().reply(kind, { lastId: helpChat.lastId, lastType: helpChat.lastType, misses: helpChat.misses }));
   }
   document.getElementById('chatSend').addEventListener('click', () => sendChat(document.getElementById('chatInput').value));
   document.getElementById('chatInput').addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(e.target.value); } });
   document.getElementById('chatSend').addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); sendChat(document.getElementById('chatInput').value); } });
-  document.getElementById('chatNew').addEventListener('click', e => { e.preventDefault(); helpChat.messages = []; helpChat.lastId = null; helpChat.topic = null; saveHelpChat(); renderChat(); });
+  document.getElementById('chatNew').addEventListener('click', e => { e.preventDefault(); helpChat.messages = []; helpChat.lastId = null; helpChat.topic = null; helpChat.lastType = null; helpChat.misses = 0; saveHelpChat(); renderChat(); });
   document.getElementById('chatToTicket').addEventListener('click', e => { e.preventDefault(); openTicketForm({ fromChat:true }); });
 
   /* ----- tabs ----- */
@@ -10885,7 +10985,7 @@ const DIRECT = [
 ];
 const RX = {
   greet: /^(hi|hello|hey|hie|howdy|yo|hiya|good (morning|afternoon|evening|day)|greetings)( there| aureum)?$/,
-  thanks: /^(ok |okay |great |cool )?(thanks|thank you|thankyou|thx|cheers|much appreciated|awesome|perfect|brilliant|nice one|great)( a lot| so much| very much| again)?$/,
+  thanks: /^(ok |okay |great |cool |alright )?(thanks|thank you|thankyou|thx|ty|cheers|much appreciated|awesome|perfect|brilliant|nice one|great|wonderful|lovely)( a lot| so much| very much| again| mate| bot)?( that helped| that worked| that was helpful| thats helpful| that is helpful| it helped| it worked)?$|^(that|it) (helped|worked|is helpful|was helpful|makes sense)( thanks| thank you)?$/,
   bye: /^(bye|goodbye|good bye|see you|cya|that is all|thats all)$/,
   yes: /^(yes|yeah|yep|yup|sure|ok|okay|it did|that helped|that worked|helpful|got it|it helped|solved)( thanks| thank you)?$/,
   no: /^(no|nope|nah|not really|that didnt help|didnt help|not what i asked|not helpful|still stuck|still problem|doesnt help)$/,
@@ -10894,6 +10994,26 @@ const RX = {
   aboutFirst: /^(are you|r u|are u|who are you|what are you|do you use ai|is this ai)\b/,
   company: /\b(founded|founder|who (made|built|created|owns|owner|runs)|which company|headquarter|where (are|is) (you|aureum) (based|located)|company (name|address|number|registration)|how old is aureum|encrypt|encryption|gdpr|privacy policy|terms (and|&) conditions|security certificate)\b/,
   more: /^(more|tell me more|more details|details|explain|explain more|elaborate|go on|and|what else|how|why|steps|next|then what)$/
+};
+/* ---- everyday conversation: the Bot understands ordinary chat, corrections and "no, that's all" instead of treating everything as a help question ---- */
+const CONV = {
+  closure: /^(no ?|nope ?|nah ?)?(ok |okay |alright |thanks |thank you )?(thats|that is|its|it is)?( all| it| fine| ok| okay| enough| good| great| everything| alright| all good| all i need| all for now)( for now| thanks| thank you| for today)?$|^(nothing|nothing else|nope nothing|nothing more|no more|no more questions|no questions|no thanks|no thank you|not now|maybe later|never ?mind|nevermind|forget it|dont worry|dont worry about it|its fine|no worries|no problem|all good|all done|im good|im fine|im all good|im done|i am done|i am good|that will be all|thats everything|im okay|i am okay)( thanks| thank you| for now| bot)?$|^no ?(thats|that is) (all|it|fine|ok|okay|enough|everything)( thanks)?$/,
+  nothat: /^(no ?|nope ?|nah ?)?(thats|that is|its|it is)$/,
+  wrong: /^(no ?|nope ?|nah ?)?(thats|that is|it is|its|this is) (not|wrong|incorrect|not right|not it|not correct|not what (i|we) (asked|meant|wanted|said|need|needed|am looking for)|not helpful|not useful|irrelevant|unrelated|different)|^not (that|this|it|what i (asked|meant|wanted|said))|^(no ?)?(wrong|incorrect|wrong answer|not correct|not right)$|^(you )?(misunderstood|dont understand|didnt understand|did not understand|are confused|got it wrong|got that wrong|missed it|misread)|^no (i|we) (meant|mean|asked|wanted|said|need|am asking)$|^(that|this) (doesnt|does not|didnt|did not) (help|work|answer|make sense)|^that is not (what|it)/,
+  confused: /^(what|huh|hm+|sorry what|come again|i dont (understand|get it|follow)|i do not understand|im (confused|lost|stuck)|i am (confused|lost|stuck)|confusing|this is confusing|say that again|say it again|can you (explain|say|put) (that |it )?(again|differently|simpler|more simply|in simple terms|another way)|explain (that |it )?(again|simpler|differently|more simply|in simple terms|another way)|simpler|in simple terms|dumb it down|make it simple|too complicated|too long|what do you mean|what does that mean|i dont know what that means)$/,
+  frustrated: /\b(useless|stupid|dumb|rubbish|nonsense|terrible|awful|hate (this|you|it)|annoying|annoyed|waste of (my )?time|you suck|bad bot|worst|garbage|ridiculous|pathetic|frustrat|you are not (helping|helpful)|youre not (helping|helpful)|not helping|cant help|cannot help|unhelpful)\b/,
+  howare: /^(how are you|how are you doing|how r u|how are u|hows it going|how is it going|hows your day|how is your day|whats up|what is up|sup|wassup|you good|are you ok|are you okay|how do you do|how have you been)( today| bot)?$/,
+  name: /^(whats|what is) your name$|^(do you have a name|who named you|what should i call you)$/,
+  compliment: /^(you are |youre |ur )?(so |very |really |quite )?(great|good|smart|clever|amazing|awesome|helpful|brilliant|wonderful|the best|nice|cool|fantastic|excellent|impressive)( bot| helper| guide)?$|^(good|great|nice|well|lovely|excellent) (bot|job|work|answer|one|stuff)$|^(well done|love it|love this|i love this|that was great|that was helpful|you rock|you are a star|thats great|thats helpful|thats perfect|that helps|that was perfect)$/,
+  sorry: /^(sorry|my bad|oops|oh sorry|apologies|my mistake|whoops)( about that)?$/,
+  hold: /^(wait|hold on|one sec|one second|just a sec|just a second|give me a (sec|second|moment|minute)|hang on|hmm+|um+|uh+|er+|let me think|thinking|ok wait|wait a (sec|second|moment|minute))$/,
+  laugh: /^(lol|lmao|haha+|hehe+|funny|rofl|that is funny|thats funny|lol thanks)$/,
+  test: /^(test|testing|test test|are you there|you there|anyone there|hello are you there|is anyone there|are you working|are you awake)$/,
+  okay: /^(ok|okay|k|kk|alright|all right|right|cool|fine|sure|i see|understood|noted|got it|i get it|makes sense|sounds good|ill try|i will try|ok ill try|ok i will try|will do|great ill try that)$/,
+  needhelp: /^(can|could|may) (i|you) (ask|help)( you| me)?( something| a question| with something| please)?$|^i (have|got) (a |another )?(question|problem|issue|query)$|^i need (some |your )?help( please)?$|^(help|help me|help please|please help|please help me|question|a question|another question|one more question|i have another question|i have one more question|can i ask)$|^(can|could) you help( me)?( please)?$|^(i )?(want|need) to ask( something| a question)?$/,
+  clock: /^(what( is|s) the )?(time|date|day|weather)( now| today| is it)?$|^what time is it$|^what day is it$|^whats the weather$|^(tell me a )?joke$|^sing( a song)?$/,
+  stillthere: /^(still there|are you still there|hello\?|helloo+)$/,
+  yesplain: /^(yes|yeah|yep|yup|sure|ok|okay|please|yes please|go on|go ahead|ok go on)$/
 };
 function create(lib, opts){
   opts = opts || {};
@@ -10956,15 +11076,46 @@ function create(lib, opts){
     const norm = words(text).join(' ');
     const mk = (type, t, extra) => Object.assign({ type, text: t, id: null, related: [], choices: [], ticket: false, confidence: 1 }, extra || {});
     if(!norm) return mk('empty', 'Type a question about using AUREUM, or pick a topic below.', { confidence: 0 });
+    const talk = (t, extra) => mk('conv', t, extra || {});
+    const popular = () => (lib.POPULAR || []).map(id => brief(id)).filter(Boolean).slice(0, 4);
+    const misses = ctx.misses || 0, lastBotAsked = ['thanks','greeting','conv'].includes(ctx.lastType);
+    // 1. "no, that's all" / "nothing else" / "I'm good" — the person is simply finished
+    if(CONV.closure.test(norm) && !(ctx.lastId && /^(no|nope|nah)$/.test(norm) && !lastBotAsked)) return talk("No problem! I'm here whenever you need me.");
+    if(/^(no|nope|nah)$/.test(norm) && lastBotAsked) return talk("Alright! Just type a question whenever you need me.");
+    if(CONV.nothat.test(norm)) return talk("Okay! If that wasn't what you were after, tell me a little more about what you're trying to do and I'll try again.", { choices: popular() });
+    // 2. "that's not what I asked" — apologise, ask them to say it another way (no ticket on the first miss)
+    if(CONV.wrong.test(norm)){
+      const e = ctx.lastId ? byId.get(ctx.lastId) : null, alts = e ? related(e).slice(0, 3) : [];
+      return mk('sorry', "Sorry, I probably misunderstood. Could you tell me in a few words what you're trying to do? For example *\"add a product\"* or *\"close a shift\"*." + (alts.length ? ' Or maybe one of these is closer:' : ''), { related: alts, choices: alts.length ? [] : popular(), ticket: misses >= 1, confidence: 0 });
+    }
+    if(CONV.frustrated.test(norm)) return mk('sorry', "I'm sorry I'm not being much help. Tell me in a few words what you're trying to do and I'll try again — or I can pass it to the AUREUM team.", { ticket: true, choices: popular(), confidence: 0 });
+    if(CONV.confused.test(norm)){
+      const e = ctx.lastId ? byId.get(ctx.lastId) : null;
+      if(e) return pack('answer', e, { text: "No problem — let me say it again, step by step:\n\n" + ans(e) });
+      return talk("Sorry, I'm not sure what you mean yet. What are you trying to do in AUREUM? A few words is enough.", { choices: popular() });
+    }
+    if(CONV.howare.test(norm)) return talk("I'm doing well, thanks for asking! What can I help you with in AUREUM today?");
+    if(CONV.name.test(norm)) return talk("I'm **AUREUM Bot**, your built-in guide to AUREUM. What would you like to do?");
+    if(CONV.compliment.test(norm)) return talk("Thank you, that's kind! Anything else I can help with?");
+    if(CONV.sorry.test(norm)) return talk("No need to apologise — it's all good! What can I help with?");
+    if(CONV.hold.test(norm)) return talk("Take your time — I'm here when you're ready.");
+    if(CONV.laugh.test(norm)) return talk("😄 Glad to help! Anything else you'd like to know?");
+    if(CONV.test.test(norm) || CONV.stillthere.test(norm)) return talk("Yes, I'm here! Ask me anything about using AUREUM.");
+    if(CONV.needhelp.test(norm)) return talk("Of course — go ahead and ask. If you're not sure where to start, here are some popular questions:", { choices: popular() });
+    if(CONV.clock.test(norm)) return talk("I don't have a clock or the news, but I know AUREUM well 🙂 What would you like to do in it?");
+    if(CONV.okay.test(norm) && !(ctx.lastId && /^(got it|ok|okay|i see|understood)$/.test(norm))) return talk(ctx.lastId ? "Great! Let me know if anything else comes up." : "Alright! What would you like to do next?");
+    // 3. "no, I meant adding a customer" / "actually …" / "sorry, …" — drop the lead-in and answer what follows
+    { const m = norm.match(/^(no|nope|nah|actually|sorry|wait|well|so|um+|uh+|ok|okay|i meant|i mean|no i meant|no i mean|what i meant is|what i mean is|i was asking( about)?|im asking( about)?|i asked( about)?|i said|but|and|also|then|please|pls)\s+(.{3,})$/);
+      if(m && !(ctx.__depth > 2)){ const rest = m[m.length - 1]; if(rest && rest !== norm && words(rest).length >= 2) return reply(rest, Object.assign({}, ctx, { __depth: (ctx.__depth || 0) + 1 })); } }
     if(RX.greet.test(norm)) return mk('greeting', 'Hello! What would you like to know about AUREUM? Type a question, or pick a topic below.');
     if(RX.thanks.test(norm)) return mk('thanks', "You're welcome! Ask me anything else about AUREUM any time.");
     if(RX.bye.test(norm)) return mk('thanks', "Goodbye! I'm here whenever you need help.");
     if(ctx.lastId && RX.yes.test(norm)) return mk('thanks', 'Glad that helped! Anything else?');
     if(ctx.lastId && RX.no.test(norm)){
       const e = byId.get(ctx.lastId), alts = e ? related(e).slice(0, 3) : [];
-      return mk('sorry', alts.length ? 'Sorry about that. Maybe one of these is closer — or I can send your question to the AUREUM team.' : 'Sorry about that. I can send your question to the AUREUM team.', { related: alts, ticket: true, confidence: 0 });
+      return mk('sorry', alts.length ? 'Sorry about that. Maybe one of these is closer — or tell me in a few words what you need.' : 'Sorry about that. Tell me in a few words what you need and I\'ll try again.', { related: alts, ticket: (ctx.misses || 0) >= 1, confidence: 0 });
     }
-    if(RX.company.test(norm)) return mk('none', "I only know how to use AUREUM, so I can't answer that. If you need an answer from the team, I can help you send a ticket.", { ticket: true, confidence: 0 });
+    if(RX.company.test(norm)) return mk('none', "I only know how to use AUREUM, so I can't answer that one. If you need an answer from the team, I can help you send a ticket.", { ticket: true, confidence: 0 });
     for(const [rx, id] of DIRECT) if(rx.test(norm) && byId.has(id)) return pack('answer', byId.get(id));
     if(!RX.aboutFirst.test(norm) && RX.human.test(norm)) return mk('human', "Of course. I'll help you send this to the AUREUM team — press the button below, add the details, and they'll reply inside your ticket.", { ticket: true });
     if(RX.about.test(norm)) return mk('about', "I'm **AUREUM Bot**, the built-in guide. I'm **not a live AI**: I answer from AUREUM's own help library, with no internet connection needed, and I can't see or change your shop's data.\n\nAsk me how to do something — for example *\"How do I close my shift?\"* — or pick a topic. If I can't answer, I'll help you send a **ticket** to the AUREUM team.");
@@ -10973,7 +11124,7 @@ function create(lib, opts){
       if(e) return pack('related', e, { text: related(e).length ? 'Related topics:' : "That's everything I have on that. Want me to send a question to the AUREUM team?", ticket: !related(e).length });
     }
     const { toks, ranked } = search(text, ctx);
-    if(!toks.length) return mk('none', "I didn't catch a question there. Try something like *\"How do I add a product?\"*, or pick a topic below.", { confidence: 0 });
+    if(!toks.length) return talk("I didn't quite catch that. Try asking something like *\"How do I add a product?\"*, or pick a topic below.", { choices: popular(), confidence: 0 });
     const top = ranked[0], second = ranked[1];
     const linked = new Set([...(top.e.rel || []), top.e.id]);
     const close = ranked.filter(r => r.rank >= top.rank - 0.05 && r.cov >= 0.6 && r.ccov >= 0.6 && !(linked.has(r.e.id) && r.e.id !== top.e.id)).slice(0, 4);
@@ -10988,7 +11139,7 @@ function create(lib, opts){
       return pack('maybe', top.e, { confidence: top.cov, ticket: true, text: 'I think you\'re asking about **' + top.e.title.replace(/\*/g, '') + '**:\n\n' + ans(top.e), choices: alts });
     }
     const near = ranked.slice(0, 3).filter(r => r.cov >= 0.28).map(r => ({ id: r.e.id, title: r.e.title }));
-    return mk('none', "I couldn't find an answer to that in my help library." + (near.length ? ' These might be close:' : ' You can pick a topic below, or I can send your question to the AUREUM team.'), { choices: near, ticket: true, confidence: top.cov });
+    return mk('none', (near.length ? "I'm not sure I understood that — do any of these look close?" : "I'm not sure I understood that. Could you say it another way, or tell me what you're trying to do in AUREUM (for example *\"add a product\"*)? You can also pick a topic below.") + (misses >= 1 ? ' If I still can\'t help, I can send it to the AUREUM team.' : ''), { choices: near.length ? near : popular(), ticket: misses >= 1, confidence: top.cov });
   }
   return {
     reply, search, entry: id => byId.get(id) || null, answerById: id => { const e = byId.get(id); return e ? pack('answer', e) : null; },

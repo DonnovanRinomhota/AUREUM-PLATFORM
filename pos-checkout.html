@@ -3497,9 +3497,29 @@ async function aureumSignIn(email, password){
     openModal('receiptOverlay');
   }
 
+  /* Sales / refund / expected-cash figures are for managers and administrators. Anyone else sees them only
+     after a manager or administrator enters their own PIN. */
+  let shiftFiguresUnlocked = false;
+  const authorisers = () => EMPLOYEES.filter(e => e.active !== false && BACK_OFFICE_ROLES.includes(e.role));
+  const authoriserFieldsHtml = p => `
+      <div class="field-label">Authorised by</div>
+      <select id="${p}Employee" class="auth-field" style="margin-bottom:10px;">${authorisers().map(e => `<option value="${e.id}">${escHtml(e.name)} · ${escHtml(e.role)}</option>`).join('') || '<option value="">No manager or administrator set up</option>'}</select>
+      <div class="field-label">Their PIN</div>
+      <input type="password" inputmode="numeric" autocomplete="off" id="${p}Pin" class="auth-field" placeholder="PIN" style="margin-bottom:0;">`;
+  function verifyAuthoriser(p){
+    const id = parseInt((document.getElementById(p + 'Employee') || {}).value), pin = ((document.getElementById(p + 'Pin') || {}).value || '').trim();
+    const emp = authorisers().find(e => e.id === id);
+    if(!emp){ aureumToast('Choose the administrator or shop manager.', 'danger'); return null; }
+    if(!pin || String(emp.pin || '') !== pin){ aureumToast('Incorrect PIN for ' + emp.name + '.', 'danger'); return null; }
+    return emp;
+  }
+  const lockedFiguresHtml = (btnId, withFields, prefix) => `<div class="shift-note">🔒 Sales, refunds and cash totals are hidden. A manager or administrator can unlock them with their PIN.</div>${withFields ? `<div style="margin:8px 0 6px;">${authoriserFieldsHtml(prefix)}</div>` : ''}<div class="pager-btn" id="${btnId}" style="height:36px;margin-top:8px;display:inline-flex;">Unlock figures</div>`;
+
   /* ---- the Shift panel (summary, close, closed shifts, sign out) ---- */
-  function openShiftPanel(){
+  function openShiftPanel(keepUnlocked){
     if(!activeShop || !activeEmployee){ openShiftGate(); return; }
+    if(keepUnlocked !== true) shiftFiguresUnlocked = false;
+    const showFigures = canManage() || shiftFiguresUnlocked;
     const sh = currentShift(), body = document.getElementById('shiftPanelBody'), act = document.getElementById('shiftPanelActions');
     document.getElementById('shiftPanelTitle').textContent = sh ? `Shift ${sh.id} · ${activeShop}` : `Shift · ${activeShop}`;
     let html = '';
@@ -3511,10 +3531,10 @@ async function aureumSignIn(email, password){
         ${old ? `<div class="shift-note warn">⚠ Your shift was opened on an earlier day and hasn't been closed. Your sales keep adding to it. Close it when your work period is over.</div>` : ''}
         <div class="sp-meta">Cashier <b>${escHtml(shiftOwnerName(sh))}</b> · opened <b>${fmtDT(sh.openedAt)}</b><br>
           Running for <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b> · Opening float <b>${money(sh.openingFloat)}</b></div>
-        <div class="tender-row"><span>Sales (${s.transactionCount})</span><span class="mono">${money(s.grossSales)}</span></div>
+        ${showFigures ? `<div class="tender-row"><span>Sales (${s.transactionCount})</span><span class="mono">${money(s.grossSales)}</span></div>
         <div class="tender-row"><span>Refunds (${s.refundsCount})</span><span class="mono">-${money(s.refunds)}</span></div>
         <div class="tender-row" style="font-weight:700;border-top:1px solid var(--line);padding-top:8px;margin-top:6px;"><span>Net sales</span><span class="mono">${money(s.netSales)}</span></div>
-        <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>`;
+        <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>` : lockedFiguresHtml('spUnlock', true, 'spAuth')}`;
     }
     // managers / admins can see — and close — the other cashiers' open shifts at this shop
     const others = canManage() ? OPEN_SHIFTS.filter(s => s.shop === activeShop && s !== sh) : [];
@@ -3528,11 +3548,12 @@ async function aureumSignIn(email, password){
     }
     body.innerHTML = html;
     act.innerHTML =
-      (sh ? `<div class="modal-btn ghost" id="spPrint">Print summary</div>` : '') +
+      (sh && showFigures ? `<div class="modal-btn ghost" id="spPrint">Print summary</div>` : '') +
       (sh ? `<div class="modal-btn solid" id="spClose">Close my shift…</div>` : '') +
       (canManage() ? `<div class="modal-btn ghost" id="spHistory">Closed shifts</div>` : '') +
       `<div class="modal-btn ghost" id="spSignOut" style="flex:1 1 100%;">Sign out — my shift stays open</div>`;
     const on = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+    on('spUnlock', ()=>{ if(verifyAuthoriser('spAuth')){ shiftFiguresUnlocked = true; openShiftPanel(true); } });
     on('spPrint', ()=>{ closeModal('shiftOverlay'); showShiftReport({ ...sh, ...computeShiftSummary(sh), __live: true }, 'Shift summary'); });
     on('spClose', ()=>{ closeModal('shiftOverlay'); openShiftCloseModal(sh); });
     on('spHistory', ()=>{ closeModal('shiftOverlay'); openClosedShifts(); });
@@ -3546,7 +3567,6 @@ async function aureumSignIn(email, password){
 
   /* ---- closing a shift (managers / administrators) ---- */
   let closeTargetUid = null;
-  const authorisers = () => EMPLOYEES.filter(e => e.active !== false && BACK_OFFICE_ROLES.includes(e.role));
   function openShiftCloseModal(target){
     const sh = target || currentShift();
     if(!sh){ aureumToast('There is no open shift to close.', 'danger'); return; }
@@ -3554,8 +3574,7 @@ async function aureumSignIn(email, password){
     closeTargetUid = sh.uid;
     const mine = ownsShift(sh, activeEmployee);
     const s = computeShiftSummary(sh);
-    document.getElementById('shiftCloseBody').innerHTML = `
-      <div class="sp-meta">Shift <b>${sh.id}</b> · cashier <b>${escHtml(shiftOwnerName(sh))}</b>${mine ? '' : ' <span style="color:#E39A4B">(you are closing someone else\'s shift)</span>'}<br>Opened <b>${fmtDT(sh.openedAt)}</b> · running <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b></div>
+    const figuresHtml = `
       <div class="tender-row"><span>Cash sales</span><span class="mono">${money(s.cashSales)}</span></div>
       <div class="tender-row"><span>Card sales</span><span class="mono">${money(s.cardSales)}</span></div>
       <div class="tender-row"><span>Mobile sales</span><span class="mono">${money(s.mobileSales)}</span></div>
@@ -3565,7 +3584,11 @@ async function aureumSignIn(email, password){
       <div class="sp-sec">Cash drawer</div>
       <div class="tender-row"><span>Opening float</span><span class="mono">${money(s.openingFloat)}</span></div>
       <div class="tender-row"><span>+ Cash sales − cash refunds</span><span class="mono">${money(s.cashSales - s.cashRefunds)}</span></div>
-      <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>
+      <div class="tender-row" style="color:var(--gold-bright);"><span>Expected cash in drawer</span><span class="mono">${money(s.expectedCash)}</span></div>`;
+    let figuresShown = canManage();
+    document.getElementById('shiftCloseBody').innerHTML = `
+      <div class="sp-meta">Shift <b>${sh.id}</b> · cashier <b>${escHtml(shiftOwnerName(sh))}</b>${mine ? '' : ' <span style="color:#E39A4B">(you are closing someone else\'s shift)</span>'}<br>Opened <b>${fmtDT(sh.openedAt)}</b> · running <b>${fmtDuration(Date.now() - new Date(sh.openedAt))}</b></div>
+      <div id="shiftFigures">${figuresShown ? figuresHtml : ''}</div>
       <div class="field-label" style="margin-top:14px;">Counted cash (actual)</div>
       <input type="number" min="0" step="0.01" id="shiftCountedCash" class="auth-field" placeholder="0.00" style="margin-bottom:0;">
       <div id="shiftVarianceRow" style="font-size:12.5px;margin-top:8px;color:var(--sage);"></div>
@@ -3577,8 +3600,12 @@ async function aureumSignIn(email, password){
       <select id="shiftAuthEmployee" class="auth-field" style="margin-bottom:10px;">${authorisers().map(e => `<option value="${e.id}" ${activeEmployee && e.id === activeEmployee.id ? 'selected' : ''}>${escHtml(e.name)} · ${escHtml(e.role)}</option>`).join('') || '<option value="">No manager or administrator set up</option>'}</select>
       <div class="field-label">Their PIN</div>
       <input type="password" inputmode="numeric" autocomplete="off" id="shiftAuthPin" class="auth-field" placeholder="PIN" style="margin-bottom:0;">`;
+    const lockBox = () => { if(!figuresShown){ document.getElementById('shiftFigures').innerHTML = `<div class="shift-note">🔒 Sales, refunds and the expected cash are hidden. Count the drawer below. A manager or administrator unlocks the figures with their PIN (boxes at the bottom).</div><div class="pager-btn" id="shiftUnlockBtn" style="height:36px;display:inline-flex;">Unlock figures</div>`;
+      document.getElementById('shiftUnlockBtn').addEventListener('click', ()=>{ if(verifyAuthoriser('shiftAuth')){ figuresShown = true; document.getElementById('shiftFigures').innerHTML = figuresHtml; document.getElementById('shiftCountedCash').dispatchEvent(new Event('input')); } }); } };
+    lockBox();
     document.getElementById('shiftCountedCash').addEventListener('input', function(){
       const counted = parseFloat(this.value), row = document.getElementById('shiftVarianceRow'), req = document.getElementById('shiftNoteReq');
+      if(!figuresShown){ row.textContent = ''; req.textContent = ''; return; }
       if(isNaN(counted)){ row.textContent = ''; req.textContent = ''; return; }
       const v = counted - s.expectedCash, off = Math.abs(v) >= 0.01;
       row.style.color = off ? 'var(--danger)' : 'var(--gold-bright)';
@@ -3618,7 +3645,11 @@ async function aureumSignIn(email, password){
     closeModal('shiftCloseOverlay');
     renderShiftBtn();
     // closing your own shift ends your session after the report; a manager closing someone else's carries on working
-    showShiftReport(closure, 'Shift closed', { gateAfter: closingOwn });
+    if(canManage()){ showShiftReport(closure, 'Shift closed', { gateAfter: closingOwn }); }
+    else {   // someone without manager access never sees the day's totals — they are saved for the manager
+      aureumToast(`Shift ${sh.id} closed and saved. The figures are only visible to a manager or administrator.`, 'ok');
+      if(closingOwn) signOutOfTill();
+    }
   });
 
   /* ---- closed shifts: look any of them up again, and re-print ---- */
