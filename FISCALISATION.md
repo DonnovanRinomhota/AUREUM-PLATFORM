@@ -67,3 +67,60 @@ USB / serial devices cannot be reached from a web page: they need a **separate, 
 * If a till has never loaded the settings (brand-new device, offline, nothing cached) it cannot know a shop is fiscalised, so that sale is not recorded as a fiscal transaction. Open the till online once first.
 * The printed thermal slip / emailed text receipt do not yet carry the fiscal block (screen receipt does). Add when the real protocol dictates the required fields.
 * Still required before use: ZIMRA registration, a verified device adapter, ZIMRA test-environment sign-off, per-product tax codes if the protocol needs them.
+
+---
+
+# Multi-country architecture (v2)
+
+Fiscalisation is now country-independent. Three layers, kept strictly apart:
+
+| Layer | Owns | Lives in |
+|---|---|---|
+| **Engine** | transaction states, idempotency, safe retry, uncertain-never-resubmit, audit trail | `fiscal/fiscal-core.js` |
+| **Country adapter** | tax rules, invoice/receipt format, signing & QR rules, reporting calendar, credit-note rules | `fiscal/countries/<cc>.js` |
+| **Device adapter** | manufacturer protocol / SDK / connection | `fiscal/devices/<id>.js` |
+
+* The engine speaks one **standard transaction** (`AureumFiscal.toStandardTransaction`). A country adapter turns it into that jurisdiction's request and validates it; a device adapter delivers the request. Neither knows the other's internals.
+* **Pairing is explicit and two-sided.** A country lists the device adapters it accepts; a device adapter lists the countries it is approved for. Both must agree — a device approved for one country is refused in another.
+* **Status ladder** for every integration: `disabled → in_development → testing → approved`. Only **approved** is ever shown to shop owners and the engine refuses to fiscalise through anything else. Nothing is called "supported" before that.
+* **Add a country or device without touching checkout:** add a file under `fiscal/countries/` or `fiscal/devices/`, load it with a `<script>` tag, add a catalogue row (platform admin page), done. The till only ever calls `fiscaliseReceipt`.
+
+## Database (v2, additive) — `supabase/fiscalisation-v2.sql`
+Run it **after** `fiscalisation.sql`, once, in the SQL Editor (needs your approval — nothing is applied for you). Undo: `fiscalisation-v2-rollback.sql`.
+* `fiscal_integrations` — platform catalogue. Owners can only read **approved** rows; only the admin edge function (service role) can write. A DB constraint refuses `testing` without verified docs, and `approved` without verified docs **and** an approval reference.
+* `fiscal_shop_settings` and `fiscal_devices` get `country`, `authority`, `integration_id`, `integration_version` / `adapter_version`. **A shop can only be switched ON with an approved integration for its own country** (database trigger); authority and version are copied from the catalogue, never trusted from the browser. Shops switched on under v1 keep working.
+* `fiscal_audit_log` — append-only record of every settings/device change and who made it (readable by owners/managers; nobody can edit or delete it).
+* Seeded: Zimbabwe (country) and the ZIMRA virtual device, both **in_development**. No other country exists.
+
+## Platform admin page — `admin.html` → **Fiscalisation** tab
+Lists integrations; an authorised platform admin can record "documentation verified" (+ which documents), notes, the authority's approval reference, and move the status **one step at a time**. **Approving requires a super admin.** Every change goes to `admin_audit_log`. Needs the updated `admin-manage` edge function:
+```
+supabase functions deploy admin-manage
+```
+Platform admins (`platform_admins`): see `supabase/seed-platform-admins.sql` (adds simonmuzviyo@gmail.com and don99business@gmail.com as ordinary admins if missing — promote to super in the Admin access tab).
+
+## Shop owners
+Back Office → Settings → Fiscalisation: choose the shop's country from the **approved** list, then switch on. Device forms only offer device integrations approved for that country. With nothing approved the tab says "Fiscalisation isn't available for your country yet".
+
+---
+
+# Zimbabwe (ZIMRA) — documentation read and what it means
+
+Sources (public): ZIMRA **Fiscal Device Gateway API Specification v7.2** — https://www.zimra.co.zw/downloads/9-domestic-taxes?download=3807%3Afiscalisation-api-documentation ; ZIMRA "Fiscalisation Explained" — https://www.zimra.co.zw/domestic-taxes/corporate/fiscalisation-explained ; Public Notice 26 of 2024 — https://www.zimra.co.zw/public-notices?download=3847%3Apublic-notice-26-of-2024-zimra-virtual-fiscalisation-and-api-fdms . Read 2026-10-10 through a text extract that **omitted spec sections 9, 10.x, 11 and 13** — those must be read from the official PDF.
+
+**Two approved routes** (ZIMRA): (1) a hardware fiscal device / ESD / register from an **Approved Supplier**, upgraded to FDMS; (2) **virtual fiscalisation** — software talks to FDMS through ZIMRA's API (free spec; built in-house or by a third party). AUREUM's adapter targets route 2; route 1 needs each manufacturer's own protocol (none available).
+
+**What the API requires** (v7.2): HTTPS/JSON; **mutual TLS with a device certificate** issued by FDMS (registration: portal gives deviceID + activation key → CSR → `registerDevice` → certificate; renew with `issueCertificate`); the same key **signs** receipts and fiscal-day reports (ECDSA P-256/SHA-256 preferred, or RSA-2048); a **fiscal day** must be opened (`openDay`), receipts submitted (`submitReceipt`, strictly increasing `receiptCounter`/`receiptGlobalNo`, unique `invoiceNo`), and the day closed (`closeDay`) with **fiscal counters**; offline mode uses `submitFile`; receipts with validation problems are marked Grey/Red and a day with those cannot be closed; test host `fdmsapitest.zimra.co.zw`, production `fdmsapi.zimra.co.zw`; 30 s timeout.
+
+**What is implemented** (`fiscal/countries/zw.js`, 55 + 35 automated checks): mapping of a sale to the `Receipt` structure; the tax formulas; MoneyType mapping; credit-note structure; and validation of the receipt rules written in the spec (RCPT015-018, 023-025, 034, 039, 040, 047, HS-code length, invoiceNo length, taxCode all-or-none).
+
+**NOT implemented / NOT verified** (listed in the adapter itself under `docs.unverified` / `docs.notImplemented`):
+* signing (spec §13 field order not obtained), QR code and verification code (§11), tax rounding rules (RCPT026/027 — half-up assumed), discount-line representation (discounted sales are refused for now), credit-note line sign rules, fiscal counters, offline files, receipt print layout (§10);
+* the **server-side gateway**: mutual TLS, certificate/private-key custody, signing, fiscal-day management. The browser must never hold these. It would be a Supabase edge function (`fiscal-zw-gateway`) — **not built**; until it exists every ZIMRA sale is saved and marked **NOT fiscalised**;
+* product → ZIMRA tax ID / HS code mapping (matched by percentage for now; VAT payers need HS codes per product);
+* ZIMRA's approval/certification steps for software providers (the notice does not state them) — ask ZIMRA (Contact Centre 585, contactcentre@zimra.co.zw).
+
+So Zimbabwe stays **in_development**. To move it forward: obtain the official PDF sections 10, 11, 13; register a **test** device with ZIMRA; build the gateway; test against `fdmsapitest.zimra.co.zw`; get ZIMRA's confirmation; only then record the approval reference and a super admin sets it to Approved.
+
+## Tests added (all actually run)
+`node tests/fiscal-core.test.js` (35) · `node tests/fiscal-countries.test.js` (55) · `node tests/fiscal-rules.test.js` (14, needs `tsc`) · `tests/fiscal-rls-test.sh` (24) · `tests/fiscal-v2-rls-test.sh` (38; both need a throwaway local Postgres) · browser tests of Back Office, till and admin page against a simulated Supabase. **Not tested:** the edge function itself running on Supabase (Deno), real devices, ZIMRA's environment.

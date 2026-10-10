@@ -11,6 +11,7 @@
 //  * Every change is written to admin_audit_log.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildFiscalPatch, type FiscalRow } from "./fiscal-rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -269,6 +270,34 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false }).range(offset, offset + limit - 1);
         if (error) throw new HttpError(500, "Could not load activity: " + error.message);
         return json({ rows: data ?? [], total: count ?? 0 });
+      }
+
+      // ---------------- fiscalisation integrations (countries / device adapters) ----------------
+      // The catalogue of what can be switched on. Shop owners only ever see rows with status "approved";
+      // the database enforces that, and also refuses "testing"/"approved" without verified documentation.
+      case "fiscal_list": {
+        const { data, error } = await supabase.from("fiscal_integrations").select("*").order("kind").order("name");
+        if (error) throw new HttpError(500, "Could not load integrations: " + error.message);
+        const { data: shops } = await supabase.from("fiscal_shop_settings").select("integration_id, enabled");
+        const inUse: Record<string, number> = {};
+        (shops ?? []).forEach((r: { integration_id: string | null; enabled: boolean }) => { if (r.integration_id && r.enabled) inUse[r.integration_id] = (inUse[r.integration_id] || 0) + 1; });
+        return json({ integrations: data ?? [], shopsUsing: inUse, isSuper });
+      }
+
+      case "fiscal_update": {
+        const id = String(body.id || "");
+        if (!/^[a-z0-9-]{3,60}$/.test(id)) throw new HttpError(400, "Invalid integration.");
+        const { data: cur, error: e1 } = await supabase.from("fiscal_integrations").select("*").eq("id", id).maybeSingle();
+        if (e1) throw new HttpError(500, "Database error: " + e1.message);
+        if (!cur) throw new HttpError(404, "Integration not found.");
+        let patch: Record<string, unknown>;
+        try { patch = buildFiscalPatch(cur as FiscalRow, body, isSuper, new Date().toISOString()); }
+        catch (e) { throw new HttpError(400, (e as Error).message); }
+        patch.updated_by = email;
+        const { data: upd, error: e2 } = await supabase.from("fiscal_integrations").update(patch).eq("id", id).select("*").single();
+        if (e2) throw new HttpError(400, "Could not update: " + e2.message);
+        await audit("fiscal_integration_update", null, { id, from: { status: cur.status, docs_verified: cur.docs_verified }, to: patch });
+        return json({ integration: upd });
       }
 
       // ---------------- support tickets ----------------

@@ -112,6 +112,57 @@
   function getAdapter(id){ return registry[id] || unsupportedAdapter; }
   function listAdapters(){ return Object.keys(registry).map(k => ({ id:k, label:registry[k].label || k, supported: registry[k].supported !== false })); }
 
+
+  /* ---------- Multi-country architecture ----------
+     Three separate layers (nothing in one layer knows the internals of another):
+       1. ENGINE (this file)        country-neutral: states, idempotency, retries, audit trail
+       2. COUNTRY adapter           tax rules, invoice/receipt format, signing, reporting, credit-note rules
+                                    (fiscal/countries/<cc>.js) — never talks to hardware
+       3. DEVICE adapter            manufacturer protocol / SDK / connection (fiscal/devices/<id>.js) — never knows tax rules
+     A country adapter lists which device adapters it accepts and a device adapter lists the countries it is
+     approved for. BOTH must agree: a device approved in one country is never usable in another. */
+  const INTEGRATION_STATUS = ['disabled','in_development','testing','approved'];
+  const INTEGRATION_STATUS_LABEL = { disabled:'Disabled', in_development:'In development', testing:'Testing', approved:'Approved' };
+  const isSelectable = status => status === 'approved';                     // only 'approved' is ever offered to shop owners
+  const countries = {};
+  function registerCountry(code, adapter){
+    code = String(code||'').toUpperCase();
+    const need = ['buildRequest','validate'].filter(m => typeof (adapter||{})[m] !== 'function');
+    if(!/^[A-Z]{2}$/.test(code)) throw new Error('Country code must be ISO 3166-1 alpha-2 (e.g. ZW).');
+    if(need.length) throw new Error('Country adapter "' + code + '" is missing: ' + need.join(', '));
+    adapter.code = code; countries[code] = adapter; return adapter;
+  }
+  /* A shop whose country has no adapter installed on this device must never fall back to country-less behaviour. */
+  const countryOrStub = code => getCountry(code) || { code:String(code||'').toUpperCase(), name:String(code||''), supportedDeviceAdapters:[],
+      buildRequest(){ return { ok:false, notReady:true, errors:['No fiscalisation adapter for ' + String(code||'this country') + ' is installed on this device.'] }; }, validate(){ return []; } };
+  const getCountry = code => countries[String(code||'').toUpperCase()] || null;
+  const listCountries = () => Object.keys(countries).map(c => ({ code:c, name:countries[c].name, authority:countries[c].authority, integrationVersion:countries[c].integrationVersion }));
+  /* Is this device adapter allowed for this country? Both sides must agree. 'unsupported' (the "no integration" placeholder) can never produce a result, so it is harmless anywhere. */
+  function deviceAllowedForCountry(deviceAdapterId, countryCode){
+    if(!deviceAdapterId || deviceAdapterId === 'unsupported') return true;
+    const c = getCountry(countryCode), d = registry[deviceAdapterId];
+    if(!c || !d) return false;
+    return (c.supportedDeviceAdapters || []).indexOf(deviceAdapterId) >= 0 && (d.countries || []).map(x => String(x).toUpperCase()).indexOf(c.code) >= 0;
+  }
+
+  /* The standard, country-independent transaction every country adapter receives. */
+  function toStandardTransaction(sale, kind, opts){
+    opts = opts || {};
+    const lines = (sale.items || []).map((i, n) => {
+      const qty = Number(i.qty), price = Number(i.price);
+      const taxable = i.taxable !== false;
+      return { no:n + 1, name:String(i.name || ''), qty, unitPrice:price, total:Math.round(qty * price * 100) / 100, taxable,
+               taxRate: taxable ? (opts.taxPercent != null ? Number(opts.taxPercent) : (sale.taxPercent != null ? Number(sale.taxPercent) : null)) : null,
+               hsCode: i.hsCode || null, productId: i.productId != null ? i.productId : null };
+    });
+    return { schema:'aureum.fiscal.tx/1', id:sale.uid, number:sale.orderNo || null, kind:kind || 'sale', shop:sale.shop || null, issuedAt:sale.dateTime || null,
+             currency: opts.currency || sale.currency || null, taxInclusive: !!sale.taxInclusive, lines,
+             discount: Number(sale.discountAmount || 0), subtotal: sale.subtotal != null ? Number(sale.subtotal) : null, tax: sale.tax != null ? Number(sale.tax) : null, total: Number(sale.total),
+             payments:[{ method: sale.payment || 'Other', amount: Number(sale.total) }],
+             buyer: sale.customer && sale.customer !== 'N/A' ? { name: String(sale.customer) } : null,
+             original: opts.original || null, notes: opts.notes || sale.note || null };
+  }
+
   /* ---------- transaction engine ---------- */
   const idempotencyKey = (kind, receiptUid) => (kind === 'credit_note' ? 'credit:' : 'sale:') + receiptUid;
   function snapshotFromSale(sale){
@@ -173,6 +224,7 @@
       let tx = await store.get(key);
       if(tx && FINAL.indexOf(tx.state) >= 0) return tx;            // already done — a refresh / reopen can never resubmit
       const adapter = getAdapter(device && device.adapter);
+      const country = opts.country || null;                       // optional country adapter; absent => behaves exactly as before
       if(!tx){
         tx = { business_id: opts.businessId || null, shop: sale.shop, device_id: device ? device.id : null, receipt_uid: sale.uid, kind, idempotency_key: key,
                state:'pending', attempts:0, request_snapshot: snapshotFromSale(sale), history:[] };
@@ -186,10 +238,27 @@
       if(kind === 'credit_note' && typeof adapter.submitCreditNote !== 'function'){
         tx.state = 'not_configured'; tx.error_message = 'This adapter does not support credit notes.'; addHistory(tx, 'credit_note_unsupported'); return store.save(tx);
       }
+      let countryRequest;
+      if(country){
+        const stop = (state, msg, ev) => { tx.state = state; tx.error_message = msg; addHistory(tx, ev, { message: msg, country: country.code }); return store.save(tx); };
+        if(opts.integrationStatus && !isSelectable(opts.integrationStatus)) return stop('not_configured', 'The ' + (country.name || country.code) + ' integration is not approved yet (' + (INTEGRATION_STATUS_LABEL[opts.integrationStatus] || opts.integrationStatus) + ') — this sale was NOT fiscalised.', 'integration_not_approved');
+        if(!deviceAllowedForCountry(device.adapter, country.code)) return stop('not_configured', 'This device is not approved for ' + (country.name || country.code) + '.', 'device_not_allowed_for_country');
+        let built;
+        try{ built = country.buildRequest(toStandardTransaction(sale, kind, opts.standardOptions), { config: opts.countryConfig || {}, device }); }
+        catch(e){ built = { ok:false, errors:['Country adapter error: ' + String((e && e.message) || e)] }; }
+        if(!built || !built.ok){
+          const msg = ((built && built.errors) || ['Could not prepare the request.']).join(' ');
+          return stop(built && built.notReady ? 'not_configured' : 'failed', (built && built.notReady ? '' : 'Not submitted — ') + msg, built && built.notReady ? 'country_not_ready' : 'country_validation_failed');
+        }
+        const verrs = country.validate(built.request, { config: opts.countryConfig || {}, device }) || [];
+        if(verrs.length) return stop('failed', 'Not submitted — ' + verrs.join(' '), 'country_validation_failed');
+        countryRequest = built.request;
+        tx.request_snapshot = Object.assign({}, tx.request_snapshot, { country: country.code, countryRequest });
+      }
       tx.state = 'submitting'; tx.attempts = (tx.attempts || 0) + 1; addHistory(tx, 'submitting', { attempt: tx.attempts });
       tx = await store.save(tx);                                   // persisted BEFORE contacting the device, so a crash leaves 'submitting' (→ treated as uncertain)
       let res;
-      try{ res = await withTimeout(kind === 'credit_note' ? adapter.submitCreditNote(device, tx) : adapter.submitFiscalTransaction(device, tx), timeoutMs); }
+      try{ res = await withTimeout(kind === 'credit_note' ? adapter.submitCreditNote(device, tx, countryRequest) : adapter.submitFiscalTransaction(device, tx, countryRequest), timeoutMs); }
       catch(e){                                                    // timeout / exception: the device may or may not have received it
         tx.state = 'uncertain'; tx.error_message = e && e.timeout ? 'The device did not answer in time.' : 'Connection problem: ' + String((e && e.message) || e);
         addHistory(tx, 'uncertain', { message: tx.error_message }); return store.save(tx);
@@ -225,17 +294,19 @@
   async function loadConfig(sb, businessId){
     if(!sb || !businessId) return { available:false, shops:{}, devices:[], reason:'local' };
     try{
-      const [a, b] = await Promise.all([
-        sb.from('fiscal_shop_settings').select('shop,enabled').eq('business_id', businessId),
-        sb.from('fiscal_devices').select('*').eq('business_id', businessId)
-      ]);
+      let a = await sb.from('fiscal_shop_settings').select('shop,enabled,country,jurisdiction,authority,integration_id,integration_version').eq('business_id', businessId);
+      let v2 = !a.error;
+      if(a.error) a = await sb.from('fiscal_shop_settings').select('shop,enabled').eq('business_id', businessId);      // v2 columns not installed yet
+      const b = await sb.from('fiscal_devices').select('*').eq('business_id', businessId);
       if(a.error || b.error){
         const err = a.error || b.error;
         if(isMissingTable(err)) return { available:false, shops:{}, devices:[], reason:'not_installed' };
         throw err;
       }
-      const cfg = { available:true, shops:{}, devices:b.data || [] };
-      (a.data || []).forEach(r => { if(r.enabled) cfg.shops[r.shop] = true; });
+      let integrations = [];
+      if(v2){ const ir = await sb.from('fiscal_integrations').select('*'); if(ir.error){ v2 = false; } else integrations = ir.data || []; }   // RLS: shop owners only ever receive APPROVED rows
+      const cfg = { available:true, v2, shops:{}, shopMeta:{}, devices:b.data || [], integrations };
+      (a.data || []).forEach(r => { if(r.enabled) cfg.shops[r.shop] = true; cfg.shopMeta[r.shop] = { country:r.country || null, jurisdiction:r.jurisdiction || null, authority:r.authority || null, integration_id:r.integration_id || null, integration_version:r.integration_version || null }; });
       lsSet(CFG_KEY + ':' + businessId, cfg);
       return cfg;
     }catch(e){
@@ -297,5 +368,7 @@
 
   return { STATES, FINAL, STATE_LABEL, CONNECTION_STATUS_LABEL, REGISTRATION_LABEL, CONNECTION_TYPES, SECRET_KEYS,
            validateDevice, isPrivateOrLocalHost, registerAdapter, getAdapter, listAdapters, REQUIRED_METHODS,
-           idempotencyKey, snapshotFromSale, createEngine, receiptLabel, loadConfig, activeDeviceFor, supabaseStore, isMissingTable };
+           idempotencyKey, snapshotFromSale, createEngine, receiptLabel, loadConfig, activeDeviceFor, supabaseStore, isMissingTable,
+           INTEGRATION_STATUS, INTEGRATION_STATUS_LABEL, isSelectable, registerCountry, getCountry, countryOrStub, listCountries, deviceAllowedForCountry, toStandardTransaction,
+           registerDeviceAdapter: registerAdapter };
 });

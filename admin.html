@@ -75,6 +75,8 @@
   .topbar .sub{ font-size:10.5px; letter-spacing:0.14em; color:var(--sage-dim); }
   .topbar .who{ margin-left:auto; text-align:right; font-size:12px; color:var(--sage); line-height:1.4; }
   .topbar .who b{ color:var(--ivory); font-weight:600; }
+  .fxs{ display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid var(--line, #3a3a30); }
+  .fxs-approved{ color:#7fd6a0; border-color:rgba(127,214,160,.5); } .fxs-testing{ color:var(--gold-bright); border-color:rgba(201,162,39,.5); } .fxs-in_development{ color:#b9b39b; } .fxs-disabled{ color:#8a8a80; }
   .pill{ display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:0.08em; padding:2px 7px; border-radius:999px; background:rgba(201,162,39,0.16); color:var(--gold-bright); margin-left:6px; text-transform:uppercase; }
   .content{ max-width:1280px; margin:0 auto; padding:22px 24px 60px; }
 
@@ -227,6 +229,7 @@
       <div class="tab active" data-tab="accounts">Accounts</div>
       <div class="tab" data-tab="admins">Admin access</div>
       <div class="tab" data-tab="support">Support <span class="pill" id="ticketBadge" hidden></span></div>
+      <div class="tab" data-tab="fiscal">Fiscalisation</div>
       <div class="tab" data-tab="activity">Activity log</div>
     </div>
 
@@ -294,6 +297,21 @@
     </section>
 
     <!-- Activity -->
+    <section id="tab-fiscal" hidden>
+      <div class="muted" style="margin-bottom:12px; font-size:12.5px; line-height:1.6;">
+        Countries and fiscal-device integrations. <b>Only integrations marked Approved are ever shown to shop owners</b>, and a shop can only switch fiscalisation on with an approved integration for its country.
+        An integration can only move forward one step at a time (Disabled → In development → Testing → Approved) and only after its official documentation has been verified; approving needs a super admin and the authority's approval / test sign-off reference.
+        Nothing here makes an integration work — it only controls whether it may be offered.
+      </div>
+      <div class="toolbar"><div class="btn ghost small" id="fxRefresh">Refresh</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Integration</th><th>Kind</th><th>Country / authority</th><th>Version</th><th>Status</th><th>Docs verified</th><th>Approval ref</th><th>Shops using</th></tr></thead>
+          <tbody id="fxBody"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section id="tab-activity" hidden>
       <div class="table-wrap">
         <table style="min-width:760px;">
@@ -675,12 +693,71 @@
   /* ---------- tabs ---------- */
   function setTab(name){
     document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-    ['accounts','admins','support','activity'].forEach(n => $('tab-' + n).hidden = (n !== name));
+    ['accounts','admins','support','fiscal','activity'].forEach(n => $('tab-' + n).hidden = (n !== name));
     if(name === 'admins') loadAdmins();
     if(name === 'support') loadTickets(true);
+    if(name === 'fiscal') loadFiscal();
     if(name === 'activity') loadActivity(true);
   }
   document.querySelectorAll('#tabs .tab').forEach(t => t.addEventListener('click', ()=> setTab(t.dataset.tab)));
+
+  /* ---------- fiscalisation integrations ---------- */
+  const FX_STATUS = { disabled:'Disabled', in_development:'In development', testing:'Testing', approved:'Approved' };
+  const fx = { rows:[], using:{}, isSuper:false, current:null };
+  async function loadFiscal(){
+    $('fxBody').innerHTML = `<tr><td colspan="8" class="empty">Loading…</td></tr>`;
+    try{
+      const res = await api('fiscal_list'); fx.rows = res.integrations || []; fx.using = res.shopsUsing || {}; fx.isSuper = !!res.isSuper;
+      renderFiscal();
+    }catch(e){ $('fxBody').innerHTML = `<tr><td colspan="8" class="empty">${esc(e.message)}${/does not exist|schema cache/i.test(e.message) ? ' — run supabase/fiscalisation-v2.sql first.' : ''}</td></tr>`; }
+  }
+  function renderFiscal(){
+    if(!fx.rows.length){ $('fxBody').innerHTML = `<tr><td colspan="8" class="empty">No integrations are registered.</td></tr>`; return; }
+    $('fxBody').innerHTML = fx.rows.map(r => `
+      <tr class="clickable" data-fx="${esc(r.id)}" tabindex="0">
+        <td><b>${esc(r.name)}</b><div class="sub">${esc(r.id)}</div></td>
+        <td>${r.kind === 'country' ? 'Country' : 'Device'}</td>
+        <td>${esc(r.kind === 'country' ? r.country : (r.countries || []).join(', '))}<div class="sub">${esc(r.authority || '')}</div></td>
+        <td>${esc(r.integration_version || '—')}</td>
+        <td><span class="fxs fxs-${esc(r.status)}">${esc(FX_STATUS[r.status] || r.status)}</span></td>
+        <td>${r.docs_verified ? 'Yes' + `<div class="sub">${esc(fmtDate(r.docs_verified_at))}</div>` : '<span class="muted">No</span>'}</td>
+        <td>${esc(r.approval_reference || '—')}</td>
+        <td>${fx.using[r.id] || 0}</td>
+      </tr>`).join('');
+    $('fxBody').querySelectorAll('[data-fx]').forEach(tr => {
+      const open = () => openFiscal(tr.dataset.fx);
+      tr.addEventListener('click', open); tr.addEventListener('keydown', e => { if(e.key === 'Enter') open(); });
+    });
+  }
+  function openFiscal(id){
+    const r = fx.rows.find(x => x.id === id); if(!r) return; fx.current = r;
+    $('mTitle').textContent = r.name; $('mSub').textContent = r.id + ' · ' + (r.authority || '');
+    $('mBody').innerHTML = `
+      <div class="muted" style="font-size:12.5px;line-height:1.6;margin-bottom:12px;">${esc(r.notes || '')}</div>
+      <label class="muted" style="font-size:12px;">Status</label>
+      <select class="field wide" id="fxStatus">${Object.keys(FX_STATUS).map(k => `<option value="${k}" ${r.status === k ? 'selected' : ''}>${esc(FX_STATUS[k])}</option>`).join('')}</select>
+      <label class="muted" style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin:12px 0 6px;"><input type="checkbox" id="fxDocs" ${r.docs_verified ? 'checked' : ''}> The official documentation (authority and manufacturer) has been verified</label>
+      <input class="field wide" id="fxDocsRef" maxlength="300" placeholder="Which documents / versions were verified" value="${esc(r.docs_reference || '')}">
+      <input class="field wide" id="fxApproval" maxlength="200" style="margin-top:8px;" placeholder="Authority approval / test sign-off reference (needed to approve)" value="${esc(r.approval_reference || '')}">
+      <textarea class="field wide" id="fxNotes" maxlength="1000" style="margin-top:8px;min-height:70px;" placeholder="Notes">${esc(r.notes || '')}</textarea>
+      <div class="muted" style="font-size:12px;margin-top:8px;line-height:1.5;">${fx.isSuper ? 'You are a super admin: you can approve.' : 'Only a super admin can set Approved.'} Moving a status down takes effect immediately for new sales.</div>
+      <div style="margin-top:14px;"><div class="btn" id="fxSave">Save</div></div>`;
+    $('manageOverlay').hidden = false; document.body.style.overflow = 'hidden';
+    $('fxSave').addEventListener('click', saveFiscal);
+  }
+  async function saveFiscal(){
+    const r = fx.current; if(!r) return; const btn = $('fxSave'); if(btn.classList.contains('busy')) return;
+    const payload = { id:r.id, docs_verified: $('fxDocs').checked, docs_reference: $('fxDocsRef').value, approval_reference: $('fxApproval').value, notes: $('fxNotes').value };
+    const st = $('fxStatus').value; if(st !== r.status) payload.status = st;
+    if(st === 'approved' && st !== r.status && !confirm(`Approve "${r.name}"?\n\nShop owners will be able to switch fiscalisation on with it. Only do this after the authority's tests / approval are complete.`)) return;
+    btn.classList.add('busy'); btn.textContent = 'Saving…';
+    try{
+      const res = await api('fiscal_update', payload);
+      const i = fx.rows.findIndex(x => x.id === r.id); if(i > -1) fx.rows[i] = res.integration;
+      renderFiscal(); closeManage(); toast('Saved.');
+    }catch(e){ toast(e.message, 'error'); btn.classList.remove('busy'); btn.textContent = 'Save'; }
+  }
+  $('fxRefresh').addEventListener('click', loadFiscal);
 
   /* ---------- admin access ---------- */
   async function loadAdmins(){

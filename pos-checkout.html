@@ -1165,6 +1165,8 @@
 
 <script src="/vendor/supabase.js"></script>
 <script src="/fiscal/fiscal-core.js"></script>
+<script src="/fiscal/countries/zw.js"></script>
+<script src="/fiscal/devices/zw-virtual-fdms.js"></script>
 <script>
   // Card and Mobile payment methods at checkout only record which method
   // was used — they don't process real charges in-app. Use your own card
@@ -2963,7 +2965,13 @@ async function aureumSignIn(email, password){
       if(!cfg || !cfg.available || !cfg.shops[rec.shop]) return;                  // off / not set up → exactly as before
       FISCAL.store = FISCAL.store || AureumFiscal.supabaseStore(sb, currentBusinessId, currentUser && currentUser.id);
       const device = AureumFiscal.activeDeviceFor(cfg, rec.shop);
-      const engine = AureumFiscal.createEngine({ store: FISCAL.store, businessId: currentBusinessId });
+      // country (v2): rules come from that country's adapter; a shop with a country but no adapter installed is never treated as country-less
+      const meta = (cfg.shopMeta || {})[rec.shop] || {};
+      const country = meta.country ? AureumFiscal.countryOrStub(meta.country) : null;
+      const integ = meta.integration_id ? (cfg.integrations || []).find(i => i.id === meta.integration_id) : null;
+      const engine = AureumFiscal.createEngine({ store: FISCAL.store, businessId: currentBusinessId, country,
+        integrationStatus: country ? (integ ? integ.status : 'disabled') : undefined,            // RLS hides non-approved integrations, so a withdrawn one reads as 'disabled'
+        standardOptions: { currency: POS_SETTINGS.currencyCode, taxPercent: POS_SETTINGS.taxPercent }, countryConfig: {} });
       const tx = await engine.fiscalise({ uid: rec.uid, orderNo: 'No. ' + rec.id, shop: rec.shop, dateTime: rec.dateTime, total: rec.total, subtotal: rec.subtotal, tax: rec.tax,
         discountAmount: rec.discountAmount, taxInclusive: rec.taxInclusive, payment: rec.payment, customer: rec.customer, items: rec.items }, device, kind || 'sale');
       FISCAL.byUid[rec.uid] = AureumFiscal.receiptLabel(tx);
