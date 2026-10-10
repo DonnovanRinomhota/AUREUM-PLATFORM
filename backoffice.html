@@ -694,6 +694,13 @@
   .chat-input textarea{ flex:1; resize:none; font:inherit; font-size:14px; color:var(--ivory); background:var(--panel-raised); border:1px solid var(--line-strong); border-radius:11px; padding:11px 13px; outline:none; }
   .chat-input textarea:focus{ border-color:var(--gold-bright); }
   .chat-foot{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; font-size:12px; color:var(--sage); }
+    .chat-foot a.chat-new-btn{ display:inline-flex; align-items:center; gap:4px; padding:7px 16px; border-radius:999px; background:linear-gradient(135deg,var(--gold-bright),#b8892f); color:#1a1306; font-weight:700; font-size:13px; box-shadow:0 2px 10px rgba(212,168,67,.35); }
+  .chat-foot a.chat-new-btn:hover{ text-decoration:none; filter:brightness(1.1); }
+  #helpFab{ position:fixed; right:18px; bottom:18px; width:54px; height:54px; border-radius:50%; z-index:900; display:none; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 30% 25%,#f3d98a,var(--gold-bright) 55%,#a67a24); color:#1a1306; font-size:28px; font-weight:800; font-family:Georgia,serif; border:2px solid rgba(255,255,255,.35);
+    box-shadow:0 6px 20px rgba(0,0,0,.45),0 0 0 3px rgba(212,168,67,.25); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #helpFab.show{ display:flex; } #helpFab.drag{ cursor:grabbing; transform:scale(1.08); } #helpFab:focus-visible{ outline:3px solid #fff; }
+  @media print{ #helpFab{ display:none !important; } }
   .chat-foot a{ color:var(--gold-bright); font-weight:600; text-decoration:none; } .chat-foot a:hover{ text-decoration:underline; } .chat-note{ flex:1 1 100%; font-size:11px; color:var(--sage-dim); }
   .tk-item{ display:flex; gap:12px; align-items:center; justify-content:space-between; padding:13px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
   .tk-item:hover{ background:rgba(255,255,255,.03); } .tk-item .sub{ font-size:11.5px; color:var(--sage); margin-top:3px; } .tk-item .nm{ font-weight:600; color:var(--ivory); font-size:13.5px; }
@@ -957,6 +964,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
+<div id="helpFab" role="button" tabindex="0" title="Help &amp; FAQ — drag to move" aria-label="Help and FAQ (drag to move)">?</div>
 <div class="auth-gate" id="authGate">
   <div class="auth-card">
     <div class="auth-seal">A</div>
@@ -2872,7 +2880,7 @@
                 <div class="btn-gold" id="chatSend" role="button" tabindex="0">Send</div>
               </div>
               <div class="chat-foot">
-                <a href="#" id="chatNew">New chat</a><span>·</span><a href="#" id="chatToTicket">Not solved? Contact support</a>
+                <a href="#" id="chatNew" class="chat-new-btn" role="button">+ New chat</a><span>·</span><a href="#" id="chatToTicket">Not solved? Contact support</a>
                 <span class="chat-note">AUREUM Bot is a built-in guide, not a live AI: it answers from AUREUM's own help library (no internet needed) and can't see your shop's data. If it can't help, send a ticket. Never type passwords, PINs or card numbers.</span>
               </div>
             </div>
@@ -9789,6 +9797,37 @@ const AureumSync = (function(){
   }
   document.getElementById('helpBtn').addEventListener('click', () => openHelp('ask'));
   document.getElementById('helpBtn').addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openHelp('ask'); } });
+
+  /* ----- movable Help shortcut ----- */
+  (function(){
+    const fab = document.getElementById('helpFab'); if(!fab) return;
+    const KEY = 'aureum.helpFab';
+    const place = (x, y) => {
+      const w = fab.offsetWidth || 54, h = fab.offsetHeight || 54;
+      x = Math.max(4, Math.min(window.innerWidth - w - 4, x)); y = Math.max(4, Math.min(window.innerHeight - h - 4, y));
+      fab.style.left = x + 'px'; fab.style.top = y + 'px'; fab.style.right = 'auto'; fab.style.bottom = 'auto'; return [x, y];
+    };
+    try{ const sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if(sv) place(sv.fx * window.innerWidth, sv.fy * window.innerHeight); }catch(e){}
+    let sx, sy, ox, oy, moved = false, down = false;
+    fab.addEventListener('pointerdown', e => { down = true; moved = false; sx = e.clientX; sy = e.clientY; const r = fab.getBoundingClientRect(); ox = r.left; oy = r.top; try{ fab.setPointerCapture(e.pointerId); }catch(_){} });
+    fab.addEventListener('pointermove', e => {
+      if(!down) return; const dx = e.clientX - sx, dy = e.clientY - sy;
+      if(!moved && Math.hypot(dx, dy) < 6) return;
+      moved = true; fab.classList.add('drag'); place(ox + dx, oy + dy);
+    });
+    const end = () => {
+      if(!down) return; down = false; fab.classList.remove('drag');
+      if(moved){ try{ const r = fab.getBoundingClientRect(); localStorage.setItem(KEY, JSON.stringify({ fx: r.left / window.innerWidth, fy: r.top / window.innerHeight })); }catch(e){} }
+      else openHelp('ask');
+    };
+    fab.addEventListener('pointerup', end); fab.addEventListener('pointercancel', () => { down = false; fab.classList.remove('drag'); });
+    fab.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openHelp('ask'); } });
+    window.addEventListener('resize', () => { if(fab.style.left){ const r = fab.getBoundingClientRect(); place(r.left, r.top); } });
+    // only visible once signed in (hidden behind the sign-in screen)
+    const gate = document.getElementById('authGate');
+    const sync = () => { const g = gate && getComputedStyle(gate).display !== 'none'; fab.classList.toggle('show', !g); };
+    sync(); setInterval(sync, 800);
+  })();
 
   /* ----- support tickets ----- */
   const TK_CAT = { problem:'Problem', question:'Question / how-to', billing:'Billing', account:'Account', feature:'Feature request' };
