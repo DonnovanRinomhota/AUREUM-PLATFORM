@@ -1164,6 +1164,7 @@
 </div>
 
 <script src="/vendor/supabase.js"></script>
+<script src="/fiscal/fiscal-core.js"></script>
 <script>
   // Card and Mobile payment methods at checkout only record which method
   // was used — they don't process real charges in-app. Use your own card
@@ -2639,6 +2640,7 @@ async function aureumSignIn(email, password){
     refreshOrderNo();
     aureumToast(`Refunded ${money(calc.total)} (${calc.lines.reduce((s,l)=>s+l.qty,0)} item${calc.lines.reduce((s,l)=>s+l.qty,0)===1?'':'s'}) — stock restored.`, 'ok');
     openReceiptByKey(refundUid);          // show the refund slip so it can be printed
+    fiscaliseReceipt(RECEIPTS.find(x => x.uid === refundUid), 'credit_note');   // optional credit note; no-op unless fiscalisation is on
   });
   document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
     if(!cashierMay('reports')){ aureumToast("Today's Sales isn't enabled for your role.", 'danger'); return; }
@@ -2703,7 +2705,7 @@ async function aureumSignIn(email, password){
       refund: !!r.refund,
       refundOf: r.refundOf || null,
       taxInclusive: !!r.taxInclusive,
-      key: receiptKey(r),
+      key: receiptKey(r), uid: r.uid,
       refunds: r.refund ? [] : RECEIPTS.filter(x => x.refund && x.refundOfKey === receiptKey(r)).map(x => ({ id: x.id, total: x.total, items: (x.items || []).map(i => ({ name: i.name, qty: i.qty })) })),
       remainingQty: r.refund ? 0 : remainingQty(r)
     };
@@ -2776,6 +2778,7 @@ async function aureumSignIn(email, password){
       ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||cur}${sale.change.toFixed(2)}</span></div>` : ''}
       ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${escHtml(sale.note)}</span></div>` : ''}
       ${(sale.refunds && sale.refunds.length) ? `<div class="r-dash"></div><div class="r-row" style="font-weight:700;"><span>Refunds on this receipt</span><span></span></div>` + sale.refunds.map(rf => `<div class="r-row"><span>${escHtml(rf.id)} · ${rf.items.map(i => i.qty + ' × ' + escHtml(i.name)).join(', ')}</span><span>-${cur}${rf.total.toFixed(2)}</span></div>`).join('') : ''}
+      ${fiscalReceiptBlock(sale)}
       <div class="receipt-thanks">${escHtml(receiptFooterText())}</div>
     `;
     shownSale = sale;
@@ -2938,6 +2941,38 @@ async function aureumSignIn(email, password){
     }
   }
 
+  /* ===== FISCALISATION (optional) =====
+     Runs AFTER a sale/refund has been fully recorded, never before and never instead of it.
+     If the shop has fiscalisation switched off (the default) nothing here does anything.
+     A receipt is only ever labelled a fiscal invoice when the device's response confirmed it. */
+  const FISCAL = { cfg:null, loadedAt:0, store:null, byUid:{} };
+  async function fiscalConfig(){
+    if(!window.AureumFiscal || !(supaReady && sb && currentBusinessId)) return null;
+    if(!FISCAL.cfg || Date.now() - FISCAL.loadedAt > 5*60*1000){ FISCAL.cfg = await AureumFiscal.loadConfig(sb, currentBusinessId); FISCAL.loadedAt = Date.now(); }
+    return FISCAL.cfg;
+  }
+  function fiscalReceiptBlock(sale){
+    const fx = sale && (sale.fiscal || (sale.uid && FISCAL.byUid[sale.uid]));
+    if(!fx) return '';
+    if(!fx.fiscal) return `<div class="r-dash"></div><div class="r-center" style="font-weight:700;">${escHtml(fx.text)}</div>`;
+    return `<div class="r-dash"></div><div class="r-center" style="font-weight:700;">${escHtml(fx.text)}</div><div class="r-row"><span>Fiscal ref</span><span>${escHtml(fx.ref||'')}</span></div>${fx.verification ? `<div class="r-row"><span>Verification</span><span>${escHtml(fx.verification)}</span></div>` : ''}${fx.qr ? `<div class="r-center r-sub" style="word-break:break-all;">${escHtml(fx.qr)}</div>` : ''}`;
+  }
+  async function fiscaliseReceipt(rec, kind){
+    try{
+      const cfg = await fiscalConfig();
+      if(!cfg || !cfg.available || !cfg.shops[rec.shop]) return;                  // off / not set up → exactly as before
+      FISCAL.store = FISCAL.store || AureumFiscal.supabaseStore(sb, currentBusinessId, currentUser && currentUser.id);
+      const device = AureumFiscal.activeDeviceFor(cfg, rec.shop);
+      const engine = AureumFiscal.createEngine({ store: FISCAL.store, businessId: currentBusinessId });
+      const tx = await engine.fiscalise({ uid: rec.uid, orderNo: 'No. ' + rec.id, shop: rec.shop, dateTime: rec.dateTime, total: rec.total, subtotal: rec.subtotal, tax: rec.tax,
+        discountAmount: rec.discountAmount, taxInclusive: rec.taxInclusive, payment: rec.payment, customer: rec.customer, items: rec.items }, device, kind || 'sale');
+      FISCAL.byUid[rec.uid] = AureumFiscal.receiptLabel(tx);
+      if(shownSale && shownSale.uid === rec.uid){ shownSale.fiscal = FISCAL.byUid[rec.uid]; buildReceipt(shownSale); }
+      if(tx.state !== 'fiscalised') aureumToast('Saved, but NOT fiscalised: ' + (tx.error_message || 'no working fiscal device') + ' — see Back Office → Settings → Fiscalisation.', 'danger');
+      FISCAL.store.flushOutbox().catch(()=>{});
+    }catch(e){ console.warn('[fiscal]', e); }
+  }
+
   document.getElementById('chargeBtn').addEventListener('click', async function(){
     if(this.classList.contains('disabled')) return;
     if(!activeShop || !activeEmployee){ aureumToast('Start a shift (shop + PIN) before ringing up a sale.', 'danger'); openShiftGate(); return; }
@@ -3063,6 +3098,7 @@ async function aureumSignIn(email, password){
     setReceiptChrome(false, sale);
     openModal('receiptOverlay');
     maybeAutoPrint();
+    fiscaliseReceipt(RECEIPTS[RECEIPTS.length - 1], 'sale');       // optional; no-op unless this shop has fiscalisation on
   });
 
   searchInput.addEventListener('input', renderCatalog);
