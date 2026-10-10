@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/safe-html.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>AUREUM — Point of Sale</title>
@@ -755,7 +756,7 @@
     <div class="auth-error" id="authError"></div>
     <label id="authRememberRow" style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--sage);margin:2px 0 12px;cursor:pointer;user-select:none;">
       <input type="checkbox" id="authRemember" checked style="width:17px;height:17px;margin:0;accent-color:var(--gold-bright);flex-shrink:0;">
-      <span>Remember me <span style="opacity:.65;">&middot; stay signed in and remember my email on this device</span></span>
+      <span>Remember me <span style="opacity:.9;">&middot; stay signed in and remember my email on this device</span></span>
     </label>
     <div class="auth-btn" id="authSubmitBtn" role="button" tabindex="0">Sign In</div>
     <input type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
@@ -2708,7 +2709,7 @@ async function aureumSignIn(email, password){
       refund: !!r.refund,
       refundOf: r.refundOf || null,
       taxInclusive: !!r.taxInclusive,
-      key: receiptKey(r), uid: r.uid,
+      key: receiptKey(r),
       refunds: r.refund ? [] : RECEIPTS.filter(x => x.refund && x.refundOfKey === receiptKey(r)).map(x => ({ id: x.id, total: x.total, items: (x.items || []).map(i => ({ name: i.name, qty: i.qty })) })),
       remainingQty: r.refund ? 0 : remainingQty(r)
     };
@@ -3852,5 +3853,6 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
 }
 </script>
+<script src="/a11y.js" defer></script>
 </body>
 </html>

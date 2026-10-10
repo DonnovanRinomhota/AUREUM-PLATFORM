@@ -43,6 +43,7 @@ returns uuid
 language sql
 security definer
 stable
+set search_path = public, pg_temp
 as $$
   select business_id from public.profiles where id = auth.uid()
 $$;
@@ -52,6 +53,7 @@ returns text
 language sql
 security definer
 stable
+set search_path = public, pg_temp
 as $$
   select role from public.profiles where id = auth.uid()
 $$;

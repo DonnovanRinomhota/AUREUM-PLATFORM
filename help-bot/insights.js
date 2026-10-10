@@ -174,9 +174,14 @@ function create(getData){
   const lowOf = p => (p.low == null ? 15 : p.low);
   /* units sold per day over the last 30 days (shop-scoped) */
   function velocity(d, name, shop){
-    const from = sod(d.now) - 29 * DAY; let q = 0;
-    for(const r of d.receipts){ if(r.t < from || (!isAll(shop) && r.shop !== shop)) continue; for(const it of (r.items || [])) if(it.name === name) q += (r.refund ? -1 : 1) * (Number(it.qty) || 0); }
-    return Math.max(0, q) / 30;
+    // one pass over the receipts per question (not one per product), remembered on the snapshot
+    const key = isAll(shop) ? '*' : shop; d.__vel = d.__vel || {};
+    if(!d.__vel[key]){
+      const from = sod(d.now) - 29 * DAY, m = new Map();
+      for(const r of d.receipts){ if(r.t < from || (!isAll(shop) && r.shop !== shop)) continue; for(const it of (r.items || [])) m.set(it.name, (m.get(it.name) || 0) + (r.refund ? -1 : 1) * (Number(it.qty) || 0)); }
+      d.__vel[key] = m;
+    }
+    return Math.max(0, d.__vel[key].get(name) || 0) / 30;
   }
   function findProducts(d, text, extraStop){
     const stop = new Set(('a an the of in on at to for from with by and or but is are was were be do does did have has had i me my we our us it its this that these those there here can could would should will how what which who when where why much many any all some more most least '

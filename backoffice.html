@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/safe-html.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AUREUM — Back Office</title>
@@ -3118,6 +3119,7 @@ const AureumSync = (function(){
     receipts:         { key: r => r.uid ? 'u:' + r.uid : 'L:' + r.dateTime + '|' + r.id + '|' + r.total },
     expenses:         { key: byUid('x:'), fix: dedupeNumericIds },
     employeeHours:    { key: byUid('h:'), fix: dedupeNumericIds },
+    suppliers:        { key: byUid('s:'), fix: dedupeNumericIds },
     purchaseOrders:   { key: byUid('PO:'), newFirst: true, fix: dedupeStringIds('PO-', 1042) },
     grnRecords:       { key: byUid('GRN:'), newFirst: true, fix: dedupeStringIds('GRN-', 11223) },
     stockAdjustments: { key: byUid('SA:'), newFirst: true, fix: dedupeStringIds('SA-', 10956) },
@@ -5350,15 +5352,29 @@ const AureumSync = (function(){
         gross += it.qty * it.price;
       });
     });
-    // Only ever fall back to seed demo volume when this business has
-    // literally no real receipts recorded yet anywhere (a fresh install) —
-    // once real sales exist, filtered-out results correctly show as zero
-    // rather than masking with fake numbers.
-    // Demo seed volume is only ever shown in the no-backend preview file
-    // (opening this HTML directly, no Supabase connected) — a real,
-    // Supabase-connected business always shows its true numbers, zero
-    // included, never a fabricated stand-in.
-    const hasAnyRealReceipts = RECEIPTS.some(r=>r.items && r.items.length);
+    return finishProductSales(p, qty, gross, refunds, RECEIPTS.some(r=>r.items && r.items.length));
+  }
+  // The same figures for EVERY product in one pass over the receipts (the page used to rescan every receipt once per
+  // product, which froze the screen for shops with thousands of products and receipts).
+  function computeAllProductSales(filters){
+    const f = filters || sbpCurrentFilters(), acc = new Map(); let hasAny = false;
+    RECEIPTS.forEach(r=>{
+      if(!r.items) return;
+      if(r.items.length) hasAny = true;
+      if(!receiptMatchesFilters(r, f)) return;
+      r.items.forEach(it=>{
+        let o = acc.get(it.productId); if(!o){ o = { qty:0, gross:0, refunds:0 }; acc.set(it.productId, o); }
+        if(r.refund){ o.refunds += it.qty * it.price; return; }
+        o.qty += it.qty; o.gross += it.qty * it.price;
+      });
+    });
+    const out = new Map();
+    PRODUCTS.forEach(p=>{ const o = acc.get(p.id) || { qty:0, gross:0, refunds:0 }; out.set(p.id, finishProductSales(p, o.qty, o.gross, o.refunds, hasAny)); });
+    return out;
+  }
+  function finishProductSales(p, qty, gross, refunds, hasAnyRealReceipts){
+    // Demo seed volume is only ever shown in the no-backend preview file (opening this HTML directly, no Supabase
+    // connected) — a real, Supabase-connected business always shows its true numbers, zero included.
     if(!supaReady && !hasAnyRealReceipts && qty === 0 && refunds === 0){
       qty = SALES_QTY[p.id] || 0;
       gross = qty * p.price;
@@ -5386,8 +5402,7 @@ const AureumSync = (function(){
     // Compute real, filtered sales for every product once, then decide
     // inclusion from that — not from a static seed map, so a product with
     // genuine receipts always shows up regardless of when it was added.
-    const salesByProduct = new Map();
-    PRODUCTS.forEach(p=> salesByProduct.set(p.id, computeProductSales(p, filters)));
+    const salesByProduct = computeAllProductSales(filters);
 
     let items = PRODUCTS.filter(p =>
       (catFilter === 'All' || p.cat === catFilter) &&
@@ -8807,7 +8822,7 @@ const AureumSync = (function(){
           const trimmed = name.trim();
           const existing = SUPPLIERS.find(s=>s.name.toLowerCase() === trimmed.toLowerCase());
           const supplier = existing || { id: nextSupplierId++, name: trimmed, phone:'', email:'', address:'', notes:'' };
-          if(!existing) SUPPLIERS.push(supplier);
+          if(!existing){ SUPPLIERS.push(supplier); persistAureum(); }
           populateSupplierSelects();
           this.value = supplier.name;
           if(typeof renderSuppliers === 'function') renderSuppliers();
@@ -8849,6 +8864,7 @@ const AureumSync = (function(){
           const s = SUPPLIERS.find(x=>x.id===id);
           if(confirm(`Delete supplier "${s.name}"? This can't be undone.`)){
             SUPPLIERS = SUPPLIERS.filter(x=>x.id!==id);
+            persistAureum();
             renderSuppliers();
             populateSupplierSelects();
           }
@@ -8908,6 +8924,7 @@ const AureumSync = (function(){
     } else {
       SUPPLIERS.push({ id: nextSupplierId++, ...data });
     }
+    persistAureum();
     populateSupplierSelects();
     switchToSupplierList();
     renderSuppliers();
@@ -9404,7 +9421,7 @@ const AureumSync = (function(){
      resolves), then keeps saving/subscribing so both apps stay
      live-in-sync across any device signed into the same business. */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
   function renderSyncStatus(){
@@ -10315,6 +10332,7 @@ const AureumSync = (function(){
     STOCK_ADJUSTMENTS = has('stockAdjustments') ? shared.stockAdjustments : (live ? [] : STOCK_ADJUSTMENTS);
     TRANSFERS = has('transfers') ? shared.transfers : (live ? [] : TRANSFERS);
     EMPLOYEE_HOURS = has('employeeHours') ? shared.employeeHours : (live ? [] : EMPLOYEE_HOURS);
+    SUPPLIERS = has('suppliers') ? shared.suppliers : (live ? [] : SUPPLIERS);     // suppliers are saved with the business too (they used to be lost on reload)
     SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
@@ -10328,6 +10346,8 @@ const AureumSync = (function(){
     nextEmployeeId = Math.max(0, ...EMPLOYEES.map(e=>e.id)) + 1;
     nextExpenseId = Math.max(0, ...EXPENSES.map(e=>e.id)) + 1;
     nextHoursId = Math.max(0, ...EMPLOYEE_HOURS.map(h=>h.id)) + 1;
+    nextSupplierId = Math.max(0, ...SUPPLIERS.map(x=>x.id)) + 1;
+    try{ populateSupplierSelects(); }catch(e){}
   }
 
   async function startApp(){
@@ -12366,9 +12386,14 @@ function create(getData){
   const lowOf = p => (p.low == null ? 15 : p.low);
   /* units sold per day over the last 30 days (shop-scoped) */
   function velocity(d, name, shop){
-    const from = sod(d.now) - 29 * DAY; let q = 0;
-    for(const r of d.receipts){ if(r.t < from || (!isAll(shop) && r.shop !== shop)) continue; for(const it of (r.items || [])) if(it.name === name) q += (r.refund ? -1 : 1) * (Number(it.qty) || 0); }
-    return Math.max(0, q) / 30;
+    // one pass over the receipts per question (not one per product), remembered on the snapshot
+    const key = isAll(shop) ? '*' : shop; d.__vel = d.__vel || {};
+    if(!d.__vel[key]){
+      const from = sod(d.now) - 29 * DAY, m = new Map();
+      for(const r of d.receipts){ if(r.t < from || (!isAll(shop) && r.shop !== shop)) continue; for(const it of (r.items || [])) m.set(it.name, (m.get(it.name) || 0) + (r.refund ? -1 : 1) * (Number(it.qty) || 0)); }
+      d.__vel[key] = m;
+    }
+    return Math.max(0, d.__vel[key].get(name) || 0) / 30;
   }
   function findProducts(d, text, extraStop){
     const stop = new Set(('a an the of in on at to for from with by and or but is are was were be do does did have has had i me my we our us it its this that these those there here can could would should will how what which who when where why much many any all some more most least '
@@ -13057,5 +13082,6 @@ if(typeof module !== 'undefined' && module.exports) module.exports = api; else r
 })(typeof window !== 'undefined' ? window : globalThis);
 /* ==== END AUREUM HELP BOT ==== */
 </script>
+<script src="/a11y.js" defer></script>
 </body>
 </html>

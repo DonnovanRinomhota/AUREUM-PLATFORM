@@ -1,5 +1,21 @@
 # Changelog
 
+## Quality check — customer-ready pass (service worker v42)
+- **Security:** names, notes and descriptions typed by staff or customers could run as code in the owner's Back Office (a customer added at the till could attack the owner's session). New `safe-html.js` strips scripts, inline event handlers and `javascript:` links from everything the apps put on screen — in the Back Office, the till and the platform admin page. Tested with hostile text in every field type.
+- **Data loss fixed:** suppliers were never saved to the account — they vanished on reload and a demo supplier appeared for every new business. They are now saved and synced like customers.
+- **Speed:** Sales by Product and the Back Office start-up froze for ~38 s with 3,000 products and 20,000 receipts; now about half a second. The bot's reorder answer went from ~1 s to ~30 ms on the same data.
+- **Accessibility:** new `a11y.js` adds missing field names, page landmarks, a page heading and keyboard access to scrollable tables (automated checker: 0 serious/critical issues on every Back Office screen, the till and the website).
+- **Database hardening:** `supabase/hardening.sql` pins the search path of the two security helper functions (also applied in `schema.sql` for new projects).
+- **Hosting headers:** clickjacking protection (`X-Frame-Options`), referrer policy and a camera-only permissions policy on every page except the already-locked admin page.
+- Small fixes: a duplicated field in the till's receipt data, low-contrast "Remember me" text on the till sign-in.
+
+## Phase 27 — Exact design, sharper and richer
+- The Phase 22 design, unchanged (serif headings, tagline, photos, flag footer), with the HD laptop, tablet and phone screens (2560 × 1600, 2200 × 1600, 1170 × 2532) re-exported with richer colour and deeper contrast without clipping highlights.
+- The four business photos are re-sampled to 1280 px with the same colour treatment.
+- Verified that every device screen paints on every load at 2× density (12 of 12 loads).
+- 121 automatic checks.
+- Open item: the product tiles in the POS pictures still show illustrations; real photographs need to be supplied.
+
 ## Phase 26 — Original design, with HD screens
 - The website is back to its original (Phase 22) design: the original serif headline typeface, the "POS & INVENTORY" tagline, the photo background and business cards, and the flag footer.
 - **Kept:** the high-resolution laptop, tablet and phone screens (2560 × 1600, 2200 × 1600, 1170 × 2532) re-captured from the real application, with higher-quality WebP and a lift in contrast and vibrancy. Each ships in two sizes and the browser picks the right one, so ordinary screens stay fast and sharp displays get full resolution. The Features page pictures and the social-share image are upgraded too.
