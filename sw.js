@@ -7,7 +7,7 @@
      • it never touches your data. Anything going to Supabase, Stripe, Paynow or any other site (and every
        non-GET request) is left completely alone — data is kept offline by the app itself, not by this file.
    Bump VERSION on each release so old copies are cleared. */
-const VERSION = 'aureum-v39';
+const VERSION = 'aureum-v40';
 const SHELL = [
   '/offline.html', '/backoffice.html', '/pos-checkout.html', '/fiscal/fiscal-core.js', '/fiscal/countries/zw.js', '/fiscal/devices/zw-virtual-fdms.js',
   '/manifest.webmanifest', '/manifest-pos.webmanifest',

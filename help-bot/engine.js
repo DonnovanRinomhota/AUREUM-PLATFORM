@@ -80,7 +80,7 @@ const DIRECT = [
 ];
 const RX = {
   greet: /^(hi|hello|hey|hie|howdy|yo|hiya|good (morning|afternoon|evening|day)|greetings)( there| aureum)?$/,
-  thanks: /^(ok |okay |great |cool )?(thanks|thank you|thankyou|thx|cheers|much appreciated|awesome|perfect|brilliant|nice one|great)( a lot| so much| very much| again)?$/,
+  thanks: /^(ok |okay |great |cool |alright )?(thanks|thank you|thankyou|thx|ty|cheers|much appreciated|awesome|perfect|brilliant|nice one|great|wonderful|lovely)( a lot| so much| very much| again| mate| bot)?( that helped| that worked| that was helpful| thats helpful| that is helpful| it helped| it worked)?$|^(that|it) (helped|worked|is helpful|was helpful|makes sense)( thanks| thank you)?$/,
   bye: /^(bye|goodbye|good bye|see you|cya|that is all|thats all)$/,
   yes: /^(yes|yeah|yep|yup|sure|ok|okay|it did|that helped|that worked|helpful|got it|it helped|solved)( thanks| thank you)?$/,
   no: /^(no|nope|nah|not really|that didnt help|didnt help|not what i asked|not helpful|still stuck|still problem|doesnt help)$/,
@@ -89,6 +89,26 @@ const RX = {
   aboutFirst: /^(are you|r u|are u|who are you|what are you|do you use ai|is this ai)\b/,
   company: /\b(founded|founder|who (made|built|created|owns|owner|runs)|which company|headquarter|where (are|is) (you|aureum) (based|located)|company (name|address|number|registration)|how old is aureum|encrypt|encryption|gdpr|privacy policy|terms (and|&) conditions|security certificate)\b/,
   more: /^(more|tell me more|more details|details|explain|explain more|elaborate|go on|and|what else|how|why|steps|next|then what)$/
+};
+/* ---- everyday conversation: the Bot understands ordinary chat, corrections and "no, that's all" instead of treating everything as a help question ---- */
+const CONV = {
+  closure: /^(no ?|nope ?|nah ?)?(ok |okay |alright |thanks |thank you )?(thats|that is|its|it is)?( all| it| fine| ok| okay| enough| good| great| everything| alright| all good| all i need| all for now)( for now| thanks| thank you| for today)?$|^(nothing|nothing else|nope nothing|nothing more|no more|no more questions|no questions|no thanks|no thank you|not now|maybe later|never ?mind|nevermind|forget it|dont worry|dont worry about it|its fine|no worries|no problem|all good|all done|im good|im fine|im all good|im done|i am done|i am good|that will be all|thats everything|im okay|i am okay)( thanks| thank you| for now| bot)?$|^no ?(thats|that is) (all|it|fine|ok|okay|enough|everything)( thanks)?$/,
+  nothat: /^(no ?|nope ?|nah ?)?(thats|that is|its|it is)$/,
+  wrong: /^(no ?|nope ?|nah ?)?(thats|that is|it is|its|this is) (not|wrong|incorrect|not right|not it|not correct|not what (i|we) (asked|meant|wanted|said|need|needed|am looking for)|not helpful|not useful|irrelevant|unrelated|different)|^not (that|this|it|what i (asked|meant|wanted|said))|^(no ?)?(wrong|incorrect|wrong answer|not correct|not right)$|^(you )?(misunderstood|dont understand|didnt understand|did not understand|are confused|got it wrong|got that wrong|missed it|misread)|^no (i|we) (meant|mean|asked|wanted|said|need|am asking)$|^(that|this) (doesnt|does not|didnt|did not) (help|work|answer|make sense)|^that is not (what|it)/,
+  confused: /^(what|huh|hm+|sorry what|come again|i dont (understand|get it|follow)|i do not understand|im (confused|lost|stuck)|i am (confused|lost|stuck)|confusing|this is confusing|say that again|say it again|can you (explain|say|put) (that |it )?(again|differently|simpler|more simply|in simple terms|another way)|explain (that |it )?(again|simpler|differently|more simply|in simple terms|another way)|simpler|in simple terms|dumb it down|make it simple|too complicated|too long|what do you mean|what does that mean|i dont know what that means)$/,
+  frustrated: /\b(useless|stupid|dumb|rubbish|nonsense|terrible|awful|hate (this|you|it)|annoying|annoyed|waste of (my )?time|you suck|bad bot|worst(?! (sell|product|item|seller|performer|day|shop|store|customer|moving|stock))|garbage|ridiculous|pathetic|frustrat|you are not (helping|helpful)|youre not (helping|helpful)|not helping|cant help|cannot help|unhelpful)\b/,
+  howare: /^(how are you|how are you doing|how r u|how are u|hows it going|how is it going|hows your day|how is your day|whats up|what is up|sup|wassup|you good|are you ok|are you okay|how do you do|how have you been)( today| bot)?$/,
+  name: /^(whats|what is) your name$|^(do you have a name|who named you|what should i call you)$/,
+  compliment: /^(you are |youre |ur )?(so |very |really |quite )?(great|good|smart|clever|amazing|awesome|helpful|brilliant|wonderful|the best|nice|cool|fantastic|excellent|impressive)( bot| helper| guide)?$|^(good|great|nice|well|lovely|excellent) (bot|job|work|answer|one|stuff)$|^(well done|love it|love this|i love this|that was great|that was helpful|you rock|you are a star|thats great|thats helpful|thats perfect|that helps|that was perfect)$/,
+  sorry: /^(sorry|my bad|oops|oh sorry|apologies|my mistake|whoops)( about that)?$/,
+  hold: /^(wait|hold on|one sec|one second|just a sec|just a second|give me a (sec|second|moment|minute)|hang on|hmm+|um+|uh+|er+|let me think|thinking|ok wait|wait a (sec|second|moment|minute))$/,
+  laugh: /^(lol|lmao|haha+|hehe+|funny|rofl|that is funny|thats funny|lol thanks)$/,
+  test: /^(test|testing|test test|are you there|you there|anyone there|hello are you there|is anyone there|are you working|are you awake)$/,
+  okay: /^(ok|okay|k|kk|alright|all right|right|cool|fine|sure|i see|understood|noted|got it|i get it|makes sense|sounds good|ill try|i will try|ok ill try|ok i will try|will do|great ill try that)$/,
+  needhelp: /^(can|could|may) (i|you) (ask|help)( you| me)?( something| a question| with something| please)?$|^i (have|got) (a |another )?(question|problem|issue|query)$|^i need (some |your )?help( please)?$|^(help|help me|help please|please help|please help me|question|a question|another question|one more question|i have another question|i have one more question|can i ask)$|^(can|could) you help( me)?( please)?$|^(i )?(want|need) to ask( something| a question)?$/,
+  clock: /^(what( is|s) the )?(time|date|day|weather)( now| today| is it)?$|^what time is it$|^what day is it$|^whats the weather$|^(tell me a )?joke$|^sing( a song)?$/,
+  stillthere: /^(still there|are you still there|hello\?|helloo+)$/,
+  yesplain: /^(yes|yeah|yep|yup|sure|ok|okay|please|yes please|go on|go ahead|ok go on)$/
 };
 function create(lib, opts){
   opts = opts || {};
@@ -111,6 +131,7 @@ function create(lib, opts){
   // a typo of a filler word means a doubled last letter ("howw") or two swapped letters ("wnat") — nothing else
   const stopish = w => STOP.has(w) || (!vocab.has(w) && !vocab.has(canon(w)) && !SYN[stem(w)] && w.length >= 4 && STOPLIST.some(x => w === x + x[x.length - 1] || swapped(w, x)));
   const byId = new Map(KB.map(e => [e.id, e]));
+  const exact = new Map(); KB.forEach(e => [e.title, ...e.q].forEach(q => { const k = words(q).join(' '); if(k && !exact.has(k)) exact.set(k, e); }));   // a question typed exactly as the library words it
   const ans = e => (opts.storeMode && e.pay && e.store) ? e.store : e.a;
   const brief = id => { const e = byId.get(id); return e ? { id: e.id, title: e.title } : null; };
   const related = e => (e.rel || []).map(brief).filter(Boolean).slice(0, 4);
@@ -151,24 +172,63 @@ function create(lib, opts){
     const norm = words(text).join(' ');
     const mk = (type, t, extra) => Object.assign({ type, text: t, id: null, related: [], choices: [], ticket: false, confidence: 1 }, extra || {});
     if(!norm) return mk('empty', 'Type a question about using AUREUM, or pick a topic below.', { confidence: 0 });
+    const talk = (t, extra) => mk('conv', t, extra || {});
+    const popular = () => (lib.POPULAR || []).map(id => brief(id)).filter(Boolean).slice(0, 4);
+    const misses = ctx.misses || 0, lastBotAsked = ['thanks','greeting','conv'].includes(ctx.lastType);
+    // 1. "no, that's all" / "nothing else" / "I'm good" — the person is simply finished
+    if(CONV.closure.test(norm) && !(ctx.lastId && /^(no|nope|nah)$/.test(norm) && !lastBotAsked)) return talk("No problem! I'm here whenever you need me.");
+    if(/^(no|nope|nah)$/.test(norm) && lastBotAsked) return talk("Alright! Just type a question whenever you need me.");
+    if(CONV.nothat.test(norm)) return talk("Okay! If that wasn't what you were after, tell me a little more about what you're trying to do and I'll try again.", { choices: popular() });
+    // 2. "that's not what I asked" — apologise, ask them to say it another way (no ticket on the first miss)
+    if(CONV.wrong.test(norm)){
+      const e = ctx.lastId ? byId.get(ctx.lastId) : null, alts = e ? related(e).slice(0, 3) : [];
+      return mk('sorry', "Sorry, I probably misunderstood. Could you tell me in a few words what you're trying to do? For example *\"add a product\"* or *\"close a shift\"*." + (alts.length ? ' Or maybe one of these is closer:' : ''), { related: alts, choices: alts.length ? [] : popular(), ticket: misses >= 1, confidence: 0 });
+    }
+    if(CONV.frustrated.test(norm)) return mk('sorry', "I'm sorry I'm not being much help. Tell me in a few words what you're trying to do and I'll try again — or I can pass it to the AUREUM team.", { ticket: true, choices: popular(), confidence: 0 });
+    if(CONV.confused.test(norm)){
+      const e = ctx.lastId ? byId.get(ctx.lastId) : null;
+      if(e) return pack('answer', e, { text: "No problem — let me say it again, step by step:\n\n" + ans(e) });
+      return talk("Sorry, I'm not sure what you mean yet. What are you trying to do in AUREUM? A few words is enough.", { choices: popular() });
+    }
+    if(CONV.howare.test(norm)) return talk("I'm doing well, thanks for asking! What can I help you with in AUREUM today?");
+    if(CONV.name.test(norm)) return talk("I'm **AUREUM Bot**, your built-in guide to AUREUM. What would you like to do?");
+    if(CONV.compliment.test(norm)) return talk("Thank you, that's kind! Anything else I can help with?");
+    if(CONV.sorry.test(norm)) return talk("No need to apologise — it's all good! What can I help with?");
+    if(CONV.hold.test(norm)) return talk("Take your time — I'm here when you're ready.");
+    if(CONV.laugh.test(norm)) return talk("😄 Glad to help! Anything else you'd like to know?");
+    if(CONV.test.test(norm) || CONV.stillthere.test(norm)) return talk("Yes, I'm here! Ask me anything about using AUREUM.");
+    if(CONV.needhelp.test(norm)) return talk("Of course — go ahead and ask. If you're not sure where to start, here are some popular questions:", { choices: popular() });
+    if(CONV.clock.test(norm)) return talk("I don't have a clock or the news, but I know AUREUM well 🙂 What would you like to do in it?");
+    if(CONV.okay.test(norm) && !(ctx.lastId && /^(got it|ok|okay|i see|understood)$/.test(norm))) return talk(ctx.lastId ? "Great! Let me know if anything else comes up." : "Alright! What would you like to do next?");
+    // 3. "no, I meant adding a customer" / "actually …" / "sorry, …" — drop the lead-in and answer what follows
+    { const m = norm.match(/^(no|nope|nah|actually|sorry|wait|well|so|um+|uh+|ok|okay|i meant|i mean|no i meant|no i mean|what i meant is|what i mean is|i was asking( about)?|im asking( about)?|i asked( about)?|i said|but|and|also|then|please|pls)\s+(.{3,})$/);
+      if(m && !(ctx.__depth > 2)){ const rest = m[m.length - 1]; if(rest && rest !== norm && words(rest).length >= 2) return reply(rest, Object.assign({}, ctx, { __depth: (ctx.__depth || 0) + 1 })); } }
     if(RX.greet.test(norm)) return mk('greeting', 'Hello! What would you like to know about AUREUM? Type a question, or pick a topic below.');
     if(RX.thanks.test(norm)) return mk('thanks', "You're welcome! Ask me anything else about AUREUM any time.");
     if(RX.bye.test(norm)) return mk('thanks', "Goodbye! I'm here whenever you need help.");
     if(ctx.lastId && RX.yes.test(norm)) return mk('thanks', 'Glad that helped! Anything else?');
     if(ctx.lastId && RX.no.test(norm)){
       const e = byId.get(ctx.lastId), alts = e ? related(e).slice(0, 3) : [];
-      return mk('sorry', alts.length ? 'Sorry about that. Maybe one of these is closer — or I can send your question to the AUREUM team.' : 'Sorry about that. I can send your question to the AUREUM team.', { related: alts, ticket: true, confidence: 0 });
+      return mk('sorry', alts.length ? 'Sorry about that. Maybe one of these is closer — or tell me in a few words what you need.' : 'Sorry about that. Tell me in a few words what you need and I\'ll try again.', { related: alts, ticket: (ctx.misses || 0) >= 1, confidence: 0 });
     }
-    if(RX.company.test(norm)) return mk('none', "I only know how to use AUREUM, so I can't answer that. If you need an answer from the team, I can help you send a ticket.", { ticket: true, confidence: 0 });
+    if(RX.company.test(norm)) return mk('none', "I only know how to use AUREUM, so I can't answer that one. If you need an answer from the team, I can help you send a ticket.", { ticket: true, confidence: 0 });
     for(const [rx, id] of DIRECT) if(rx.test(norm) && byId.has(id)) return pack('answer', byId.get(id));
     if(!RX.aboutFirst.test(norm) && RX.human.test(norm)) return mk('human', "Of course. I'll help you send this to the AUREUM team — press the button below, add the details, and they'll reply inside your ticket.", { ticket: true });
-    if(RX.about.test(norm)) return mk('about', "I'm **AUREUM Bot**, the built-in guide. I'm **not a live AI**: I answer from AUREUM's own help library, with no internet connection needed, and I can't see or change your shop's data.\n\nAsk me how to do something — for example *\"How do I close my shift?\"* — or pick a topic. If I can't answer, I'll help you send a **ticket** to the AUREUM team.");
+    if(RX.about.test(norm)){
+      if(opts.insights && byId.has('bot-data')) return pack('answer', byId.get('bot-data'), { type: 'about', text: "I'm **AUREUM Bot**, your built-in guide. I'm **not a live AI** — I work on your device, so nothing you ask is sent anywhere.\n\n" + ans(byId.get('bot-data')) });
+      return mk('about', "I'm **AUREUM Bot**, the built-in guide. I'm **not a live AI**: I answer from AUREUM's own help library, with no internet connection needed, and I can't see or change your shop's data.\n\nAsk me how to do something — for example *\"How do I close my shift?\"* — or pick a topic. If I can't answer, I'll help you send a **ticket** to the AUREUM team."); }
+    // 4. questions about the business's own numbers ("what did we sell today?", "what should I reorder?") and "take me to …"
+    if(opts.insights){ let ins = null; try{ ins = opts.insights.answer(text, ctx); }catch(e){ ins = null; }
+      if(ins && !ins.explicit){          // a near-exact match in the help library wins over a vague data guess
+        const s0 = search(text, ctx).ranked[0]; if(s0 && s0.sim >= 0.85 && s0.cov >= 0.85) ins = null; }
+      if(ins) return ins; }
+    if(exact.has(norm)) return pack('answer', exact.get(norm));
     if(ctx.lastId && RX.more.test(norm)){
       const e = byId.get(ctx.lastId);
       if(e) return pack('related', e, { text: related(e).length ? 'Related topics:' : "That's everything I have on that. Want me to send a question to the AUREUM team?", ticket: !related(e).length });
     }
     const { toks, ranked } = search(text, ctx);
-    if(!toks.length) return mk('none', "I didn't catch a question there. Try something like *\"How do I add a product?\"*, or pick a topic below.", { confidence: 0 });
+    if(!toks.length) return talk("I didn't quite catch that. Try asking something like *\"How do I add a product?\"*, or pick a topic below.", { choices: popular(), confidence: 0 });
     const top = ranked[0], second = ranked[1];
     const linked = new Set([...(top.e.rel || []), top.e.id]);
     const close = ranked.filter(r => r.rank >= top.rank - 0.05 && r.cov >= 0.6 && r.ccov >= 0.6 && !(linked.has(r.e.id) && r.e.id !== top.e.id)).slice(0, 4);
@@ -183,7 +243,7 @@ function create(lib, opts){
       return pack('maybe', top.e, { confidence: top.cov, ticket: true, text: 'I think you\'re asking about **' + top.e.title.replace(/\*/g, '') + '**:\n\n' + ans(top.e), choices: alts });
     }
     const near = ranked.slice(0, 3).filter(r => r.cov >= 0.28).map(r => ({ id: r.e.id, title: r.e.title }));
-    return mk('none', "I couldn't find an answer to that in my help library." + (near.length ? ' These might be close:' : ' You can pick a topic below, or I can send your question to the AUREUM team.'), { choices: near, ticket: true, confidence: top.cov });
+    return mk('none', (near.length ? "I'm not sure I understood that — do any of these look close?" : "I'm not sure I understood that. Could you say it another way, or tell me what you're trying to do in AUREUM (for example *\"add a product\"*)? You can also pick a topic below.") + (misses >= 1 ? ' If I still can\'t help, I can send it to the AUREUM team.' : ''), { choices: near.length ? near : popular(), ticket: misses >= 1, confidence: top.cov });
   }
   return {
     reply, search, entry: id => byId.get(id) || null, answerById: id => { const e = byId.get(id); return e ? pack('answer', e) : null; },

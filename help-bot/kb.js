@@ -56,7 +56,7 @@ E('forgot-password','Getting started','I forgot my password',
 E('roles','Getting started','What roles are there and what can each do?',
   ['what roles are there','what is the difference between cashier and manager','what can a shop manager do','what can an administrator do','employee roles','what is inventory clerk'],
   'cashier shop manager administrator inventory clerk permissions access rights',
-  `Roles: **Cashier**, **Shop Manager**, **Inventory Clerk** and **Administrator**.\n\nAt the till, **Shop Manager** and **Administrator** are managers: they can always give discounts, change prices, refund, view Today's Sales, close anyone's shift and open the closed-shifts list. Cashiers and Inventory Clerks are limited by the switches in **Settings → Users & Permissions**.`,
+  `Roles: **Cashier**, **Shop Manager**, **Inventory Clerk** and **Administrator** — or **Other…** to type your own (Driver, Cleaner…). Other roles have **no access to POS Checkout**.\n\nAt the till, **Shop Manager** and **Administrator** are managers: they can always give discounts, change prices, refund, view Today's Sales, close anyone's shift and open the closed-shifts list. Cashiers and Inventory Clerks are limited by the switches in **Settings → Users & Permissions**.`,
   ['permissions-settings','add-employee']),
 
 /* ============ DASHBOARD ============ */
@@ -160,7 +160,7 @@ E('import-problems','Products','My import has problems or skipped rows',
 E('product-export','Products','How do I export my products?',
   ['how do i export products','download my product list','save products to excel','print product list','export to pdf'],
   'export csv excel pdf download list print backup',
-  `On **Products** press **Export** and choose **CSV, Excel or PDF**. Most lists in AUREUM (receipts, customers, employees, purchases, reports…) have the same Export button.`,
+  `On **Products** press **Export** and choose **CSV, Excel or PDF**. Most lists in AUREUM (receipts, customers, employees, purchase orders, reports…) have the same Export button.`,
   ['export-data']),
 E('product-shops','Products','How do I sell a product in several shops?',
   ['how do i assign products to shops','product in all shops','stock per shop','different stock in each shop','make a product available in another shop','item not in my second shop'],
@@ -182,7 +182,7 @@ E('product-not-at-till','Products','A product isn\'t showing at the till',
 E('po-create','Stock','How do I create a purchase order?',
   ['how do i create a purchase order','order stock from a supplier','make a po','purchase order','how do i order goods'],
   'purchase order po supplier order buy stock lines unit cost pdf',
-  `Open **Purchases** and press **New purchase order**: choose the supplier and shop, add product lines with **quantity** and **unit cost**, and save. Saved orders keep an exact copy of their lines and can be downloaded as a **PDF**. Use the date filter (default *All time*) to find old ones. When the goods arrive, record them in **Goods Received**.`,
+  `Open **Purchase Orders** and press **New purchase order**: choose the supplier and shop, add product lines with **quantity** and **unit cost**, and save. Saved orders keep an exact copy of their lines and can be downloaded as a **PDF**. Use the date filter (default *All time*) to find old ones. When the goods arrive, record them in **Goods Received**.`,
   ['grn-receive','supplier-add'], { pages:['purchases'] }),
 E('grn-receive','Stock','How do I receive stock (Goods Received)?',
   ['how do i receive stock','how do i record a delivery','goods received note','add stock when goods arrive','grn','receive goods from supplier'],
@@ -229,12 +229,12 @@ E('add-customer','People','How do I add a customer?',
 E('customer-segments','People','What are customer segments (New, Regular, VIP)?',
   ['what is a vip customer','customer segments','how are customers classified','what makes a customer regular','vip customers'],
   'vip regular new segment spent orders lifetime classify',
-  `Segments are automatic: **VIP** = spent **$200 or more**, or **15 or more orders**; **Regular** = spent **$50 or more**, or **3 or more orders**; otherwise **New**.`,
+  `Segments are automatic and change with time: **VIP** = **8+ orders in the last 90 days**; **Regular** = **3+ orders in the last 90 days**; **New** = first order in the last 30 days; **Occasional** = bought within 60 days but less often; **At risk** = last order 61–120 days ago; **Lost** = over 120 days ago; **Inactive** = no orders yet.`,
   ['loyalty-points']),
 E('loyalty-points','People','How do loyalty points work?',
   ['how do loyalty points work','can customers redeem points','loyalty programme','reward points','how do customers earn points'],
   'loyalty points rewards redeem earn spent',
-  `Customers show **one loyalty point per dollar spent**. This is for information only — AUREUM does **not** let customers redeem points at the till.`,
+  `Points follow a fixed rule per order: **1 point per whole $1**, plus a bonus of **+5** for an order of $25+, **+15** for $50+ and **+40** for $100+ (refunded amounts are taken off). This is for information only — AUREUM does **not** let customers redeem points at the till.`,
   ['store-credit','not-available']),
 E('store-credit','People','How does store credit work?',
   ['how does store credit work','add credit to a customer','customer credit balance','gift card','voucher balance','can customers pay with store credit'],
@@ -289,7 +289,7 @@ E('sales-by-product','Sales & reports','How do I see which products sell best?',
   `Open **Sales by Product** to see revenue and profit for each product over the dates and shop you choose. The Dashboard also shows your top performers.`,
   ['dashboard-overview'], { pages:['sales-by-product'] }),
 E('accounting','Sales & reports','How does Accounting work?',
-  ['how do i see my profit','income statement','profit and loss','how is profit calculated','accounting page','net income'],
+  ['how do i see my profit','income statement','profit and loss','accounting page','net income'],
   'accounting income statement profit loss revenue cogs gross expenses net',
   `**Accounting** shows an **Income Statement** for the dates you choose: revenue (sales less refunds), cost of goods sold (estimated from the cost of what was sold), gross profit, operating expenses and **net income**. Add your costs with **Add expense**.`,
   ['add-expense'], { pages:['accounting'] }),
@@ -348,7 +348,7 @@ E('shift-left-open','Shifts','A cashier left their shift open',
 E('shift-who-closes','Shifts','Who can close a shift?',
   ['who can close a shift','can a cashier close their shift','manager close shift','permission to close shift'],
   'close permission cashier manager administrator own anyone',
-  `A cashier can close **their own** shift. **Shop Managers and Administrators** can close anyone's shift and can open the **Closed shifts** list.`,
+  `Closing a shift always needs the **PIN of a Shop Manager or Administrator** — a cashier can't close their own shift alone. Managers and Administrators can also close anyone's shift and open the **Closed shifts** list.`,
   ['shift-close']),
 E('sell-basic','The till','How do I make a sale?',
   ['how do i make a sale','how do i sell','ring up a customer','how does checkout work','process a sale','how to use the till'],
@@ -624,7 +624,94 @@ E('staff-backoffice','Not available','Can my staff have their own Back Office lo
   ['can staff log in to the back office','manager login for back office','give my manager access to reports','second user for the back office','share the owner account'],
   'staff manager back office login access user account share second',
   `Not at the moment: the **owner's** sign-in is used for the Back Office. Staff use their **name and PIN at the till** only. Managers get extra abilities at the till (refunds, closing shifts, Today's Sales) but not a Back Office login. Send a **Feature request** if you need it.`,
-  ['who-can-sign-in','feature-request'])
+  ['who-can-sign-in','feature-request']),
+
+/* ============ ASK ABOUT YOUR BUSINESS · NEWER FEATURES ============ */
+E('bot-data','Help & support','What can AUREUM Bot tell me about my business?',
+  ['what can you do','can you tell me my sales','can you see my data','can you look at my numbers','what questions can i ask you','can you check my stock','are you able to read my sales','what can i ask the bot','ask about my business','can the bot show me my profit'],
+  'bot assistant ask data numbers sales profit stock customers reorder questions examples abilities insight read-only briefing navigate',
+  `Yes — I can look at the numbers already loaded in Back Office and answer in plain words. I only **read** them; I can never change anything. Try:
+
+- **Sales & profit:** *"How much did we sell today?"*, *"Profit last month"*, *"Compare this month with last month"*
+- **Products:** *"Best sellers this week"*, *"What's not selling?"*, *"How many cold brew do we have?"*, *"When will water run out?"*
+- **Stock:** *"What's running low?"*, *"What should I reorder?"*, *"Is any stock negative?"*, *"How much is my stock worth?"*
+- **People:** *"Which customers are at risk?"*, *"Who are my best customers?"*, *"Who sold the most?"*, *"Who's on shift?"*
+- **Overview:** *"How is the business doing?"*
+- **Getting around:** *"Take me to Suppliers"*, *"Open the low stock report"*
+
+You can add a time or shop to any of them (*"…in Harare last week"*) and then follow up with *"what about yesterday?"* or *"how did you work that out?"*. Profit and cost figures are only shown to **owners and managers**.`,
+  ['bot-privacy','profit-calc'], { pages:['settings-help','dashboard'] }),
+E('bot-privacy','Help & support','Does AUREUM Bot send my data anywhere?',
+  ['is my data safe with the bot','does the bot send my sales anywhere','where do the bots answers come from','is the bot connected to the internet','is the bot ai','does the bot learn from my data','who can see what i ask the bot'],
+  'bot privacy data safe internet ai offline on device private chatgpt learn',
+  `No. AUREUM Bot works **on your device**: it reads the shop data already loaded on this screen to work out an answer, then the answer is shown to you — nothing you ask is sent to an outside AI service. It is not a live AI model, so it can't chat about anything under the sun, but its answers about your numbers are calculated, not guessed. The chat is only kept for this browser session. If you tick **Include my chat** on a support ticket, the team can read it — and only then. Never type passwords, PINs or card numbers.`,
+  ['bot-data'], { pages:['settings-help'] }),
+E('profit-calc','Sales & reports','How is profit calculated?',
+  ['how is profit calculated','how is profit worked out','how does profit work','how do you calculate profit','what is cost of revenue','why is my profit different','how does accounting work out profit','what is profit before tax','how is gross profit calculated','profit after tax'],
+  'profit gross net revenue cost cogs expenses tax income statement calculated margin',
+  `On **Accounting** (and when you ask AUREUM Bot):
+
+1. **Revenue** = sales minus refunds for the period and shop you are viewing.
+2. **Cost of revenue** = revenue × the real cost-to-price ratio of the items you actually sold (from the cost saved on each sale line).
+3. **Gross profit** = revenue − cost of revenue.
+4. **Profit before tax** = gross profit − the **expenses** you recorded.
+5. **Profit after tax** takes off your income-tax % — but only when there is a profit; a loss isn't taxed.
+
+If a product has no cost price, profit looks better than it really is — set costs on the Products page.`,
+  ['add-expense','income-tax-pct','accounting'], { pages:['accounting'] }),
+E('income-tax-pct','Sales & reports','Where do I set the income tax percentage?',
+  ['income tax percent','profit after tax is wrong','set tax on profit','change the income tax rate','how do i set corporate tax'],
+  'income tax percent profit after tax accounting rate corporate',
+  `On **Accounting**, type your rate into the **Income tax %** box above the income statement. It is used only to work out **Profit after tax** — it doesn't change the sales tax on receipts (that's in **Settings → Taxes**).`,
+  ['profit-calc','taxes-settings'], { pages:['accounting'] }),
+E('help-shortcut','Help & support','What is the gold ? button?',
+  ['gold question mark','floating help button','move the help button','shortcut to help','help button in the corner','how do i hide the question mark','the circle with a question mark','where did the help button go'],
+  'help button question mark floating gold circle corner drag move shortcut faq',
+  `The gold **?** in a circle is a shortcut to **Help & FAQ**. Click it to open the help page. To put it somewhere else, **press and drag** it to any spot on the screen — it stays where you leave it.`,
+  ['contact-support','bot-data'], { pages:['dashboard'] }),
+E('new-chat','Help & support','How do I start a new chat with AUREUM Bot?',
+  ['clear the chat','start over with the bot','new conversation','reset the chat','delete chat history','how do i clear this conversation'],
+  'new chat clear reset start over conversation history gold button',
+  `Press the gold **+ New chat** button under the chat box. It clears this conversation and starts a fresh one. Chats are only kept for the current browser session anyway.`,
+  ['bot-data'], { pages:['settings-help'] }),
+E('fiscal-what','Settings','What is fiscalisation and do I have to use it?',
+  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','zimra fiscal','fiscal receipts','what does fiscalise mean','tax authority receipts','fdms','fiscal printer'],
+  'fiscalisation fiscalization fiscal device zimra tax authority receipts compliance country optional virtual fdms',
+  `Fiscalisation means each sale is also reported to your country's **tax authority** (in Zimbabwe, ZIMRA) through an approved fiscal device, so the receipt can carry an official fiscal reference.
+
+It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**, and only for countries AUREUM has enabled. **Zimbabwe (ZIMRA) is still in development**: until it is tested and approved, sales are saved normally and clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
+  ['fiscal-setup','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
+E('fiscal-setup','Settings','How do I set up fiscalisation?',
+  ['set up fiscalisation','turn on fiscalisation','add a fiscal device','configure zimra','connect my fiscal device','enable fiscal receipts','fiscalisation settings'],
+  'fiscalisation setup enable turn on shop country device configure test connection serial number',
+  `1. Open **Settings → Fiscalisation** (owners and managers).
+2. Pick your **country** — only countries AUREUM has enabled for you are offered.
+3. Choose which **shops** should fiscalise sales.
+4. Add the **fiscal device** for each shop (type, serial number and the connection details your device supplier gives you) and press **Test device**.
+5. Switch it on for the shop.
+
+If the country isn't listed, it hasn't been enabled for your business yet — contact AUREUM support.`,
+  ['fiscal-what','contact-support'], { pages:['settings-fiscal'], human:true }),
+E('fiscal-not-fiscalised','Troubleshooting','Why does a sale say NOT fiscalised or uncertain?',
+  ['sale not fiscalised','receipt says not fiscalised','fiscal status uncertain','fiscal submission failed','retry fiscalisation','fiscal error on receipt','fiscal reference missing'],
+  'fiscal not fiscalised uncertain failed retry submission reference error pending device offline',
+  `A sale only counts as **fiscalised** once the device or tax authority has sent back a **fiscal reference**. If it says **not fiscalised**, the sale is still saved and paid — it just hasn't been confirmed. **Uncertain** means the answer was lost (for example the connection dropped), so AUREUM **does not resend it automatically** to avoid reporting a sale twice. In **Settings → Fiscalisation** you can see the transactions, check their status and **retry** the ones that failed. If the country is still in development, this is expected.`,
+  ['fiscal-what','fiscal-setup'], { pages:['settings-fiscal'], human:true }),
+E('dup-products','Products','What does the DUPLICATE tag on a product mean?',
+  ['duplicate product','two products with the same name','why does my product say duplicate','same product twice','duplicate name warning','merge duplicate products'],
+  'duplicate same name twice repeated product tag warning merge delete',
+  `Two products can't share exactly the same name (capitals and extra spaces are ignored). If older data already had two, the list marks them **DUPLICATE** so you can fix it: edit one name to make it different, or delete the extra one — move its stock first with a **Stock Adjustment** or transfer so you don't lose count.`,
+  ['edit-product','stock-adjustment'], { pages:['products'] }),
+E('stock-forecast','Stock','How do I know when to reorder and how much?',
+  ['how do i know what to buy','stock forecasting','how do i plan my purchases','how do i decide how much to order'],
+  'reorder suggestions forecast how much order quantity cover days velocity plan buying purchases',
+  `Ask AUREUM Bot **"What should I reorder?"** — it lists products at or under their alert level (or with under ~10 days of stock left) and suggests an amount to cover about **3 weeks** of sales, based on the last 30 days. Ask **"When will cold brew run out?"** for a single product. Treat it as a starting point: check supplier minimums and what's already on order, then raise a **Purchase Order**.`,
+  ['po-create','alerts-low','bot-data'], { pages:['reports-lowstock','products'] }),
+E('customer-winback','People','How do I find customers who stopped coming?',
+  ['win back customers','how do i find lapsed customers','bring customers back','how do i win back customers who stopped coming'],
+  'win back lapsed inactive at risk lost customers stopped coming churn retention segment',
+  `AUREUM groups customers automatically: **At risk** = no purchase for 60+ days, **Lost** = 120+ days. Ask AUREUM Bot **"Which customers are at risk?"** for the list, or open **Customers** and look at the segment column. A friendly message or a small offer is the quickest way to win them back — their phone number is on their profile.`,
+  ['customer-segments','loyalty-points','bot-data'], { pages:['customers'] }),
 ];
 const TOPICS = ['Getting started','Dashboard','Products','Stock','People','Sales & reports','The till','Shifts','Settings','Billing','Troubleshooting','Help & support','Not available'];
 const POPULAR = ['add-product','product-import','shift-close','refund-how','alerts-negative','price','contact-support'];
