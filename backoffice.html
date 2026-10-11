@@ -505,6 +505,10 @@
   .popover.align-left{ right:auto; left:0; }
   .popover.open{ display:block; }
   .shop-popover{ width:260px; padding:10px; }
+  /* inside the sidebar the switcher must fit the sidebar's width (it used to be wider and the "+" add-shop button was clipped) */
+  #sidebarShopPopover{ left:0; right:0; width:auto; max-height:min(70vh, 420px); overflow-y:auto; overflow-x:hidden; box-sizing:border-box; }
+  .add-shop-row input{ min-width:0; }
+  .add-shop-row .go{ flex:0 0 32px; min-height:32px; }
   .export-popover{ width:190px; padding:8px; }
   .col-toggle-row{ padding:8px 12px; border-radius:8px; font-size:12.5px; color:var(--ivory-dim); display:flex; align-items:center; gap:10px; cursor:pointer; }
   .col-toggle-row:hover{ background: var(--panel); }
@@ -2529,7 +2533,7 @@
               <div class="form-grid-2">
                 <div>
                   <div class="field-label">Business name</div>
-                  <input type="text" class="modal-field" id="stBizName" value="Aureum Retail">
+                  <input type="text" class="modal-field" id="stBizName" value="">
                 </div>
                 <div>
                   <div class="field-label">Business phone</div>
@@ -2565,12 +2569,7 @@
                 </div>
                 <div>
                   <div class="field-label">Timezone</div>
-                  <select class="modal-select" id="stTimezone">
-                    <option>Africa/Harare (GMT+2)</option>
-                    <option>Africa/Johannesburg (GMT+2)</option>
-                    <option>Europe/London (GMT+0/+1)</option>
-                    <option>America/New_York (GMT-5/-4)</option>
-                  </select>
+                  <select class="modal-select" id="stTimezone" aria-label="Timezone"></select>
                 </div>
               </div>
               <div class="toggle-row" style="margin-top:16px;">
@@ -4027,7 +4026,7 @@ const AureumSync = (function(){
   /* ===== SHOPS (used everywhere: sidebar, dashboard, filters, forms) =====
      No shop is hard-coded — the system starts with none, and shops only
      exist once someone adds one from a shop switcher. */
-  let SHOPS = [];
+  let SHOPS = ['Shop 1'];   // every new business starts with one shop
   let viewingShop = "All Shops";
 
   function closeAllPopovers(){ document.querySelectorAll('.popover.open').forEach(p=>p.classList.remove('open')); }
@@ -4341,14 +4340,7 @@ const AureumSync = (function(){
   /* ===== PRODUCTS ===== */
   // Seed data only — everything here comes from what's entered through "Add Product" below.
   // Categories are never a fixed list: they're read straight off whatever products exist.
-  let PRODUCTS = [
-    { id:1, name:"Sparkling Water 500ml", price:1.25, cost:0.60, cat:"Beverages", stock:120, image:null, code:"100001", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:2, name:"Cold Brew Coffee Can", price:2.75, cost:1.40, cat:"Beverages", stock:64, image:null, code:"100002", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:3, name:"Sea Salt Crackers", price:2.10, cost:1.05, cat:"Snacks", stock:90, image:null, code:"100003", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:4, name:"Bamboo Toothbrush", price:3.00, cost:1.20, cat:"Personal Care", stock:75, image:null, code:"100004", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:5, name:"Linen Spray 250ml", price:8.00, cost:3.90, cat:"Household", stock:22, image:null, code:"100005", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:6, name:"Reusable Tote Bag", price:6.00, cost:2.50, cat:"Others", stock:47, image:null, code:"100006", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-  ];
+  let PRODUCTS = [];   // a new business starts with no products — they add their own
   const SALES_QTY = {1:340, 2:210, 3:180, 4:95, 5:40, 6:60};
   let nextProductId = PRODUCTS.length + 1;
   let editingProductId = null;
@@ -6976,10 +6968,7 @@ const AureumSync = (function(){
   rcpDateState = mountDateFilterField('rcpDateSlot', 'rcpDate', renderReceipts, true);
 
   /* ===== CUSTOMERS ===== */
-  let CUSTOMERS = [
-    { id:1, name:"Rudo Chikafu", phone:"+263 77 234 5678", email:"rudo.c@example.com", shop:"", notes:"", orders:6, spent:142.50, credit:0, joined:"2026-03-14" },
-    { id:2, name:"Farai Banda", phone:"+263 71 456 7890", email:"", shop:"", notes:"", orders:2, spent:38.00, credit:0, joined:"2026-06-02" },
-  ];
+  let CUSTOMERS = [];   // a new business starts with no customers
   let nextCustomerId = CUSTOMERS.length + 1;
   let editingCustomerId = null;
 
@@ -7189,9 +7178,8 @@ const AureumSync = (function(){
 
   /* ===== EMPLOYEES ===== */
   let EMPLOYEES = [
-    { id:1, name:"Employee2", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
-    { id:2, name:"Employee4", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
-  ];
+    { id:1, name:"Employee 1", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
+  ];   // a new business starts with one employee
   let nextEmployeeId = EMPLOYEES.length + 1;
   let editingEmployeeId = null;
 
@@ -8482,6 +8470,7 @@ const AureumSync = (function(){
     const bizName = document.getElementById('stBizName').value.trim();
     if(!bizName){ alert('Business name is required.'); document.getElementById('stBizName').focus(); return; }
     POS_SETTINGS.businessName = bizName;
+    { const tz = document.getElementById('stTimezone'); if(tz && tz.value) POS_SETTINGS.timezone = tz.value; }
     const curCode = document.getElementById('stCurrency').value;
     POS_SETTINGS.currencyCode = curCode;
     POS_SETTINGS.currency = CURRENCY_SYMBOLS[curCode] || '$';
@@ -9590,11 +9579,25 @@ const AureumSync = (function(){
     renderSyncStatus();
     if(supaReady && sb) aureumToast('Back online \u2014 syncing your changes\u2026', 'ok');
   });
+  /* every time zone the browser knows (about 400), each shown with its current UTC offset */
+  function fillTimezones(){
+    const el = document.getElementById('stTimezone'); if(!el || el.options.length) return;
+    let zones = [];
+    try{ zones = Intl.supportedValuesOf('timeZone'); }catch(e){}
+    if(!zones.length) zones = ['Africa/Harare','Africa/Johannesburg','Africa/Lagos','Africa/Nairobi','Africa/Cairo','Europe/London','Europe/Paris','Europe/Berlin','Asia/Dubai','Asia/Kolkata','Asia/Singapore','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Sao_Paulo'];
+    if(!zones.includes('UTC')) zones.unshift('UTC');
+    const now = new Date();
+    const off = z => { try{ return new Intl.DateTimeFormat('en-US', { timeZone:z, timeZoneName:'shortOffset' }).formatToParts(now).find(p => p.type === 'timeZoneName').value.replace('GMT', 'GMT') ; }catch(e){ return ''; } };
+    el.innerHTML = zones.map(z => `<option value="${z}">${z.replace(/_/g, ' ')} (${off(z) || 'GMT'})</option>`).join('');
+  }
   function applySettingsToForm(){
     const acctEmailEl = document.getElementById('stAccountEmail');
     if(acctEmailEl && currentUser) acctEmailEl.textContent = 'Signed in as ' + (currentUser.email || '—');
     const nameEl = document.getElementById('stBizName');
-    if(nameEl && !nameEl.value) nameEl.value = POS_SETTINGS.businessName;
+    if(nameEl && (!nameEl.value || nameEl.value === 'Aureum Retail')) nameEl.value = POS_SETTINGS.businessName;
+    fillTimezones();
+    const tzEl = document.getElementById('stTimezone');
+    if(tzEl){ const want = POS_SETTINGS.timezone || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'); if([...tzEl.options].some(o => o.value === want)) tzEl.value = want; }
     const rateEl = document.getElementById('stTaxRate');
     if(rateEl && !rateEl.value) rateEl.value = POS_SETTINGS.taxPercent;
     const curEl = document.getElementById('stCurrency');
@@ -10043,7 +10046,17 @@ const AureumSync = (function(){
     window.addEventListener('resize', () => { if(fab.style.left){ const r = fab.getBoundingClientRect(); place(r.left, r.top); } });
     // only visible once signed in (hidden behind the sign-in screen)
     const gate = document.getElementById('authGate');
-    const sync = () => { const g = gate && getComputedStyle(gate).display !== 'none'; fab.classList.toggle('show', !g); };
+    const sync = () => {
+      const g = gate && getComputedStyle(gate).display !== 'none'; fab.classList.toggle('show', !g);
+      // a different person/account signing in starts with the button in its default spot (lower right)
+      try{
+        const uid = currentUser && currentUser.id;
+        if(!g && uid && localStorage.getItem(KEY + '.user') !== uid){
+          localStorage.setItem(KEY + '.user', uid); localStorage.removeItem(KEY);
+          fab.style.left = fab.style.top = ''; fab.style.right = ''; fab.style.bottom = '';
+        }
+      }catch(e){}
+    };
     sync(); setInterval(sync, 800);
   })();
 
@@ -10457,6 +10470,11 @@ const AureumSync = (function(){
     SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
+    // the business name typed when the account was created is the starting business name
+    try{
+      const sn = currentUser && currentUser.user_metadata && String(currentUser.user_metadata.business_name || '').trim();
+      if(sn && (!POS_SETTINGS.businessName || POS_SETTINGS.businessName === 'AUREUM' || POS_SETTINGS.businessName === 'Aureum Retail')) POS_SETTINGS.businessName = sn;
+    }catch(e){}
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
     // old products with zero stock (false low-stock alerts). Freeze it to

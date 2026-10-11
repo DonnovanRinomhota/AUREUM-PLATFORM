@@ -1,5 +1,12 @@
 # Changelog
 
+## New-account defaults (service worker v44)
+- A new account starts **blank**: no sample products (Reusable Tote Bag etc.), no sample customers, **one** employee, and one shop called **Shop 1**.
+- **Business name** in Settings is the name typed at sign-up.
+- **Timezone** list now has every time zone (about 400), and the choice is saved.
+- The gold **?** help button starts in the lower right (and resets for a newly signed-in account).
+- The shop switcher's **+ add shop** button is no longer cut off in the left column.
+
 ## Units, expiry report & polish (service worker v43)
 - **Unit column** on Goods Received, Purchase Orders, Stock Adjustments and Transfers: **Each** by default, or Pack of 5/6/10/12/20/24/50, or **Custom…** any pack size. Stock always moves by **Quantity × Unit** (4 × Pack of 12 = 48). Cost on GRN/PO follows the pack size until you type your own. Saved documents, pop-ups and PDFs show Unit and Total qty. This also fixes the GRN Unit cell that could not be changed.
 - Removed the category filter above the line items on Goods Received and Purchase Orders.

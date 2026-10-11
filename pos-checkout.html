@@ -1739,15 +1739,8 @@ async function aureumSignIn(email, password){
   }
 
   let POS_SETTINGS = { businessName:'AUREUM', currency:'$', currencyCode:'USD', taxPercent:0, taxLabel:'Tax', receiptFooter:'Thank you for shopping with us', dualCurrency:false, currencyCode2:'ZWG', currencySymbol2:'ZWG ', fxRate:0 };
-  let SHOPS = [];
-  let PRODUCTS = [
-    { id:1, name:"Sparkling Water 500ml", price:1.25, cost:0.60, cat:"Beverages", stock:120, image:null, code:"100001", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:2, name:"Cold Brew Coffee Can", price:2.75, cost:1.40, cat:"Beverages", stock:64, image:null, code:"100002", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:3, name:"Sea Salt Crackers", price:2.10, cost:1.05, cat:"Snacks", stock:90, image:null, code:"100003", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:4, name:"Bamboo Toothbrush", price:3.00, cost:1.20, cat:"Personal Care", stock:75, image:null, code:"100004", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:5, name:"Linen Spray 250ml", price:8.00, cost:3.90, cat:"Household", stock:22, image:null, code:"100005", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-    { id:6, name:"Reusable Tote Bag", price:6.00, cost:2.50, cat:"Others", stock:47, image:null, code:"100006", barcode:"", soldBy:"each", description:"", shops:"all", stockControl:true },
-  ];
+  let SHOPS = ['Shop 1'];   // every new business starts with one shop
+  let PRODUCTS = [];   // a new business starts with no products
 
   /* ===== PER-SHOP STOCK (mirrors the same helpers/field used in backoffice.html —
      shares the same p.shopStock data via Supabase, so both files must agree on
@@ -1788,13 +1781,9 @@ async function aureumSignIn(email, password){
   }
 
   let EMPLOYEES = [
-    { id:1, name:"Employee2", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
-    { id:2, name:"Employee4", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
+    { id:1, name:"Employee 1", role:"Cashier", shop:"", phone:"", email:"", pin:"", active:true },
   ];
-  let CUSTOMERS = [
-    { id:1, name:"Rudo Chikafu", phone:"+263 77 234 5678", email:"rudo.c@example.com", shop:"", notes:"", orders:6, spent:142.50, credit:0, joined:"2026-03-14" },
-    { id:2, name:"Farai Banda", phone:"+263 71 456 7890", email:"", shop:"", notes:"", orders:2, spent:38.00, credit:0, joined:"2026-06-02" },
-  ];
+  let CUSTOMERS = [];   // ...and no customers
   let RECEIPTS = [];
   let nextCustomerId = CUSTOMERS.length + 1;
   let activeEmployee = null; // set only after a PIN is entered at the shift gate — see startShift()
@@ -3246,6 +3235,10 @@ async function aureumSignIn(email, password){
     SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
+    try{
+      const sn = currentUser && currentUser.user_metadata && String(currentUser.user_metadata.business_name || '').trim();
+      if(sn && (!POS_SETTINGS.businessName || POS_SETTINGS.businessName === 'AUREUM' || POS_SETTINGS.businessName === 'Aureum Retail')) POS_SETTINGS.businessName = sn;
+    }catch(e){}
     // Don't clobber the cashier's active shift if data reloads mid-shift
     // (e.g. a live sync update from Back Office) — only set a default
     // employee if no one has actually started a shift yet.
