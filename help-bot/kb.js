@@ -712,6 +712,16 @@ E('customer-winback','People','How do I find customers who stopped coming?',
   'win back lapsed inactive at risk lost customers stopped coming churn retention segment',
   `AUREUM groups customers automatically: **At risk** = no purchase for 60+ days, **Lost** = 120+ days. Ask AUREUM Bot **"Which customers are at risk?"** for the list, or open **Customers** and look at the segment column. A friendly message or a small offer is the quickest way to win them back — their phone number is on their profile.`,
   ['customer-segments','loyalty-points','bot-data'], { pages:['customers'] }),
+E('unit-pack','Stock','What does the Unit column do (packs of 5, 12, 50)?',
+  ['what is the unit column','how do i receive stock in packs','pack of 12','received in cartons','unit size on goods received','how do packs work','unit each pack'],
+  'unit pack packs carton case each custom size quantity multiply total goods received purchase order stock adjustment transfer',
+  `On **Goods Received**, **Purchase Orders**, **Stock Adjustments** and **Transfers**, every line has a **Unit**. It starts as **Each**. If the stock arrives in packs, choose **Pack of 5, 6, 10, 12, 20, 24 or 50**, or **Custom…** and type any number. The total added to stock is **Quantity × Unit** — for example 4 × Pack of 12 adds **48**. On Goods Received and Purchase Orders the cost is per pack and updates for you; you can still type your own cost.`,
+  ['grn-receive','po-create'], { pages:['goods-received'] }),
+E('report-expired','Sales & reports','Where is the list of expired products?',
+  ['expired products','show expired products','which products have expired','expired stock report','what is expiring soon','products past their expiry date'],
+  'expired expiry expiring date report products batch shelf life reports',
+  `Open **Reports → Expired Products**. It lists every batch whose **expiry date** has passed (and, if you like, those expiring in the next 30 days), with the shop, the Goods Received note, how many days ago it expired, and what is still in stock. Expiry dates come from the **Expiry date** you enter on **Goods Received** notes, so fill that in when stock arrives.`,
+  ['grn-receive','alerts-low'], { pages:['reports'] }),
 ];
 const TOPICS = ['Getting started','Dashboard','Products','Stock','People','Sales & reports','The till','Shifts','Settings','Billing','Troubleshooting','Help & support','Not available'];
 const POPULAR = ['add-product','product-import','shift-close','refund-how','alerts-negative','price','contact-support'];

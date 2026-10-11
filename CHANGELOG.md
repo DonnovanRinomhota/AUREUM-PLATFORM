@@ -1,5 +1,15 @@
 # Changelog
 
+## Units, expiry report & polish (service worker v43)
+- **Unit column** on Goods Received, Purchase Orders, Stock Adjustments and Transfers: **Each** by default, or Pack of 5/6/10/12/20/24/50, or **Custom…** any pack size. Stock always moves by **Quantity × Unit** (4 × Pack of 12 = 48). Cost on GRN/PO follows the pack size until you type your own. Saved documents, pop-ups and PDFs show Unit and Total qty. This also fixes the GRN Unit cell that could not be changed.
+- Removed the category filter above the line items on Goods Received and Purchase Orders.
+- **Reports → Expired Products** (from the expiry dates on Goods Received), with an "expiring in 30 days" view.
+- Accounting: **Income tax %** now sits on a gold plate.
+- Aureum Bot opening message updated.
+- POS: product photos have their empty white margins trimmed so items fill the tile.
+- Stock Transfer PDF is now a print-out of the saved-transfer pop-up (same fields, columns and note).
+- Website: removed the "Watch Demo" button and dialog.
+
 ## Quality check — customer-ready pass (service worker v42)
 - **Security:** names, notes and descriptions typed by staff or customers could run as code in the owner's Back Office (a customer added at the till could attack the owner's session). New `safe-html.js` strips scripts, inline event handlers and `javascript:` links from everything the apps put on screen — in the Back Office, the till and the platform admin page. Tested with hostile text in every field type.
 - **Data loss fixed:** suppliers were never saved to the account — they vanished on reload and a demo supplier appeared for every new business. They are now saved and synced like customers.

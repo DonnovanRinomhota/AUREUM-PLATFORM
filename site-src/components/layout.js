@@ -105,7 +105,6 @@ ${header(active)}
 ${body}
 </main>
 ${footer()}
-${demoDialog()}
 <script src="/site/assets/site.js?v=${assetV}" defer></script>
 </body>
 </html>

@@ -946,6 +946,14 @@
   .pp-meta{ flex-shrink:0; font-size:11px; color:var(--sage); }
   .pp-empty{ padding:14px 12px; font-size:13px; color:var(--sage); text-align:center; }
   .line-table .pn{ font-weight:600; color:var(--ivory); }
+  .tax-plate{ display:flex; align-items:center; gap:12px; padding:9px 14px; border-radius:12px; background:linear-gradient(135deg,#F3D98B 0%,#D4AF37 55%,#B8902A 100%); border:1px solid #F3D98B; box-shadow:0 0 0 1px rgba(212,175,55,.25), 0 6px 18px rgba(212,175,55,.28); }
+  .tax-plate .fl-label{ margin:0; color:#20160A; font-weight:700; font-size:12px; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+  .tax-plate input{ width:92px; padding:8px 10px; font-weight:700; text-align:right; background:#20160A; color:#F3D98B; border:1px solid #20160A; border-radius:8px; }
+  .tax-plate input:focus{ outline:2px solid #20160A; outline-offset:2px; }
+  .unit-cell{ min-width:118px; }
+  .unit-cell .unit-sel, .unit-cell .unit-custom{ width:100%; }
+  .unit-cell .unit-custom{ margin-top:6px; }
+  .unit-cell .unit-total{ font-size:10.5px; color:var(--gold-bright); margin-top:4px; min-height:0; }
   .saved-banner{ display:flex; align-items:center; gap:10px; background:rgba(60,170,110,.12); border:1px solid rgba(60,170,110,.35); color:var(--ivory); border-radius:10px; padding:10px 12px; margin-bottom:16px; font-size:13px; }
   .saved-banner b{ color:#8ee3b4; }
   .app{ height:var(--vvh, 100vh); }
@@ -1733,12 +1741,9 @@
         </div>
 
         <div class="line-table-wrap">
-          <div class="filter-field" style="max-width:200px; margin-left:auto; margin-bottom:12px;">
-            <select class="cat-select" id="poCatFilter"><option>All categories</option></select>
-          </div>
           <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>In stock</th><th>Incoming</th><th>Quantity</th><th>Unit cost</th><th>Price</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>In stock</th><th>Incoming</th><th>Quantity</th><th>Unit</th><th>Unit cost</th><th>Price</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="poLineBody"></tbody>
           </table>
@@ -1842,9 +1847,6 @@
         </div>
 
         <div class="line-table-wrap">
-          <div class="filter-field" style="max-width:200px; margin-left:auto; margin-bottom:12px;">
-            <select class="cat-select" id="grnCatFilter"><option>All categories</option></select>
-          </div>
           <table class="line-table stack-sm">
             <thead>
               <tr><th>Product</th><th>In stock</th><th>Received quantity</th><th>Expiry date</th><th>Unit</th><th>Cost</th><th>Price</th><th>Total cost</th><th></th></tr>
@@ -1954,7 +1956,7 @@
         <div class="line-table-wrap">
           <table class="line-table stack-sm">
             <thead>
-              <tr><th>Product</th><th>Current stock</th><th id="saQtyColHead">Counted stock</th><th>Unit cost</th><th>Price</th><th>Total cost</th><th></th></tr>
+              <tr><th>Product</th><th>Current stock</th><th id="saQtyColHead">Counted stock</th><th>Unit</th><th>Unit cost</th><th>Price</th><th>Total cost</th><th></th></tr>
             </thead>
             <tbody id="saLineBody"></tbody>
           </table>
@@ -2335,7 +2337,7 @@
             <div class="btn-outline add-line-btn" id="trAddLineBtn">+ Add product</div>
           </div>
           <table class="line-table stack-sm">
-            <thead><tr><th>Product</th><th style="width:100px;">Stock (From)</th><th style="width:100px;">Stock (To)</th><th style="width:110px;">Quantity</th><th style="width:80px;">Cost</th><th style="width:80px;">Price</th><th style="width:44px;"></th></tr></thead>
+            <thead><tr><th>Product</th><th style="width:100px;">Stock (From)</th><th style="width:100px;">Stock (To)</th><th style="width:110px;">Quantity</th><th style="width:130px;">Unit</th><th style="width:80px;">Cost</th><th style="width:80px;">Price</th><th style="width:44px;"></th></tr></thead>
             <tbody id="trLineBody"></tbody>
           </table>
           <div class="field-error" id="trLinesError">Add at least one product with a quantity greater than 0</div>
@@ -2354,9 +2356,9 @@
 
       <div class="filters-bar">
         <div id="acctDateSlot"></div>
-        <div class="filter-field" style="margin-left:auto;">
-          <div class="fl-label">Income tax (%)</div>
-          <input type="number" class="modal-field" id="acctTaxPct" min="0" max="100" step="0.1" value="0" style="width:110px; padding:8px 10px;" title="Used to work out Profit After Tax">
+        <div class="filter-field tax-plate" style="margin-left:auto;">
+          <label class="fl-label" for="acctTaxPct">Income tax %</label>
+          <input type="number" inputmode="decimal" class="modal-field" id="acctTaxPct" min="0" max="100" step="0.1" value="0" title="Used to work out Profit After Tax">
         </div>
       </div>
 
@@ -2458,6 +2460,22 @@
             <tbody id="repLowStockBody"></tbody>
           </table>
           <div id="repLowStockPagination"></div>
+        </div>
+      </div>
+
+      <!-- Expired products (from the expiry dates entered on Goods Received Notes) -->
+      <div class="report-panel" id="report-expired">
+        <div class="filter-row" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+          <div class="filter-field"><div class="fl-label">Shop</div><select class="cat-select" id="repExpShopFilter"></select></div>
+          <div class="filter-field"><div class="fl-label">Show</div><select class="cat-select" id="repExpView" aria-label="Expiry view"><option value="expired">Expired</option><option value="soon">Expiring in 30 days</option><option value="both">Expired + expiring soon</option></select></div>
+        </div>
+        <div class="page-sub" id="repExpSub" style="margin-bottom:12px;"></div>
+        <div class="table-panel">
+          <table>
+            <thead><tr><th>Product</th><th>Category</th><th>Shop</th><th>GRN</th><th>Expiry date</th><th style="text-align:right;">Days</th><th style="text-align:right;">Received</th><th style="text-align:right;">In stock now</th></tr></thead>
+            <tbody id="repExpiredBody"></tbody>
+          </table>
+          <div id="repExpiredPagination"></div>
         </div>
       </div>
 
@@ -3937,6 +3955,37 @@ const AureumSync = (function(){
     return input._ppApi;
   }
   function productUnitLabel(p){ return (p && p.soldBy === 'weight') ? 'By weight' : 'Each'; }
+  /* ---- Unit / pack size on stock documents ----
+     A line's quantity is counted in UNITS (Each, Pack of 12 …). Stock always moves by quantity × unit size. */
+  const UNIT_PRESETS = [1,5,6,10,12,20,24,50];
+  function unitSizeOf(it){ const n = Math.floor(Number(it && it.unitSize)); return n > 0 ? n : 1; }
+  function unitText(it, p){ if(p && p.soldBy === 'weight') return 'By weight'; const n = unitSizeOf(it); return n === 1 ? 'Each' : 'Pack of ' + n; }
+  function unitTotalQty(it, key){ return Math.round(((Number(it && it[key || 'qty']) || 0) * unitSizeOf(it)) * 1000) / 1000; }
+  function unitCellHtml(i, row, p, qtyKey){
+    if(p && p.soldBy === 'weight') return 'By weight';
+    const n = unitSizeOf(row), preset = UNIT_PRESETS.includes(n);
+    const opts = UNIT_PRESETS.map(u => `<option value="${u}"${(preset && n === u) ? ' selected' : ''}>${u === 1 ? 'Each' : 'Pack of ' + u}</option>`).join('')
+      + `<option value="custom"${preset ? '' : ' selected'}>Custom…</option>`;
+    return `<div class="unit-cell"><select class="unit-sel" data-idx="${i}" aria-label="Unit">${opts}</select>`
+      + `<input type="number" inputmode="numeric" min="1" step="1" class="unit-custom" data-idx="${i}" value="${preset ? '' : n}" placeholder="Units per pack" aria-label="Units per pack" style="${preset ? 'display:none;' : ''}">`
+      + `<div class="unit-total" data-idx="${i}">${n > 1 ? '= ' + unitTotalQty(row, qtyKey) + ' units' : ''}</div></div>`;
+  }
+  function refreshUnitTotal(bodyId, i, row, qtyKey){
+    const el = document.querySelector(`#${bodyId} .unit-total[data-idx="${i}"]`);
+    if(el) el.textContent = unitSizeOf(row) > 1 ? '= ' + unitTotalQty(row, qtyKey) + ' units' : '';
+  }
+  function wireUnitCells(bodyId, items, qtyKey, onChange){
+    const tbody = document.getElementById(bodyId);
+    tbody.querySelectorAll('.unit-sel').forEach(sel => sel.addEventListener('change', function(){
+      const i = this.dataset.idx, row = items[i];
+      if(this.value === 'custom'){ const c = tbody.querySelector(`.unit-custom[data-idx="${i}"]`); c.style.display = ''; c.focus(); return; }
+      row.unitSize = Number(this.value); row.unit = unitText(row); setTimeout(() => onChange(i, row), 0);
+    }));
+    tbody.querySelectorAll('.unit-custom').forEach(inp => {
+      inp.addEventListener('input', function(){ const i = this.dataset.idx; items[i].unitSize = Math.max(1, Math.floor(Number(this.value)) || 1); refreshUnitTotal(bodyId, i, items[i], qtyKey); });
+      inp.addEventListener('change', function(){ const i = this.dataset.idx, row = items[i]; row.unitSize = Math.max(1, Math.floor(Number(this.value)) || 1); row.unit = unitText(row); setTimeout(() => onChange(i, row), 0); });   // deferred: this can fire from a blur while the table is being rebuilt
+    });
+  }
   // selling price shown next to the cost on purchase orders, GRNs, adjustments and transfers
   const money2 = n => (Number(n) || 0).toFixed(2);
   function linePrice(it, p){ return (it && it.price != null && !isNaN(it.price)) ? Number(it.price) : (p ? (Number(p.price) || 0) : 0); }
@@ -4037,7 +4086,7 @@ const AureumSync = (function(){
     document.getElementById('dashShopLabel').textContent = viewingShop;
 
     // shop *filter* selects (include an "All Shops" option)
-    ["productShopFilter","sbpShopFilter","grnShopFilter","saShopFilter","rcpShopFilter","repInvShopFilter"].forEach(id=>{
+    ["productShopFilter","sbpShopFilter","grnShopFilter","saShopFilter","rcpShopFilter","repInvShopFilter","repExpShopFilter"].forEach(id=>{
       const el = document.getElementById(id); if(!el) return;
       const prev = el.value || "All Shops";
       el.innerHTML = ["All Shops", ...SHOPS].map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -4439,7 +4488,7 @@ const AureumSync = (function(){
   function renderCategoryFilter(){
     const cats = getProductCategories();
     const options = ["All", ...cats];
-    ["productCatFilter","sbpCatFilter","repInvCatFilter","poCatFilter","grnCatFilter"].forEach(id=>{
+    ["productCatFilter","sbpCatFilter","repInvCatFilter"].forEach(id=>{
       const select = document.getElementById(id);
       if(!select) return;
       const cur = id==='productCatFilter' ? productCatFilterValue : (select.value || "All");
@@ -5847,12 +5896,12 @@ const AureumSync = (function(){
 
   function renderPODetailBody(po){
     const itemsSubtotal = (po.items||[]).reduce((s,it)=> s + ((it.qty*it.unitCost)||0), 0);
-    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="4" style="color:var(--sage);">${escHtml(c.name)}</td><td style="text-align:right;">$${(c.amount||0).toFixed(2)}</td></tr>`).join('');
+    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="6" style="color:var(--sage);">${escHtml(c.name)}</td><td style="text-align:right;">$${(c.amount||0).toFixed(2)}</td></tr>`).join('');
     const rows = (po.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${it.qty}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
-    }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this order.</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${it.qty}</td><td>${unitText(it,p)}</td><td style="text-align:right;">${unitTotalQty(it)}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this order.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${po.supplier}</div></div>
@@ -5863,8 +5912,8 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Delivery instruction</div><div class="v">${po.delivery||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
-        <tbody>${rows}${costRows ? `<tr><td colspan="4" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">$${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th>Unit</th><th style="text-align:right;">Total qty</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
+        <tbody>${rows}${costRows ? `<tr><td colspan="6" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">$${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${po.total.toFixed(2)}</span></div>
     `;
@@ -5922,7 +5971,7 @@ const AureumSync = (function(){
   function poPdf(po){
     const rows = (po.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), String(it.qty), money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0))];
+      return [itemLabel(it,p), String(it.qty), unitText(it,p), String(unitTotalQty(it)), money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0))];
     });
     const sub = (po.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
     const totals = [];
@@ -5932,7 +5981,7 @@ const AureumSync = (function(){
       docType:'Purchase Order', number: po.id, subtitle: `Status: ${po.status || '—'}`, createdBy: po.createdBy || '',
       meta:[['Supplier', po.supplier], ['Shop', po.shop], ['PO date', po.date ? fmtDisplay(po.date) : ''], ['Expected date', po.expected ? fmtDisplay(po.expected) : ''], ['Payment method', po.payment], ['Delivery instruction', po.delivery], ['Created by', po.createdBy]],
       tableTitle:'Products',
-      columns:[{h:'Product', wrap:true}, {h:'Quantity', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
+      columns:[{h:'Product', wrap:true}, {h:'Quantity', align:'r'}, {h:'Unit'}, {h:'Total qty', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
       rows, totals, signatures:['Prepared by','Approved by','Supplier acknowledgement']
     }, `${po.id}.pdf`);
   }
@@ -5970,7 +6019,8 @@ const AureumSync = (function(){
      unit cost, line total) so history stays correct even if the product is later renamed or deleted. */
   function snapshotLine(r){
     const p = PRODUCTS.find(x => x.id === r.productId);
-    return { ...r, name: p ? p.name : (r.name || ''), price: p ? (Number(p.price) || 0) : (r.price || 0), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
+    const o = { ...r }; delete o.costEdited;
+    return { ...o, name: p ? p.name : (r.name || ''), price: p ? (Number(p.price) || 0) : (r.price || 0), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
   }
   function itemLabel(it, p){ return it.name || (p && p.name) || (PRODUCTS.find(x => x.id === it.productId) || {}).name || 'Deleted product'; }
   function renderPOLines(){
@@ -5983,6 +6033,7 @@ const AureumSync = (function(){
         <td class="mono" data-label="In stock">${p ? getStock(p, document.getElementById('poShop').value) : '—'}</td>
         <td class="mono" data-label="Incoming">0</td>
         <td data-label="Quantity"><input type="number" inputmode="decimal" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
+        <td data-label="Unit">${unitCellHtml(i, row, p)}</td>
         <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="po-cost"></td>
         <td class="mono" data-label="Price">${p ? money2(p.price) : '—'}</td>
         <td class="mono po-line-total" data-label="Total cost" data-idx="${i}">${total.toFixed(2)}</td>
@@ -5994,13 +6045,21 @@ const AureumSync = (function(){
     tbody.querySelectorAll('.po-qty').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       poLineItems[idx].qty = parseFloat(this.value)||0;
+      refreshUnitTotal('poLineBody', idx, poLineItems[idx]);
       updatePOLineTotal(idx);
     }));
     tbody.querySelectorAll('.po-cost').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       poLineItems[idx].unitCost = parseFloat(this.value)||0;
+      poLineItems[idx].costEdited = true;
       updatePOLineTotal(idx);
     }));
+    wireUnitCells('poLineBody', poLineItems, 'qty', (i, r) => {
+      if(poLineItems.indexOf(r) < 0) return;
+      const pp = PRODUCTS.find(x=>x.id===r.productId);
+      if(pp && !r.costEdited) r.unitCost = Math.round((Number(pp.cost)||0) * unitSizeOf(r) * 100) / 100;
+      renderPOLines();
+    });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){ poLineItems.splice(this.dataset.idx,1); renderPOLines(); }));
   }
   function updatePOLineTotal(idx){
@@ -6010,9 +6069,7 @@ const AureumSync = (function(){
     updatePOTotal();
   }
   function poPickableProducts(){
-    const catFilterEl = document.getElementById('poCatFilter');
-    const catFilter = catFilterEl ? catFilterEl.value : 'All';
-    return PRODUCTS.filter(pp=> catFilter==='All' || catFilter==='All categories' || pp.cat===catFilter);
+    return PRODUCTS;
   }
   function populatePOProductDatalist(){ const a = document.getElementById('poProductSearch'); if(a && a._ppApi) a._ppApi.refresh(); }
   function addPOProduct(match){
@@ -6037,7 +6094,6 @@ const AureumSync = (function(){
   });
 
   document.getElementById('addPurchaseBtn').addEventListener('click', ()=> switchToPOCreate());
-  document.getElementById('poCatFilter').addEventListener('change', populatePOProductDatalist);
   document.getElementById('poBackLink').addEventListener('click', switchToPOList);
   document.getElementById('poCancelBtn').addEventListener('click', switchToPOList);
   let poCostItems = [];
@@ -6108,8 +6164,8 @@ const AureumSync = (function(){
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
-    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${unitText(it,p)}</td><td class="num">${unitTotalQty(it)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+    }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${g.supplier}</div></div>
@@ -6120,7 +6176,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Additional info</div><div class="v">${g.additional||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th class="exp">Expiry date</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total cost</th></tr></thead>
+        <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th>Unit</th><th class="num">Total qty</th><th class="exp">Expiry date</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total cost</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
@@ -6149,7 +6205,7 @@ const AureumSync = (function(){
   function grnPdf(g){
     const rows = (g.items||[]).filter(it=>it.productId || it.name).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '-', String(it.qty), it.expiry ? fmtDisplay(it.expiry) : '-', money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0))];
+      return [itemLabel(it,p), it.beforeStock!=null ? String(it.beforeStock) : '-', String(it.qty), unitText(it,p), String(unitTotalQty(it)), it.expiry ? fmtDisplay(it.expiry) : '-', money2(it.unitCost), money2(linePrice(it,p)), money2((it.qty||0)*(it.unitCost||0))];
     });
     const sub = (g.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
     const totals = [];
@@ -6159,7 +6215,7 @@ const AureumSync = (function(){
       docType:'Goods Received Note', number: g.id, subtitle: g.po ? `Received against ${g.po}` : (g.type || ''), createdBy: g.createdBy || '',
       meta:[['Supplier', g.supplier], ['Shop', g.shop], ['GRN date', g.date ? fmtDisplay(g.date) : ''], ['Payment method', g.payment], ['Supplier invoice no.', g.invoice], ['Additional information', g.additional], ['Created by', g.createdBy]],
       tableTitle:'Products',
-      columns:[{h:'Product', wrap:true}, {h:'In stock', align:'r'}, {h:'Received qty', align:'r'}, {h:'Expiry date'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
+      columns:[{h:'Product', wrap:true}, {h:'In stock', align:'r'}, {h:'Received qty', align:'r'}, {h:'Unit'}, {h:'Total qty', align:'r'}, {h:'Expiry date'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
       rows, totals, signatures:['Store keeper signature','Approved by','Received by']
     }, `${g.id}.pdf`);
   }
@@ -6241,7 +6297,7 @@ const AureumSync = (function(){
         <td data-label="In stock" class="mono">${getStock(p, shop)}</td>
         <td data-label="Received quantity"><input type="number" inputmode="decimal" min="0" step="${p.soldBy==='weight'?'0.01':'1'}" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Received quantity"></td>
         <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
-        <td data-label="Unit">${productUnitLabel(p)}</td>
+        <td data-label="Unit">${unitCellHtml(i, row, p)}</td>
         <td data-label="Cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost" aria-label="Cost per unit"></td>
         <td data-label="Price" class="mono">${money2(p.price)}</td>
         <td data-label="Total cost" class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
@@ -6254,13 +6310,21 @@ const AureumSync = (function(){
     tbody.querySelectorAll('.grn-qty').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       grnLineItems[idx].qty = parseFloat(this.value)||0;
+      refreshUnitTotal('grnLineBody', idx, grnLineItems[idx]);
       updateGRNLineTotal(idx);
     }));
     tbody.querySelectorAll('.grn-cost').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       grnLineItems[idx].unitCost = parseFloat(this.value)||0;
+      grnLineItems[idx].costEdited = true;
       updateGRNLineTotal(idx);
     }));
+    wireUnitCells('grnLineBody', grnLineItems, 'qty', (i, r) => {
+      if(grnLineItems.indexOf(r) < 0) return;
+      const pp = PRODUCTS.find(x=>x.id===r.productId);
+      if(pp && !r.costEdited) r.unitCost = Math.round((Number(pp.cost)||0) * unitSizeOf(r) * 100) / 100;
+      renderGRNLines();
+    });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){ grnLineItems.splice(this.dataset.idx,1); renderGRNLines(); }));
   }
   function updateGRNLineTotal(idx){
@@ -6270,9 +6334,7 @@ const AureumSync = (function(){
     updateGRNTotal();
   }
   function grnPickableProducts(){
-    const catFilterEl = document.getElementById('grnCatFilter');
-    const catFilter = catFilterEl ? catFilterEl.value : 'All';
-    return PRODUCTS.filter(pp=> catFilter==='All' || catFilter==='All categories' || pp.cat===catFilter);
+    return PRODUCTS;
   }
   function populateGRNProductDatalist(){ const a = document.getElementById('grnProductSearch'); if(a && a._ppApi) a._ppApi.refresh(); }
   function addGRNProduct(match){
@@ -6298,7 +6360,6 @@ const AureumSync = (function(){
   document.getElementById('grnShop').addEventListener('change', renderGRNLines);
 
   document.getElementById('addGrnBtn').addEventListener('click', switchToGRNCreate);
-  document.getElementById('grnCatFilter').addEventListener('change', populateGRNProductDatalist);
   document.getElementById('grnBackLink').addEventListener('click', switchToGRNList);
   document.getElementById('grnCancelBtn').addEventListener('click', switchToGRNList);
   let grnCostItems = [];
@@ -6353,9 +6414,12 @@ const AureumSync = (function(){
     validLines.forEach(row=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
       row.beforeStock = p ? getStock(p, grnShopVal) : 0;              // "in stock" as it was just before this GRN
-      row.unit = productUnitLabel(p);
+      if(p && p.soldBy === 'weight') row.unitSize = 1;
+      row.unitSize = unitSizeOf(row);
+      row.unit = unitText(row, p);
+      row.totalQty = unitTotalQty(row);
       row.price = p ? (Number(p.price) || 0) : 0;
-      if(p) addStock(p, grnShopVal, row.qty || 0);
+      if(p) addStock(p, grnShopVal, row.totalQty);
     });
     GRN_RECORDS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(),
@@ -6395,13 +6459,13 @@ const AureumSync = (function(){
     const qtyLabel = SA_QTY_LABEL_BY_TYPE[a.type] || 'Quantity';
     const rows = (a.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      const before = it.beforeStock||0;
+      const before = it.beforeStock||0, eff = unitTotalQty(it, 'counted');
       let delta, after;
-      if(a.type === 'Add'){ delta = it.counted; after = before + it.counted; }
-      else if(a.type === 'Reduce'){ delta = -it.counted; after = before - it.counted; }
-      else { delta = it.counted - before; after = it.counted; } // Override
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td><td style="text-align:right;">$${money2(it.unitCost)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td></tr>`;
-    }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
+      if(a.type === 'Add'){ delta = eff; after = before + eff; }
+      else if(a.type === 'Reduce'){ delta = -eff; after = before - eff; }
+      else { delta = eff - before; after = eff; } // Override
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td>${unitText(it,p)}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td><td style="text-align:right;">$${money2(it.unitCost)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td></tr>`;
+    }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Type</div><div class="v">${a.type}</div></div>
@@ -6411,7 +6475,7 @@ const AureumSync = (function(){
         <div class="detail-field" style="grid-column:1/-1;"><div class="field-label">Notes</div><div class="v">${a.notes||'—'}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Before</th><th style="text-align:right;">${qtyLabel}</th><th style="text-align:right;">After</th><th style="text-align:right;">Change</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th></tr></thead>
+        <thead><tr><th>Product</th><th style="text-align:right;">Before</th><th style="text-align:right;">${qtyLabel}</th><th>Unit</th><th style="text-align:right;">After</th><th style="text-align:right;">Change</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Stock adjustments are locked from editing once saved to keep the audit trail accurate — delete it to reverse the stock change.</div>
@@ -6478,20 +6542,20 @@ const AureumSync = (function(){
     let total = 0;
     const rows = (a.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      const before = it.beforeStock||0;
+      const before = it.beforeStock||0, eff = unitTotalQty(it, 'counted'), n = unitSizeOf(it);
       let after, line, delta;
-      if(a.type === 'Add'){ after = before + it.counted; delta = it.counted; line = (it.counted||0) * (it.unitCost||0); }
-      else if(a.type === 'Reduce'){ after = before - it.counted; delta = -it.counted; line = (it.counted||0) * (it.unitCost||0); }
-      else { after = it.counted; delta = it.counted - before; line = ((it.counted||0) - before) * (it.unitCost||0); }
+      if(a.type === 'Add'){ after = before + eff; delta = eff; line = (it.counted||0) * (it.unitCost||0); }
+      else if(a.type === 'Reduce'){ after = before - eff; delta = -eff; line = (it.counted||0) * (it.unitCost||0); }
+      else { after = eff; delta = eff - before; line = (eff - before) * ((it.unitCost||0) / n); }
       total += line;
-      return [itemLabel(it,p), String(before), String(it.counted), String(after), { t:(delta>=0?'+':'') + delta, c: delta>=0 ? 'pos' : 'neg' }, money2(it.unitCost), money2(linePrice(it,p)), money2(line)];
+      return [itemLabel(it,p), String(before), String(it.counted), unitText(it,p), String(after), { t:(delta>=0?'+':'') + delta, c: delta>=0 ? 'pos' : 'neg' }, money2(it.unitCost), money2(linePrice(it,p)), money2(line)];
     });
     const qtyLabel = SA_QTY_LABEL_BY_TYPE[a.type] || 'Quantity';
     openDocPdf({
       docType:'Stock Adjustment', number: a.id, subtitle: `${a.type} - ${a.reason}`, createdBy: a.createdBy || '',
       meta:[['Supplier', a.supplier], ['Shop', a.shop], ['Adjustment type', a.type], ['Adjustment reason', a.reason], ['Created date', a.date ? fmtDisplay(a.date) : ''], ['Created by', a.createdBy], ['Notes', a.notes]],
       tableTitle:'Products',
-      columns:[{h:'Product', wrap:true}, {h:'Current stock', align:'r'}, {h:qtyLabel, align:'r'}, {h:'Stock after', align:'r'}, {h:'Change', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
+      columns:[{h:'Product', wrap:true}, {h:'Current stock', align:'r'}, {h:qtyLabel, align:'r'}, {h:'Unit'}, {h:'Stock after', align:'r'}, {h:'Change', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
       rows, totals:[['Total', '$' + money2(total), true]], signatures:['Store keeper signature','Approved by','Received by']
     }, `${a.id}.pdf`);
   }
@@ -6539,7 +6603,8 @@ const AureumSync = (function(){
   function saLineTotal(row, p){
     const type = document.getElementById('saType').value;
     const shopVal = document.getElementById('saShop').value;
-    if(type === 'Override') return ((row.counted - getStock(p, shopVal)) * row.unitCost) || 0;
+    const n = unitSizeOf(row);
+    if(type === 'Override') return (((row.counted||0) * n - getStock(p, shopVal)) * (row.unitCost / n)) || 0;
     return ((row.counted||0) * row.unitCost) || 0;
   }
 
@@ -6555,6 +6620,7 @@ const AureumSync = (function(){
         <td class="full" data-label="Product"><div class="pn">${escHtml(p.name)}</div></td>
         <td data-label="Current stock" class="mono">${getStock(p, shopVal)}</td>
         <td data-label="${qtyLabel}"><input type="number" inputmode="decimal" min="0" step="1" value="${row.counted}" data-idx="${i}" class="sa-counted"></td>
+        <td data-label="Unit">${unitCellHtml(i, row, p, 'counted')}</td>
         <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="sa-cost"></td>
         <td data-label="Price" class="mono">${money2(p.price)}</td>
         <td data-label="Total cost" class="mono sa-line-total" data-idx="${i}">${total.toFixed(2)}</td>
@@ -6566,13 +6632,21 @@ const AureumSync = (function(){
     tbody.querySelectorAll('.sa-counted').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       saLineItems[idx].counted = parseFloat(this.value)||0;
+      refreshUnitTotal('saLineBody', idx, saLineItems[idx], 'counted');
       updateSALineTotal(idx);
     }));
     tbody.querySelectorAll('.sa-cost').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       saLineItems[idx].unitCost = parseFloat(this.value)||0;
+      saLineItems[idx].costEdited = true;
       updateSALineTotal(idx);
     }));
+    wireUnitCells('saLineBody', saLineItems, 'counted', (i, r) => {
+      if(saLineItems.indexOf(r) < 0) return;
+      const pp = PRODUCTS.find(x=>x.id===r.productId);
+      if(pp && !r.costEdited) r.unitCost = Math.round((Number(pp.cost)||0) * unitSizeOf(r) * 100) / 100;
+      renderSALines();
+    });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){ saLineItems.splice(this.dataset.idx,1); renderSALines(); }));
   }
   function updateSALineTotal(idx){
@@ -6644,15 +6718,17 @@ const AureumSync = (function(){
     const savedItems = withProduct.map(row=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
       const beforeStock = p ? getStock(p, saShopVal) : 0;
+      if(p && p.soldBy === 'weight') row.unitSize = 1;
+      const size = unitSizeOf(row), eff = Math.round((row.counted || 0) * size * 1000) / 1000;
       if(p){
         // Add/Reduce apply the entered quantity as a delta on top of
         // whatever the current stock is; Override replaces it outright.
         // All of this only ever touches the ONE shop this adjustment is for.
-        if(type === 'Add') addStock(p, saShopVal, row.counted);
-        else if(type === 'Reduce') addStock(p, saShopVal, -row.counted);
-        else if(type === 'Override') setStock(p, saShopVal, row.counted);
+        if(type === 'Add') addStock(p, saShopVal, eff);
+        else if(type === 'Reduce') addStock(p, saShopVal, -eff);
+        else if(type === 'Override') setStock(p, saShopVal, eff);
       }
-      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitCost: row.unitCost, price: p ? (Number(p.price) || 0) : 0, beforeStock };
+      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: eff, unitCost: row.unitCost, price: p ? (Number(p.price) || 0) : 0, beforeStock };
     });
     STOCK_ADJUSTMENTS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
@@ -7507,6 +7583,7 @@ const AureumSync = (function(){
     { id:"valuation", label:"Inventory Valuation" },
     { id:"summary", label:"Inventory Summary" },
     { id:"lowstock", label:"Low Stock" },
+    { id:"expired", label:"Expired Products" },
     { id:"staff", label:"Staff Snapshot" },
     { id:"shifts", label:"Shifts" },
   ];
@@ -7526,7 +7603,7 @@ const AureumSync = (function(){
       });
     });
   }
-  const REPORT_EXPORT = { inventory:['repInventoryBody','available-inventory','Available Inventory'], valuation:['repValuationBody','inventory-valuation','Inventory Valuation'], summary:['repSummaryBody','inventory-summary','Inventory Summary'], lowstock:['repLowStockBody','low-stock','Low Stock'], staff:['repStaffBody','staff-snapshot','Staff Snapshot'], shifts:['repClosedShiftsBody','closed-shifts','Closed Shifts'] };
+  const REPORT_EXPORT = { inventory:['repInventoryBody','available-inventory','Available Inventory'], valuation:['repValuationBody','inventory-valuation','Inventory Valuation'], summary:['repSummaryBody','inventory-summary','Inventory Summary'], lowstock:['repLowStockBody','low-stock','Low Stock'], expired:['repExpiredBody','expired-products','Expired Products'], staff:['repStaffBody','staff-snapshot','Staff Snapshot'], shifts:['repClosedShiftsBody','closed-shifts','Closed Shifts'] };
   function showReportPanel(){
     const ex = REPORT_EXPORT[activeReportTab];
     if(ex) document.querySelectorAll('#reportExportBtn .export-opt').forEach(o=>{ o.dataset.source = ex[0]; o.dataset.filename = ex[1]; o.dataset.title = ex[2]; });
@@ -7537,6 +7614,7 @@ const AureumSync = (function(){
     else if(activeReportTab === 'valuation') renderReportValuation();
     else if(activeReportTab === 'summary') renderReportSummary();
     else if(activeReportTab === 'lowstock') renderReportLowStock();
+    else if(activeReportTab === 'expired') renderReportExpired();
     else if(activeReportTab === 'staff') renderReportStaff();
     else if(activeReportTab === 'shifts') renderReportShifts();
   }
@@ -7793,6 +7871,42 @@ const AureumSync = (function(){
     renderPaginationControls('repStaffPagination', EMPLOYEES.length, repStaffPage, renderReportStaff);
   }
 
+  /* Expired products: every GRN line whose expiry date has passed (stock isn't tracked per batch, so
+     "In stock now" is the product's total at that shop and tells you what may still need pulling off the shelf). */
+  const repExpPage = { page:1, pageSize:10 };
+  function expiredRows(shopFilter, view){
+    const today = stripTime(new Date()).getTime(), DAY = 86400000, out = [];
+    (GRN_RECORDS || []).forEach(g => (g.items || []).forEach(it => {
+      if(!it.expiry) return;
+      const d = stripTime(new Date(String(it.expiry).slice(0,10) + 'T00:00:00')).getTime();
+      if(isNaN(d)) return;
+      const days = Math.round((d - today) / DAY);             // negative = already expired
+      const expired = days < 0, soon = days >= 0 && days <= 30;
+      if(!(view === 'expired' ? expired : view === 'soon' ? soon : (expired || soon))) return;
+      if(shopFilter !== 'All Shops' && g.shop !== shopFilter) return;
+      const p = PRODUCTS.find(x => x.id === it.productId);
+      out.push({ name: itemLabel(it, p), cat: p ? (p.cat || 'Uncategorized') : '—', shop: g.shop, grn: g.id, expiry: it.expiry, days, qty: unitTotalQty(it), stock: p ? getStock(p, g.shop) : '—' });
+    }));
+    return out.sort((a, b) => a.days - b.days);
+  }
+  function renderReportExpired(){
+    const shopFilter = document.getElementById('repExpShopFilter').value || 'All Shops';
+    const view = document.getElementById('repExpView').value || 'expired';
+    const rows = expiredRows(shopFilter, view);
+    const tbody = document.getElementById('repExpiredBody');
+    const nExp = rows.filter(r => r.days < 0).length;
+    document.getElementById('repExpSub').textContent = rows.length
+      ? `${nExp} expired batch${nExp === 1 ? '' : 'es'}${view === 'expired' ? '' : ` and ${rows.length - nExp} expiring within 30 days`}. Based on the expiry dates entered on Goods Received Notes.`
+      : 'Based on the expiry dates entered on Goods Received Notes.';
+    if(rows.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--sage);">${view === 'expired' ? 'No expired products found. Expiry dates are picked up from Goods Received Notes.' : 'Nothing expired or expiring in the next 30 days.'}</td></tr>`; clearPager('repExpiredPagination'); return; }
+    tbody.innerHTML = paginateSlice(rows, repExpPage).map(r => `
+      <tr><td>${escHtml(r.name)}</td><td>${escHtml(r.cat)}</td><td>${escHtml(r.shop)}</td><td class="mono">${escHtml(r.grn)}</td><td>${fmtDisplay(r.expiry)}</td>
+      <td class="mono" style="text-align:right; color:${r.days < 0 ? 'var(--danger)' : 'var(--gold-bright)'};">${r.days < 0 ? 'Expired ' + (-r.days) + 'd ago' : (r.days === 0 ? 'Today' : 'In ' + r.days + 'd')}</td>
+      <td class="mono" style="text-align:right;">${r.qty}</td><td class="mono" style="text-align:right;">${r.stock}</td></tr>`).join('');
+    renderPaginationControls('repExpiredPagination', rows.length, repExpPage, renderReportExpired);
+  }
+  document.getElementById('repExpShopFilter').addEventListener('change', ()=>{ repExpPage.page = 1; renderReportExpired(); });
+  document.getElementById('repExpView').addEventListener('change', ()=>{ repExpPage.page = 1; renderReportExpired(); });
   document.getElementById('repInvShopFilter').addEventListener('change', renderReportInventory);
   document.getElementById('repInvCatFilter').addEventListener('change', renderReportInventory);
 
@@ -8964,6 +9078,7 @@ const AureumSync = (function(){
         <td class="mono" data-label="Stock (${escHtml(fromShop || 'From')})" style="text-align:right;">${fromStock}</td>
         <td class="mono" data-label="Stock (${escHtml(toShop || 'To')})" style="text-align:right;">${toStock}</td>
         <td data-label="Quantity"><input type="number" inputmode="numeric" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
+        <td data-label="Unit">${p ? unitCellHtml(i, row, p) : '—'}</td>
         <td class="mono" data-label="Cost">${p ? money2(p.cost) : '—'}</td>
         <td class="mono" data-label="Price">${p ? money2(p.price) : '—'}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
@@ -8989,7 +9104,9 @@ const AureumSync = (function(){
     });
     tbody.querySelectorAll('.tr-qty').forEach(inp=> inp.addEventListener('input', function(){
       trLineItems[this.dataset.idx].qty = parseInt(this.value) || 0;
+      refreshUnitTotal('trLineBody', this.dataset.idx, trLineItems[this.dataset.idx]);
     }));
+    wireUnitCells('trLineBody', trLineItems, 'qty', (i, r) => { if(trLineItems.indexOf(r) >= 0) renderTrLines(); });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){
       trLineItems.splice(parseInt(this.dataset.idx),1);
       renderTrLines();
@@ -9002,31 +9119,33 @@ const AureumSync = (function(){
   document.getElementById('trFromShop').addEventListener('change', renderTrLines);
   document.getElementById('trToShop').addEventListener('change', renderTrLines);
 
+  /* The PDF is a print-out of the saved-transfer popup (renderTransferDetailBody): same fields, same columns, same order, same footnote. */
   function transferPdf(t){
     const rows = (t.items||[]).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
-      return [itemLabel(it,p), String(it.qty), money2(lineCost(it,p)), money2(linePrice(it,p)),
-        String(it.beforeFrom ?? '-'), String(it.afterFrom ?? '-'), String(it.beforeTo ?? '-'), String(it.afterTo ?? '-')];
+      return [itemLabel(it,p), String(it.qty), unitText(it,p), String(unitTotalQty(it)), money2(lineCost(it,p)), money2(linePrice(it,p)),
+        `${it.beforeFrom ?? '-'} -> ${it.afterFrom ?? '-'}`, `${it.beforeTo ?? '-'} -> ${it.afterTo ?? '-'}`];
     });
-    const totalQty = (t.items||[]).reduce((s2, it)=> s2 + (it.qty||0), 0);
+    const totalQty = (t.items||[]).reduce((s2, it)=> s2 + unitTotalQty(it), 0);
     openDocPdf({
       docType:'Stock Transfer', number: t.id, subtitle: `${t.from} to ${t.to}`, createdBy: t.createdBy || '',
-      meta:[['From shop', t.from], ['To shop', t.to], ['Transfer date', t.date ? fmtDisplay(t.date) : ''], ['Status', t.status], ['Total quantity moved', String(totalQty)], ['Created by', t.createdBy]],
+      meta:[['Transfer number', t.id], ['Date', t.date ? fmtDisplay(t.date) : ''], ['From shop', t.from], ['To shop', t.to], ['Status', t.status || '-'], ['Total quantity moved', String(totalQty)]],
       tableTitle:'Products',
-      columns:[{h:'Product', wrap:true}, {h:'Qty', align:'r'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:`${t.from} before`, align:'r'}, {h:`${t.from} after`, align:'r'}, {h:`${t.to} before`, align:'r'}, {h:`${t.to} after`, align:'r'}],
-      rows, totals:[['Total quantity moved', String(totalQty), true]], signatures:['Sent by','Approved by','Received by']
+      columns:[{h:'Product', wrap:true}, {h:'Quantity', align:'r'}, {h:'Unit'}, {h:'Total qty', align:'r'}, {h:'Cost', align:'r'}, {h:'Price', align:'r'}, {h:`Stock at ${t.from} (before -> after)`, align:'r'}, {h:`Stock at ${t.to} (before -> after)`, align:'r'}],
+      rows, notes:'Completed transfers have already moved the stock, so they are kept as a permanent record. To correct a mistake, make a new transfer the other way.',
+      signatures:['Sent by','Approved by','Received by']
     }, `${t.id}.pdf`);
   }
 
   function renderTransferDetailBody(t){
     const rows = (t.items || []).map(it => {
       const p = PRODUCTS.find(x => x.id === it.productId);
-      return `<tr><td>${escHtml(itemLabel(it, p))}</td><td style="text-align:right;">${it.qty}</td>
+      return `<tr><td>${escHtml(itemLabel(it, p))}</td><td style="text-align:right;">${it.qty}</td><td>${unitText(it, p)}</td><td style="text-align:right;">${unitTotalQty(it)}</td>
         <td style="text-align:right;" class="mono">${money2(lineCost(it, p))}</td><td style="text-align:right;" class="mono">${money2(linePrice(it, p))}</td>
         <td style="text-align:right;" class="mono">${it.beforeFrom ?? '—'} → ${it.afterFrom ?? '—'}</td>
         <td style="text-align:right;" class="mono">${it.beforeTo ?? '—'} → ${it.afterTo ?? '—'}</td></tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this transfer.</td></tr>`;
-    const totalQty = (t.items || []).reduce((s, it) => s + (it.qty || 0), 0);
+    }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this transfer.</td></tr>`;
+    const totalQty = (t.items || []).reduce((s, it) => s + unitTotalQty(it), 0);
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Transfer number</div><div class="v mono">${t.id}</div></div>
@@ -9037,7 +9156,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Total quantity moved</div><div class="v">${totalQty}</div></div>
       </div>
       <table class="detail-table">
-        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Stock at ${t.from}<br><span style="font-weight:400;opacity:.7;">before → after</span></th><th style="text-align:right;">Stock at ${t.to}<br><span style="font-weight:400;opacity:.7;">before → after</span></th></tr></thead>
+        <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th>Unit</th><th style="text-align:right;">Total qty</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Stock at ${t.from}<br><span style="font-weight:400;opacity:.7;">before → after</span></th><th style="text-align:right;">Stock at ${t.to}<br><span style="font-weight:400;opacity:.7;">before → after</span></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Completed transfers have already moved the stock, so they are kept as a permanent record. To correct a mistake, make a new transfer the other way.</div>`;
@@ -9067,7 +9186,7 @@ const AureumSync = (function(){
         <td>${fmtDisplay(t.date)}</td>
         <td>${t.from}</td>
         <td>${t.to}</td>
-        <td class="mono" style="text-align:right;">${t.items.reduce((s,it)=>s+it.qty,0)}</td>
+        <td class="mono" style="text-align:right;">${t.items.reduce((s,it)=>s+unitTotalQty(it),0)}</td>
         <td><span class="status-badge ${t.status==='Completed'?'completed':'pending'}">${t.status}</span></td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap;"><span class="rcp-view" data-view="${t.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">VIEW</span> <span style="color:var(--sage-dim);">·</span> <span class="rcp-view" data-pdf="${t.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span></td>
       </tr>`).join('');
@@ -9097,7 +9216,7 @@ const AureumSync = (function(){
     // Can't transfer more than what's actually on hand at the source shop
     const overdrawn = validLines.filter(r=>{
       const p = PRODUCTS.find(x=>x.id===r.productId);
-      return p && r.qty > getStock(p, from);
+      return p && unitTotalQty(r) > getStock(p, from);
     });
     if(overdrawn.length > 0){
       alert(`Not enough stock at ${from} for: ${overdrawn.map(r=>PRODUCTS.find(p=>p.id===r.productId)?.name).join(', ')}. Check current stock in the line items.`);
@@ -9107,10 +9226,12 @@ const AureumSync = (function(){
     // and record before/after at BOTH shops on each line for the transfer's PDF.
     const savedItems = validLines.map(r=>{
       const p = PRODUCTS.find(x=>x.id===r.productId);
+      if(p && p.soldBy === 'weight') r.unitSize = 1;
+      const size = unitSizeOf(r), moved = unitTotalQty(r);
       const beforeFrom = getStock(p, from), beforeTo = getStock(p, to);
-      addStock(p, from, -r.qty);
-      addStock(p, to, r.qty);
-      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, cost: p ? (Number(p.cost) || 0) : 0, price: p ? (Number(p.price) || 0) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
+      addStock(p, from, -moved);
+      addStock(p, to, moved);
+      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: moved, cost: p ? (Number(p.cost) || 0) : 0, price: p ? (Number(p.price) || 0) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
     });
     TRANSFERS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
@@ -9748,7 +9869,7 @@ const AureumSync = (function(){
      AUREUM Bot is a built-in guide, NOT a live AI: it searches AUREUM's own help library (embedded above) and needs no
      internet and no subscription. It can't see or change the business's data. When it isn't sure, it says so and offers a
      support ticket. Tickets go to the AUREUM team through database functions that check who you are. */
-  const HELP_WELCOME = "Hi! I'm **AUREUM Bot**. Ask me **how to do something** in AUREUM — or ask about **your business**, like *\"How much did we sell today?\"*, *\"What should I reorder?\"* or *\"Which customers are at risk?\"*. I can also take you to any screen. I work on your device, I'm not a live AI, and I only read your data — I never change it. If I can't answer, I'll help you send a ticket to the AUREUM team.";
+  const HELP_WELCOME = "Hi, I'm **Aureum Bot**. I am here to help you navigate the application and review your business performance. I am not a live AI and I only use your data. If I can't answer, I'll help you send a ticket to Aureum Team.";
   let helpChat = { messages:[], busy:false, lastId:null, lastInsight:null, topic:null, lastType:null, misses:0 }, helpFromPage = '', helpFromKey = '';
   const helpKey = () => 'aureum_help_chat_' + (currentBusinessId || 'x');
   function loadHelpChat(){ try{ const j = JSON.parse(sessionStorage.getItem(helpKey()) || 'null'); if(j && Array.isArray(j.messages)){ helpChat.messages = j.messages.slice(-40); helpChat.lastId = j.lastId || null; helpChat.lastInsight = j.lastInsight || null; } }catch(e){} }
@@ -12204,6 +12325,16 @@ E('customer-winback','People','How do I find customers who stopped coming?',
   'win back lapsed inactive at risk lost customers stopped coming churn retention segment',
   `AUREUM groups customers automatically: **At risk** = no purchase for 60+ days, **Lost** = 120+ days. Ask AUREUM Bot **"Which customers are at risk?"** for the list, or open **Customers** and look at the segment column. A friendly message or a small offer is the quickest way to win them back — their phone number is on their profile.`,
   ['customer-segments','loyalty-points','bot-data'], { pages:['customers'] }),
+E('unit-pack','Stock','What does the Unit column do (packs of 5, 12, 50)?',
+  ['what is the unit column','how do i receive stock in packs','pack of 12','received in cartons','unit size on goods received','how do packs work','unit each pack'],
+  'unit pack packs carton case each custom size quantity multiply total goods received purchase order stock adjustment transfer',
+  `On **Goods Received**, **Purchase Orders**, **Stock Adjustments** and **Transfers**, every line has a **Unit**. It starts as **Each**. If the stock arrives in packs, choose **Pack of 5, 6, 10, 12, 20, 24 or 50**, or **Custom…** and type any number. The total added to stock is **Quantity × Unit** — for example 4 × Pack of 12 adds **48**. On Goods Received and Purchase Orders the cost is per pack and updates for you; you can still type your own cost.`,
+  ['grn-receive','po-create'], { pages:['goods-received'] }),
+E('report-expired','Sales & reports','Where is the list of expired products?',
+  ['expired products','show expired products','which products have expired','expired stock report','what is expiring soon','products past their expiry date'],
+  'expired expiry expiring date report products batch shelf life reports',
+  `Open **Reports → Expired Products**. It lists every batch whose **expiry date** has passed (and, if you like, those expiring in the next 30 days), with the shop, the Goods Received note, how many days ago it expired, and what is still in stock. Expiry dates come from the **Expiry date** you enter on **Goods Received** notes, so fill that in when stock arrives.`,
+  ['grn-receive','alerts-low'], { pages:['reports'] }),
 ];
 const TOPICS = ['Getting started','Dashboard','Products','Stock','People','Sales & reports','The till','Shifts','Settings','Billing','Troubleshooting','Help & support','Not available'];
 const POPULAR = ['add-product','product-import','shift-close','refund-how','alerts-negative','price','contact-support'];

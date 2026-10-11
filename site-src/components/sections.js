@@ -14,7 +14,6 @@ export const hero = () => `<section class="hero" aria-labelledby="hero-title">
       <ul class="badges">${HERO.badges.map(b => `<li>${icon(b.icon, 26)}<span>${esc(b.text)}</span></li>`).join('')}</ul>
       <div class="hero-cta">
         ${linkButton({ label: 'Start Free Trial', href: APP.signUp, size: 'lg', arrow: true })}
-        ${actionButton({ label: 'Watch Demo', kind: 'outline', size: 'lg', iconName: 'play', attrs: 'data-open-demo aria-haspopup="dialog"' })}
       </div>
     </div>
     ${heroDevices()}
