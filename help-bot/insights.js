@@ -138,11 +138,12 @@ function create(getData){
   /* aggregate everything in one pass for a period + shop */
   function agg(d, period, shop){
     const rs = d.receipts.filter(r => r.t >= period.start && r.t < period.end && (isAll(shop) || r.shop === shop));
-    const a = { rs, gross: 0, refunds: 0, count: 0, refundCount: 0, items: new Map(), cats: new Map(), pay: new Map(), emp: new Map(), shops: new Map(), cust: new Map(), dow: [0, 0, 0, 0, 0, 0, 0], dowN: [0, 0, 0, 0, 0, 0, 0], hour: new Array(24).fill(0), hourN: new Array(24).fill(0), saleGross: 0, saleCost: 0, units: 0 };
+    const a = { rs, gross: 0, refunds: 0, count: 0, refundCount: 0, items: new Map(), cats: new Map(), pay: new Map(), emp: new Map(), shops: new Map(), cust: new Map(), dow: [0, 0, 0, 0, 0, 0, 0], dowN: [0, 0, 0, 0, 0, 0, 0], hour: new Array(24).fill(0), hourN: new Array(24).fill(0), saleGross: 0, saleCost: 0, units: 0, taxNet: 0, costNet: 0 };
     const catOf = new Map(d.products.map(p => [norm(p.name), p.cat || 'Uncategorised']));
     for(const r of rs){
       const tot = Number(r.total) || 0, sign = r.refund ? -1 : 1, dt = new Date(r.t);
       if(r.refund){ a.refunds += tot; a.refundCount++; } else { a.gross += tot; a.count++; }
+      a.taxNet += sign * (Number(r.tax) || 0);
       const bump = (map, k, v, n) => { const o = map.get(k) || { rev: 0, n: 0 }; o.rev += v; o.n += n; map.set(k, o); };
       bump(a.pay, (r.payment || 'Other').toString(), sign * tot, r.refund ? 0 : 1);
       bump(a.emp, r.employee || 'Unknown', sign * tot, r.refund ? 0 : 1);
@@ -153,14 +154,15 @@ function create(getData){
       }
       for(const it of (r.items || [])){
         const q = (Number(it.qty) || 0) * sign, rev = q * (Number(it.price) || 0), cost = q * (Number(it.cost) || 0);
+        a.costNet += cost;
         const o = a.items.get(it.name) || { name: it.name, qty: 0, rev: 0, cost: 0 }; o.qty += q; o.rev += rev; o.cost += cost; a.items.set(it.name, o);
         const cat = catOf.get(norm(it.name)) || 'Uncategorised'; const c = a.cats.get(cat) || { name: cat, qty: 0, rev: 0, cost: 0 }; c.qty += q; c.rev += rev; c.cost += cost; a.cats.set(cat, c);
         if(!r.refund){ a.saleGross += (Number(it.qty) || 0) * (Number(it.price) || 0); a.saleCost += (Number(it.qty) || 0) * (Number(it.cost) || 0); a.units += Number(it.qty) || 0; }
       }
     }
-    a.revenue = a.gross - a.refunds;
-    a.ratio = a.saleGross > 0 ? a.saleCost / a.saleGross : 0.45;           // same fall-back the Accounting screen uses
-    a.cogs = Math.max(0, a.revenue) * a.ratio;
+    a.revenue = a.gross - a.refunds - a.taxNet;                              // sales tax collected is not revenue (same as the Accounting screen)
+    a.ratio = a.saleGross > 0 ? a.saleCost / a.saleGross : 0.45;
+    a.cogs = Math.max(0, a.costNet);                                          // exact cost of what was sold, less what was refunded
     a.grossProfit = a.revenue - a.cogs;
     const ex = d.expenses.filter(e => e.t >= period.start && e.t < period.end);
     a.expList = ex; a.opex = ex.reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -239,11 +241,11 @@ function create(getData){
     const P = spec.period, a = agg(d, P, spec.shop), prev = previousPeriod(P, d.now), pa = prev ? agg(d, prev, spec.shop) : null;
     if(!a.count && !a.refundCount && !a.expList.length) return noData(d, spec, 'sales or expenses', P);
     let t = '**Profit for ' + P.label + '**' + scope(d, spec.shop) + ' (same sums as the Accounting screen):\n\n';
-    t += '- Revenue: **' + money(d, a.revenue) + '**\n- Cost of goods: ' + money(d, a.cogs) + ' (' + pct(a.ratio * 100) + ' of sales)\n- Gross profit: **' + money(d, a.grossProfit) + '** (' + pct(a.revenue > 0 ? a.grossProfit / a.revenue * 100 : 0) + ' margin)\n';
+    t += '- Revenue: **' + money(d, a.revenue) + '**\n- Cost of goods: ' + money(d, a.cogs) + ' (' + pct(a.revenue > 0 ? a.cogs / a.revenue * 100 : 0) + ' of revenue)\n- Gross profit: **' + money(d, a.grossProfit) + '** (' + pct(a.revenue > 0 ? a.grossProfit / a.revenue * 100 : 0) + ' margin)\n';
     t += '- Expenses: ' + money(d, a.opex) + '\n- **Profit before tax: ' + money(d, a.net) + '**' + (pa ? arrow(a.net, pa.net) + ' vs ' + prev.label : '') + '\n';
     if(a.taxPct) t += '- After ' + a.taxPct + '% income tax: **' + money(d, a.after) + '**' + (a.net <= 0 ? ' (no tax on a loss)' : '') + '\n';
     if(a.net < 0) t += '\nExpenses are higher than gross profit for this period.' + (a.opex > 0 ? ' Biggest expense: ' + biggestExpense(d, a) + '.' : '');
-    spec.method = 'Revenue = sales − refunds. Cost of goods = revenue × the cost-to-price ratio of the items actually sold (' + pct(a.ratio * 100) + ' here). Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
+    spec.method = 'Revenue = sales − refunds − sales tax collected. Cost of goods = the exact cost saved on every item sold, less the cost of refunded items. Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
     return out(t, spec, { nav: [{ label: 'Open Accounting', page: 'accounting' }], asks: ['Expenses ' + P.label, 'Compare with ' + (prev ? prev.label : 'last month'), 'Which products make the most profit?'] });
   }
   const biggestExpense = (d, a) => { const m = new Map(); a.expList.forEach(e => m.set(e.category || 'Other', (m.get(e.category || 'Other') || 0) + e.amount)); const b = [...m.entries()].sort((x, y) => y[1] - x[1])[0]; return b ? '**' + b[0] + '** (' + money(d, b[1]) + ')' : 'none'; };

@@ -56,8 +56,9 @@ t('sales for one shop', () => { const r = ask('sales today in Bulawayo'); has(r,
 t('sales this month', () => { const r = ask('total sales this month'); has(r, money(62)); });   // 18.5 + (12+12.5-2.5=22) + 11 + 10.5 = 62
 t('profit matches accounting maths', () => {
   const r = ask('what is my profit this month?');
-  // revenue 62.00; gross sales 64.50 w/ cost: lines cost
-  const cost = 4 * .6 + 2 * 1.4 + 3.9 + 2 * 2.5 + 10 * .6 + 4 * 1.4 + 5 * 1.05, gross = 18.5 + 12 + 12.5 + 11 + 10.5, ratio = cost / gross, rev = 62, gp = rev - rev * ratio, net = gp - 25, after = net - net * .1;
+  // exact maths: revenue 62 (no tax), cost of goods = saved cost of items sold less refunded items' cost
+  const cost = 4 * .6 + 2 * 1.4 + 3.9 + 2 * 2.5 + 10 * .6 + 4 * 1.4 + 5 * 1.05, rev = 62;
+  const cogs = cost - 2 * 0.6, gp = rev - cogs, net = gp - 25, after = net - net * .1;
   has(r, money(62)); has(r, money(net)); has(r, money(after));
 });
 t('profit hidden from cashiers', () => { snap = Object.assign({}, base, { role: 'cashier' }); const r = ask('what is my profit this month'); snap = base; has(r, 'owner'); assert.ok(!/\$\d/.test(r.text)); });

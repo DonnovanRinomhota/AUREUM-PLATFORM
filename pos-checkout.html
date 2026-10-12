@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="/safe-html.js"></script>
+<script src="/countries.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <title>AUREUM — Point of Sale</title>
@@ -193,7 +194,7 @@
     border:1px solid var(--line);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -8px 18px rgba(0,0,0,0.25);
   }
-  .card .glyph.has-img{ background:#fff; height:96px; }   /* whole picture shown (never cropped); the white photo margins are trimmed away in JS so the product fills the tile */
+  .card .glyph.has-img{ background:#14281f; height:100px; border-radius:10px; }   /* picture fills the whole tile, rounded, like a photo card */
   .card .glyph svg{ width:34px; height:34px; position:relative; z-index:1; }
   .card .glyph::before{
     content:"";
@@ -1313,6 +1314,7 @@ const AureumSync = (function(){
     transfers:        { key: byUid('TR:'), newFirst: true, fix: dedupeStringIds('TR-', 1001) },
     shiftClosures:    { key: byUid('SC:'), newFirst: true, fix: dedupeClosures },
     openShifts:       { key: byUid('OS:'), newFirst: true, fix: dedupeOpenShifts },
+    posDevices:       { key: byUid('D:') },
   };
   // Numbers that are COUNTERS (changed by deltas from several devices at once),
   // so concurrent changes add up instead of one overwriting the other.
@@ -1809,7 +1811,9 @@ async function aureumSignIn(email, password){
   const cashierMay = key => !!activeEmployee && (canManage() || settingOn(PERM[key][0], PERM[key][1]));
   const canRefund = () => cashierMay('refund');
   let priceOverride = {};   // this ticket only: product id → the price set at the till (never changes the product itself)
-  const unitPrice = p => Object.prototype.hasOwnProperty.call(priceOverride, p.id) ? priceOverride[p.id] : p.price;
+  // the price at THIS shop: its own price if the Back Office gave it one, otherwise the product's regular price
+  const shopPrice = p => { const sp = (activeShop && p.shopPrice) ? p.shopPrice[activeShop] : undefined; return (typeof sp === 'number' && isFinite(sp) && sp >= 0) ? sp : (Number(p.price) || 0); };
+  const unitPrice = p => Object.prototype.hasOwnProperty.call(priceOverride, p.id) ? priceOverride[p.id] : shopPrice(p);
 
   function computeTotals(){
     // Every money figure is rounded to whole cents HERE, once, so what's shown, what's charged and what's
@@ -1903,7 +1907,7 @@ async function aureumSignIn(email, password){
   }
   document.addEventListener('load', e => { const t = e.target; if(t && t.tagName === 'IMG' && t.dataset && t.dataset.trim) trimWhiteMargins(t); }, true);
   function productArt(p){
-    if(p.image){ return `<img src="${escAttr(p.image)}" alt="${escAttr(p.name)}" data-trim="1" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:1;">`; }
+    if(p.image){ return `<img src="${escAttr(p.image)}" alt="${escAttr(p.name)}" style="width:100%;height:100%;object-fit:cover;object-position:center;position:relative;z-index:1;display:block;">`; }
     const style = CATEGORY_STYLE[p.cat] || CATEGORY_STYLE.Default;
     return `<div style="position:absolute;inset:0;background:${style.bg};"></div><svg viewBox="0 0 24 24">${style.icon}</svg>`;
   }
@@ -1987,7 +1991,7 @@ async function aureumSignIn(email, password){
         <div class="glyph${p.image ? ' has-img' : ''}">${productArt(p)}</div>
         <div class="pname">${p.name}</div>
         <div class="pmeta">
-          <span class="pprice">${POS_SETTINGS.currency}${p.price.toFixed(2)}</span>
+          <span class="pprice">${POS_SETTINGS.currency}${shopPrice(p).toFixed(2)}</span>
           <span class="pstock ${getStock(p, activeShop) < 0 ? 'neg' : ''}">In Stock : ${getStock(p, activeShop)}</span>
         </div>
       </div>
@@ -2080,7 +2084,7 @@ async function aureumSignIn(email, password){
     } else {
       ticketItemsEl.innerHTML = ids.map(id=>{
         const p = PRODUCTS.find(p=>p.id==id);
-        const qty = cart[id], up = unitPrice(p), changed = up !== p.price, editable = cashierMay('editPrice');
+        const qty = cart[id], up = unitPrice(p), changed = up !== shopPrice(p), editable = cashierMay('editPrice');
         return `
         <div class="line-item">
           <div class="li-name">${p.name}</div>
@@ -2089,7 +2093,7 @@ async function aureumSignIn(email, password){
             <div class="qty-btn" data-act="dec" data-id="${p.id}">–</div>
             <div class="qty-val">${qty}</div>
             <div class="qty-btn" data-act="inc" data-id="${p.id}">+</div>
-            <span class="li-unit${editable ? ' editable' : ''}"${editable ? ` data-act="price" data-id="${p.id}" title="Tap to change this item's price for this sale" role="button" tabindex="0"` : ''}>× ${POS_SETTINGS.currency}${up.toFixed(2)}${changed ? ` <s>${POS_SETTINGS.currency}${p.price.toFixed(2)}</s>` : ''}</span>
+            <span class="li-unit${editable ? ' editable' : ''}"${editable ? ` data-act="price" data-id="${p.id}" title="Tap to change this item's price for this sale" role="button" tabindex="0"` : ''}>× ${POS_SETTINGS.currency}${up.toFixed(2)}${changed ? ` <s>${POS_SETTINGS.currency}${shopPrice(p).toFixed(2)}</s>` : ''}</span>
             <span class="li-remove" data-act="rm" data-id="${p.id}">Remove</span>
           </div>
         </div>`;
@@ -2387,7 +2391,7 @@ async function aureumSignIn(email, password){
     const p = PRODUCTS.find(x => x.id == id); if(!p) return;
     priceEditId = p.id;
     document.getElementById('priceEditName').textContent = p.name;
-    document.getElementById('priceEditList').textContent = 'List price: ' + POS_SETTINGS.currency + p.price.toFixed(2);
+    document.getElementById('priceEditList').textContent = 'List price: ' + POS_SETTINGS.currency + shopPrice(p).toFixed(2);
     document.getElementById('priceEditField').value = unitPrice(p).toFixed(2);
     document.getElementById('priceEditError').classList.remove('show'); document.getElementById('priceEditField').classList.remove('invalid');
     openModal('priceOverlay');
@@ -2398,7 +2402,7 @@ async function aureumSignIn(email, password){
     const f = document.getElementById('priceEditField'), v = parseFloat(f.value);
     if(!isFinite(v) || v < 0 || v > 1000000){ document.getElementById('priceEditError').classList.add('show'); f.classList.add('invalid'); f.focus(); return; }
     const price = Math.round((v + Number.EPSILON) * 100) / 100;
-    if(price === p.price) delete priceOverride[p.id]; else priceOverride[p.id] = price;
+    if(price === shopPrice(p)) delete priceOverride[p.id]; else priceOverride[p.id] = price;
     tenderedAmt = 0; closeModal('priceOverlay'); renderTicket();
   });
   document.getElementById('priceResetBtn').addEventListener('click', () => { if(priceEditId != null) delete priceOverride[priceEditId]; tenderedAmt = 0; closeModal('priceOverlay'); renderTicket(); });
@@ -3059,7 +3063,7 @@ async function aureumSignIn(email, password){
     const lineItems = ids.map(id=>{
       const p = PRODUCTS.find(p=>p.id==id);
       const up = unitPrice(p);
-      return { productId: p.id, name:p.name, qty:cart[id], price:up, cost:p.cost||0, taxable: p.taxable !== false, ...(up !== p.price ? { listPrice: p.price } : {}) };
+      return { productId: p.id, name:p.name, qty:cart[id], price:up, cost:p.cost||0, taxable: p.taxable !== false, ...(up !== shopPrice(p) ? { listPrice: shopPrice(p) } : {}) };
     });
 
     // Receipt number: next in sequence, computed from the synced receipts at the
@@ -3220,9 +3224,33 @@ async function aureumSignIn(email, password){
 
   /* ===== CLOUD SYNC ===== */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, posDevices:POS_DEVICES, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
+
+  /* ===== THIS DEVICE -> Back Office "POS Devices" =====
+     Once a cashier starts a shift, this device lists itself (name, type, the shop it is working in) and checks in
+     every few minutes, so the owner sees which tills are connected to which shop. */
+  let POS_DEVICES = [];
+  const DEVICE_KEY = (function(){ try{ let k = localStorage.getItem('aureum.deviceKey'); if(!k){ k = 'd' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); localStorage.setItem('aureum.deviceKey', k); } return k; }catch(e){ return 'd-' + Date.now().toString(36); } })();
+  function describeThisDevice(){
+    const ua = navigator.userAgent || '', w = Math.min(screen.width || 0, screen.height || 0);
+    const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Device';
+    const br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox/i.test(ua) ? 'Firefox' : /Chrome|CriOS/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : 'Browser';
+    const mobile = /Mobi|iPhone|Android.*Mobile/i.test(ua), tablet = /iPad|Tablet|Android(?!.*Mobile)/i.test(ua) || (os === 'Android' && !mobile) || (navigator.maxTouchPoints > 1 && w >= 600 && os !== 'Windows');
+    return { type: tablet ? 'Tablet' : mobile ? 'Mobile' : 'Terminal', name: os + ' ' + (tablet ? 'tablet' : mobile ? 'phone' : 'computer') + ' · ' + br };
+  }
+  function checkInDevice(){
+    try{
+      if(!activeShop) return;
+      const info = describeThisDevice(), now = new Date().toISOString();
+      let d = POS_DEVICES.find(x => x.key === DEVICE_KEY);
+      if(!d){ d = { uid: AureumSync.uid(), key: DEVICE_KEY, auto: true, name: info.name }; POS_DEVICES.push(d); }
+      d.type = info.type; d.store = activeShop; d.lastSeen = now; d.cashier = activeEmployee ? activeEmployee.name : (d.cashier || ''); d.auto = true;
+      persistAureum();
+    }catch(e){}
+  }
+  setInterval(() => { if(activeShop && !document.hidden) checkInDevice(); }, 4 * 60 * 1000);
   function applyLoadedData(shared){
     if(!shared) return;
     const live = !!(supaReady && sb);   // a real cloud business: the server's copy is the truth — demo seed data never survives
@@ -3234,7 +3262,16 @@ async function aureumSignIn(email, password){
     RECEIPTS = has('receipts') ? shared.receipts : (live ? [] : RECEIPTS);
     SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
+    if(has('posDevices')) POS_DEVICES = shared.posDevices;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
+    try{
+      const meta = (currentUser && currentUser.user_metadata) || {}, c = window.AureumCountries && AureumCountries.byCode[meta.country];
+      if(c && !POS_SETTINGS.countryApplied){
+        POS_SETTINGS.countryApplied = true; POS_SETTINGS.country = c.code;
+        POS_SETTINGS.currencyCode = c.currency; POS_SETTINGS.currency = AureumCountries.symbolFor(c.currency); POS_SETTINGS.timezone = c.tz;
+      }
+      if(window.AureumCountries) AureumCountries.setTimezone(POS_SETTINGS.timezone || '');
+    }catch(e){}
     try{
       const sn = currentUser && currentUser.user_metadata && String(currentUser.user_metadata.business_name || '').trim();
       if(sn && (!POS_SETTINGS.businessName || POS_SETTINGS.businessName === 'AUREUM' || POS_SETTINGS.businessName === 'Aureum Retail')) POS_SETTINGS.businessName = sn;
@@ -3456,6 +3493,7 @@ async function aureumSignIn(email, password){
   function startShift(shopName, employee, openingFloat){
     activeShop = shopName;
     activeEmployee = employee;
+    checkInDevice();
     let sh = findOpenShift(shopName, employee);
     if(!sh){
       sh = openNewShift(shopName, employee, openingFloat);

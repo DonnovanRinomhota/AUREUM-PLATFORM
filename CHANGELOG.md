@@ -1,5 +1,16 @@
 # Changelog
 
+## Country, per-shop pricing & accuracy pass
+- Sign-up asks for the country (flag + searchable list); sets default currency and time zone. Both can be changed in Settings; all currencies/time zones available.
+- Currency symbol now follows the chosen currency everywhere (was hard-coded `$` in ~60 places), including PDFs.
+- Per-shop selling price in the product form now saves and is used by product list, reports, valuation, documents and the POS.
+- Editing a cost on a GRN, Purchase Order or Stock Adjustment updates the product cost.
+- Settings → POS Devices lists tills signed in to each shop (auto-registered, Connected/Offline, last active), synced across devices.
+- Accounting/dashboard: revenue excludes sales tax collected; cost of goods is the exact saved cost of items sold (less refunds), not a ratio estimate.
+- Weight-product stock keeps decimals in the product form.
+- New Reports → Data Check tab flags duplicate names/codes, zero price, missing cost, cost above price, cost equal to price, negative/fractional stock, mismatched document totals, long-open shifts.
+- Aureum Bot: removed the stock "heads up" message; opening message only. POS tiles: photos fill the tile.
+
 ## New-account defaults (service worker v44)
 - A new account starts **blank**: no sample products (Reusable Tote Bag etc.), no sample customers, **one** employee, and one shop called **Shop 1**.
 - **Business name** in Settings is the name typed at sign-up.

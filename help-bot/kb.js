@@ -652,7 +652,7 @@ E('profit-calc','Sales & reports','How is profit calculated?',
   `On **Accounting** (and when you ask AUREUM Bot):
 
 1. **Revenue** = sales minus refunds for the period and shop you are viewing.
-2. **Cost of revenue** = revenue × the real cost-to-price ratio of the items you actually sold (from the cost saved on each sale line).
+2. **Cost of revenue** = the exact cost saved on each item sold, less the cost of refunded items (sales tax collected is not counted as revenue).
 3. **Gross profit** = revenue − cost of revenue.
 4. **Profit before tax** = gross profit − the **expenses** you recorded.
 5. **Profit after tax** takes off your income-tax % — but only when there is a profit; a loss isn't taxed.

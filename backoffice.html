@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="/safe-html.js"></script>
+<script src="/countries.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AUREUM — Back Office</title>
@@ -935,6 +936,7 @@
     font-size:13px; outline:none; box-sizing:border-box;
   }
   .auth-field:focus{ border-color:var(--gold-dim); }
+  button.auth-field{ text-align:left; cursor:pointer; margin-bottom:0; font-family:inherit; }
   .auth-error{ font-size:11.5px; color:var(--danger); min-height:16px; margin-bottom:6px; }
   .auth-btn{
     background: linear-gradient(135deg, var(--gold-bright), var(--gold));
@@ -1004,6 +1006,8 @@
     <div id="authSignupFields">
       <input class="auth-field" id="authBizName" placeholder="Business name">
       <input class="auth-field" id="authFullName" placeholder="Your full name">
+      <div id="authCountry" style="margin-bottom:10px;"></div>
+      <div style="font-size:11px;color:var(--sage);margin:6px 0 10px;text-align:left;">Your country sets your starting currency and time zone. You can change both later in Settings.</div>
     </div>
     <div id="authForgotFields" style="display:none;">
       <div style="font-size:12px;color:var(--sage);margin-bottom:10px;">Enter the email on your account and we'll send you a link to reset your password.</div>
@@ -1469,7 +1473,7 @@
           <div class="form-section-title">Price information</div>
           <div class="create-form-grid">
             <div>
-              <div class="field-label">Regular unit price (USD)</div>
+              <div class="field-label">Regular unit price (<span class="cur-code">USD</span>)</div>
               <input type="number" id="pfPrice" class="modal-field" min="0" step="0.01" placeholder="0.00">
               <div class="field-error" id="pfPriceError">Enter a price of 0 or more</div>
             </div>
@@ -1478,7 +1482,7 @@
               <div class="switch on" data-toggle="pfPriceChange"></div>
             </div>
             <div>
-              <div class="field-label">Regular unit cost (USD)</div>
+              <div class="field-label">Regular unit cost (<span class="cur-code">USD</span>)</div>
               <input type="number" id="pfCost" class="modal-field" min="0" step="0.01" placeholder="0.00">
               <div class="field-error" id="pfCostError">Enter a cost of 0 or more</div>
             </div>
@@ -2483,6 +2487,18 @@
         </div>
       </div>
 
+      <!-- Data check: pricing / stock / totals that look wrong -->
+      <div class="report-panel" id="report-datacheck">
+        <div class="page-sub" id="repCheckSub" style="margin-bottom:12px;"></div>
+        <div class="table-panel">
+          <table>
+            <thead><tr><th style="width:90px;">Severity</th><th>Where</th><th>What looks wrong</th><th>What to do</th></tr></thead>
+            <tbody id="repCheckBody"></tbody>
+          </table>
+          <div id="repCheckPagination"></div>
+        </div>
+      </div>
+
       <!-- Staff performance -->
       <div class="report-panel" id="report-staff">
         <div class="page-sub" style="margin-bottom:12px;">Snapshot of active staff and their assigned shop.</div>
@@ -2557,14 +2573,13 @@
             <div class="form-section">
               <div class="form-grid-2">
                 <div>
+                  <div class="field-label">Country</div>
+                  <div id="stCountry"></div>
+                  <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">Changing country offers to switch your currency and time zone to match.</div>
+                </div>
+                <div>
                   <div class="field-label">Primary currency</div>
-                  <select class="modal-select" id="stCurrency">
-                    <option value="USD">USD — US Dollar ($)</option>
-                    <option value="ZWG">ZWG — Zimbabwe Gold (ZWG)</option>
-                    <option value="ZAR">ZAR — South African Rand (R)</option>
-                    <option value="EUR">EUR — Euro (€)</option>
-                    <option value="GBP">GBP — British Pound (£)</option>
-                  </select>
+                  <select class="modal-select" id="stCurrency"></select>
                   <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">All prices, reports, and totals are kept in this currency.</div>
                 </div>
                 <div>
@@ -2580,11 +2595,7 @@
                 <div class="form-grid-2">
                   <div>
                     <div class="field-label">Secondary currency</div>
-                    <select class="modal-select" id="stCurrency2">
-                      <option value="ZWG">ZWG — Zimbabwe Gold (ZWG)</option>
-                      <option value="USD">USD — US Dollar ($)</option>
-                      <option value="ZAR">ZAR — South African Rand (R)</option>
-                    </select>
+                    <select class="modal-select" id="stCurrency2"></select>
                   </div>
                   <div>
                     <div class="field-label">Exchange rate</div>
@@ -2641,7 +2652,7 @@
           <div class="settings-panel" id="settings-pos">
             <div class="settings-panel-head">
               <div class="t">POS Devices</div>
-              <div class="s">Registered terminals, tablets, and mobile devices per store.</div>
+              <div class="s">Every till signed in to POS Checkout shows here automatically with the shop it is working in. You can also add a device by hand.</div>
             </div>
             <div class="form-section">
               <div class="data-toolbar" style="padding:0 0 14px;">
@@ -2652,7 +2663,7 @@
               </div>
               <div class="table-panel">
                 <table>
-                  <thead><tr><th>Device name</th><th>Type</th><th>Assigned store</th><th>Status</th><th style="width:70px;"></th></tr></thead>
+                  <thead><tr><th>Device name</th><th>Type</th><th>Shop signed in to</th><th>Status</th><th>Last active</th><th style="width:70px;"></th></tr></thead>
                   <tbody id="stPosTableBody"></tbody>
                 </table>
               </div>
@@ -3143,6 +3154,7 @@ const AureumSync = (function(){
     transfers:        { key: byUid('TR:'), newFirst: true, fix: dedupeStringIds('TR-', 1001) },
     shiftClosures:    { key: byUid('SC:'), newFirst: true, fix: dedupeClosures },
     openShifts:       { key: byUid('OS:'), newFirst: true, fix: dedupeOpenShifts },
+    posDevices:       { key: byUid('D:') },
   };
   // Numbers that are COUNTERS (changed by deltas from several devices at once),
   // so concurrent changes add up instead of one overwriting the other.
@@ -3535,7 +3547,7 @@ const AureumSync = (function(){
     app: 'bo',
     getSnapshot: () => aureumSnapshotData(),
     applyData: (d) => applyLoadedData(d),
-    onApplied: () => { try{ if(ensureProductCodes()) persistAureum(); }catch(e){} try{ runSettingsMigration(); }catch(e){} try{ renderAllData(); }catch(e){} try{ runNotifications(); }catch(e){} },
+    onApplied: () => { try{ if(ensureProductCodes()) persistAureum(); }catch(e){} try{ runSettingsMigration(); }catch(e){} try{ renderAllData(); }catch(e){} try{ renderSettingsPos(); }catch(e){} try{ runNotifications(); }catch(e){} },
     onStatus: (state) => {
       try{ renderSyncStatus(); }catch(e){}
       if(state === 'synced-compat' && !window.__aureumCompatWarned){
@@ -3550,11 +3562,11 @@ const AureumSync = (function(){
   });
 
   /* ===== AUTH ===== */
- async function aureumSignUp(email, password, businessName, fullName){
+ async function aureumSignUp(email, password, businessName, fullName, country){
   if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
   const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
     email, password,
-    options: { data: { business_name: businessName, full_name: fullName } }
+    options: { data: { business_name: businessName, full_name: fullName, country: country || '' } }
   });
   if(signUpErr) throw signUpErr;
   // Supabase deliberately doesn't throw an error when the email is already
@@ -3575,6 +3587,13 @@ const AureumSync = (function(){
     if(error) throw error;
     return data;
   }
+  // country picker on the sign-up form (flag + search)
+  let authCountryPicker = null;
+  (function(){
+    const host = document.getElementById('authCountry'); if(!host || !window.AureumCountries) return;
+    authCountryPicker = AureumCountries.mountPicker(host, { btnClass:'auth-field', placeholder:'Country' });
+    try{ const z = Intl.DateTimeFormat().resolvedOptions().timeZone; const c = AureumCountries.list.find(x => x.tz === z); if(c) authCountryPicker.set(c.code); }catch(e){}   // a starting guess from this device; the person can change it
+  })();
   async function aureumSignOut(){ if(sb) await sb.auth.signOut(); location.reload(); }
   async function resolveProfile(){
     const { data: { user } } = await sb.auth.getUser();
@@ -3670,10 +3689,10 @@ const AureumSync = (function(){
      two panels always agree with each other. */
   function sumBy(arr, fn){ return arr.reduce((s,d)=> s + fn(d), 0); }
   function pctChange(cur, prev){ return prev > 0 ? ((cur-prev)/prev*100) : (cur>0 ? 100 : 0); }
-  function fmtMoney(n){ return '$' + n.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+  function fmtMoney(n){ return curSym() + n.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
   function fmtCompactMoney(n){
-    if(n >= 1000) return '$' + (n/1000).toFixed(n>=10000?0:1) + 'K';
-    return '$' + Math.round(n).toLocaleString('en-US');
+    if(n >= 1000) return curSym() + (n/1000).toFixed(n>=10000?0:1) + 'K';
+    return curSym() + Math.round(n).toLocaleString('en-US');
   }
 
   function salesAggregateForRange(rangeStart, rangeEnd){
@@ -3687,9 +3706,10 @@ const AureumSync = (function(){
     const grossSales = receipts.filter(r=>!r.refund).reduce((sum,r)=>sum+r.total,0);
     const refunds = receipts.filter(r=>r.refund).reduce((sum,r)=>sum+r.total,0);
     const netSales = grossSales - refunds;
-    const ratio = blendedCogsRatio(receipts);
-    const costOfSales = Math.max(0,netSales) * ratio;
-    const grossProfit = netSales - costOfSales;
+    // exact: the cost saved on every item sold (less items refunded); sales tax collected is not profit
+    const rc = receiptCosts(receipts);
+    const costOfSales = rc.cogs;
+    const grossProfit = netSales - rc.tax - costOfSales;
     return { grossSales, netSales, costOfSales, grossProfit };
   }
 
@@ -3987,6 +4007,33 @@ const AureumSync = (function(){
   }
   // selling price shown next to the cost on purchase orders, GRNs, adjustments and transfers
   const money2 = n => (Number(n) || 0).toFixed(2);
+  /* the business's currency symbol (Settings → Business Profile); set from the country chosen at sign-up */
+  function curSym(){ return (typeof POS_SETTINGS !== 'undefined' && POS_SETTINGS && POS_SETTINGS.currency) || '$'; }
+  /* A product has one regular price; any shop can have its OWN price (p.shopPrice[shop]). A shop with no price of its own uses the regular one. */
+  function priceAt(p, shop){
+    if(!p) return 0;
+    const sp = (shop && shop !== 'All Shops' && p.shopPrice) ? p.shopPrice[shop] : undefined;
+    return (typeof sp === 'number' && isFinite(sp) && sp >= 0) ? sp : (Number(p.price) || 0);
+  }
+  function priceLabel(p, shop){
+    if(shop && shop !== 'All Shops') return priceAt(p, shop).toFixed(2);
+    const live = (typeof productLiveShops === 'function') ? productLiveShops(p) : [];
+    const all = [Number(p.price) || 0, ...live.map(sh => priceAt(p, sh))];
+    const lo = Math.min(...all), hi = Math.max(...all);
+    return lo === hi ? lo.toFixed(2) : lo.toFixed(2) + ' – ' + hi.toFixed(2);
+  }
+  function retailValueOf(p, shop){
+    if(p.stockControl === false) return 0;
+    if(shop && shop !== 'All Shops') return Math.max(0, getStock(p, shop)) * priceAt(p, shop);
+    if(!p.shopPrice || !Object.keys(p.shopPrice).length) return Math.max(0, getStock(p, 'All Shops')) * (Number(p.price) || 0);
+    return SHOPS.reduce((t, sh) => t + (productInShop(p, sh) ? Math.max(0, getStock(p, sh)) * priceAt(p, sh) : 0), 0);
+  }
+  /* Cost typed on a Goods Received Note, Purchase Order or Stock Adjustment becomes the product's cost (per single item). */
+  function syncCostFromLine(p, row){
+    if(!p || !row || !row.costEdited) return;
+    const per = Math.round(((Number(row.unitCost) || 0) / unitSizeOf(row)) * 10000) / 10000;
+    if(per >= 0 && Math.abs(per - (Number(p.cost) || 0)) > 0.00001) p.cost = Math.round(per * 100) / 100;
+  }
   function linePrice(it, p){ return (it && it.price != null && !isNaN(it.price)) ? Number(it.price) : (p ? (Number(p.price) || 0) : 0); }
   function lineCost(it, p){ return (it && it.cost != null && !isNaN(it.cost)) ? Number(it.cost) : (p ? (Number(p.cost) || 0) : 0); }
   function whoCreated(){ try{ return (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || ''; }catch(e){ return ''; } }
@@ -4593,7 +4640,7 @@ const AureumSync = (function(){
       productInShop(p, shopFilter)
     );
     if(sortVal === 'name') items.sort((a,b)=>a.name.localeCompare(b.name));
-    else if(sortVal === 'price') items.sort((a,b)=>b.price-a.price);
+    else if(sortVal === 'price') items.sort((a,b)=>priceAt(b, shopFilter)-priceAt(a, shopFilter));
     else if(sortVal === 'stock') items.sort((a,b)=>getStock(a,shopFilter)-getStock(b,shopFilter));
     else items.sort((a,b)=>b.id-a.id);
 
@@ -4620,7 +4667,7 @@ const AureumSync = (function(){
         </td>
         <td class="mono" data-col="code">${p.code || '—'}</td>
         <td data-col="category">${p.cat || 'Uncategorized'}</td>
-        <td class="gold" data-col="price" style="text-align:right;">${p.price.toFixed(2)}</td>
+        <td class="gold" data-col="price" style="text-align:right;">${priceLabel(p, shopFilter)}</td>
         <td class="mono" data-col="cost" style="text-align:right;">${p.cost.toFixed(2)}</td>
         <td class="mono" data-col="stock" style="text-align:right;">${p.stockControl===false ? '—' : fmtStockVal(getStock(p, shopFilter))}</td>
         <td data-col="shops" style="text-align:right;">${productShopLabel(p)}</td>
@@ -4757,8 +4804,8 @@ const AureumSync = (function(){
       <div class="shop-table-row">
         <input type="checkbox" class="cb pf-shop-cb" value="${s}" ${checked?'checked':''}>
         <div>${s}</div>
-        <input type="number" min="0" step="0.01" class="modal-field pf-shop-price" placeholder="Same as regular" style="padding:6px 8px;font-size:12px;">
-        <input type="number" min="0" step="1" class="modal-field pf-shop-stock" data-shop="${s}" value="${stockVal}" placeholder="0" style="padding:6px 8px;font-size:12px;">
+        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-price" data-shop="${s}" value="${(p && p.shopPrice && typeof p.shopPrice[s] === 'number') ? p.shopPrice[s] : ''}" placeholder="Same as regular" aria-label="Price at ${s}" style="padding:6px 8px;font-size:12px;">
+        <input type="number" min="0" step="any" class="modal-field pf-shop-stock" data-shop="${s}" value="${stockVal}" placeholder="0" style="padding:6px 8px;font-size:12px;">
       </div>`;
     }).join('');
     document.querySelectorAll('#pfShopTable .shop-table-row').forEach((row,i)=>{
@@ -4769,8 +4816,8 @@ const AureumSync = (function(){
     });
   }
   function recomputeShopStockTotal(){
-    const sum = [...document.querySelectorAll('.pf-shop-stock')].reduce((s,inp)=> s + (parseInt(inp.value)||0), 0);
-    document.getElementById('pfStock').value = sum;
+    const sum = [...document.querySelectorAll('.pf-shop-stock')].reduce((s,inp)=> s + (document.getElementById('pfSoldBy').value === 'weight' ? (parseFloat(inp.value)||0) : (parseInt(inp.value)||0)), 0);
+    document.getElementById('pfStock').value = Math.round(sum * 1000) / 1000;
   }
   document.getElementById('pfAllShops').addEventListener('change', function(){
     document.querySelectorAll('.pf-shop-cb').forEach(cb => cb.checked = this.checked);
@@ -5275,7 +5322,18 @@ const AureumSync = (function(){
     const cat = document.getElementById('pfCategory').value.trim();
     const stockControl = document.getElementById('pfStockControlToggle').classList.contains('on');
     const shopStock = {};
-    document.querySelectorAll('.pf-shop-stock').forEach(inp=>{ shopStock[inp.dataset.shop] = Math.max(0, parseInt(inp.value)||0); });
+    const byWeight = document.getElementById('pfSoldBy').value === 'weight';
+    const stockNum = v => byWeight ? Math.max(0, Math.round((parseFloat(v) || 0) * 1000) / 1000) : Math.max(0, parseInt(v) || 0);   // kg/litres keep their decimals
+    document.querySelectorAll('.pf-shop-stock').forEach(inp=>{ shopStock[inp.dataset.shop] = stockNum(inp.value); });
+    const shopPrice = {};
+    let badShopPrice = '';
+    document.querySelectorAll('.pf-shop-price').forEach(inp=>{
+      if(inp.value.trim() === '') return;
+      const v = parseFloat(inp.value);
+      if(isNaN(v) || v < 0){ badShopPrice = inp.dataset.shop; return; }
+      shopPrice[inp.dataset.shop] = Math.round(v * 100) / 100;
+    });
+    if(badShopPrice){ alert('The price for ' + badShopPrice + ' must be a number of 0 or more (or leave it empty to use the regular price).'); return; }
     const shopStockSum = Object.values(shopStock).reduce((s,v)=>s+v,0);
     // Legacy products edited before ever touching the per-shop stock inputs
     // keep their existing total untouched; once any shop row is edited (or
@@ -5299,6 +5357,9 @@ const AureumSync = (function(){
     if(SHOPS.length && !shops.length){ alert('Tick at least one shop where this product is sold.'); return; }
     // stock is only kept for shops the product is sold in
     Object.keys(shopStock).forEach(k=>{ if(!shops.includes(k)) delete shopStock[k]; });
+    Object.keys(shopPrice).forEach(k=>{ if(!shops.includes(k)) delete shopPrice[k]; });
+    // shop prices equal to the regular price are not stored (so changing the regular price later moves those shops too)
+    Object.keys(shopPrice).forEach(k=>{ if(shopPrice[k] === (isNaN(price) ? 0 : Math.round(price*100)/100)) delete shopPrice[k]; });
     if(stockControl && usePerShop) stock = Object.values(shopStock).reduce((a,v)=>a+v,0);
     // the code: blank is never saved (one is generated); a code another product already has is refused
     const codeEl = document.getElementById('pfCode'), codeErr = document.getElementById('pfCodeError');
@@ -5321,7 +5382,7 @@ const AureumSync = (function(){
       taxable: document.getElementById('pfTaxableToggle').classList.contains('on'),
       barcode: document.getElementById('pfBarcode').value.trim(),
       description: document.getElementById('pfDescription').value.trim(),
-      stockControl, shops, lowStockThreshold, safetyStock,
+      stockControl, shops, lowStockThreshold, safetyStock, shopPrice,
       shopStock: stockControl && usePerShop ? shopStock : (existing ? existing.shopStock : undefined)
     };
     if(editingProductId){
@@ -5455,10 +5516,10 @@ const AureumSync = (function(){
     let totGross=0, totNet=0, totCost=0, totProfit=0;
     items.forEach(p=>{ const s = salesByProduct.get(p.id); totGross+=s.gross; totNet+=s.net; totCost+=s.cost; totProfit+=s.profit; });
     document.getElementById('sbpKpiRow').innerHTML = `
-      <div class="kpi-card"><div class="lbl"><span>Total product gross sale</span></div><div class="val green">$${totGross.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total product net sale</span></div><div class="val">$${totNet.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total product cost</span></div><div class="val red">$${totCost.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total product profit</span></div><div class="val blue">$${totProfit.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total product gross sale</span></div><div class="val green">${curSym()}${totGross.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total product net sale</span></div><div class="val">${curSym()}${totNet.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total product cost</span></div><div class="val red">${curSym()}${totCost.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total product profit</span></div><div class="val blue">${curSym()}${totProfit.toFixed(2)}</div></div>
     `;
 
     const sorted = [...items].sort((a,b)=> salesByProduct.get(b.id).net - salesByProduct.get(a.id).net);
@@ -5472,7 +5533,7 @@ const AureumSync = (function(){
       top5Wrap.innerHTML = `<div class="dl-row" style="font-weight:700; color:var(--sage-dim); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; padding-bottom:8px; border-bottom:1px dashed var(--line);"><div class="name">Item</div><div class="pct">Net sales</div></div>` +
         top5.map(p=>{
           const s = salesByProduct.get(p.id);
-          return `<div class="dl-row" style="padding:9px 0; border-bottom:1px solid var(--line);"><div class="name">${p.name}</div><div class="pct gold">$${s.net.toFixed(2)}</div></div>`;
+          return `<div class="dl-row" style="padding:9px 0; border-bottom:1px solid var(--line);"><div class="name">${p.name}</div><div class="pct gold">${curSym()}${s.net.toFixed(2)}</div></div>`;
         }).join('');
     }
 
@@ -5501,7 +5562,7 @@ const AureumSync = (function(){
       if(isDonut){
         const inner = document.createElement('div');
         inner.className = 'donut-inner';
-        inner.innerHTML = `<div class="v">$${(totalNetAll/1000).toFixed(1)}K</div><div class="l">Net</div>`;
+        inner.innerHTML = `<div class="v">${curSym()}${(totalNetAll/1000).toFixed(1)}K</div><div class="l">Net</div>`;
         pieEl.appendChild(inner);
       }
       legendEl.innerHTML = pieSlices.map(sl=>`
@@ -5670,7 +5731,8 @@ const AureumSync = (function(){
     const m = { 0x20AC:0x80, 0x2026:0x85, 0x2018:0x91, 0x2019:0x92, 0x201C:0x93, 0x201D:0x94, 0x2022:0x95, 0x2013:0x96, 0x2014:0x97, 0x2122:0x99, 0x2192:62, 0x2212:45 };
     return m[c] != null ? m[c] : 63;
   }
-  function pdfText(s){ s = String(s == null ? '' : s); let o = ''; for(const ch of s){ const b = pdfByte(ch); if(b >= 0) o += String.fromCharCode(b); } return o.replace(/ {2,}/g, ' ').trim(); }
+  const PDF_CUR = { '\u20A6':'NGN ', '\u20B5':'GHS ', '\u20B9':'INR ', '\u20A8':'Rs ', '\u20AB':'VND ', '\u20B1':'PHP ', '\u20AA':'ILS ', '\u20BA':'TRY ', '\u20BD':'RUB ', '\u20B4':'UAH ', '\u20B8':'KZT ', '\u20BC':'AZN ', '\u20BE':'GEL ', '\u09F3':'BDT ', '\u0E3F':'THB ', '\u20AD':'LAK ', '\u20AE':'MNT ', '\u17DB':'KHR ', '\u20A9':'KRW ', '\u20B2':'PYG ', '\u20A1':'CRC ', '\u20B3':'ARA ', '\u20B5':'GHS ' };
+  function pdfText(s){ s = String(s == null ? '' : s).replace(/[\u20A0-\u20CF\u09F3\u0E3F\u17DB]/g, ch => PDF_CUR[ch] || ch); let o = ''; for(const ch of s){ const b = pdfByte(ch); if(b >= 0) o += String.fromCharCode(b); } return o.replace(/ {2,}/g, ' ').trim(); }
   function pdfEsc(s){ return s.replace(/[\\()]/g, '\\$&'); }
   function pdfW(s, bold, size, tc){ const t = PDF_WIDTHS[bold ? 'B' : 'R']; let w = 0; for(let i = 0; i < s.length; i++) w += t[s.charCodeAt(i) & 255]; return w * size / 1000 + (tc || 0) * s.length; }
   function pdfWrap(s, bold, size, maxW){
@@ -5888,11 +5950,11 @@ const AureumSync = (function(){
 
   function renderPODetailBody(po){
     const itemsSubtotal = (po.items||[]).reduce((s,it)=> s + ((it.qty*it.unitCost)||0), 0);
-    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="6" style="color:var(--sage);">${escHtml(c.name)}</td><td style="text-align:right;">$${(c.amount||0).toFixed(2)}</td></tr>`).join('');
+    const costRows = (po.costs||[]).map(c=>`<tr><td colspan="6" style="color:var(--sage);">${escHtml(c.name)}</td><td style="text-align:right;">${curSym()}${(c.amount||0).toFixed(2)}</td></tr>`).join('');
     const rows = (po.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${it.qty}</td><td>${unitText(it,p)}</td><td style="text-align:right;">${unitTotalQty(it)}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${it.qty}</td><td>${unitText(it,p)}</td><td style="text-align:right;">${unitTotalQty(it)}</td><td style="text-align:right;">${curSym()}${it.unitCost.toFixed(2)}</td><td style="text-align:right;">${curSym()}${money2(linePrice(it,p))}</td><td style="text-align:right;">${curSym()}${total.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this order.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -5905,9 +5967,9 @@ const AureumSync = (function(){
       </div>
       <table class="detail-table">
         <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th>Unit</th><th style="text-align:right;">Total qty</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
-        <tbody>${rows}${costRows ? `<tr><td colspan="6" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">$${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
+        <tbody>${rows}${costRows ? `<tr><td colspan="6" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">${curSym()}${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
       </table>
-      <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${po.total.toFixed(2)}</span></div>
+      <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">${curSym()}${po.total.toFixed(2)}</span></div>
     `;
   }
 
@@ -5967,8 +6029,8 @@ const AureumSync = (function(){
     });
     const sub = (po.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
     const totals = [];
-    if((po.costs||[]).length){ totals.push(['Items subtotal', '$' + money2(sub)]); po.costs.forEach(c=> totals.push([c.name || 'Additional cost', '$' + money2(c.amount)])); }
-    totals.push(['Total', '$' + money2(po.total), true]);
+    if((po.costs||[]).length){ totals.push(['Items subtotal', curSym() + money2(sub)]); po.costs.forEach(c=> totals.push([c.name || 'Additional cost', curSym() + money2(c.amount)])); }
+    totals.push(['Total', curSym() + money2(po.total), true]);
     openDocPdf({
       docType:'Purchase Order', number: po.id, subtitle: `Status: ${po.status || '—'}`, createdBy: po.createdBy || '',
       meta:[['Supplier', po.supplier], ['Shop', po.shop], ['PO date', po.date ? fmtDisplay(po.date) : ''], ['Expected date', po.expected ? fmtDisplay(po.expected) : ''], ['Payment method', po.payment], ['Delivery instruction', po.delivery], ['Created by', po.createdBy]],
@@ -6009,10 +6071,10 @@ const AureumSync = (function(){
 
   /* Documents keep an exact copy of each line as it was when saved (product NAME, quantity,
      unit cost, line total) so history stays correct even if the product is later renamed or deleted. */
-  function snapshotLine(r){
+  function snapshotLine(r, shop){
     const p = PRODUCTS.find(x => x.id === r.productId);
     const o = { ...r }; delete o.costEdited;
-    return { ...o, name: p ? p.name : (r.name || ''), price: p ? (Number(p.price) || 0) : (r.price || 0), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
+    return { ...o, name: p ? p.name : (r.name || ''), price: p ? priceAt(p, shop) : (r.price || 0), total: Math.round(((r.qty || 0) * (r.unitCost || 0)) * 100) / 100 };
   }
   function itemLabel(it, p){ return it.name || (p && p.name) || (PRODUCTS.find(x => x.id === it.productId) || {}).name || 'Deleted product'; }
   function renderPOLines(){
@@ -6027,7 +6089,7 @@ const AureumSync = (function(){
         <td data-label="Quantity"><input type="number" inputmode="decimal" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
         <td data-label="Unit">${unitCellHtml(i, row, p)}</td>
         <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="po-cost"></td>
-        <td class="mono" data-label="Price">${p ? money2(p.price) : '—'}</td>
+        <td class="mono" data-label="Price">${p ? money2(priceAt(p, document.getElementById('poShop').value)) : '—'}</td>
         <td class="mono po-line-total" data-label="Total cost" data-idx="${i}">${total.toFixed(2)}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
@@ -6116,6 +6178,7 @@ const AureumSync = (function(){
     if(validLines.length < withProduct.length){ alert(`${withProduct.length - validLines.length} line item(s) with a quantity of 0 were skipped.`); }
     const validCosts = poCostItems.filter(c=> c.name && c.name.trim() && (c.amount||0) > 0);
     const total = validLines.reduce((s,r)=>s+((r.qty*r.unitCost)||0),0) + validCosts.reduce((s,c)=>s+c.amount,0);
+    validLines.forEach(r => syncCostFromLine(PRODUCTS.find(x=>x.id===r.productId), r));
     const data = {
       date: document.getElementById('poDate').value || todayStr(),
       expected: document.getElementById('poExpected').value || todayStr(),
@@ -6123,7 +6186,7 @@ const AureumSync = (function(){
       shop: document.getElementById('poShop').value,
       payment: document.getElementById('poPayment').value,
       delivery: document.getElementById('poDelivery').value.trim(),
-      items: validLines.map(snapshotLine),
+      items: validLines.map(r => snapshotLine(r, document.getElementById('poShop').value)),
       costs: validCosts.map(c=>({...c})),
       total
     };
@@ -6156,7 +6219,7 @@ const AureumSync = (function(){
     const rows = (g.items||[]).filter(it=>it.productId).map(it=>{
       const p = PRODUCTS.find(x=>x.id===it.productId);
       const total = (it.qty*it.unitCost)||0;
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${unitText(it,p)}</td><td class="num">${unitTotalQty(it)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">$${it.unitCost.toFixed(2)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td><td style="text-align:right;">$${total.toFixed(2)}</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td class="num">${it.beforeStock!=null?it.beforeStock:'—'}</td><td class="num">${it.qty}</td><td>${unitText(it,p)}</td><td class="num">${unitTotalQty(it)}</td><td class="exp">${it.expiry?fmtDisplay(it.expiry):'—'}</td><td style="text-align:right;">${curSym()}${it.unitCost.toFixed(2)}</td><td style="text-align:right;">${curSym()}${money2(linePrice(it,p))}</td><td style="text-align:right;">${curSym()}${total.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded for this GRN.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -6171,7 +6234,7 @@ const AureumSync = (function(){
         <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Received</th><th>Unit</th><th class="num">Total qty</th><th class="exp">Expiry date</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total cost</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">$${g.total.toFixed(2)}</span></div>
+      <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">${curSym()}${g.total.toFixed(2)}</span></div>
       <div style="margin-top:14px; font-size:11.5px; color:var(--sage);">Completed GRNs have already added their quantities to stock, so they are locked. To correct a mistake, record a Stock Adjustment.</div>
     `;
   }
@@ -6201,8 +6264,8 @@ const AureumSync = (function(){
     });
     const sub = (g.items||[]).reduce((t,it)=> t + ((it.qty||0)*(it.unitCost||0)), 0);
     const totals = [];
-    if((g.costs||[]).length){ totals.push(['Items subtotal', '$' + money2(sub)]); g.costs.forEach(c=> totals.push([c.name || 'Additional cost', '$' + money2(c.amount)])); }
-    totals.push(['Total', '$' + money2(g.total), true]);
+    if((g.costs||[]).length){ totals.push(['Items subtotal', curSym() + money2(sub)]); g.costs.forEach(c=> totals.push([c.name || 'Additional cost', curSym() + money2(c.amount)])); }
+    totals.push(['Total', curSym() + money2(g.total), true]);
     openDocPdf({
       docType:'Goods Received Note', number: g.id, subtitle: g.po ? `Received against ${g.po}` : (g.type || ''), createdBy: g.createdBy || '',
       meta:[['Supplier', g.supplier], ['Shop', g.shop], ['GRN date', g.date ? fmtDisplay(g.date) : ''], ['Payment method', g.payment], ['Supplier invoice no.', g.invoice], ['Additional information', g.additional], ['Created by', g.createdBy]],
@@ -6291,7 +6354,7 @@ const AureumSync = (function(){
         <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
         <td data-label="Unit">${unitCellHtml(i, row, p)}</td>
         <td data-label="Cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost" aria-label="Cost per unit"></td>
-        <td data-label="Price" class="mono">${money2(p.price)}</td>
+        <td data-label="Price" class="mono">${money2(priceAt(p, shop))}</td>
         <td data-label="Total cost" class="mono grn-line-total" data-idx="${i}">${total.toFixed(2)}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
@@ -6410,8 +6473,9 @@ const AureumSync = (function(){
       row.unitSize = unitSizeOf(row);
       row.unit = unitText(row, p);
       row.totalQty = unitTotalQty(row);
-      row.price = p ? (Number(p.price) || 0) : 0;
+      row.price = p ? priceAt(p, grnShopVal) : 0;
       if(p) addStock(p, grnShopVal, row.totalQty);
+      syncCostFromLine(p, row);
     });
     GRN_RECORDS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(),
@@ -6425,7 +6489,7 @@ const AureumSync = (function(){
       payment: document.getElementById('grnPayment').value,
       invoice: document.getElementById('grnInvoice').value.trim(),
       additional: document.getElementById('grnAdditional').value.trim(),
-      items: validLines.map(snapshotLine),
+      items: validLines.map(r => snapshotLine(r, grnShopVal)),
       costs: validCosts.map(c=>({...c})),
       total, status: "Completed"
     });
@@ -6456,7 +6520,7 @@ const AureumSync = (function(){
       if(a.type === 'Add'){ delta = eff; after = before + eff; }
       else if(a.type === 'Reduce'){ delta = -eff; after = before - eff; }
       else { delta = eff - before; after = eff; } // Override
-      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td>${unitText(it,p)}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td><td style="text-align:right;">$${money2(it.unitCost)}</td><td style="text-align:right;">$${money2(linePrice(it,p))}</td></tr>`;
+      return `<tr><td>${escHtml(itemLabel(it,p))}</td><td style="text-align:right;">${before}</td><td style="text-align:right;">${it.counted}</td><td>${unitText(it,p)}</td><td style="text-align:right;">${after}</td><td style="text-align:right; color:${delta>=0?'var(--emerald-light)':'var(--danger)'};">${delta>=0?'+':''}${delta}</td><td style="text-align:right;">${curSym()}${money2(it.unitCost)}</td><td style="text-align:right;">${curSym()}${money2(linePrice(it,p))}</td></tr>`;
     }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--sage);padding:16px 0;">No line items recorded.</td></tr>`;
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
@@ -6548,7 +6612,7 @@ const AureumSync = (function(){
       meta:[['Supplier', a.supplier], ['Shop', a.shop], ['Adjustment type', a.type], ['Adjustment reason', a.reason], ['Created date', a.date ? fmtDisplay(a.date) : ''], ['Created by', a.createdBy], ['Notes', a.notes]],
       tableTitle:'Products',
       columns:[{h:'Product', wrap:true}, {h:'Current stock', align:'r'}, {h:qtyLabel, align:'r'}, {h:'Unit'}, {h:'Stock after', align:'r'}, {h:'Change', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
-      rows, totals:[['Total', '$' + money2(total), true]], signatures:['Store keeper signature','Approved by','Received by']
+      rows, totals:[['Total', curSym() + money2(total), true]], signatures:['Store keeper signature','Approved by','Received by']
     }, `${a.id}.pdf`);
   }
 
@@ -6614,7 +6678,7 @@ const AureumSync = (function(){
         <td data-label="${qtyLabel}"><input type="number" inputmode="decimal" min="0" step="1" value="${row.counted}" data-idx="${i}" class="sa-counted"></td>
         <td data-label="Unit">${unitCellHtml(i, row, p, 'counted')}</td>
         <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="sa-cost"></td>
-        <td data-label="Price" class="mono">${money2(p.price)}</td>
+        <td data-label="Price" class="mono">${money2(priceAt(p, shopVal))}</td>
         <td data-label="Total cost" class="mono sa-line-total" data-idx="${i}">${total.toFixed(2)}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
@@ -6712,6 +6776,7 @@ const AureumSync = (function(){
       const beforeStock = p ? getStock(p, saShopVal) : 0;
       if(p && p.soldBy === 'weight') row.unitSize = 1;
       const size = unitSizeOf(row), eff = Math.round((row.counted || 0) * size * 1000) / 1000;
+      syncCostFromLine(p, row);
       if(p){
         // Add/Reduce apply the entered quantity as a delta on top of
         // whatever the current stock is; Override replaces it outright.
@@ -6720,7 +6785,7 @@ const AureumSync = (function(){
         else if(type === 'Reduce') addStock(p, saShopVal, -eff);
         else if(type === 'Override') setStock(p, saShopVal, eff);
       }
-      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: eff, unitCost: row.unitCost, price: p ? (Number(p.price) || 0) : 0, beforeStock };
+      return { productId: row.productId, name: p ? p.name : '', counted: row.counted, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: eff, unitCost: row.unitCost, price: p ? priceAt(p, saShopVal) : 0, beforeStock };
     });
     STOCK_ADJUSTMENTS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
@@ -6786,7 +6851,7 @@ const AureumSync = (function(){
   function viewReceipt(key){
     const r = RECEIPTS.find(x => receiptKey(x) === key);
     if(!r) return;
-    const money = n => '$' + Number(n || 0).toFixed(2);
+    const money = n => curSym() + Number(n || 0).toFixed(2);
     const items = r.items || [];
     const subtotal = typeof r.subtotal === 'number' ? r.subtotal : items.reduce((s,i)=> s + i.qty*i.price, 0);
     const disc = r.discountAmount || 0, tax = r.tax || 0;
@@ -6843,7 +6908,7 @@ const AureumSync = (function(){
       <div class="kpi-card"><div class="lbl"><span>Total number of receipts</span></div><div class="val">${total}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Total number of refunds</span></div><div class="val">${refunds}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Total unique customers</span></div><div class="val">${uniqueCustomers}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total amount (net of refunds)</span></div><div class="val gold">${amount < 0 ? '-' : ''}$${Math.abs(amount).toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total amount (net of refunds)</span></div><div class="val gold">${amount < 0 ? '-' : ''}${curSym()}${Math.abs(amount).toFixed(2)}</div></div>
     `;
   }
 
@@ -7051,9 +7116,9 @@ const AureumSync = (function(){
         <td>${c.email || '—'}</td>
         <td><span class="segment-badge ${seg.key}">${seg.label}</span></td>
         <td class="mono" style="text-align:right;">${c.orders}</td>
-        <td class="gold" style="text-align:right;">$${c.spent.toFixed(2)}</td>
+        <td class="gold" style="text-align:right;">${curSym()}${c.spent.toFixed(2)}</td>
         <td class="mono" style="text-align:right;">${customerLoyaltyPoints(c)}</td>
-        <td class="mono" style="text-align:right;">$${(c.credit||0).toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${(c.credit||0).toFixed(2)}</td>
         <td>${fmtDisplay(c.joined)}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
@@ -7082,7 +7147,7 @@ const AureumSync = (function(){
     const c = CUSTOMERS.find(x=>x.id===id);
     if(!c) return;
     openDetailModal(`Adjust store credit — ${c.name}`, `
-      <div style="margin-bottom:14px; color:var(--sage); font-size:13px;">Current balance: <span class="gold" style="font-weight:700;">$${(c.credit||0).toFixed(2)}</span></div>
+      <div style="margin-bottom:14px; color:var(--sage); font-size:13px;">Current balance: <span class="gold" style="font-weight:700;">${curSym()}${(c.credit||0).toFixed(2)}</span></div>
       <div class="field-label">Amount</div>
       <input type="number" step="0.01" class="modal-field" id="creditAdjustAmount" placeholder="e.g. 10.00 to add, -5.00 to redeem">
       <div class="field-error" id="creditAdjustError">Enter a non-zero amount that wouldn't take the balance below $0</div>
@@ -7123,10 +7188,10 @@ const AureumSync = (function(){
       const segBadge = document.getElementById('cfSegBadge');
       segBadge.textContent = seg.label;
       segBadge.className = 'segment-badge ' + seg.key;
-      document.getElementById('cfLtv').textContent = '$' + c.spent.toFixed(2);
+      document.getElementById('cfLtv').textContent = curSym() + c.spent.toFixed(2);
       document.getElementById('cfLoyalty').textContent = customerLoyaltyPoints(c);
       { const st = customerStats(c); document.getElementById('cfLastOrder').textContent = st.last ? new Date(st.last).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' (' + (st.daysSinceLast === 0 ? 'today' : st.daysSinceLast + ' days ago') + ')' : 'No orders yet'; document.getElementById('cfOrders90').textContent = st.in90; }
-      document.getElementById('cfCredit').textContent = '$' + (c.credit||0).toFixed(2);
+      document.getElementById('cfCredit').textContent = curSym() + (c.credit||0).toFixed(2);
     } else {
       document.getElementById('cfCrmSummary').style.display = 'none';
       document.getElementById('cfName').value = '';
@@ -7572,6 +7637,7 @@ const AureumSync = (function(){
     { id:"summary", label:"Inventory Summary" },
     { id:"lowstock", label:"Low Stock" },
     { id:"expired", label:"Expired Products" },
+    { id:"datacheck", label:"Data Check" },
     { id:"staff", label:"Staff Snapshot" },
     { id:"shifts", label:"Shifts" },
   ];
@@ -7591,7 +7657,7 @@ const AureumSync = (function(){
       });
     });
   }
-  const REPORT_EXPORT = { inventory:['repInventoryBody','available-inventory','Available Inventory'], valuation:['repValuationBody','inventory-valuation','Inventory Valuation'], summary:['repSummaryBody','inventory-summary','Inventory Summary'], lowstock:['repLowStockBody','low-stock','Low Stock'], expired:['repExpiredBody','expired-products','Expired Products'], staff:['repStaffBody','staff-snapshot','Staff Snapshot'], shifts:['repClosedShiftsBody','closed-shifts','Closed Shifts'] };
+  const REPORT_EXPORT = { inventory:['repInventoryBody','available-inventory','Available Inventory'], valuation:['repValuationBody','inventory-valuation','Inventory Valuation'], summary:['repSummaryBody','inventory-summary','Inventory Summary'], lowstock:['repLowStockBody','low-stock','Low Stock'], expired:['repExpiredBody','expired-products','Expired Products'], datacheck:['repCheckBody','data-check','Data Check'], staff:['repStaffBody','staff-snapshot','Staff Snapshot'], shifts:['repClosedShiftsBody','closed-shifts','Closed Shifts'] };
   function showReportPanel(){
     const ex = REPORT_EXPORT[activeReportTab];
     if(ex) document.querySelectorAll('#reportExportBtn .export-opt').forEach(o=>{ o.dataset.source = ex[0]; o.dataset.filename = ex[1]; o.dataset.title = ex[2]; });
@@ -7603,6 +7669,7 @@ const AureumSync = (function(){
     else if(activeReportTab === 'summary') renderReportSummary();
     else if(activeReportTab === 'lowstock') renderReportLowStock();
     else if(activeReportTab === 'expired') renderReportExpired();
+    else if(activeReportTab === 'datacheck') renderReportDataCheck();
     else if(activeReportTab === 'staff') renderReportStaff();
     else if(activeReportTab === 'shifts') renderReportShifts();
   }
@@ -7623,8 +7690,8 @@ const AureumSync = (function(){
         <td>${p.cat || 'Uncategorized'}</td>
         <td>${productShopLabel(p)}</td>
         <td class="mono" style="text-align:right;">${p.stockControl===false ? '—' : getStock(p, shopFilter)}</td>
-        <td class="mono" style="text-align:right;">$${p.cost.toFixed(2)}</td>
-        <td class="gold" style="text-align:right;">$${p.price.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${p.cost.toFixed(2)}</td>
+        <td class="gold" style="text-align:right;">${curSym()}${priceLabel(p, shopFilter)}</td>
       </tr>`).join('');
     renderPaginationControls('repInventoryPagination', items.length, repInvPage, renderReportInventory);
   }
@@ -7637,23 +7704,23 @@ const AureumSync = (function(){
       // value only stock that physically exists — oversold (negative) units aren't an asset
       // and must not drag down the value of everything else; the true count still shows
       const valued = Math.max(0, stock);
-      const costVal = valued * p.cost, retailVal = valued * p.price;
+      const costVal = valued * p.cost, retailVal = retailValueOf(p, shopCtx);
       totCostVal += costVal; totRetailVal += retailVal;
       return { p, stock, costVal, retailVal };
     });
     document.getElementById('repValKpiRow').innerHTML = `
-      <div class="kpi-card"><div class="lbl"><span>Total cost value</span></div><div class="val">$${totCostVal.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total retail value</span></div><div class="val">$${totRetailVal.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Potential margin</span></div><div class="val gold">$${(totRetailVal-totCostVal).toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total cost value</span></div><div class="val">${curSym()}${totCostVal.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total retail value</span></div><div class="val">${curSym()}${totRetailVal.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Potential margin</span></div><div class="val gold">${curSym()}${(totRetailVal-totCostVal).toFixed(2)}</div></div>
     `;
     document.getElementById('repValuationBody').innerHTML = paginateSlice(rows, repValPage).map(r=>`
       <tr>
         <td>${r.p.name}</td><td>${r.p.cat || 'Uncategorized'}</td>
         <td class="mono" style="text-align:right;">${r.stock}</td>
-        <td class="mono" style="text-align:right;">$${r.p.cost.toFixed(2)}</td>
-        <td class="mono" style="text-align:right;">$${r.costVal.toFixed(2)}</td>
-        <td class="mono" style="text-align:right;">$${r.p.price.toFixed(2)}</td>
-        <td class="gold" style="text-align:right;">$${r.retailVal.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${r.p.cost.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${r.costVal.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${priceLabel(r.p, shopCtx)}</td>
+        <td class="gold" style="text-align:right;">${curSym()}${r.retailVal.toFixed(2)}</td>
       </tr>`).join('');
     renderPaginationControls('repValuationPagination', rows.length, repValPage, renderReportValuation);
   }
@@ -7668,7 +7735,7 @@ const AureumSync = (function(){
     document.getElementById('repSumKpiRow').innerHTML = `
       <div class="kpi-card"><div class="lbl"><span>Total SKUs</span></div><div class="val">${totalSKUs}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Units in stock</span></div><div class="val">${totalUnits}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Total cost value</span></div><div class="val">$${totalCostVal.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Total cost value</span></div><div class="val">${curSym()}${totalCostVal.toFixed(2)}</div></div>
       <div class="kpi-card"><div class="lbl"><span>Low stock items</span></div><div class="val ${lowStockCount>0?'gold':''}">${lowStockCount}</div></div>
     `;
     document.getElementById('repSummaryBody').innerHTML = paginateSlice(cats, repSumPage).map(cat=>{
@@ -7676,8 +7743,8 @@ const AureumSync = (function(){
       const skus = inCat.length;
       const units = inCat.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
       const costVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx))*p.cost), 0);
-      const retailVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx))*p.price), 0);
-      return `<tr><td>${cat}</td><td class="mono" style="text-align:right;">${skus}</td><td class="mono" style="text-align:right;">${units}</td><td class="mono" style="text-align:right;">$${costVal.toFixed(2)}</td><td class="gold" style="text-align:right;">$${retailVal.toFixed(2)}</td></tr>`;
+      const retailVal = inCat.reduce((s,p)=> s + retailValueOf(p, shopCtx), 0);
+      return `<tr><td>${cat}</td><td class="mono" style="text-align:right;">${skus}</td><td class="mono" style="text-align:right;">${units}</td><td class="mono" style="text-align:right;">${curSym()}${costVal.toFixed(2)}</td><td class="gold" style="text-align:right;">${curSym()}${retailVal.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">No categories yet.</td></tr>`;
     renderPaginationControls('repSummaryPagination', cats.length, repSumPage, renderReportSummary);
   }
@@ -7709,8 +7776,8 @@ const AureumSync = (function(){
     tbody.innerHTML = paginateSlice(rows, repLowPage).map(r => `
       <tr><td>${r.p.name}</td><td>${r.p.cat || 'Uncategorized'}</td><td>${r.shop}</td>
         <td class="mono" style="text-align:right; color:var(--danger); ${r.neg ? 'font-weight:700;' : ''}">${r.qty}</td>
-        <td class="mono" style="text-align:right;">$${r.p.cost.toFixed(2)}</td>
-        <td class="mono" style="text-align:right;">${r.neg ? '—' : '$' + (r.p.cost * 20).toFixed(2)}</td></tr>`).join('');
+        <td class="mono" style="text-align:right;">${curSym()}${r.p.cost.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${r.neg ? '—' : curSym() + (r.p.cost * 20).toFixed(2)}</td></tr>`).join('');
     renderPaginationControls('repLowStockPagination', rows.length, repLowPage, renderReportLowStock);
   }
 
@@ -7760,7 +7827,7 @@ const AureumSync = (function(){
       .filter(r=>r.net > 0).sort((a,b)=>b.net-a.net);
 
     const totalNet = rows.reduce((s,r)=>s+r.net,0);
-    totalEl.textContent = '$' + totalNet.toFixed(totalNet>=1000?0:2);
+    totalEl.textContent = curSym() + totalNet.toFixed(totalNet>=1000?0:2);
 
     if(rows.length === 0){
       donutEl.style.background = 'var(--panel-raised)';
@@ -7780,14 +7847,14 @@ const AureumSync = (function(){
       return `
       <div class="dl-row">
         <div class="name"><span class="legend-dot" style="background:${palette[i%palette.length]}"></span>${r.cat} <span style="color:var(--sage); margin-left:6px;">(${r.qty} sold)</span></div>
-        <div class="pct">$${r.net.toFixed(2)} · ${pct.toFixed(1)}%</div>
+        <div class="pct">${curSym()}${r.net.toFixed(2)} · ${pct.toFixed(1)}%</div>
       </div>`;
     }).join('');
   }
 
   /* ===== REPORTS → SHIFTS ===== */
   const repShiftPage = { page:1, pageSize:10 };
-  const usd = n => '$' + Number(n || 0).toFixed(2);
+  const usd = n => curSym() + Number(n || 0).toFixed(2);
   // Each cashier has their own shift. Receipts carry the id of the shift they were rung up in; older ones
   // are matched by shop + cashier + time.
   const shiftOwner = c => c.employeeName || c.openedBy || c.employee || '—';
@@ -7857,6 +7924,64 @@ const AureumSync = (function(){
     tbody.innerHTML = paginateSlice(EMPLOYEES, repStaffPage).map(e=>`
       <tr><td>${e.name}</td><td>${e.role}</td><td>${e.shop||'—'}</td><td><span class="status-badge ${e.active?'completed':'pending'}">${e.active?'Active':'Inactive'}</span></td></tr>`).join('');
     renderPaginationControls('repStaffPagination', EMPLOYEES.length, repStaffPage, renderReportStaff);
+  }
+
+  /* Data Check: scans products, documents and sales for numbers that cannot be right (read-only — it never changes anything). */
+  const repCheckPage = { page:1, pageSize:15 };
+  function dataCheckIssues(){
+    const out = [], add = (sev, where, what, fix) => out.push({ sev, where, what, fix });
+    const r2 = n => Math.round((Number(n) || 0) * 100) / 100, near = (a, b) => Math.abs(a - b) <= 0.011;
+    const seenName = new Map(), seenCode = new Map();
+    PRODUCTS.forEach(p => {
+      const nm = prodNameKey(p.name), cd = String(p.code || '').trim().toLowerCase();
+      if(seenName.has(nm)) add('High', 'Product: ' + p.name, 'Another product has exactly the same name.', 'Rename or delete one — sales and stock reports group by name.'); else seenName.set(nm, 1);
+      if(cd){ if(seenCode.has(cd)) add('High', 'Product: ' + p.name, 'The product code ' + p.code + ' is used by more than one product.', 'Give each product its own code.'); else seenCode.set(cd, 1); }
+      const price = Number(p.price) || 0, cost = Number(p.cost) || 0;
+      if(price === 0) add('High', 'Product: ' + p.name, 'Selling price is 0.', 'Set a price, or the till will sell it for nothing.');
+      if(price > 0 && cost === 0) add('Medium', 'Product: ' + p.name, 'No cost is set, so profit shows as 100%.', 'Enter the cost on the product, or receive stock with a cost on a Goods Received Note.');
+      if(price > 0 && cost > price) add('High', 'Product: ' + p.name, 'Cost (' + cost.toFixed(2) + ') is higher than the selling price (' + price.toFixed(2) + ') — every sale loses money.', 'Check both numbers on the product.');
+      else if(price > 0 && cost === price) add('Medium', 'Product: ' + p.name, 'Cost equals the selling price, so there is no profit. This often means the price was typed into the cost box.', 'Open the product and correct the cost.');
+      Object.keys(p.shopPrice || {}).forEach(sh => {
+        const sp = p.shopPrice[sh];
+        if(!SHOPS.includes(sh)) add('Low', 'Product: ' + p.name, 'Has a price for "' + sh + '", a shop that no longer exists.', 'Open the product and save it to clear it.');
+        else if(cost > 0 && sp < cost) add('High', 'Product: ' + p.name + ' @ ' + sh, 'Price at ' + sh + ' (' + sp.toFixed(2) + ') is below the cost (' + cost.toFixed(2) + ').', 'Raise the price at that shop.');
+      });
+      if(p.stockControl !== false){
+        ensureShopStock(p);
+        const live = productLiveShops(p);
+        Object.keys(p.shopStock).forEach(sh => {
+          const q = Number(p.shopStock[sh]) || 0;
+          if(q < 0 && SHOPS.includes(sh)) add('High', 'Stock: ' + p.name + ' @ ' + sh, 'Stock is negative (' + q + ') — more was sold than was ever received.', 'Record the missing delivery on a Goods Received Note or Stock Adjustment.');
+          if(q > 0 && SHOPS.includes(sh) && !live.includes(sh)) add('Medium', 'Stock: ' + p.name + ' @ ' + sh, q + ' in stock at a shop where the product is switched off, so it is not counted anywhere.', 'Tick the shop on the product, or move the stock.');
+          if(!Number.isFinite(q)) add('High', 'Stock: ' + p.name + ' @ ' + sh, 'Stock is not a number.', 'Correct it with a Stock Adjustment (Override).');
+        });
+        if(p.soldBy !== 'weight' && Object.values(p.shopStock).some(v => Number(v) % 1 !== 0)) add('Medium', 'Stock: ' + p.name, 'Has a part-unit quantity but is sold by "each".', 'Use a Stock Adjustment (Override) with a whole number.');
+      }
+    });
+    const lineSum = d => (d.items || []).reduce((t, it) => t + (Number(it.qty) || 0) * (Number(it.unitCost) || 0), 0) + (d.costs || []).reduce((t, c) => t + (Number(c.amount) || 0), 0);
+    GRN_RECORDS.forEach(g => { if(g.items && g.items.length && !near(lineSum(g), Number(g.total) || 0)) add('High', 'Goods Received ' + g.id, 'The total (' + r2(g.total).toFixed(2) + ') does not match the lines (' + r2(lineSum(g)).toFixed(2) + ').', 'Open the note and check each line.'); });
+    PURCHASE_ORDERS.forEach(o => { if(o.items && o.items.length && !near(lineSum(o), Number(o.total) || 0)) add('High', 'Purchase Order ' + o.id, 'The total (' + r2(o.total).toFixed(2) + ') does not match the lines (' + r2(lineSum(o)).toFixed(2) + ').', 'Open the order and check each line.'); });
+    let badRcp = 0;
+    RECEIPTS.forEach(r => {
+      if(r.refund || !Array.isArray(r.items) || typeof r.subtotal !== 'number') return;
+      const items = r.items.reduce((t, i) => t + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
+      const expect = r.taxInclusive ? r.subtotal - (r.discountAmount || 0) : r.subtotal - (r.discountAmount || 0) + (r.tax || 0);
+      if(!near(items, r.subtotal) || !near(expect, Number(r.total) || 0)){ if(badRcp++ < 25) add('High', 'Receipt ' + r.id, 'The receipt does not add up (lines ' + r2(items).toFixed(2) + ', subtotal ' + r2(r.subtotal).toFixed(2) + ', total ' + r2(r.total).toFixed(2) + ').', 'Open the receipt and compare with the till.'); }
+    });
+    if(badRcp > 25) add('High', 'Receipts', (badRcp - 25) + ' more receipts do not add up.', 'Filter Receipts by date and check them.');
+    (OPEN_SHIFTS || []).forEach(sh => { const t = Date.parse(sh.openedAt || sh.start || sh.dateTime || ''); if(t && Date.now() - t > 36 * 3600 * 1000) add('Medium', 'Shift ' + (sh.id || ''), 'A shift has been open for more than 36 hours.', 'Close it from Reports → Shifts so cash is reconciled.'); });
+    const rank = { High: 0, Medium: 1, Low: 2 };
+    return out.sort((a, b) => rank[a.sev] - rank[b.sev]);
+  }
+  function renderReportDataCheck(){
+    const list = dataCheckIssues(), tbody = document.getElementById('repCheckBody');
+    const n = sev => list.filter(x => x.sev === sev).length;
+    document.getElementById('repCheckSub').innerHTML = list.length
+      ? `Found <b>${list.length}</b> thing${list.length === 1 ? '' : 's'} to look at: <b style="color:var(--danger);">${n('High')} high</b>, ${n('Medium')} medium, ${n('Low')} low. This page only reports — it never changes your data.`
+      : 'Everything checked looks consistent: prices, costs, stock, document totals and receipts.';
+    if(!list.length){ tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--sage);">No problems found.</td></tr>`; clearPager('repCheckPagination'); return; }
+    tbody.innerHTML = paginateSlice(list, repCheckPage).map(x => `<tr><td><span class="status-badge ${x.sev === 'High' ? 'pending' : 'completed'}">${x.sev}</span></td><td>${escHtml(x.where)}</td><td>${escHtml(x.what)}</td><td style="color:var(--sage);">${escHtml(x.fix)}</td></tr>`).join('');
+    renderPaginationControls('repCheckPagination', list.length, repCheckPage, renderReportDataCheck);
   }
 
   /* Expired products: every GRN line whose expiry date has passed (stock isn't tracked per batch, so
@@ -8288,7 +8413,7 @@ const AureumSync = (function(){
       const total = items.reduce((s,it)=>s+it.qty*it.unitCost,0);
       const todayIso = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`;
       const id = 'GRN-' + AureumSync.nextDocNumber(GRN_RECORDS, 'GRN-', 11223);
-      GRN_RECORDS.unshift({ uid: AureumSync.uid(), createdAt: new Date().toISOString(), id, date: todayIso, type:'Direct GRN', po:'', created: todayIso, supplier:'N/A', shop:viewingShop, payment:'Cash', invoice:'', additional:'Imported from CSV', items: items.map(snapshotLine), total, status:'Completed' });
+      GRN_RECORDS.unshift({ uid: AureumSync.uid(), createdAt: new Date().toISOString(), id, date: todayIso, type:'Direct GRN', po:'', created: todayIso, supplier:'N/A', shop:viewingShop, payment:'Cash', invoice:'', additional:'Imported from CSV', items: items.map(r => snapshotLine(r, viewingShop)), total, status:'Completed' });
       items.forEach(it=>{ const p = PRODUCTS.find(x=>x.id===it.productId); if(p) addStock(p, viewingShop, it.qty); });
       renderGRNTable();
       renderProducts();
@@ -8457,7 +8582,13 @@ const AureumSync = (function(){
     el._t = setTimeout(()=> el.classList.remove('show'), 2200);
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const CURRENCY_SYMBOLS = { USD:'$', ZWG:'ZWG ', ZAR:'R', EUR:'€', GBP:'£' };
+  const CURRENCY_SYMBOLS = new Proxy({}, { get: (t, code) => (window.AureumCountries ? AureumCountries.symbolFor(String(code)) : '$') });
+  function fillCurrencySelects(){
+    ['stCurrency','stCurrency2'].forEach(id => {
+      const el = document.getElementById(id); if(!el || el.options.length) return;
+      el.innerHTML = AureumCountries.allCurrencies().map(c => `<option value="${c}">${c} — ${AureumCountries.currencyName(c)} (${AureumCountries.symbolFor(c).trim()})</option>`).join('');
+    });
+  }
 
   document.getElementById('stSaveGeneral').addEventListener('click', ()=>{
     const email = document.getElementById('stBizEmail').value.trim();
@@ -8470,10 +8601,13 @@ const AureumSync = (function(){
     const bizName = document.getElementById('stBizName').value.trim();
     if(!bizName){ alert('Business name is required.'); document.getElementById('stBizName').focus(); return; }
     POS_SETTINGS.businessName = bizName;
-    { const tz = document.getElementById('stTimezone'); if(tz && tz.value) POS_SETTINGS.timezone = tz.value; }
+    { const tz = document.getElementById('stTimezone'); if(tz && tz.value){ POS_SETTINGS.timezone = tz.value; AureumCountries.setTimezone(tz.value); } }
+    if(settingsCountryPicker && settingsCountryPicker.value) POS_SETTINGS.country = settingsCountryPicker.value;
     const curCode = document.getElementById('stCurrency').value;
     POS_SETTINGS.currencyCode = curCode;
     POS_SETTINGS.currency = CURRENCY_SYMBOLS[curCode] || '$';
+    document.querySelectorAll('.cur-code').forEach(e => { e.textContent = curCode; });
+    try{ renderAllData(); }catch(e){}
     POS_SETTINGS.dualCurrency = document.getElementById('stDualCurrency').classList.contains('on');
     if(POS_SETTINGS.dualCurrency){
       const cur2 = document.getElementById('stCurrency2').value;
@@ -8644,7 +8778,7 @@ const AureumSync = (function(){
         } else {
           if(!confirm(`Remove store "${current}"? This can't be undone.`)) return;
           SHOPS.splice(idx,1);
-          POS_DEVICES = POS_DEVICES.filter(d=>d.store !== current);
+          POS_DEVICES = POS_DEVICES.filter(d=>d.store !== current); persistAureum();
           PRODUCTS.forEach(p=>{ if(Array.isArray(p.shops)) p.shops = p.shops.filter(s=>s !== current); });   // products stop pointing at the removed shop
           if(viewingShop === current) setViewingShop('All Shops');
           refreshAllShopUI(); renderSettingsStores(); renderSettingsPos();
@@ -8667,50 +8801,70 @@ const AureumSync = (function(){
   let nextPosId = 1;
   let editingPosId = null;
 
+  /* Till devices register themselves here when a cashier starts a shift in POS Checkout (shop, device type, last seen).
+     A device counts as Connected while its till has checked in within the last 10 minutes. */
+  const POS_ONLINE_MS = 10 * 60 * 1000;
+  function posDeviceStatus(d){
+    if(!d.auto) return d.status || 'Connected';
+    const t = Date.parse(d.lastSeen || '');
+    return (t && Date.now() - t < POS_ONLINE_MS) ? 'Connected' : 'Offline';
+  }
+  function posSeenText(d){
+    const t = Date.parse(d.lastSeen || ''); if(!t) return '—';
+    const m = Math.round((Date.now() - t) / 60000);
+    return m < 1 ? 'Just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : new Date(t).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
   function renderSettingsPos(){
     const tbody = document.getElementById('stPosTableBody');
     if(!tbody) return;
     if(POS_DEVICES.length === 0){
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 20px;color:var(--sage);">No POS devices registered yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 20px;color:var(--sage);">No POS devices yet. A device appears here automatically as soon as a cashier signs in to POS Checkout on it.</td></tr>`;
       return;
     }
-    tbody.innerHTML = POS_DEVICES.map(d=>`
+    const list = POS_DEVICES.slice().sort((a, b) => (posDeviceStatus(a) === 'Connected' ? 0 : 1) - (posDeviceStatus(b) === 'Connected' ? 0 : 1) || String(a.store || '').localeCompare(String(b.store || '')) || String(a.name).localeCompare(String(b.name)));
+    tbody.innerHTML = list.map(d=>{
+      const st = posDeviceStatus(d);
+      return `
       <tr>
-        <td>${d.name}</td>
-        <td>${d.type}</td>
-        <td>${d.store || '—'}</td>
-        <td><span class="status-badge ${d.status==='Connected'?'completed':'pending'}">${d.status}</span></td>
+        <td>${escHtml(d.name)}${d.auto ? ' <span style="font-size:10px;color:var(--sage);">(signed in at the till)</span>' : ''}${d.cashier ? `<div style="font-size:11px;color:var(--sage);">${escHtml(d.cashier)}</div>` : ''}</td>
+        <td>${escHtml(d.type)}</td>
+        <td>${escHtml(d.store || '—')}</td>
+        <td><span class="status-badge ${st==='Connected'?'completed':'pending'}">${st}</span></td>
+        <td>${d.auto ? posSeenText(d) : '—'}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
-            <div class="icon-btn-sm" data-pact="edit" data-id="${d.id}" title="Edit">&#9998;</div>
-            <div class="icon-btn-sm" data-pact="delete" data-id="${d.id}" title="Remove">&#10005;</div>
+            <div class="icon-btn-sm" data-pact="edit" data-id="${escHtml(d.uid)}" title="Edit">&#9998;</div>
+            <div class="icon-btn-sm" data-pact="delete" data-id="${escHtml(d.uid)}" title="Remove">&#10005;</div>
           </div>
         </td>
-      </tr>`).join('');
+      </tr>`; }).join('');
     tbody.querySelectorAll('[data-pact]').forEach(el=>{
-      const id = parseInt(el.dataset.id);
+      const id = el.dataset.id;
       el.addEventListener('click', ()=>{
         if(el.dataset.pact === 'edit') openPosModal(id);
         else {
-          if(!confirm('Remove this device? This can\'t be undone.')) return;
-          POS_DEVICES = POS_DEVICES.filter(d=>d.id!==id);
+          if(!confirm('Remove this device from the list? If it is still signed in at the till it will appear again.')) return;
+          POS_DEVICES = POS_DEVICES.filter(d=>d.uid!==id);
+          persistAureum();
           renderSettingsPos();
         }
       });
     });
   }
+  setInterval(() => { try{ if(document.getElementById('settings-pos') && document.getElementById('settings-pos').classList.contains('active')) renderSettingsPos(); }catch(e){} }, 30000);
 
   function openPosModal(id){
     editingPosId = id || null;
-    const d = id ? POS_DEVICES.find(x=>x.id===id) : null;
+    const d = id ? POS_DEVICES.find(x=>x.uid===id) : null;
+    const auto = !!(d && d.auto);
     const body = `
       <div class="create-form-grid">
         <div>
           <div class="field-label">Device name</div>
-          <input type="text" class="modal-field" id="posName" placeholder="e.g. Front Counter iPad" value="${d ? d.name : ''}">
+          <input type="text" class="modal-field" id="posName" placeholder="e.g. Front Counter iPad" value="${d ? escHtml(d.name) : ''}">
           <div class="field-error" id="posNameError">Device name is required</div>
         </div>
-        <div>
+        <div style="${auto ? 'display:none;' : ''}">
           <div class="field-label">Device type</div>
           <select class="modal-select" id="posType">
             <option ${d && d.type==='Terminal'?'selected':''}>Terminal</option>
@@ -8718,13 +8872,13 @@ const AureumSync = (function(){
             <option ${d && d.type==='Mobile'?'selected':''}>Mobile</option>
           </select>
         </div>
-        <div>
+        <div style="${auto ? 'display:none;' : ''}">
           <div class="field-label">Assigned store</div>
           <select class="modal-select" id="posStore">
             ${SHOPS.length ? SHOPS.map(s=>`<option value="${s}" ${d && d.store===s?'selected':''}>${s}</option>`).join('') : `<option value="">No shops added yet</option>`}
           </select>
         </div>
-        <div>
+        <div style="${auto ? 'display:none;' : ''}">
           <div class="field-label">Status</div>
           <select class="modal-select" id="posStatus">
             <option ${!d || d.status==='Connected'?'selected':''}>Connected</option>
@@ -8748,17 +8902,12 @@ const AureumSync = (function(){
         document.getElementById('posName').focus();
         return;
       }
-      const data = {
-        name,
-        type: document.getElementById('posType').value,
-        store: document.getElementById('posStore').value,
-        status: document.getElementById('posStatus').value,
-      };
-      if(editingPosId){
-        Object.assign(POS_DEVICES.find(x=>x.id===editingPosId), data);
-      } else {
-        POS_DEVICES.push({ id: nextPosId++, ...data });
-      }
+      const data = { name, type: document.getElementById('posType').value, store: document.getElementById('posStore').value, status: document.getElementById('posStatus').value };
+      const cur = editingPosId ? POS_DEVICES.find(x=>x.uid===editingPosId) : null;
+      if(cur && cur.auto) cur.name = name;                       // a till that signed in keeps its own shop/type — only the name is yours to change
+      else if(cur) Object.assign(cur, data);
+      else POS_DEVICES.push({ uid: AureumSync.uid(), ...data });
+      persistAureum();
       closeModal('detailModal');
       renderSettingsPos();
     });
@@ -9069,7 +9218,7 @@ const AureumSync = (function(){
         <td data-label="Quantity"><input type="number" inputmode="numeric" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
         <td data-label="Unit">${p ? unitCellHtml(i, row, p) : '—'}</td>
         <td class="mono" data-label="Cost">${p ? money2(p.cost) : '—'}</td>
-        <td class="mono" data-label="Price">${p ? money2(p.price) : '—'}</td>
+        <td class="mono" data-label="Price">${p ? money2(priceAt(p, toShop)) : '—'}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
     }).join('');
@@ -9220,7 +9369,7 @@ const AureumSync = (function(){
       const beforeFrom = getStock(p, from), beforeTo = getStock(p, to);
       addStock(p, from, -moved);
       addStock(p, to, moved);
-      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: moved, cost: p ? (Number(p.cost) || 0) : 0, price: p ? (Number(p.price) || 0) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
+      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: moved, cost: p ? (Number(p.cost) || 0) : 0, price: p ? priceAt(p, to) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
     });
     TRANSFERS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
@@ -9273,6 +9422,13 @@ const AureumSync = (function(){
   // (same period + shop as the rest of the Accounting page), not a global
   // demo-volume estimate. Falls back to a neutral default only when there's
   // truly no real sales data yet to derive a ratio from.
+  /* Exact cost of goods sold = the cost saved on each sold item, minus the cost of items refunded; and the sales tax collected
+     (which belongs to the tax authority, so it is never revenue or profit). */
+  function receiptCosts(list){
+    let cogs = 0, tax = 0;
+    (list || []).forEach(r => { const sg = r.refund ? -1 : 1; (r.items || []).forEach(it => { cogs += sg * (Number(it.qty) || 0) * (Number(it.cost) || 0); }); tax += sg * (Number(r.tax) || 0); });
+    return { cogs: Math.max(0, Math.round(cogs * 100) / 100), tax: Math.round(tax * 100) / 100 };
+  }
   function blendedCogsRatio(receiptsInView){
     let gross=0, cost=0;
     (receiptsInView||[]).filter(r=>!r.refund).forEach(r=>{
@@ -9289,8 +9445,10 @@ const AureumSync = (function(){
     const rangeReceipts = receiptsInRange(acctDateState);
     const grossRevenue = rangeReceipts.filter(r=>!r.refund).reduce((s,r)=>s+r.total,0);
     const refunds = rangeReceipts.filter(r=>r.refund).reduce((s,r)=>s+r.total,0);
-    const revenue = grossRevenue - refunds;
-    const cogs = Math.max(0, revenue) * blendedCogsRatio(rangeReceipts);
+    const rcAcct = receiptCosts(rangeReceipts);
+    const salesInclTax = grossRevenue - refunds;
+    const revenue = salesInclTax - rcAcct.tax;                 // revenue excludes the sales tax collected
+    const cogs = rcAcct.cogs;
     const grossProfit = revenue - cogs;
     const rangeExpenses = expensesInRange(acctDateState);
     const totalOpex = rangeExpenses.reduce((s,e)=>s+e.amount,0);
@@ -9301,21 +9459,22 @@ const AureumSync = (function(){
     { const ti = document.getElementById('acctTaxPct'); if(ti && document.activeElement !== ti) ti.value = taxPct; }
 
     document.getElementById('acctKpiRow').innerHTML = `
-      <div class="kpi-card"><div class="lbl"><span>Revenue</span></div><div class="val green">$${revenue.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Cost of revenue</span></div><div class="val red">$${cogs.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Operating expenses</span></div><div class="val">$${totalOpex.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Profit before tax</span></div><div class="val" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
-      <div class="kpi-card"><div class="lbl"><span>Profit after tax${taxPct ? ' (' + taxPct + '%)' : ''}</span></div><div class="val" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">$${profitAfterTax.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Revenue</span></div><div class="val green">${curSym()}${revenue.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Cost of revenue</span></div><div class="val red">${curSym()}${cogs.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Operating expenses</span></div><div class="val">${curSym()}${totalOpex.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Profit before tax</span></div><div class="val" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${netIncome.toFixed(2)}</div></div>
+      <div class="kpi-card"><div class="lbl"><span>Profit after tax${taxPct ? ' (' + taxPct + '%)' : ''}</span></div><div class="val" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${profitAfterTax.toFixed(2)}</div></div>
     `;
 
     document.getElementById('acctIncomeStatement').innerHTML = `
-      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Revenue</div><div class="pct" style="color:var(--green-bright);">$${revenue.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Cost of revenue</div><div class="pct" style="color:var(--danger);">-$${cogs.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Gross profit</div><div class="pct" style="color:var(--blue);">$${grossProfit.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Operating expenses</div><div class="pct">-$${totalOpex.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Profit before tax</div><div class="pct" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">$${netIncome.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Income tax (${taxPct}%)</div><div class="pct">-$${incomeTax.toFixed(2)}</div></div>
-      <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Profit after tax</div><div class="pct" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">$${profitAfterTax.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Revenue</div><div class="pct" style="color:var(--green-bright);">${curSym()}${revenue.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Cost of revenue</div><div class="pct" style="color:var(--danger);">-${curSym()}${cogs.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Gross profit</div><div class="pct" style="color:var(--blue);">${curSym()}${grossProfit.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Operating expenses</div><div class="pct">-${curSym()}${totalOpex.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Profit before tax</div><div class="pct" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${netIncome.toFixed(2)}</div></div>
+      <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Income tax (${taxPct}%)</div><div class="pct">-${curSym()}${incomeTax.toFixed(2)}</div></div>
+      ${rcAcct.tax ? `<div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line); color:var(--sage); font-size:12px;"><div class="name">Sales tax collected (owed to the tax authority — not counted in revenue)</div><div class="pct">${curSym()}${rcAcct.tax.toFixed(2)}</div></div>` : ''}
+      <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Profit after tax</div><div class="pct" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${profitAfterTax.toFixed(2)}</div></div>
     `;
 
     const tbody = document.getElementById('expenseTableBody');
@@ -9327,7 +9486,7 @@ const AureumSync = (function(){
           <td>${fmtDisplay(e.date)}</td>
           <td>${e.category}</td>
           <td>${e.description || '—'}</td>
-          <td class="mono" style="text-align:right;">$${e.amount.toFixed(2)}</td>
+          <td class="mono" style="text-align:right;">${curSym()}${e.amount.toFixed(2)}</td>
           <td onclick="event.stopPropagation()">
             <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
               <div class="icon-btn-sm" data-eact="edit" data-id="${e.id}" title="Edit">&#9998;</div>
@@ -9374,7 +9533,7 @@ const AureumSync = (function(){
           <input type="text" class="modal-field" id="expDescription" placeholder="What was this expense for?" value="${ex ? ex.description.replace(/"/g,'&quot;') : ''}">
         </div>
         <div>
-          <div class="field-label">Amount (USD)</div>
+          <div class="field-label">Amount (<span class="cur-code">USD</span>)</div>
           <input type="number" class="modal-field" id="expAmount" min="0" step="0.01" placeholder="0.00" value="${ex ? ex.amount : ''}">
           <div class="field-error" id="expAmountError">Enter an amount greater than 0</div>
         </div>
@@ -9458,7 +9617,7 @@ const AureumSync = (function(){
     const rows = Object.entries(totals).map(([name,total])=>({name,total})).sort((a,b)=>b.total-a.total);
     el.innerHTML = rows.length === 0
       ? `<div style="color:var(--sage); font-size:13px; padding:8px 0;">No receipts in this period${viewingShop && viewingShop!=='All Shops' ? ' for '+viewingShop : ''}.</div>`
-      : rows.map((r,i)=>`<div class="top-row"><span class="rank">${i+1}</span><span class="nm">${r.name}</span><span class="amt">$${r.total.toFixed(2)}</span></div>`).join('');
+      : rows.map((r,i)=>`<div class="top-row"><span class="rank">${i+1}</span><span class="nm">${r.name}</span><span class="amt">${curSym()}${r.total.toFixed(2)}</span></div>`).join('');
   }
 
   function renderSalesByPayment(){
@@ -9470,7 +9629,7 @@ const AureumSync = (function(){
     receiptsForDashboardPeriod().filter(r=>!r.refund).forEach(r=>{ totals[r.payment] = (totals[r.payment]||0) + r.total; });
     const rows = Object.entries(totals).map(([label,total])=>({label,total})).sort((a,b)=>b.total-a.total);
     const grandTotal = rows.reduce((s,r)=>s+r.total,0);
-    totalEl.textContent = '$' + grandTotal.toFixed(grandTotal>=1000?0:2);
+    totalEl.textContent = curSym() + grandTotal.toFixed(grandTotal>=1000?0:2);
     if(rows.length === 0){
       donutEl.style.background = 'var(--panel-raised)';
       legendEl.innerHTML = `<div style="color:var(--sage); font-size:12px; padding:8px 0;">No receipts in this period${viewingShop && viewingShop!=='All Shops' ? ' for '+viewingShop : ''}.</div>`;
@@ -9485,7 +9644,7 @@ const AureumSync = (function(){
     donutEl.style.background = `conic-gradient(${gradientParts})`;
     legendEl.innerHTML = rows.map((r,i)=>{
       const pct = grandTotal>0 ? (r.total/grandTotal*100) : 0;
-      return `<div class="dl-row"><div class="name"><span class="legend-dot" style="background:${palette[i%palette.length]}"></span>${r.label}</div><div class="pct">$${r.total.toFixed(2)} · ${pct.toFixed(1)}%</div></div>`;
+      return `<div class="dl-row"><div class="name"><span class="legend-dot" style="background:${palette[i%palette.length]}"></span>${r.label}</div><div class="pct">${curSym()}${r.total.toFixed(2)} · ${pct.toFixed(1)}%</div></div>`;
     }).join('');
   }
 
@@ -9531,7 +9690,7 @@ const AureumSync = (function(){
      resolves), then keeps saving/subscribing so both apps stay
      live-in-sync across any device signed into the same business. */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, posDevices:POS_DEVICES, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
   function renderSyncStatus(){
@@ -9582,20 +9741,30 @@ const AureumSync = (function(){
   /* every time zone the browser knows (about 400), each shown with its current UTC offset */
   function fillTimezones(){
     const el = document.getElementById('stTimezone'); if(!el || el.options.length) return;
-    let zones = [];
-    try{ zones = Intl.supportedValuesOf('timeZone'); }catch(e){}
-    if(!zones.length) zones = ['Africa/Harare','Africa/Johannesburg','Africa/Lagos','Africa/Nairobi','Africa/Cairo','Europe/London','Europe/Paris','Europe/Berlin','Asia/Dubai','Asia/Kolkata','Asia/Singapore','Asia/Tokyo','Australia/Sydney','Pacific/Auckland','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Sao_Paulo'];
-    if(!zones.includes('UTC')) zones.unshift('UTC');
-    const now = new Date();
-    const off = z => { try{ return new Intl.DateTimeFormat('en-US', { timeZone:z, timeZoneName:'shortOffset' }).formatToParts(now).find(p => p.type === 'timeZoneName').value.replace('GMT', 'GMT') ; }catch(e){ return ''; } };
-    el.innerHTML = zones.map(z => `<option value="${z}">${z.replace(/_/g, ' ')} (${off(z) || 'GMT'})</option>`).join('');
+    el.innerHTML = AureumCountries.allTimezones().map(z => `<option value="${z}">${AureumCountries.tzLabel(z)}</option>`).join('');
   }
+  let settingsCountryPicker = null;
+  (function(){
+    const host = document.getElementById('stCountry'); if(!host || !window.AureumCountries) return;
+    settingsCountryPicker = AureumCountries.mountPicker(host, { btnClass:'modal-select', placeholder:'Select your country', onChange: c => {
+      if(!c) return;
+      POS_SETTINGS.country = c.code;
+      if(confirm(`Switch your currency to ${c.currency} and your time zone to ${c.tz.replace(/_/g,' ')}, the usual ones for ${c.name}?\n\nChoose Cancel to keep your current currency and time zone.`)){
+        fillCurrencySelects(); fillTimezones();
+        const ce = document.getElementById('stCurrency'); if(ce) ce.value = c.currency;
+        const te = document.getElementById('stTimezone'); if(te) te.value = c.tz;
+        document.getElementById('stFxRateLabel').textContent = '1 ' + c.currency + ' =';
+      }
+    } });
+  })();
   function applySettingsToForm(){
     const acctEmailEl = document.getElementById('stAccountEmail');
     if(acctEmailEl && currentUser) acctEmailEl.textContent = 'Signed in as ' + (currentUser.email || '—');
     const nameEl = document.getElementById('stBizName');
     if(nameEl && (!nameEl.value || nameEl.value === 'Aureum Retail')) nameEl.value = POS_SETTINGS.businessName;
-    fillTimezones();
+    fillTimezones(); fillCurrencySelects();
+    if(settingsCountryPicker) settingsCountryPicker.set(POS_SETTINGS.country || '');
+    document.querySelectorAll('.cur-code').forEach(e => { e.textContent = POS_SETTINGS.currencyCode || 'USD'; });
     const tzEl = document.getElementById('stTimezone');
     if(tzEl){ const want = POS_SETTINGS.timezone || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'); if([...tzEl.options].some(o => o.value === want)) tzEl.value = want; }
     const rateEl = document.getElementById('stTaxRate');
@@ -9890,7 +10059,7 @@ const AureumSync = (function(){
     return {
       now: Date.now(), currency: (POS_SETTINGS && POS_SETTINGS.currency) || '$', role: (supaReady && sb && currentBusinessId) ? currentRole : null,
       shop: viewingShop || 'All Shops', shops: SHOPS.slice(), taxPct: Number(POS_SETTINGS && POS_SETTINGS.incomeTaxPercent) || 0, products,
-      receipts: RECEIPTS.map(r => ({ id:r.id, t:ts(r.dateTime), total:Number(r.total) || 0, refund:!!r.refund, payment:r.payment, customer:r.customer, employee:r.employee, shop:r.shop, items:r.items || [] })),
+      receipts: RECEIPTS.map(r => ({ id:r.id, t:ts(r.dateTime), total:Number(r.total) || 0, refund:!!r.refund, payment:r.payment, customer:r.customer, employee:r.employee, shop:r.shop, tax:Number(r.tax) || 0, items:r.items || [] })),
       expenses: EXPENSES.map(e => ({ t:ts(e.date + 'T00:00:00'), category:e.category, description:e.description, amount:Number(e.amount) || 0 })),
       customers, openShifts: OPEN_SHIFTS.map(sh => ({ employee:shiftOwner(sh), shop:sh.shop, since:ts(sh.openedAt) }))
     };
@@ -9936,7 +10105,7 @@ const AureumSync = (function(){
   function renderChat(){
     const log = document.getElementById('chatLog'); if(!log) return;
     const msgs = helpChat.messages;
-    const headsUp = msgs.length ? '' : botHeadsUp();
+    const headsUp = '';   // only the opening message is shown
     log.innerHTML = `<div class="chat-msg bot">${chatHtml(HELP_WELCOME)}</div>` + (headsUp ? `<div class="chat-msg bot">${chatHtml(headsUp)}</div>` : '') + msgs.map((m, i) => {
       if(m.role === 'user') return `<div class="chat-msg me">${escHtml(m.content)}</div>`;
       const showFb = (m.type === 'answer' || m.type === 'maybe') && !m.fb && i === msgs.length - 1;
@@ -10469,11 +10638,22 @@ const AureumSync = (function(){
     SUPPLIERS = has('suppliers') ? shared.suppliers : (live ? [] : SUPPLIERS);     // suppliers are saved with the business too (they used to be lost on reload)
     SHIFT_CLOSURES = has('shiftClosures') ? shared.shiftClosures : (live ? [] : SHIFT_CLOSURES);
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
+    POS_DEVICES = has('posDevices') ? shared.posDevices : (live ? [] : POS_DEVICES);
+    POS_DEVICES.forEach(d => { if(!d.uid) d.uid = AureumSync.uid(); });
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // the business name typed when the account was created is the starting business name
     try{
       const sn = currentUser && currentUser.user_metadata && String(currentUser.user_metadata.business_name || '').trim();
       if(sn && (!POS_SETTINGS.businessName || POS_SETTINGS.businessName === 'AUREUM' || POS_SETTINGS.businessName === 'Aureum Retail')) POS_SETTINGS.businessName = sn;
+    }catch(e){}
+    // a brand-new account: the country chosen at sign-up sets the starting currency and time zone (once; the owner can change both)
+    try{
+      const meta = (currentUser && currentUser.user_metadata) || {}, c = window.AureumCountries && AureumCountries.byCode[meta.country];
+      if(c && !POS_SETTINGS.countryApplied){
+        POS_SETTINGS.countryApplied = true; POS_SETTINGS.country = c.code;
+        POS_SETTINGS.currencyCode = c.currency; POS_SETTINGS.currency = AureumCountries.symbolFor(c.currency); POS_SETTINGS.timezone = c.tz;
+      }
+      if(window.AureumCountries) AureumCountries.setTimezone(POS_SETTINGS.timezone || '');
     }catch(e){}
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
@@ -10643,7 +10823,9 @@ const AureumSync = (function(){
         const bizName = document.getElementById('authBizName').value.trim();
         const fullName = document.getElementById('authFullName').value.trim();
         if(!bizName){ errEl.textContent = 'Business name is required.'; return; }
-        await aureumSignUp(email, password, bizName, fullName);
+        const country = authCountryPicker ? authCountryPicker.value : '';
+        if(!country){ errEl.textContent = 'Please choose your country.'; errEl.classList.add('show'); return; }
+        await aureumSignUp(email, password, bizName, fullName, country);
       } else {
         applyRememberChoice(email);
         await aureumSignIn(email, password);
@@ -12283,7 +12465,7 @@ E('profit-calc','Sales & reports','How is profit calculated?',
   `On **Accounting** (and when you ask AUREUM Bot):
 
 1. **Revenue** = sales minus refunds for the period and shop you are viewing.
-2. **Cost of revenue** = revenue × the real cost-to-price ratio of the items you actually sold (from the cost saved on each sale line).
+2. **Cost of revenue** = the exact cost saved on each item sold, less the cost of refunded items (sales tax collected is not counted as revenue).
 3. **Gross profit** = revenue − cost of revenue.
 4. **Profit before tax** = gross profit − the **expenses** you recorded.
 5. **Profit after tax** takes off your income-tax % — but only when there is a profit; a loss isn't taxed.
@@ -12499,11 +12681,12 @@ function create(getData){
   /* aggregate everything in one pass for a period + shop */
   function agg(d, period, shop){
     const rs = d.receipts.filter(r => r.t >= period.start && r.t < period.end && (isAll(shop) || r.shop === shop));
-    const a = { rs, gross: 0, refunds: 0, count: 0, refundCount: 0, items: new Map(), cats: new Map(), pay: new Map(), emp: new Map(), shops: new Map(), cust: new Map(), dow: [0, 0, 0, 0, 0, 0, 0], dowN: [0, 0, 0, 0, 0, 0, 0], hour: new Array(24).fill(0), hourN: new Array(24).fill(0), saleGross: 0, saleCost: 0, units: 0 };
+    const a = { rs, gross: 0, refunds: 0, count: 0, refundCount: 0, items: new Map(), cats: new Map(), pay: new Map(), emp: new Map(), shops: new Map(), cust: new Map(), dow: [0, 0, 0, 0, 0, 0, 0], dowN: [0, 0, 0, 0, 0, 0, 0], hour: new Array(24).fill(0), hourN: new Array(24).fill(0), saleGross: 0, saleCost: 0, units: 0, taxNet: 0, costNet: 0 };
     const catOf = new Map(d.products.map(p => [norm(p.name), p.cat || 'Uncategorised']));
     for(const r of rs){
       const tot = Number(r.total) || 0, sign = r.refund ? -1 : 1, dt = new Date(r.t);
       if(r.refund){ a.refunds += tot; a.refundCount++; } else { a.gross += tot; a.count++; }
+      a.taxNet += sign * (Number(r.tax) || 0);
       const bump = (map, k, v, n) => { const o = map.get(k) || { rev: 0, n: 0 }; o.rev += v; o.n += n; map.set(k, o); };
       bump(a.pay, (r.payment || 'Other').toString(), sign * tot, r.refund ? 0 : 1);
       bump(a.emp, r.employee || 'Unknown', sign * tot, r.refund ? 0 : 1);
@@ -12514,14 +12697,15 @@ function create(getData){
       }
       for(const it of (r.items || [])){
         const q = (Number(it.qty) || 0) * sign, rev = q * (Number(it.price) || 0), cost = q * (Number(it.cost) || 0);
+        a.costNet += cost;
         const o = a.items.get(it.name) || { name: it.name, qty: 0, rev: 0, cost: 0 }; o.qty += q; o.rev += rev; o.cost += cost; a.items.set(it.name, o);
         const cat = catOf.get(norm(it.name)) || 'Uncategorised'; const c = a.cats.get(cat) || { name: cat, qty: 0, rev: 0, cost: 0 }; c.qty += q; c.rev += rev; c.cost += cost; a.cats.set(cat, c);
         if(!r.refund){ a.saleGross += (Number(it.qty) || 0) * (Number(it.price) || 0); a.saleCost += (Number(it.qty) || 0) * (Number(it.cost) || 0); a.units += Number(it.qty) || 0; }
       }
     }
-    a.revenue = a.gross - a.refunds;
-    a.ratio = a.saleGross > 0 ? a.saleCost / a.saleGross : 0.45;           // same fall-back the Accounting screen uses
-    a.cogs = Math.max(0, a.revenue) * a.ratio;
+    a.revenue = a.gross - a.refunds - a.taxNet;                              // sales tax collected is not revenue (same as the Accounting screen)
+    a.ratio = a.saleGross > 0 ? a.saleCost / a.saleGross : 0.45;
+    a.cogs = Math.max(0, a.costNet);                                          // exact cost of what was sold, less what was refunded
     a.grossProfit = a.revenue - a.cogs;
     const ex = d.expenses.filter(e => e.t >= period.start && e.t < period.end);
     a.expList = ex; a.opex = ex.reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -12600,11 +12784,11 @@ function create(getData){
     const P = spec.period, a = agg(d, P, spec.shop), prev = previousPeriod(P, d.now), pa = prev ? agg(d, prev, spec.shop) : null;
     if(!a.count && !a.refundCount && !a.expList.length) return noData(d, spec, 'sales or expenses', P);
     let t = '**Profit for ' + P.label + '**' + scope(d, spec.shop) + ' (same sums as the Accounting screen):\n\n';
-    t += '- Revenue: **' + money(d, a.revenue) + '**\n- Cost of goods: ' + money(d, a.cogs) + ' (' + pct(a.ratio * 100) + ' of sales)\n- Gross profit: **' + money(d, a.grossProfit) + '** (' + pct(a.revenue > 0 ? a.grossProfit / a.revenue * 100 : 0) + ' margin)\n';
+    t += '- Revenue: **' + money(d, a.revenue) + '**\n- Cost of goods: ' + money(d, a.cogs) + ' (' + pct(a.revenue > 0 ? a.cogs / a.revenue * 100 : 0) + ' of revenue)\n- Gross profit: **' + money(d, a.grossProfit) + '** (' + pct(a.revenue > 0 ? a.grossProfit / a.revenue * 100 : 0) + ' margin)\n';
     t += '- Expenses: ' + money(d, a.opex) + '\n- **Profit before tax: ' + money(d, a.net) + '**' + (pa ? arrow(a.net, pa.net) + ' vs ' + prev.label : '') + '\n';
     if(a.taxPct) t += '- After ' + a.taxPct + '% income tax: **' + money(d, a.after) + '**' + (a.net <= 0 ? ' (no tax on a loss)' : '') + '\n';
     if(a.net < 0) t += '\nExpenses are higher than gross profit for this period.' + (a.opex > 0 ? ' Biggest expense: ' + biggestExpense(d, a) + '.' : '');
-    spec.method = 'Revenue = sales − refunds. Cost of goods = revenue × the cost-to-price ratio of the items actually sold (' + pct(a.ratio * 100) + ' here). Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
+    spec.method = 'Revenue = sales − refunds − sales tax collected. Cost of goods = the exact cost saved on every item sold, less the cost of refunded items. Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
     return out(t, spec, { nav: [{ label: 'Open Accounting', page: 'accounting' }], asks: ['Expenses ' + P.label, 'Compare with ' + (prev ? prev.label : 'last month'), 'Which products make the most profit?'] });
   }
   const biggestExpense = (d, a) => { const m = new Map(); a.expList.forEach(e => m.set(e.category || 'Other', (m.get(e.category || 'Other') || 0) + e.amount)); const b = [...m.entries()].sort((x, y) => y[1] - x[1])[0]; return b ? '**' + b[0] + '** (' + money(d, b[1]) + ')' : 'none'; };
