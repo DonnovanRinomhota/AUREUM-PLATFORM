@@ -76,7 +76,8 @@
         if(!/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?(\/.*)?$/i.test(String(c.connectorUrl).trim())) errs.push('The local connector address must be on this computer (http://127.0.0.1:PORT or http://localhost:PORT).');
       }
       if(d.connection_type === 'vendor_api' && c.endpoint && !/^https:\/\/[^\s]+$/i.test(String(c.endpoint).trim())) errs.push('The service URL must start with https://');
-      Object.keys(c).forEach(k => { if(SECRET_KEYS.indexOf(k.toLowerCase()) >= 0) errs.push('"' + k + '" looks like a secret and cannot be stored here.'); });
+      const scan = (o, depth) => { if(!o || typeof o !== 'object' || depth > 3) return; Object.keys(o).forEach(k => { if(SECRET_KEYS.indexOf(k.toLowerCase()) >= 0) errs.push('"' + k + '" looks like a secret and cannot be stored here.'); scan(o[k], depth + 1); }); };
+      scan(c, 0);
     }
     if(d.serial_number && !/^[\w .\/-]{1,60}$/.test(String(d.serial_number).trim())) errs.push('Serial number has unusual characters.');
     if(d.zimra_device_id && !/^[\w .\/-]{1,60}$/.test(String(d.zimra_device_id).trim())) errs.push('Tax authority device ID has unusual characters.');
@@ -142,7 +143,8 @@
     if(!deviceAdapterId || deviceAdapterId === 'unsupported') return true;
     const c = getCountry(countryCode), d = registry[deviceAdapterId];
     if(!c || !d) return false;
-    return (c.supportedDeviceAdapters || []).indexOf(deviceAdapterId) >= 0 && (d.countries || []).map(x => String(x).toUpperCase()).indexOf(c.code) >= 0;
+    const dc = (d.countries || []).map(x => String(x).toUpperCase());
+    return (c.supportedDeviceAdapters || []).indexOf(deviceAdapterId) >= 0 && (dc.indexOf('*') >= 0 || dc.indexOf(c.code) >= 0);   // '*' = a country-neutral connector; the COUNTRY side must still list it
   }
 
   /* The standard, country-independent transaction every country adapter receives. */
@@ -362,7 +364,10 @@
     };
   }
 
-  const receiptLabel = tx => (tx && tx.state === 'fiscalised')
+  const isSimulated = tx => !!tx && /^SIMULATED-/i.test(String(tx.fiscal_ref || ''));
+  const receiptLabel = tx => (tx && tx.state === 'fiscalised' && isSimulated(tx))
+    ? { fiscal:false, simulated:true, text:'TEST ONLY — NOT A REAL FISCAL INVOICE', ref: tx.fiscal_ref }
+    : (tx && tx.state === 'fiscalised')
     ? { fiscal:true, text:'FISCAL TAX INVOICE', ref: tx.fiscal_ref, verification: tx.verification_code, qr: tx.qr_data }
     : { fiscal:false, text: tx ? 'NOT A FISCAL TAX INVOICE' : '', ref:null };
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## Country-driven fiscalisation + POS guide fix
+- **POS guide:** a new user now gets the highlighted tour automatically at first sign-in (like the Back Office), with or without products. Before, accounts with no products got no guide at all and everyone else only saw a small corner card.
+- **Fiscalisation is country-driven, with no default country.** Each shop picks its country (your business country is only suggested). `fiscal/profiles.js` lists what the authority usually asks for in 15 countries, with a neutral profile for every other country. The setup form asks for the device/provider **model**, serial number, how sales are reported, the **tax details**, and the **authority portal** (never passwords). A per-shop **readiness checklist** shows what is left, and owners can finish setup before the country is approved.
+- **Any device, any country, one adapter:** `fiscal/devices/local-connector.js` talks to a fiscal connector (documented protocol `aureum.fiscal.connector/1` in FISCALISATION.md), and `fiscal/countries/generic.js` builds the neutral request for any African country. Outcomes are unchanged and safe: only an answer with a fiscal reference counts, unknown outcomes become *uncertain* and are never resent, and a country still needs its integration approved by the AUREUM team.
+- `tools/fiscal-connector-sim.cjs` simulates a connector for testing; its references are printed as **TEST ONLY — NOT A REAL FISCAL INVOICE**.
+- New SQL `supabase/fiscalisation-v3.sql` (+ rollback): 53 African country rows and the connector device row, all *in development*; nothing is approved by it.
+- Help bot: fiscalisation answers are country-neutral and a new "What details does fiscalisation ask for?" answer was added. Service worker v48.
+
 ## Guided tours & Guide centre
 - New shared engine `guide.js` (spotlight, tooltip, progress, Back/Skip/Exit/Resume, Guide centre, first-run welcome card, one-time screen hints). Keyboard (Esc exits), screen-reader announcements, reduced-motion, phone layout.
 - POS journeys (`guide-pos.js`): Find your way around, Complete your first sale, Find a receipt, Understand stock, Close your shift and sign out. Steps complete from real till state (ticket, receipts, open pop-ups); nothing is added, charged or saved by the guide.

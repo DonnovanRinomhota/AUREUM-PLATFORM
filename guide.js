@@ -376,6 +376,8 @@ function maybeWelcome(opts){
   var j = opts.journey && journeyById(opts.journey); if(!j || !usable(j)) return false;
   if(doc.getElementById('agWelcome')) return true;
   S.data.welcomeShown = (S.data.welcomeShown || 0) + 1; save();
+  /* auto: go straight into the highlighted tour (the person can still exit it at any time with Esc or Exit) */
+  if(opts.auto){ S.data.welcomedAt = Date.now(); save(); track('guide_autostart', j.id); startJourney(j.id); return true; }
   var d = doc.createElement('div'); d.className = 'ag-welcome'; d.id = 'agWelcome'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-label', 'Welcome to AUREUM');
   d.innerHTML = '<h3>' + esc(opts.title || 'Welcome to AUREUM') + '</h3><p>' + (opts.text || '') + '</p><div class="ag-row" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="ag-btn link" data-w="never">Don\'t show again</button><button class="ag-btn" data-w="later">Not now</button><button class="ag-btn solid" data-w="go">' + esc(opts.cta || 'Show me') + '</button></div>';
   doc.body.appendChild(d);

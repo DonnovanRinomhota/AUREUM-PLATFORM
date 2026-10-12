@@ -26,7 +26,7 @@
     name: 'Zimbabwe', authority: 'Zimbabwe Revenue Authority (ZIMRA)', jurisdiction: 'Zimbabwe',
     integrationVersion: 'FDMS Fiscal Device Gateway API v7.2 (adapter 0.1-draft)',
     defaultStatus: 'in_development',
-    supportedDeviceAdapters: ['zw-virtual-fdms'],           // hardware fiscal devices from ZIMRA Approved Suppliers: no manufacturer protocol available yet
+    supportedDeviceAdapters: ['zw-virtual-fdms', 'local-connector'],           // hardware fiscal devices from ZIMRA Approved Suppliers: no manufacturer protocol available yet
     docs: {
       name: 'ZIMRA Fiscal Device Gateway API Specification', version: 'v7.2',
       url: 'https://www.zimra.co.zw/downloads/9-domestic-taxes?download=3807%3Afiscalisation-api-documentation',
@@ -60,6 +60,8 @@
          { deviceID, vatNumber?, applicableTaxes:[{taxID,taxPercent?,taxName,taxValidFrom,taxValidTill?}],
            next:{ receiptCounter, receiptGlobalNo, invoiceNo } }                                              */
     buildRequest(std, ctx){
+      /* a fiscal connector (any manufacturer) does its own ZIMRA mapping and signing: hand it the neutral envelope */
+      if(ctx && ctx.device && ctx.device.adapter === 'local-connector' && F.genericCountry) return F.genericCountry('ZW').buildRequest(std, ctx);
       const cfg = (ctx && ctx.config) || {};
       if(!cfg.applicableTaxes || !cfg.next || cfg.deviceID == null)
         return { ok:false, notReady:true, errors:['ZIMRA fiscal-day state and tax configuration come from the server gateway, which is not available yet.'] };
@@ -111,6 +113,7 @@
 
     /* Rules written in the spec. Returns a list of problems (empty = passes). */
     validate(request, ctx){
+      if(request && request.schema === 'aureum.fiscal.request/1' && F.genericCountry) return F.genericCountry('ZW').validate(request, ctx);
       const e = [], cfg = (ctx && ctx.config) || {}, r = request && request.receipt;
       if(!r) return ['No receipt to validate.'];
       const credit = r.receiptType === 'CreditNote', debit = r.receiptType === 'DebitNote';

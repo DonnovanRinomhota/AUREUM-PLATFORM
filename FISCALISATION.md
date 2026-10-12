@@ -1,4 +1,6 @@
-# AUREUM — Fiscalisation (optional physical fiscal device, Zimbabwe / ZIMRA)
+# AUREUM — Fiscalisation (optional, per country)
+
+> **v3 (country-driven setup + fiscal connector)** — see the section "Country-driven setup (v3)" at the end. Everything below describes the engine and the Zimbabwe work it grew from; nothing in the app defaults to any country any more.
 
 **Status: framework only.** The settings screen, database, security rules, safe transaction engine and the
 till hook are built and tested. **No real fiscal device or ZIMRA integration exists yet**, because no
@@ -124,3 +126,62 @@ So Zimbabwe stays **in_development**. To move it forward: obtain the official PD
 
 ## Tests added (all actually run)
 `node tests/fiscal-core.test.js` (35) · `node tests/fiscal-countries.test.js` (55) · `node tests/fiscal-rules.test.js` (14, needs `tsc`) · `tests/fiscal-rls-test.sh` (24) · `tests/fiscal-v2-rls-test.sh` (38; both need a throwaway local Postgres) · browser tests of Back Office, till and admin page against a simulated Supabase. **Not tested:** the edge function itself running on Supabase (Deno), real devices, ZIMRA's environment.
+
+
+---
+
+# Country-driven setup (v3) — any African country, any device, via a fiscal connector
+
+## What changed
+- **No default country.** Each shop has its own country (the business country is only *suggested*, and is saved only when the owner confirms it). Labels, requirements and routes all come from that country.
+- **`fiscal/profiles.js`** holds, for 15 countries (ZW, ZM, MW, TZ, KE, UG, RW, ET, NG, GH, EG, ZA, BW, NA, MZ) the authority, system name, the usual routes (fiscal device / software / portal) and the numbers it asks for (TIN, TPIN, KRA PIN, VRN…). **Every other country gets a neutral profile** with the same questions. These profiles are a *checklist of what to collect*, flagged `confirm: true`: they are not tax law and are not verified integrations.
+- **Setup form** (Settings → Fiscalisation → *Set up device & tax details*): asks for the device/provider **manufacturer, model, serial number**, the authority's device number, **how sales are reported**, the **tax details** (only the taxpayer number is mandatory), the **authority portal address** + portal user name (never a password) and the **connection**.
+- **Readiness checklist** per shop: country → device recorded → tax details → connection tested → country integration approved. The switch only works when the integration is approved.
+- **No more "not available"**: owners can complete their setup before the country is approved; they switch on when it is.
+
+## How it connects to hardware: the connector
+AUREUM runs in a browser, so it cannot speak a manufacturer's USB/serial/vendor protocol itself, and it must never hold the device certificate or keys. The part that knows the device — a **fiscal connector** — is a small program on the till computer (or an https service). It is supplied by the device maker/supplier, by an approved provider, or written to the contract below. One generic device adapter (`fiscal/devices/local-connector.js`, id `local-connector`) works for every manufacturer and every country; the country adapter (`fiscal/countries/generic.js`, or the Zimbabwe one) builds the neutral request.
+
+### Connector protocol `aureum.fiscal.connector/1`
+Base address = the *Connector address* saved on the device (`http://127.0.0.1:PORT`, or an `https://` URL). JSON over HTTP, CORS enabled for the AUREUM site, no cookies.
+
+| Call | Request | Answer |
+|---|---|---|
+| `GET /aureum/v1/health` | – | `{ "protocol":"aureum.fiscal.connector/1", "ok":true, "device":{ "ready":true, "model":"…", "serial":"…" } }` |
+| `POST /aureum/v1/fiscalise` | `{ protocol, idempotencyKey, kind:"sale", country, request, receipt:{uid,number} }` | `{ "status":"fiscalised", "fiscalRef":"…", "verificationCode"?, "qrData"?, "idempotencyKey"? }` or `{ "status":"rejected"\|"failed", "code"?, "message" }` |
+| `POST /aureum/v1/credit-note` | same, `kind:"credit_note"` | same |
+| `POST /aureum/v1/status` | `{ protocol, idempotencyKey }` | `fiscalised` / `rejected` (as above), `{ "status":"not_found" }` or `{ "status":"unknown" }` |
+
+`request` is the neutral envelope `aureum.fiscal.request/1`: `{ country, authority, route, taxpayer:{taxId,name,vatNumber,branchId,…}, device:{manufacturer,model,serial,authorityDeviceId}, transaction:<aureum.fiscal.tx/1> }`. The connector maps it to the authority's own format, signs it and returns the authority's reference.
+
+**Rules the connector must follow** (AUREUM relies on them):
+1. The same `idempotencyKey` must **never** produce a second fiscal receipt — answer again with the first result.
+2. Only answer `fiscalised` with a real fiscal reference. Anything else is not a success.
+3. Refuse (HTTP 4xx / `failed`) only when it is certain nothing was submitted. If unsure, do not answer: AUREUM then marks the sale **uncertain**, never resends it, and asks `/status`.
+4. Keep certificates, keys and passwords inside the connector. AUREUM neither asks for nor stores them.
+5. Browsers need CORS (`Access-Control-Allow-Origin` for the AUREUM site; Chrome may also ask for `Access-Control-Allow-Private-Network: true` for a localhost connector).
+
+How AUREUM treats answers: timeout / dropped connection / HTTP 5xx / unreadable answer → **uncertain**; `rejected` → rejected (final); `failed` → can be retried; missing fiscal reference → never fiscalised. A plain-http device on the shop network cannot be reached from an https page (browsers block it) — use a connector on the till computer.
+
+### Test it without hardware
+```
+node tools/fiscal-connector-sim.cjs --port 8787            # modes: ok | reject | fail | garbage | slow | down | notready | error500
+```
+Add a device with connection type *Local connector* and address `http://127.0.0.1:8787`. Every reference it returns starts with `SIMULATED-`, and the receipt then prints **TEST ONLY — NOT A REAL FISCAL INVOICE**. Connector authors can use it as the reference for the contract above; `tests/fiscal-connector.test.js` runs the engine against it.
+
+## What still has to happen before a country goes live
+AUREUM can collect the details and talk to a connector today. A country is only **real** when all of these are true — the app enforces the last one:
+1. The authority's **current official documentation** is read and its rules (and any software-provider approval) are understood.
+2. A **connector** exists for the device/authority — from the supplier, an approved provider, or built to the protocol above — and has been **tested in the authority's test environment**.
+3. The AUREUM team sets the country's integration to *testing* and then **approved** in the platform admin (needs *documentation verified* + the authority's **approval reference**; super admin only). Shop owners only ever see approved integrations.
+
+Zimbabwe additionally keeps its dedicated FDMS mapping (`fiscal/countries/zw.js`); when a ZW device uses the connector, the neutral envelope is used and the connector does the ZIMRA mapping and signing.
+
+## Database (v3, additive) — `supabase/fiscalisation-v3.sql`
+Run once **after** `fiscalisation.sql` and `fiscalisation-v2.sql` (safe to re-run; undo with `fiscalisation-v3-rollback.sql`). It adds one **in development** row per African country (`<cc>-generic`) and the `local-connector` device row, so the platform admin can approve them one by one. It approves nothing and shop owners cannot see unapproved rows. Verified against a local Postgres: runs twice cleanly, the gates still refuse an unapproved country, a device in a country the connector row does not list, and secret-looking keys. Device details (route, portal, tax numbers) are stored in the device's existing non-secret `connection` JSON, so no other schema change is needed.
+
+## Adding a country with its own rules
+Copy `fiscal/countries/zw.js` (see `fiscal/countries/README.md`). A country that only needs the neutral envelope needs **no code**: it is covered by `generic.js` as soon as its profile is in `profiles.js` and its catalogue row exists.
+
+## Tests
+`node tests/fiscal-connector.test.js` (52 checks: profiles, readiness, generic adapter, connector adapter and engine safety against the simulator, approval gate, secrets). The browser tests for the setup form and the till run the same flows end to end.

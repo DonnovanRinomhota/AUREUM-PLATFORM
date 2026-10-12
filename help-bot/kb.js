@@ -675,27 +675,39 @@ E('new-chat','Help & support','How do I start a new chat with AUREUM Bot?',
   `Press the gold **+ New chat** button under the chat box. It clears this conversation and starts a fresh one. Chats are only kept for the current browser session anyway.`,
   ['bot-data'], { pages:['settings-help'] }),
 E('fiscal-what','Settings','What is fiscalisation and do I have to use it?',
-  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','zimra fiscal','tax authority device','fiscal receipts','what does fiscalise mean','tax authority receipts','fdms','fiscal printer'],
-  'fiscalisation fiscalization fiscal device zimra tax authority receipts compliance country optional virtual fdms',
-  `Fiscalisation means each sale is also reported to your country's **tax authority** (for example ZIMRA in Zimbabwe, ZRA in Zambia, TRA in Tanzania) through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference.
+  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','tax authority device','fiscal receipts','what does fiscalise mean','tax authority receipts','fiscal printer','is fiscalisation required in my country'],
+  'fiscalisation fiscalization fiscal device tax authority receipts compliance country optional etims efris zimra zra tra',
+  `Fiscalisation means each sale is also reported to **your country's tax authority** through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference. What is required, and how, depends on the country — AUREUM asks for your shop's country and then for that country's details.
 
-It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**, and only for countries AUREUM has enabled. **Each country is switched on only after it has been tested and approved** (Zimbabwe is still in development): until then, sales are saved normally and clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
-  ['fiscal-setup','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
+It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**. **Each country is switched on only after it has been tested and approved.** Until then you can still enter your device and tax details, sales are saved normally and are clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
+  ['fiscal-setup','fiscal-requirements','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
 E('fiscal-setup','Settings','How do I set up fiscalisation?',
-  ['set up fiscalisation','turn on fiscalisation','add a fiscal device','configure zimra','connect my fiscal device','enable fiscal receipts','fiscalisation settings'],
-  'fiscalisation setup enable turn on shop country device configure test connection serial number',
+  ['set up fiscalisation','turn on fiscalisation','add a fiscal device','connect my fiscal device','enable fiscal receipts','fiscalisation settings','set up fiscal device for my country'],
+  'fiscalisation setup enable turn on shop country device configure test connection serial number model portal tax details checklist',
   `1. Open **Settings → Fiscalisation** (owners and managers).
-2. Pick your **country** — only countries AUREUM has enabled for you are offered.
-3. Choose which **shops** should fiscalise sales.
-4. Add the **fiscal device** for each shop (type, serial number and the connection details your device supplier gives you) and press **Test device**.
-5. Switch it on for the shop.
+2. For each shop, **choose its country** (your business country is suggested). AUREUM then shows that country's tax authority and what it usually asks for.
+3. Press **Set up device & tax details** and enter the device **model**, serial number, how sales are reported, your **tax number** and the authority **portal** address. Never type passwords or keys.
+4. Choose how it connects — usually a **fiscal connector** on this computer — and press **Test**.
+5. Check the **checklist** under the shop. When everything is ticked and the country's integration is approved, **switch it on**.
 
-If the country isn't listed, it hasn't been enabled for your business yet — contact AUREUM support.`,
-  ['fiscal-what','contact-support'], { pages:['settings-fiscal'], human:true }),
+If the last item says the integration is not approved yet, your details are saved and you can switch it on as soon as AUREUM approves it.`,
+  ['fiscal-requirements','fiscal-what','contact-support'], { pages:['settings-fiscal'], human:true }),
+E('fiscal-requirements','Settings','What details does fiscalisation ask for?',
+  ['what do i need for fiscalisation','fiscal device model','tax identification number fiscal','portal address fiscal','tpin tin pin fiscal','what information to fiscalise','fiscal requirements by country'],
+  'fiscal requirements tax number tin tpin pin vat branch device model serial portal connector route hardware virtual',
+  `AUREUM asks for what tax authorities commonly require, using your country's own names (for example TIN, TPIN or KRA PIN):
+
+- the **taxpayer number** (the only item AUREUM insists on), plus your registered business name, VAT number and branch ID if you have them;
+- the **device or provider**: manufacturer, **model**, serial number and the number the authority gave the device, if any;
+- **how sales are reported**: fiscal device, software connection or the authority's portal;
+- the authority **portal address** and your portal user name (not the password).
+
+These are the usual requirements, not legal advice — confirm them with your tax authority.`,
+  ['fiscal-setup','fiscal-what'], { pages:['settings-fiscal'] }),
 E('fiscal-not-fiscalised','Troubleshooting','Why does a sale say NOT fiscalised or uncertain?',
   ['sale not fiscalised','receipt says not fiscalised','fiscal status uncertain','fiscal submission failed','retry fiscalisation','fiscal error on receipt','fiscal reference missing'],
   'fiscal not fiscalised uncertain failed retry submission reference error pending device offline',
-  `A sale only counts as **fiscalised** once the device or tax authority has sent back a **fiscal reference**. If it says **not fiscalised**, the sale is still saved and paid — it just hasn't been confirmed. **Uncertain** means the answer was lost (for example the connection dropped), so AUREUM **does not resend it automatically** to avoid reporting a sale twice. In **Settings → Fiscalisation** you can see the transactions, check their status and **retry** the ones that failed. If the country is still in development, this is expected.`,
+  `A sale only counts as **fiscalised** once the device or tax authority has sent back a **fiscal reference**. If it says **not fiscalised**, the sale is still saved and paid — it just hasn't been confirmed. **Uncertain** means the answer was lost (for example the connection dropped), so AUREUM **does not resend it automatically** to avoid reporting a sale twice. In **Settings → Fiscalisation** you can see the transactions, check their status and **retry** the ones that failed. If your country's integration is not approved yet, this is expected.`,
   ['fiscal-what','fiscal-setup'], { pages:['settings-fiscal'], human:true }),
 E('dup-products','Products','What does the DUPLICATE tag on a product mean?',
   ['duplicate product','two products with the same name','why does my product say duplicate','same product twice','duplicate name warning','merge duplicate products'],

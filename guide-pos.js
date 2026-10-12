@@ -150,7 +150,8 @@ G.init({
 window.AureumGuidePos = {
   signedIn: function(){
     G.reload();
-    setTimeout(function(){ if(who() && shopHasProducts()) G.maybeWelcome({ journey: 'pos-first-sale', title: 'Welcome to AUREUM', text: 'Let\'s complete your first sale together. It takes about two minutes and nothing is sold unless you choose to.', cta: 'Start' }); }, 900);
+    /* first sign-in on this till: go straight into the highlighted tour (like the Back Office) — it needs no products, so brand-new accounts get it too */
+    setTimeout(function(){ if(who()) G.maybeWelcome({ journey: 'pos-welcome', auto: true }); }, 900);
   }
 };
 })();

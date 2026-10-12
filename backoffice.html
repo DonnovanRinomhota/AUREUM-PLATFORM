@@ -711,6 +711,7 @@
   .fx-shop .sub{ font-size:11.5px; color:var(--sage); display:block; margin-top:2px; }
   .fx-pill{ display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid var(--line); white-space:nowrap; }
   .fx-pill.ok{ color:#7fd6a0; border-color:rgba(127,214,160,.45); } .fx-pill.warn{ color:var(--gold-bright); border-color:rgba(212,168,67,.5); } .fx-pill.bad{ color:#ef8a8a; border-color:rgba(224,98,98,.5); } .fx-pill.mute{ color:var(--sage); }
+  .fx-check{ list-style:none; margin:8px 0 2px; padding:0; font-size:12px; color:var(--ivory-dim); } .fx-check li{ padding:1px 0; } .fx-check li.ok{ color:#7fd6a0; } .fx-check li span{ display:inline-block; width:14px; }
   .fx-act{ display:inline-block; margin-left:6px; padding:3px 9px; border:1px solid var(--line); border-radius:7px; font-size:11.5px; cursor:pointer; color:var(--gold-bright); } .fx-act:hover{ border-color:var(--gold-bright); }
   .fx-form label{ display:block; font-size:11.5px; color:var(--sage); margin:10px 0 4px; } .fx-form .note{ font-size:11.5px; color:var(--sage); margin-top:6px; line-height:1.5; }
   .fx-form .err{ color:#ef8a8a; font-size:12px; margin-top:10px; white-space:pre-line; }
@@ -2535,7 +2536,7 @@
       <div class="main-top"><div><div class="page-title">Settings</div><div class="page-sub">Shop profile, currency, taxes, and users.</div></div></div>
 
       <div class="settings-layout">
-        <div class="settings-nav" id="settingsNav"></div>
+        <div class="settings-nav" id="settingsNav" tabindex="0" aria-label="Settings sections"></div>
 
         <div class="settings-content">
 
@@ -2992,8 +2993,11 @@
 
 <script src="/vendor/supabase.js"></script>
 <script src="/fiscal/fiscal-core.js"></script>
+<script src="/fiscal/profiles.js"></script>
 <script src="/fiscal/countries/zw.js"></script>
+<script src="/fiscal/countries/generic.js"></script>
 <script src="/fiscal/devices/zw-virtual-fdms.js"></script>
+<script src="/fiscal/devices/local-connector.js"></script>
 <script src="/vendor/xlsx.full.min.js"></script>
 <script>
   /* ===== AUREUM CLOUD BACKEND (Supabase: Postgres + Auth) =====
@@ -10590,48 +10594,84 @@ const AureumSync = (function(){
   /* approved country integrations the owner may choose from (RLS only ever returns approved rows; filtered again here) */
   const fxCountryOptions = () => (FX.cfg.integrations || []).filter(i => i.kind === 'country' && AureumFiscal.isSelectable(i.status));
   const fxDeviceOptions = country => (FX.cfg.integrations || []).filter(i => i.kind === 'device' && AureumFiscal.isSelectable(i.status) && (i.countries || []).indexOf(country) >= 0);
+  const FPR = () => window.AureumFiscalProfiles;
+  const fxIntegFor = code => (FX.cfg.integrations || []).find(i => i.kind === 'country' && i.country === code && AureumFiscal.isSelectable(i.status)) || null;
+  const fxShopCountry = sh => ((FX.cfg.shopMeta || {})[sh] || {}).country || '';
+  const fxSuggested = () => { try{ const c = POS_SETTINGS && POS_SETTINGS.country; return c && AureumCountries.byCode[c] ? c : ''; }catch(e){ return ''; } };   // the business's own country: only a suggestion, never saved silently
+  const fxCountryName = code => { const c = window.AureumCountries && AureumCountries.byCode[code]; return c ? c.name : code; };
+  function fxReady(sh){
+    const cc = fxShopCountry(sh), dv = AureumFiscal.activeDeviceFor(FX.cfg, sh), req = (dv && dv.connection && dv.connection.requirements) || {};
+    return FPR().readiness({ country: cc, deviceRecorded: !!(dv && dv.model), requirementsComplete: cc ? FPR().requirementsComplete(cc, req) : false, connected: !!dv && dv.connection_status === 'connected', integrationStatus: cc ? (fxIntegFor(cc) ? 'approved' : 'pending') : null });
+  }
   function fxRenderNote(){
     const el = document.getElementById('fxAdapterNote'), n = fxCountryOptions().length;
-    if(FX.cfg.available && FX.cfg.v2 && n){ el.hidden = false; el.className = 'fx-banner'; el.innerHTML = '<b>' + n + ' country integration' + (n === 1 ? ' is' : 's are') + ' available.</b> Choose the shop\'s country, then switch fiscalisation on. Only options approved for your configuration are shown.'; return; }
-    el.hidden = false; el.className = 'fx-banner warn';
-    el.innerHTML = FX.cfg.available && !FX.cfg.v2
-      ? '<b>Country selection is not installed yet.</b> Run <code>supabase/fiscalisation-v2.sql</code> once, then reload this page. Until then <b>nothing is sent to any tax authority and no sale is ever marked as fiscalised</b>.'
-      : '<b>Fiscalisation isn\'t available for your country yet.</b> An integration is only offered here after the AUREUM team has verified the tax authority\'s official documentation and finished testing. Until then <b>nothing is sent to any tax authority and no sale is ever marked as fiscalised</b>. You can still record your fiscal devices.';
+    el.hidden = false;
+    if(FX.cfg.available && !FX.cfg.v2){
+      el.className = 'fx-banner warn';
+      el.innerHTML = '<b>Country selection is not installed yet.</b> Run <code>supabase/fiscalisation-v2.sql</code> (then <code>fiscalisation-v3.sql</code>) once, then reload this page. Until then <b>nothing is sent to any tax authority and no sale is ever marked as fiscalised</b>.';
+      return;
+    }
+    el.className = 'fx-banner';
+    el.innerHTML = '<b>How this works.</b> Choose each shop\'s country, then add the fiscal device (or provider) and the tax details your authority asks for. AUREUM switches fiscalisation on for a shop only when its country\'s integration has been tested and approved'
+      + (n ? ' — ' + n + ' approved for your account.' : ' — none is approved for your account yet.')
+      + ' Until then <b>nothing is sent to any tax authority and no sale is ever marked as fiscalised</b>; sales are saved as usual.';
   }
   function fxRenderShops(){
     fxRenderNote();
-    const el = document.getElementById('fxShops'), can = fxCan() && FX.cfg.available, v2 = !!FX.cfg.v2, opts = fxCountryOptions();
+    const el = document.getElementById('fxShops'), can = fxCan() && FX.cfg.available, v2 = !!FX.cfg.v2;
     if(!SHOPS.length){ el.innerHTML = '<div class="shift-note">Add a shop under Settings → Stores first.</div>'; return; }
+    const countries = (window.AureumCountries ? AureumCountries.list : []).slice();
     el.innerHTML = SHOPS.map(sh => {
-      const on = !!FX.cfg.shops[sh], dv = AureumFiscal.activeDeviceFor(FX.cfg, sh), meta = (FX.cfg.shopMeta || {})[sh] || {};
-      const sel = meta.integration_id || '';
-      const canSwitchOn = !v2 || (opts.length > 0);
-      const hint = !on ? (v2 && !opts.length ? 'Not available for your country yet.' : 'Off — this shop sells exactly as before.')
+      const on = !!FX.cfg.shops[sh], cc = fxShopCountry(sh), sug = cc ? '' : fxSuggested(), eff = cc || sug, P = eff ? FPR().get(eff) : null;
+      const dv = AureumFiscal.activeDeviceFor(FX.cfg, sh), rd = fxReady(sh), integ = cc ? fxIntegFor(cc) : null;
+      const hint = !on ? 'Off — this shop sells exactly as before.'
         : (dv ? 'On — device: ' + escHtml(dv.name) + ' (' + escHtml(AureumFiscal.CONNECTION_STATUS_LABEL[dv.connection_status] || dv.connection_status) + ')' : 'On, but no active device yet — sales are saved and marked “not fiscalised”.');
-      const picker = v2 && opts.length ? `<select class="modal-field" data-fxcountry="${escHtml(sh)}" style="width:auto;margin-top:6px;" ${can && !on ? '' : 'disabled'}><option value="">Choose country…</option>${opts.map(i => `<option value="${escHtml(i.id)}" ${sel === i.id ? 'selected' : ''}>${escHtml(i.name)}</option>`).join('')}</select>` : '';
-      const info = meta.country && sel ? `<span class="sub">${escHtml(meta.authority || '')}${meta.integration_version ? ' · ' + escHtml(meta.integration_version) : ''}</span>` : '';
-      const swOk = can && (on || (canSwitchOn && (!v2 || sel)));
-      return `<div class="fx-shop"><div><b>${escHtml(sh)}</b><span class="sub">${hint}</span>${picker}${info}</div><div class="switch ${on?'on':''}" data-fxshop="${escHtml(sh)}" role="switch" aria-checked="${on}" title="${!on && v2 && !sel ? 'Choose a country first' : ''}" style="${swOk?'':'opacity:.4;pointer-events:none;'}"></div></div>`;
+      const picker = v2 ? `<select class="modal-field" data-fxcountry="${escHtml(sh)}" aria-label="Country of ${escHtml(sh)}" style="width:auto;min-width:220px;margin-top:6px;" ${can && !on ? '' : 'disabled'}><option value="">Choose country…</option>${countries.map(c => `<option value="${c.code}" ${eff === c.code ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('')}</select>` : '';
+      const meta0 = (FX.cfg.shopMeta || {})[sh] || {};
+      const info = P ? `<span class="sub"><b>${escHtml(P.authority)}</b>${P.system && P.system !== 'Not yet recorded' ? ' · ' + escHtml(P.system) : ''}${on && meta0.integration_version ? ' · ' + escHtml(meta0.integration_version) : ''}${P.site ? ` · <a href="${escHtml(P.site)}" target="_blank" rel="noopener noreferrer" style="color:var(--gold-bright);">official site</a>` : ''}</span>` : '';
+      const confirmNote = sug ? `<span class="sub" style="color:var(--gold-bright);">Suggested from your business country — confirm it with “Set up”.</span>` : '';
+      const list = (cc && P) ? `<ul class="fx-check">${rd.items.map(i => `<li class="${i.done ? 'ok' : ''}" title="${escHtml(i.hint)}"><span aria-hidden="true">${i.done ? '✓' : '○'}</span> ${escHtml(i.label)}</li>`).join('')}</ul><span class="sub">${escHtml(rd.summary)}</span>` : '';
+      const setup = v2 && can && eff ? `<span class="fx-act" data-fxsetup="${escHtml(sh)}" role="button" tabindex="0" style="margin-left:0;margin-top:8px;">${dv ? 'Edit device &amp; tax details' : 'Set up device &amp; tax details'}</span>` : '';
+      const tip = P && P.tip ? `<span class="sub">${escHtml(P.tip)}</span>` : '';
+      const swOk = can && (on || !v2 || (cc && integ));          // without the country tables (v1) the old behaviour stays
+      const swTitle = on ? 'Switch off' : !v2 ? 'Switch on' : !cc ? 'Choose and confirm a country first' : !integ ? 'Waiting for the AUREUM team to approve ' + (P ? P.short : 'this country') : 'Switch on';
+      return `<div class="fx-shop"><div style="min-width:0;"><b>${escHtml(sh)}</b><span class="sub">${hint}</span>${picker}${confirmNote}${info}${tip}${list}${setup}</div><div class="switch ${on ? 'on' : ''}" data-fxshop="${escHtml(sh)}" role="switch" tabindex="${swOk ? 0 : -1}" aria-checked="${on}" aria-label="Fiscalisation for ${escHtml(sh)}" title="${escHtml(swTitle)}" style="${swOk ? '' : 'opacity:.4;pointer-events:none;'}"></div></div>`;
     }).join('');
     el.querySelectorAll('[data-fxshop]').forEach(sw => sw.addEventListener('click', () => fxToggleShop(sw.dataset.fxshop)));
-    el.querySelectorAll('[data-fxcountry]').forEach(sl => sl.addEventListener('change', () => fxPickCountry(sl.dataset.fxcountry, sl.value)));
+    el.querySelectorAll('[data-fxcountry]').forEach(sl => { sl.addEventListener('change', () => fxPickCountry(sl.dataset.fxcountry, sl.value)); try{ AureumCountries.enhanceSelect(sl, { placeholder:'Search country…' }); }catch(e){} });
+    el.querySelectorAll('[data-fxsetup]').forEach(b => { const go = () => fxSetup(b.dataset.fxsetup); b.addEventListener('click', go); b.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } }); });
   }
-  async function fxPickCountry(shop, integrationId){
-    if(!fxCan() || !FX.cfg.available) return;
-    const integ = (FX.cfg.integrations || []).find(i => i.id === integrationId);
-    const row = { business_id: currentBusinessId, shop, enabled: false, country: integ ? integ.country : null, integration_id: integ ? integ.id : null, updated_by: currentUser && currentUser.id, updated_at: new Date().toISOString() };
+  async function fxSaveCountry(shop, code){
+    const integ = code ? fxIntegFor(code) : null;
+    const row = { business_id: currentBusinessId, shop, enabled: false, country: code || null, integration_id: integ ? integ.id : null, updated_by: currentUser && currentUser.id, updated_at: new Date().toISOString() };
     const { error } = await sb.from('fiscal_shop_settings').upsert(row, { onConflict:'business_id,shop' });
-    if(error){ alert('Could not save: ' + error.message); }
-    await fxLoad();
+    if(error){ alert('Could not save: ' + error.message); return false; }
+    return true;
+  }
+  async function fxPickCountry(shop, code){
+    if(!fxCan() || !FX.cfg.available) return;
+    if(!code){ if(fxShopCountry(shop)){ await fxSaveCountry(shop, null); await fxLoad(); } return; }
+    if(code === fxShopCountry(shop)) return;
+    if(fxShopCountry(shop) && !confirm('Change ' + shop + ' to ' + fxCountryName(code) + '?\n\nIts saved device and tax details were entered for ' + fxCountryName(fxShopCountry(shop)) + ' and will need to be checked again.')){ await fxLoad(); return; }
+    if(await fxSaveCountry(shop, code)) await fxLoad();
+  }
+  async function fxSetup(shop){
+    const eff = fxShopCountry(shop) || fxSuggested();
+    if(!eff){ alert('Choose this shop\'s country first.'); return; }
+    if(!fxShopCountry(shop)){ if(!(await fxSaveCountry(shop, eff))) return; await fxLoad(); }
+    const dv = AureumFiscal.activeDeviceFor(FX.cfg, shop);
+    fxDeviceForm(dv ? dv.id : null, shop);
   }
   async function fxToggleShop(shop){
     if(!fxCan() || !FX.cfg.available) return;
-    const turnOn = !FX.cfg.shops[shop], meta = (FX.cfg.shopMeta || {})[shop] || {};
-    if(turnOn && FX.cfg.v2 && !meta.integration_id){ alert('Choose the shop\'s country first.'); return; }
-    if(turnOn && !confirm('Switch fiscalisation ON for ' + shop + '?\n\nEvery sale there will be sent to the fiscal device. With no working device, sales are still saved but are clearly marked NOT fiscalised. This does not make your receipts tax-authority approved.')) return;
+    const turnOn = !FX.cfg.shops[shop], cc = fxShopCountry(shop), integ = cc ? fxIntegFor(cc) : null;
+    if(turnOn && FX.cfg.v2 && !cc){ alert('Choose the shop\'s country first.'); return; }
+    if(turnOn && FX.cfg.v2 && !integ){ alert('Fiscalisation cannot be switched on for ' + fxCountryName(cc) + ' yet.\n\nThe AUREUM team approves each country after testing it with the tax authority. Your details are saved, so you can switch it on as soon as it is approved.'); return; }
+    const rd = fxReady(shop), todo = rd.items.filter(i => !i.done && i.id !== 'integration').map(i => '• ' + i.label).join('\n');
+    if(turnOn && !confirm('Switch fiscalisation ON for ' + shop + '?\n\nEvery sale there will be sent to the fiscal device. With no working device, sales are still saved but are clearly marked NOT fiscalised. This does not make your receipts tax-authority approved.' + (todo ? '\n\nStill to do:\n' + todo : ''))) return;
     if(!turnOn && !confirm('Switch fiscalisation OFF for ' + shop + '?\n\nPast fiscal records are kept. New sales will not be fiscalised.')) return;
     const row = { business_id: currentBusinessId, shop, enabled: turnOn, updated_by: currentUser && currentUser.id, updated_at: new Date().toISOString() };
-    if(FX.cfg.v2){ row.country = meta.country || null; row.integration_id = meta.integration_id || null; }
+    if(FX.cfg.v2){ const meta = (FX.cfg.shopMeta || {})[shop] || {}; row.country = cc || null; row.integration_id = turnOn ? integ.id : (meta.integration_id || null); }
     const { error } = await sb.from('fiscal_shop_settings').upsert(row, { onConflict:'business_id,shop' });
     if(error){ alert('Could not save: ' + (/approved integration/.test(error.message) ? 'this integration is not approved for your country (any longer).' : error.message)); await fxLoad(); return; }
     await fxLoad();
@@ -10645,8 +10685,11 @@ const AureumSync = (function(){
       const ct = L.CONNECTION_TYPES[d.connection_type], cs = L.CONNECTION_STATUS_LABEL[d.connection_status] || d.connection_status;
       const tone = d.connection_status === 'connected' ? 'ok' : (d.connection_status === 'unreachable' || d.connection_status === 'error') ? 'bad' : 'warn';
       const conn = d.connection || {}, where = d.connection_type === 'network' ? ` · ${escHtml(conn.host||'')}:${escHtml(conn.port||'')}` : d.connection_type === 'local_connector' ? ' · ' + escHtml(conn.connectorUrl||'') : d.connection_type === 'vendor_api' ? ' · ' + escHtml(conn.endpoint||'') : '';
-      return `<tr style="${d.active?'':'opacity:.55;'}"><td><b>${escHtml(d.name)}</b>${d.active?'':' '+fxPill('Deactivated','mute')}</td><td>${escHtml(d.shop)}</td>
-        <td>${escHtml([d.manufacturer,d.model].filter(Boolean).join(' ')||'—')}<br><span style="color:var(--sage);font-size:11.5px;">S/N ${escHtml(d.serial_number||'—')}${d.zimra_device_id?' · Tax authority device ID '+escHtml(d.zimra_device_id):''}</span></td>
+      const P = (d.country || fxShopCountry(d.shop)) ? FPR().get(d.country || fxShopCountry(d.shop)) : null;
+      const route = conn.route && FPR().ROUTES[conn.route] ? `<br><span style="color:var(--sage);font-size:11.5px;">${escHtml(FPR().ROUTES[conn.route].label)}</span>` : '';
+      const portal = conn.portal && conn.portal.url ? `<br><span style="color:var(--sage);font-size:11.5px;">Portal: ${escHtml(conn.portal.url)}</span>` : '';
+      return `<tr style="${d.active?'':'opacity:.55;'}"><td><b>${escHtml(d.name)}</b>${d.active?'':' '+fxPill('Deactivated','mute')}${route}</td><td>${escHtml(d.shop)}</td>
+        <td>${escHtml([d.manufacturer,d.model].filter(Boolean).join(' ')||'—')}<br><span style="color:var(--sage);font-size:11.5px;">S/N ${escHtml(d.serial_number||'—')}${d.zimra_device_id?' · '+escHtml(P ? P.deviceId.label : 'Authority device ID')+' '+escHtml(d.zimra_device_id):''}</span>${portal}</td>
         <td>${escHtml(ct ? ct.label.split(' (')[0] : d.connection_type)}${where}</td>
         <td>${fxPill(L.REGISTRATION_LABEL[d.registration_status]||d.registration_status, d.registration_status==='registered'?'ok':'mute')}</td>
         <td>${fxPill(cs, tone)}</td><td>${fxFmt(d.last_connected_at)}</td>
@@ -10656,53 +10699,81 @@ const AureumSync = (function(){
     tb.querySelectorAll('[data-fxedit]').forEach(b => b.addEventListener('click', () => fxDeviceForm(b.dataset.fxedit)));
     tb.querySelectorAll('[data-fxtoggle]').forEach(b => b.addEventListener('click', () => fxToggleDevice(b.dataset.fxtoggle)));
   }
-  function fxDeviceForm(id){
+  /* Add / edit a fiscal device. Everything country-specific (labels, which numbers to ask for, which routes exist) comes from the shop's country. */
+  function fxDeviceForm(id, shopPref){
     if(!fxCan() || !FX.cfg.available) return;
-    const d = id ? FX.cfg.devices.find(x => x.id === id) : null, L = AureumFiscal, c = (d && d.connection) || {};
-    const typeOpts = Object.keys(L.CONNECTION_TYPES).map(k => `<option value="${k}" ${d && d.connection_type===k?'selected':''}>${escHtml(L.CONNECTION_TYPES[k].label)}</option>`).join('');
+    const d = id ? FX.cfg.devices.find(x => x.id === id) : null, L = AureumFiscal, c = (d && d.connection) || {}, req0 = c.requirements || {}, portal0 = c.portal || {};
     const body = `<div class="fx-form">
-      <label>Device name</label><input class="modal-field" id="fxfName" maxlength="80" value="${escHtml(d?d.name:'')}" placeholder="e.g. Main shop till 1 fiscal device">
-      <label>Shop</label><select class="modal-field" id="fxfShop">${SHOPS.map(sh => `<option ${d && d.shop===sh?'selected':''}>${escHtml(sh)}</option>`).join('')}</select>
-      <label>Manufacturer</label><input class="modal-field" id="fxfMan" value="${escHtml(d?d.manufacturer||'':'')}" placeholder="As printed on the device">
-      <label>Model</label><input class="modal-field" id="fxfModel" value="${escHtml(d?d.model||'':'')}">
-      <label>Serial number</label><input class="modal-field" id="fxfSerial" value="${escHtml(d?d.serial_number||'':'')}">
-      <label>Tax authority device ID / registration identifier (if you have one)</label><input class="modal-field" id="fxfZim" value="${escHtml(d?d.zimra_device_id||'':'')}">
-      <label>Registration status</label><select class="modal-field" id="fxfReg">${['unregistered','test','registered'].map(k => `<option value="${k}" ${d && d.registration_status===k?'selected':''}>${escHtml(L.REGISTRATION_LABEL[k])}</option>`).join('')}</select>
-      ${FX.cfg.v2 ? (() => { const meta = (FX.cfg.shopMeta || {})[(d && d.shop) || SHOPS[0]] || {}, os = meta.country ? fxDeviceOptions(meta.country) : []; return `<label>Integration</label><select class="modal-field" id="fxfInteg"><option value="">None — just record this device</option>${os.map(i => `<option value="${escHtml(i.id)}" ${d && d.integration_id === i.id ? 'selected' : ''}>${escHtml(i.name)}</option>`).join('')}</select><div class="note">${os.length ? 'Only integrations approved for this shop\'s country are listed.' : 'No approved device integration exists for this shop\'s country yet, so the device can only be recorded.'}</div>`; })() : ''}
-      <label>Connection type</label><select class="modal-field" id="fxfType"><option value="">Choose…</option>${typeOpts}</select>
-      <div id="fxfConn"></div>
-      <div class="note">AUREUM has no adapter for any device yet, so a saved device shows “Awaiting supported adapter”. Never type passwords, keys or certificates here.</div>
-      <div class="err" id="fxfErr"></div></div>`;
+      <label for="fxfName">Device name</label><input class="modal-field" id="fxfName" maxlength="80" value="${escHtml(d?d.name:'')}" placeholder="e.g. Main shop till 1 fiscal device">
+      <label for="fxfShop">Shop</label><select class="modal-field" id="fxfShop" ${d ? 'disabled' : ''}>${SHOPS.map(sh => `<option ${(d ? d.shop : (shopPref || SHOPS[0])) === sh ? 'selected' : ''}>${escHtml(sh)}</option>`).join('')}</select>
+      <div id="fxfDyn"></div>
+      <div class="err" id="fxfErr" role="alert"></div></div>`;
     openDetailModal(d ? 'Edit fiscal device' : 'Add fiscal device', body, `<div class="modal-btn" data-close="detailModal">Cancel</div><div class="modal-btn solid" id="fxfSave">Save device</div>`);
-    const connEl = document.getElementById('fxfConn'), typeEl = document.getElementById('fxfType');
-    const drawConn = () => {
-      const ct = L.CONNECTION_TYPES[typeEl.value];
-      connEl.innerHTML = !ct ? '' : ct.fields.map(f => `<label>${escHtml(f.label)}${f.required?' *':''}</label><input class="modal-field" data-fxc="${f.key}" ${f.type==='number'?'type="number" min="1" max="65535"':''} value="${escHtml(c[f.key]||'')}" placeholder="${escHtml(f.placeholder||'')}">`).join('') + `<div class="note">${escHtml(ct.note)}</div>`;
+    const shopEl = document.getElementById('fxfShop'), dyn = document.getElementById('fxfDyn'), errEl = document.getElementById('fxfErr');
+    let typeEl = null, connEl = null;
+    const draw = (keep) => {
+      const shop = shopEl.value, v1 = !FX.cfg.v2, cc = v1 ? 'ZZ' : fxShopCountry(shop), P = v1 ? FPR().neutral() : (cc ? FPR().get(cc) : null);
+      const cur = keep || { man: d && d.manufacturer || '', model: d && d.model || '', serial: d && d.serial_number || '', authId: d && d.zimra_device_id || '', reg: d && d.registration_status || 'unregistered', route: c.route || '', req: req0, portalUrl: portal0.url || '', portalAcc: portal0.account || '', type: d && d.connection_type || '', integ: d && d.integration_id || '', conn: c };
+      if(!P){ dyn.innerHTML = '<div class="fx-banner warn" style="margin-top:12px;">Choose this shop\'s country first (Settings → Fiscalisation → Shops). The questions asked here depend on the country.</div>'; typeEl = connEl = null; document.getElementById('fxfSave').style.opacity = .5; return; }
+      document.getElementById('fxfSave').style.opacity = 1;
+      const routeOpts = (P.routes || []).map(r => `<option value="${r}" ${cur.route === r ? 'selected' : ''}>${escHtml(FPR().ROUTES[r].label)}</option>`).join('');
+      const regOpts = ['unregistered','test','registered'].map(k => `<option value="${k}" ${cur.reg === k ? 'selected' : ''}>${escHtml(L.REGISTRATION_LABEL[k])}</option>`).join('');
+      const typeOpts = Object.keys(L.CONNECTION_TYPES).map(k => `<option value="${k}" ${cur.type === k ? 'selected' : ''}>${escHtml(L.CONNECTION_TYPES[k].label)}</option>`).join('');
+      const fields = FPR().requirementFields(cc).map(f => `<label for="fxr_${f.key}">${escHtml(f.label)}${f.required ? ' *' : ''}</label><input class="modal-field" id="fxr_${f.key}" data-fxr="${f.key}" maxlength="${f.key === 'taxpayerName' ? 120 : f.max}" value="${escHtml(cur.req[f.key] || '')}"><div class="note">${escHtml(f.help)}</div>`).join('');
+      const os = fxDeviceOptions(cc);
+      dyn.innerHTML = `
+        ${v1 ? '' : `<div class="fx-banner" style="margin-top:12px;"><b>${escHtml(P.name)} — ${escHtml(P.authority)}</b>${P.system && P.system !== 'Not yet recorded' ? '<br>' + escHtml(P.system) : ''}${P.site ? `<br><a href="${escHtml(P.site)}" target="_blank" rel="noopener noreferrer" style="color:var(--gold-bright);">Official website</a>` : ''}<br><span style="color:var(--sage);">${escHtml(P.tip)}</span><br><span style="color:var(--sage);">These are the usual requirements — confirm them with ${escHtml(P.short)}.</span></div>`}
+        <div class="form-section-title" style="margin-top:14px;">Device or provider</div>
+        ${routeOpts ? `<label for="fxfRoute">How will sales be reported?</label><select class="modal-field" id="fxfRoute"><option value="">Choose…</option>${routeOpts}</select><div class="note" id="fxfRouteNote"></div>` : ''}
+        <label for="fxfMan">Manufacturer / provider</label><input class="modal-field" id="fxfMan" maxlength="80" value="${escHtml(cur.man)}" placeholder="As printed on the device, or your provider's name">
+        <label for="fxfModel">Model *</label><input class="modal-field" id="fxfModel" maxlength="80" value="${escHtml(cur.model)}" placeholder="Exact model, e.g. as on the device label">
+        <label for="fxfSerial">Serial number</label><input class="modal-field" id="fxfSerial" maxlength="60" value="${escHtml(cur.serial)}">
+        <label for="fxfZim">${escHtml(P.deviceId.label)} (if you have one)</label><input class="modal-field" id="fxfZim" maxlength="60" value="${escHtml(cur.authId)}"><div class="note">${escHtml(P.deviceId.help)}</div>
+        <label for="fxfReg">Registration status</label><select class="modal-field" id="fxfReg">${regOpts}</select>
+        <div class="form-section-title" style="margin-top:16px;">Tax details for ${escHtml(P.short)}</div>${fields}
+        <div class="form-section-title" style="margin-top:16px;">Authority portal</div>
+        <label for="fxfPortal">Portal address (https)</label><input class="modal-field" id="fxfPortal" maxlength="200" value="${escHtml(cur.portalUrl)}" placeholder="${P.site ? escHtml(P.site) : 'https://…'}"><div class="note">Where you manage the registration or view invoices${P.short ? ' with ' + escHtml(P.short) : ''}.</div>
+        <label for="fxfPortalAcc">Portal user name / account ID (optional)</label><input class="modal-field" id="fxfPortalAcc" maxlength="80" value="${escHtml(cur.portalAcc)}"><div class="note"><b>Never type a password, key or certificate here.</b> They stay in the device or its connector.</div>
+        ${FX.cfg.v2 ? `<div class="form-section-title" style="margin-top:16px;">Integration</div><select class="modal-field" id="fxfInteg" aria-label="Integration"><option value="">None — just record this device</option>${os.map(i => `<option value="${escHtml(i.id)}" ${cur.integ === i.id || (!cur.integ && os.length === 1) ? 'selected' : ''}>${escHtml(i.name)}</option>`).join('')}</select><div class="note">${os.length ? 'Only integrations approved for ' + escHtml(P.name) + ' are listed.' : 'No device integration is approved for ' + escHtml(P.name) + ' yet, so the device is recorded now and can be linked as soon as one is approved.'}</div>` : ''}
+        <div class="form-section-title" style="margin-top:16px;">Connection</div>
+        <select class="modal-field" id="fxfType" aria-label="Connection type"><option value="">Choose…</option>${typeOpts}</select><div id="fxfConn"></div>`;
+      typeEl = document.getElementById('fxfType'); connEl = document.getElementById('fxfConn');
+      const routeEl = document.getElementById('fxfRoute'), routeNote = document.getElementById('fxfRouteNote');
+      const drawRoute = () => { if(routeEl && routeNote) routeNote.textContent = routeEl.value && FPR().ROUTES[routeEl.value] ? FPR().ROUTES[routeEl.value].help : ''; };
+      if(routeEl){ routeEl.addEventListener('change', drawRoute); drawRoute(); }
+      const drawConn = () => {
+        const ct = L.CONNECTION_TYPES[typeEl.value];
+        connEl.innerHTML = !ct ? '<div class="note">A fiscal connector on this computer is the usual choice: it talks to the device and the authority for you.</div>' : ct.fields.map(f => `<label>${escHtml(f.label)}${f.required?' *':''}</label><input class="modal-field" data-fxc="${f.key}" ${f.type==='number'?'type="number" min="1" max="65535"':''} value="${escHtml((cur.conn||{})[f.key]||'')}" placeholder="${escHtml(f.placeholder||'')}">`).join('') + `<div class="note">${escHtml(ct.note)}</div>`;
+      };
+      typeEl.addEventListener('change', drawConn); drawConn();
     };
-    typeEl.addEventListener('change', drawConn); drawConn();
-    const shopEl = document.getElementById('fxfShop'), integEl = document.getElementById('fxfInteg');
-    if(integEl) shopEl.addEventListener('change', () => {                                    // integrations offered depend on the shop's country
-      const meta = (FX.cfg.shopMeta || {})[shopEl.value] || {}, os = meta.country ? fxDeviceOptions(meta.country) : [];
-      integEl.innerHTML = '<option value="">None — just record this device</option>' + os.map(i => `<option value="${escHtml(i.id)}">${escHtml(i.name)}</option>`).join('');
-    });
+    draw();
+    shopEl.addEventListener('change', () => draw({ man:'', model:'', serial:'', authId:'', reg:'unregistered', route:'', req:{}, portalUrl:'', portalAcc:'', type:'', integ:'', conn:{} }));
     document.getElementById('fxfSave').addEventListener('click', async () => {
+      const shop = shopEl.value, v1 = !FX.cfg.v2, cc = v1 ? 'ZZ' : fxShopCountry(shop), P = v1 ? FPR().neutral() : (cc ? FPR().get(cc) : null);
+      if(!P || !typeEl){ errEl.textContent = 'Choose this shop\'s country first.'; return; }
+      const val = i => (document.getElementById(i) ? document.getElementById(i).value.trim() : '');
       const connection = {}; connEl.querySelectorAll('[data-fxc]').forEach(i => { if(i.value.trim() !== '') connection[i.dataset.fxc] = i.value.trim(); });
-      const rec = { name: document.getElementById('fxfName').value.trim(), shop: document.getElementById('fxfShop').value, manufacturer: document.getElementById('fxfMan').value.trim() || null,
-        model: document.getElementById('fxfModel').value.trim() || null, serial_number: document.getElementById('fxfSerial').value.trim() || null, zimra_device_id: document.getElementById('fxfZim').value.trim() || null,
-        registration_status: document.getElementById('fxfReg').value, connection_type: typeEl.value, connection };
-      const errs = L.validateDevice(rec); const errEl = document.getElementById('fxfErr');
+      const requirements = {}; dyn.querySelectorAll('[data-fxr]').forEach(i => { if(i.value.trim() !== '') requirements[i.dataset.fxr] = i.value.trim(); });
+      if(val('fxfRoute')) connection.route = val('fxfRoute');
+      if(Object.keys(requirements).length) connection.requirements = requirements;
+      if(val('fxfPortal') || val('fxfPortalAcc')){ connection.portal = {}; if(val('fxfPortal')) connection.portal.url = val('fxfPortal'); if(val('fxfPortalAcc')) connection.portal.account = val('fxfPortalAcc'); }
+      const rec = { name: val('fxfName'), shop, manufacturer: val('fxfMan') || null, model: val('fxfModel') || null, serial_number: val('fxfSerial') || null, zimra_device_id: val('fxfZim') || null,
+        registration_status: val('fxfReg'), connection_type: typeEl.value, connection };
+      const errs = L.validateDevice(rec).concat(FPR().validateRequirements(cc, requirements), FPR().validatePortal(val('fxfPortal')));
+      if(!rec.model) errs.push('Enter the device or provider model.');
       if(errs.length){ errEl.textContent = errs.join('\n'); return; }
       errEl.textContent = '';
       const row = Object.assign({}, rec, { adapter: (d && d.adapter) || 'unsupported' });
+      let integId = '';
       if(FX.cfg.v2){
-        const meta = (FX.cfg.shopMeta || {})[rec.shop] || {}, integ = document.getElementById('fxfInteg') ? document.getElementById('fxfInteg').value : '';
-        row.country = meta.country || null; row.authority = meta.authority || null; row.integration_id = integ || null;
-        if(!integ){ row.adapter = 'unsupported'; }
-        else if(!meta.country){ errEl.textContent = 'Choose the shop\'s country first.'; return; }
+        integId = val('fxfInteg');
+        row.country = cc; row.authority = ((FX.cfg.shopMeta || {})[shop] || {}).authority || P.authority; row.integration_id = integId || null;
+        if(!integId){ row.adapter = 'unsupported'; }
       }
       let r;
-      if(d){ if(d.connection_type !== rec.connection_type || JSON.stringify(d.connection||{}) !== JSON.stringify(connection)) row.connection_status = 'not_configured'; r = await sb.from('fiscal_devices').update(row).eq('id', d.id); }
-      else r = await sb.from('fiscal_devices').insert(Object.assign({ business_id: currentBusinessId, created_by: currentUser && currentUser.id, connection_status:'awaiting_adapter' }, row));
+      if(d){ if(d.connection_type !== rec.connection_type || JSON.stringify(d.connection||{}) !== JSON.stringify(connection) || (d.integration_id || '') !== integId) row.connection_status = integId ? 'not_configured' : 'awaiting_adapter'; r = await sb.from('fiscal_devices').update(row).eq('id', d.id); }
+      else r = await sb.from('fiscal_devices').insert(Object.assign({ business_id: currentBusinessId, created_by: currentUser && currentUser.id, connection_status: integId ? 'not_configured' : 'awaiting_adapter' }, row));
       if(r.error){ errEl.textContent = /duplicate key/.test(r.error.message) ? 'A device with this serial number already exists for that shop.' : r.error.message; return; }
       closeModal('detailModal'); await fxLoad();
     });
@@ -10712,7 +10783,7 @@ const AureumSync = (function(){
     const old = btn.textContent; btn.textContent = 'Testing…';
     let res; try{ res = await AureumFiscal.getAdapter(d.adapter).testConnection(d); }catch(e){ res = { ok:false, status:'error', message:String(e.message||e) }; }
     btn.textContent = old;
-    const upd = { connection_status: res.ok ? 'connected' : (res.status === 'awaiting_adapter' ? 'awaiting_adapter' : (res.status === 'unreachable' ? 'unreachable' : 'error')) };
+    const upd = { connection_status: res.ok ? 'connected' : (['awaiting_adapter','unreachable','not_configured'].indexOf(res.status) >= 0 ? res.status : 'error') };
     if(res.ok) upd.last_connected_at = new Date().toISOString();
     await sb.from('fiscal_devices').update(upd).eq('id', id);
     openDetailModal('Connection test — ' + d.name, `<div class="fx-banner ${res.ok?'':'warn'}"><b>${res.ok?'Connected':'Not connected'}</b><br>${escHtml(res.message || (res.ok ? 'The device answered.' : 'The device did not respond.'))}</div>${res.status==='awaiting_adapter'?'<div class="note" style="font-size:12px;color:var(--sage);">This was not a real test: no integration exists for this device yet, so nothing was sent to it.</div>':''}`);
@@ -10750,7 +10821,9 @@ const AureumSync = (function(){
       const dev = AureumFiscal.activeDeviceFor(FX.cfg, t.shop);
       b.textContent = 'Working…';
       FX.store = FX.store || AureumFiscal.supabaseStore(sb, currentBusinessId, currentUser && currentUser.id);
-      await AureumFiscal.createEngine({ store: FX.store, businessId: currentBusinessId }).retry(t, Object.assign({ shop:t.shop }, sale), dev);
+      const meta = (FX.cfg.shopMeta || {})[t.shop] || {}, country = meta.country ? AureumFiscal.countryOrStub(meta.country) : null, integ = country ? fxIntegFor(meta.country) : null;
+      await AureumFiscal.createEngine({ store: FX.store, businessId: currentBusinessId, country, integrationStatus: country ? (integ ? integ.status : 'disabled') : undefined,
+        standardOptions: { currency: POS_SETTINGS.currencyCode, taxPercent: POS_SETTINGS.taxPercent }, countryConfig: {} }).retry(t, Object.assign({ shop:t.shop }, sale), dev);
       await fxLoadTx();
     }));
   }
@@ -12706,27 +12779,39 @@ E('new-chat','Help & support','How do I start a new chat with AUREUM Bot?',
   `Press the gold **+ New chat** button under the chat box. It clears this conversation and starts a fresh one. Chats are only kept for the current browser session anyway.`,
   ['bot-data'], { pages:['settings-help'] }),
 E('fiscal-what','Settings','What is fiscalisation and do I have to use it?',
-  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','zimra fiscal','tax authority device','fiscal receipts','what does fiscalise mean','tax authority receipts','fdms','fiscal printer'],
-  'fiscalisation fiscalization fiscal device zimra tax authority receipts compliance country optional virtual fdms',
-  `Fiscalisation means each sale is also reported to your country's **tax authority** (for example ZIMRA in Zimbabwe, ZRA in Zambia, TRA in Tanzania) through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference.
+  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','tax authority device','fiscal receipts','what does fiscalise mean','tax authority receipts','fiscal printer','is fiscalisation required in my country'],
+  'fiscalisation fiscalization fiscal device tax authority receipts compliance country optional etims efris zimra zra tra',
+  `Fiscalisation means each sale is also reported to **your country's tax authority** through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference. What is required, and how, depends on the country — AUREUM asks for your shop's country and then for that country's details.
 
-It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**, and only for countries AUREUM has enabled. **Each country is switched on only after it has been tested and approved** (Zimbabwe is still in development): until then, sales are saved normally and clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
-  ['fiscal-setup','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
+It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**. **Each country is switched on only after it has been tested and approved.** Until then you can still enter your device and tax details, sales are saved normally and are clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
+  ['fiscal-setup','fiscal-requirements','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
 E('fiscal-setup','Settings','How do I set up fiscalisation?',
-  ['set up fiscalisation','turn on fiscalisation','add a fiscal device','configure zimra','connect my fiscal device','enable fiscal receipts','fiscalisation settings'],
-  'fiscalisation setup enable turn on shop country device configure test connection serial number',
+  ['set up fiscalisation','turn on fiscalisation','add a fiscal device','connect my fiscal device','enable fiscal receipts','fiscalisation settings','set up fiscal device for my country'],
+  'fiscalisation setup enable turn on shop country device configure test connection serial number model portal tax details checklist',
   `1. Open **Settings → Fiscalisation** (owners and managers).
-2. Pick your **country** — only countries AUREUM has enabled for you are offered.
-3. Choose which **shops** should fiscalise sales.
-4. Add the **fiscal device** for each shop (type, serial number and the connection details your device supplier gives you) and press **Test device**.
-5. Switch it on for the shop.
+2. For each shop, **choose its country** (your business country is suggested). AUREUM then shows that country's tax authority and what it usually asks for.
+3. Press **Set up device & tax details** and enter the device **model**, serial number, how sales are reported, your **tax number** and the authority **portal** address. Never type passwords or keys.
+4. Choose how it connects — usually a **fiscal connector** on this computer — and press **Test**.
+5. Check the **checklist** under the shop. When everything is ticked and the country's integration is approved, **switch it on**.
 
-If the country isn't listed, it hasn't been enabled for your business yet — contact AUREUM support.`,
-  ['fiscal-what','contact-support'], { pages:['settings-fiscal'], human:true }),
+If the last item says the integration is not approved yet, your details are saved and you can switch it on as soon as AUREUM approves it.`,
+  ['fiscal-requirements','fiscal-what','contact-support'], { pages:['settings-fiscal'], human:true }),
+E('fiscal-requirements','Settings','What details does fiscalisation ask for?',
+  ['what do i need for fiscalisation','fiscal device model','tax identification number fiscal','portal address fiscal','tpin tin pin fiscal','what information to fiscalise','fiscal requirements by country'],
+  'fiscal requirements tax number tin tpin pin vat branch device model serial portal connector route hardware virtual',
+  `AUREUM asks for what tax authorities commonly require, using your country's own names (for example TIN, TPIN or KRA PIN):
+
+- the **taxpayer number** (the only item AUREUM insists on), plus your registered business name, VAT number and branch ID if you have them;
+- the **device or provider**: manufacturer, **model**, serial number and the number the authority gave the device, if any;
+- **how sales are reported**: fiscal device, software connection or the authority's portal;
+- the authority **portal address** and your portal user name (not the password).
+
+These are the usual requirements, not legal advice — confirm them with your tax authority.`,
+  ['fiscal-setup','fiscal-what'], { pages:['settings-fiscal'] }),
 E('fiscal-not-fiscalised','Troubleshooting','Why does a sale say NOT fiscalised or uncertain?',
   ['sale not fiscalised','receipt says not fiscalised','fiscal status uncertain','fiscal submission failed','retry fiscalisation','fiscal error on receipt','fiscal reference missing'],
   'fiscal not fiscalised uncertain failed retry submission reference error pending device offline',
-  `A sale only counts as **fiscalised** once the device or tax authority has sent back a **fiscal reference**. If it says **not fiscalised**, the sale is still saved and paid — it just hasn't been confirmed. **Uncertain** means the answer was lost (for example the connection dropped), so AUREUM **does not resend it automatically** to avoid reporting a sale twice. In **Settings → Fiscalisation** you can see the transactions, check their status and **retry** the ones that failed. If the country is still in development, this is expected.`,
+  `A sale only counts as **fiscalised** once the device or tax authority has sent back a **fiscal reference**. If it says **not fiscalised**, the sale is still saved and paid — it just hasn't been confirmed. **Uncertain** means the answer was lost (for example the connection dropped), so AUREUM **does not resend it automatically** to avoid reporting a sale twice. In **Settings → Fiscalisation** you can see the transactions, check their status and **retry** the ones that failed. If your country's integration is not approved yet, this is expected.`,
   ['fiscal-what','fiscal-setup'], { pages:['settings-fiscal'], human:true }),
 E('dup-products','Products','What does the DUPLICATE tag on a product mean?',
   ['duplicate product','two products with the same name','why does my product say duplicate','same product twice','duplicate name warning','merge duplicate products'],

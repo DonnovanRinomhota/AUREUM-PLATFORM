@@ -8,3 +8,7 @@
 4. Load both with `<script>` tags in `backoffice.html` / `pos-checkout.html` and add them to `sw.js` SHELL. Nothing else in checkout changes.
 5. Add the catalogue rows (see the seed in `supabase/fiscalisation-v2.sql`) with status `in_development`.
 6. Test against the authority's test environment. Only a **super admin** can then set it to *Approved* (needs the authority's approval reference).
+
+
+## No code needed for the neutral route
+If a country only needs AUREUM's neutral request (the connector does the authority-specific mapping), add its profile to `fiscal/profiles.js` and its catalogue row (see `supabase/fiscalisation-v3.sql`) — `generic.js` covers it. Write a dedicated `<cc>.js` only when AUREUM itself must build or validate the authority's message.
