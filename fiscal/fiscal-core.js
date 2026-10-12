@@ -79,7 +79,7 @@
       Object.keys(c).forEach(k => { if(SECRET_KEYS.indexOf(k.toLowerCase()) >= 0) errs.push('"' + k + '" looks like a secret and cannot be stored here.'); });
     }
     if(d.serial_number && !/^[\w .\/-]{1,60}$/.test(String(d.serial_number).trim())) errs.push('Serial number has unusual characters.');
-    if(d.zimra_device_id && !/^[\w .\/-]{1,60}$/.test(String(d.zimra_device_id).trim())) errs.push('ZIMRA device ID has unusual characters.');
+    if(d.zimra_device_id && !/^[\w .\/-]{1,60}$/.test(String(d.zimra_device_id).trim())) errs.push('Tax authority device ID has unusual characters.');
     return errs;
   }
 

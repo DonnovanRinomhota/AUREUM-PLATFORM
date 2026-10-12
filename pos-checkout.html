@@ -1813,6 +1813,7 @@ async function aureumSignIn(email, password){
   let priceOverride = {};   // this ticket only: product id → the price set at the till (never changes the product itself)
   // the price at THIS shop: its own price if the Back Office gave it one, otherwise the product's regular price
   const shopPrice = p => { const sp = (activeShop && p.shopPrice) ? p.shopPrice[activeShop] : undefined; return (typeof sp === 'number' && isFinite(sp) && sp >= 0) ? sp : (Number(p.price) || 0); };
+  const costAt = p => { const c = (activeShop && p.shopCost) ? p.shopCost[activeShop] : undefined; return (typeof c === 'number' && isFinite(c) && c >= 0) ? c : (Number(p.cost) || 0); };
   const unitPrice = p => Object.prototype.hasOwnProperty.call(priceOverride, p.id) ? priceOverride[p.id] : shopPrice(p);
 
   function computeTotals(){
@@ -3063,7 +3064,7 @@ async function aureumSignIn(email, password){
     const lineItems = ids.map(id=>{
       const p = PRODUCTS.find(p=>p.id==id);
       const up = unitPrice(p);
-      return { productId: p.id, name:p.name, qty:cart[id], price:up, cost:p.cost||0, taxable: p.taxable !== false, ...(up !== shopPrice(p) ? { listPrice: shopPrice(p) } : {}) };
+      return { productId: p.id, name:p.name, qty:cart[id], price:up, cost:costAt(p), taxable: p.taxable !== false, ...(up !== shopPrice(p) ? { listPrice: shopPrice(p) } : {}) };
     });
 
     // Receipt number: next in sequence, computed from the synced receipts at the

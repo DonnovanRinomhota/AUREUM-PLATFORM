@@ -107,5 +107,48 @@ function mountPicker(host, opts){
   return { get value(){ return value; }, set(code){ value = code || ''; label(); }, open, close };
 }
 
-root.AureumCountries = { list, byCode, isAfrica: c => AFRICA.has(c), flagHtml, flagEmoji, symbolFor, currencyName, allCurrencies, allTimezones, tzLabel, setTimezone, getTimezone: () => TZ, mountPicker };
+/* Turns an ordinary <select> into a button + search box + list (used for currencies and time zones).
+   The <select> stays in the page (hidden) so existing code that reads or sets .value keeps working. */
+function enhanceSelect(sel, opts){
+  if(!sel || sel._cpEnhanced) return sel && sel._cpApi; css(); opts = opts || {};
+  const host = document.createElement('div'); sel.parentNode.insertBefore(host, sel); sel.style.display = 'none'; sel._cpEnhanced = true;
+  host.className = 'cp'; host.innerHTML = '<button type="button" class="cp-btn modal-select" aria-haspopup="listbox" aria-expanded="false"></button><div class="cp-panel"><input class="cp-search" type="search" autocomplete="off"><div class="cp-list" role="listbox"></div></div>';
+  const btn = host.querySelector('.cp-btn'), panel = host.querySelector('.cp-panel'), search = host.querySelector('.cp-search'), box = host.querySelector('.cp-list');
+  search.placeholder = opts.placeholder || 'Search…'; search.setAttribute('aria-label', opts.placeholder || 'Search');
+  let hl = 0, shown = [];
+  const all = () => Array.from(sel.options).map(o => ({ v: o.value, t: o.textContent }));
+  const label = () => { const o = sel.options[sel.selectedIndex]; btn.innerHTML = '<span class="cp-name">' + (o ? o.textContent.replace(/[<>&]/g, '') : (opts.empty || 'Select')) + '</span><span class="cp-car">&#9662;</span>'; };
+  const draw = () => {
+    box.innerHTML = shown.length ? shown.map((o, i) => '<div class="cp-item' + (i === hl ? ' hl' : '') + '" role="option" data-i="' + i + '"><span>' + o.t.replace(/[<>&]/g, '') + '</span></div>').join('') : '<div class="cp-empty">Nothing matches that</div>';
+    const h = box.querySelector('.hl'); if(h && h.scrollIntoView) h.scrollIntoView({ block: 'nearest' });
+  };
+  const filter = () => {
+    const q = norm(search.value).trim(), list = all();
+    shown = !q ? list : list.map(o => { const t = norm(o.t), v = norm(o.v); let r = 9;
+        if(v === q) r = 0; else if(t.startsWith(q)) r = 1; else if(t.split(/[\s\/_()\-,]+/).some(w => w.startsWith(q))) r = 2; else if(t.includes(q) || v.includes(q)) r = 3;
+        return { o, r }; }).filter(x => x.r < 9).sort((a, b) => a.r - b.r).map(x => x.o);
+  };
+  const open = () => { host.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); search.value = ''; shown = all(); hl = Math.max(0, shown.findIndex(o => o.v === sel.value)); draw(); setTimeout(() => search.focus(), 0); };
+  const close = () => { host.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); };
+  const pick = o => { if(!o) return; sel.value = o.v; label(); close(); sel.dispatchEvent(new Event('change', { bubbles: true })); };
+  btn.addEventListener('click', () => host.classList.contains('open') ? close() : open());
+  search.addEventListener('input', () => { filter(); hl = 0; draw(); });
+  search.addEventListener('keydown', e => {
+    if(e.key === 'ArrowDown'){ e.preventDefault(); hl = Math.min(shown.length - 1, hl + 1); draw(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); hl = Math.max(0, hl - 1); draw(); }
+    else if(e.key === 'Enter'){ e.preventDefault(); pick(shown[hl]); }
+    else if(e.key === 'Escape'){ e.preventDefault(); close(); btn.focus(); }
+  });
+  box.addEventListener('click', e => { const it = e.target.closest('.cp-item'); if(it) pick(shown[+it.dataset.i]); });
+  document.addEventListener('click', e => { if(!host.contains(e.target)) close(); });
+  // keep the label right when code sets .value or refills the options
+  const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  Object.defineProperty(sel, 'value', { get(){ return d.get.call(this); }, set(v){ d.set.call(this, v); label(); }, configurable: true });
+  new MutationObserver(label).observe(sel, { childList: true });
+  label();
+  sel._cpApi = { refresh: label, open, close };
+  return sel._cpApi;
+}
+
+root.AureumCountries = { list, byCode, isAfrica: c => AFRICA.has(c), flagHtml, flagEmoji, symbolFor, currencyName, allCurrencies, allTimezones, tzLabel, setTimezone, getTimezone: () => TZ, mountPicker, enhanceSelect };
 })(typeof window !== 'undefined' ? window : globalThis);

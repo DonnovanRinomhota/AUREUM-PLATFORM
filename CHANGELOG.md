@@ -1,5 +1,13 @@
 # Changelog
 
+## Per-shop cost, searchable currency, product history, currency conversion
+- Cost typed on a Goods Received Note, Purchase Order or Stock Adjustment now changes the cost of that shop only (`shopCost`); other shops keep theirs. Product form has a per-shop Cost box; lists, valuation and reports use each shop's cost; the till records the shop's cost on each sale.
+- Fiscalisation screens no longer mention ZIMRA by default; wording is country-neutral.
+- Currency, secondary currency and time zone pickers are searchable.
+- Product form: only Find a picture online and Google Images remain (Bing / DuckDuckGo removed).
+- New Product history (top right of Products): permanent, non-deletable log of stock typed directly on a product, with date and product filters.
+- Changing currency with existing records asks whether to convert them; fetches a market rate (editable), logs the rate in Settings, and the rate can be changed later (re-converts only records that conversion touched).
+
 ## Country, per-shop pricing & accuracy pass
 - Sign-up asks for the country (flag + searchable list); sets default currency and time zone. Both can be changed in Settings; all currencies/time zones available.
 - Currency symbol now follows the chosen currency everywhere (was hard-coded `$` in ~60 places), including PDFs.

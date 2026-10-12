@@ -804,7 +804,7 @@
   .color-swatch.selected{ border-color: var(--gold-bright); }
 
   .shop-table{ width:100%; margin-top:10px; }
-  .shop-table-row{ display:grid; grid-template-columns: 24px 1fr 90px 90px; gap:10px; align-items:center; padding:8px 0; font-size:12.5px; color:var(--ivory-dim); }
+  .shop-table-row{ display:grid; grid-template-columns: 24px 1fr 80px 80px 80px; gap:10px; align-items:center; padding:8px 0; font-size:12.5px; color:var(--ivory-dim); }
   .shop-table-row input[type="checkbox"], .cb{ width:16px; height:16px; accent-color: var(--gold); }
   .show-toggle{ font-size:11.5px; color:var(--gold-bright); cursor:pointer; margin-top:8px; text-align:right; }
 
@@ -1366,6 +1366,7 @@
           <div class="btn-ghost-sm" id="productFixNamesBtn" title="Restore spaces in names that were saved with _ or - instead">Fix names</div>
           <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls,.xlsm,.txt,.tsv,text/csv" style="display:none;">
           <div class="icon-btn-sm" title="More">&#8942;</div>
+          <div class="btn-ghost-sm" id="productHistoryBtn" role="button" tabindex="0" style="margin-left:auto;" title="Every stock change made directly on a product">&#128339; Product history</div>
           <div class="icon-btn-row">
             <div class="icon-btn-sm" title="Search" id="productSearchIconBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
             <div class="icon-btn-sm" title="Refresh" id="productsRefreshBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v6h-6"/></svg></div>
@@ -1524,7 +1525,7 @@
             <label class="lbl" style="cursor:pointer;"><input type="checkbox" class="cb" id="pfAllShops" checked style="margin-right:8px;">The item is available for sale in all shops</label>
           </div>
           <div class="shop-table-row" style="font-size:10.5px;color:var(--sage);border-bottom:1px solid var(--line);padding-bottom:6px;">
-            <div></div><div>Shop</div><div>Price</div><div>Stock on hand</div>
+            <div></div><div>Shop</div><div>Price</div><div>Cost</div><div>Stock on hand</div>
           </div>
           <div class="shop-table" id="pfShopTable"></div>
           <div class="show-toggle" id="pfShopShowToggle">Show less</div>
@@ -1542,8 +1543,6 @@
           <div class="img-actions">
             <div class="btn-ghost-sm" id="pfFindImageBtn" role="button" tabindex="0">&#128269; Find a picture online</div>
             <div class="btn-ghost-sm" id="pfGoogleImgBtn" role="button" tabindex="0">Google Images &#8599;</div>
-            <div class="btn-ghost-sm" id="pfBingImgBtn" role="button" tabindex="0">Bing Images &#8599;</div>
-            <div class="btn-ghost-sm" id="pfDdgImgBtn" role="button" tabindex="0">DuckDuckGo &#8599;</div>
           </div>
           <div class="img-hint">Found a picture on any website? Right-click it → <b>Copy image</b>, then click here and press <b>Ctrl+V</b> — or drag it onto the box. Only use pictures you have the right to use.</div>
           <div class="img-credit" id="pfImageCredit"></div>
@@ -2607,6 +2606,7 @@
                   </div>
                 </div>
               </div>
+              <div id="stConvLog"></div>
             </div>
             <div class="settings-save-row">
               <div class="btn-gold" id="stSaveGeneral">Save changes</div>
@@ -2906,7 +2906,7 @@
           <div class="settings-panel" id="settings-fiscal">
             <div class="settings-panel-head">
               <div class="t">Fiscalisation</div>
-              <div class="s">Optional. Connect a physical fiscal device for ZIMRA fiscalisation, shop by shop. Shops that don't switch it on work exactly as before.</div>
+              <div class="s">Optional. Connect a fiscal device for your country's tax authority, shop by shop. Shops that don't switch it on work exactly as before.</div>
             </div>
             <div class="fx-banner warn" id="fxAdapterNote"></div>
             <div class="fx-banner" id="fxDbNote" hidden></div>
@@ -3155,6 +3155,7 @@ const AureumSync = (function(){
     shiftClosures:    { key: byUid('SC:'), newFirst: true, fix: dedupeClosures },
     openShifts:       { key: byUid('OS:'), newFirst: true, fix: dedupeOpenShifts },
     posDevices:       { key: byUid('D:') },
+    productHistory:   { key: byUid('PH:'), newFirst: true },
   };
   // Numbers that are COUNTERS (changed by deltas from several devices at once),
   // so concurrent changes add up instead of one overwriting the other.
@@ -4029,10 +4030,36 @@ const AureumSync = (function(){
     return SHOPS.reduce((t, sh) => t + (productInShop(p, sh) ? Math.max(0, getStock(p, sh)) * priceAt(p, sh) : 0), 0);
   }
   /* Cost typed on a Goods Received Note, Purchase Order or Stock Adjustment becomes the product's cost (per single item). */
-  function syncCostFromLine(p, row){
+  function syncCostFromLine(p, row, shop){
     if(!p || !row || !row.costEdited) return;
     const per = Math.round(((Number(row.unitCost) || 0) / unitSizeOf(row)) * 10000) / 10000;
-    if(per >= 0 && Math.abs(per - (Number(p.cost) || 0)) > 0.00001) p.cost = Math.round(per * 100) / 100;
+    if(!(per >= 0)) return;
+    const per2 = Math.round(per * 100) / 100;
+    if(shop && shop !== 'All Shops'){
+      // a cost typed on a document belongs to THAT shop only; other shops keep theirs
+      if(Math.abs(per2 - (Number(p.cost) || 0)) < 0.00001){ if(p.shopCost) delete p.shopCost[shop]; }
+      else { p.shopCost = p.shopCost || {}; p.shopCost[shop] = per2; }
+    } else if(Math.abs(per - (Number(p.cost) || 0)) > 0.00001) p.cost = per2;
+  }
+  /* cost of a product at one shop: its own cost if it has one, otherwise the regular cost */
+  function costAt(p, shop){
+    if(!p) return 0;
+    const c = (shop && shop !== 'All Shops' && p.shopCost) ? p.shopCost[shop] : undefined;
+    return (typeof c === 'number' && isFinite(c) && c >= 0) ? c : (Number(p.cost) || 0);
+  }
+  function costLabel(p, shop){
+    if(shop && shop !== 'All Shops') return costAt(p, shop).toFixed(2);
+    const live = (typeof productLiveShops === 'function') ? productLiveShops(p) : [];
+    const all = [Number(p.cost) || 0, ...live.map(sh => costAt(p, sh))];
+    const lo = Math.min(...all), hi = Math.max(...all);
+    return lo === hi ? lo.toFixed(2) : lo.toFixed(2) + ' – ' + hi.toFixed(2);
+  }
+  /* value of the stock on hand at cost, using each shop's own cost */
+  function costValueOf(p, shop){
+    if(p.stockControl === false) return 0;
+    if(shop && shop !== 'All Shops') return Math.max(0, getStock(p, shop)) * costAt(p, shop);
+    if(!p.shopCost || !Object.keys(p.shopCost).length) return Math.max(0, getStock(p, 'All Shops')) * (Number(p.cost) || 0);
+    return SHOPS.reduce((t, sh) => t + (productInShop(p, sh) ? Math.max(0, getStock(p, sh)) * costAt(p, sh) : 0), 0);
   }
   function linePrice(it, p){ return (it && it.price != null && !isNaN(it.price)) ? Number(it.price) : (p ? (Number(p.price) || 0) : 0); }
   function lineCost(it, p){ return (it && it.cost != null && !isNaN(it.cost)) ? Number(it.cost) : (p ? (Number(p.cost) || 0) : 0); }
@@ -4668,7 +4695,7 @@ const AureumSync = (function(){
         <td class="mono" data-col="code">${p.code || '—'}</td>
         <td data-col="category">${p.cat || 'Uncategorized'}</td>
         <td class="gold" data-col="price" style="text-align:right;">${priceLabel(p, shopFilter)}</td>
-        <td class="mono" data-col="cost" style="text-align:right;">${p.cost.toFixed(2)}</td>
+        <td class="mono" data-col="cost" style="text-align:right;">${costLabel(p, shopFilter)}</td>
         <td class="mono" data-col="stock" style="text-align:right;">${p.stockControl===false ? '—' : fmtStockVal(getStock(p, shopFilter))}</td>
         <td data-col="shops" style="text-align:right;">${productShopLabel(p)}</td>
         <td onclick="event.stopPropagation()">
@@ -4805,6 +4832,7 @@ const AureumSync = (function(){
         <input type="checkbox" class="cb pf-shop-cb" value="${s}" ${checked?'checked':''}>
         <div>${s}</div>
         <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-price" data-shop="${s}" value="${(p && p.shopPrice && typeof p.shopPrice[s] === 'number') ? p.shopPrice[s] : ''}" placeholder="Same as regular" aria-label="Price at ${s}" style="padding:6px 8px;font-size:12px;">
+        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-cost" data-shop="${s}" value="${(p && p.shopCost && typeof p.shopCost[s] === 'number') ? p.shopCost[s] : ''}" placeholder="Same as regular" aria-label="Cost at ${s}" style="padding:6px 8px;font-size:12px;">
         <input type="number" min="0" step="any" class="modal-field pf-shop-stock" data-shop="${s}" value="${stockVal}" placeholder="0" style="padding:6px 8px;font-size:12px;">
       </div>`;
     }).join('');
@@ -4958,7 +4986,7 @@ const AureumSync = (function(){
      reuse and its credit is saved with the picture. "Show more" pages through every source, and a simpler wording of the name
      (without sizes like 500ml) is tried when the first finds little.
      BROUGHT IN FROM ANYWHERE: paste a picture's web address, paste a copied picture (Ctrl+V), drag a picture onto the box,
-     or use the Google / Bing / DuckDuckGo shortcuts. Pictures on ordinary websites are usually copyrighted, so the owner is
+     or use the Google Images shortcut. Pictures on ordinary websites are usually copyrighted, so the owner is
      reminded to use only what they may use. Only the product name (and barcode) is sent, only when Search is pressed. */
   const imgfEnc = encodeURIComponent;
   async function imgfJson(url, ms, headers){
@@ -5155,7 +5183,7 @@ const AureumSync = (function(){
     chipsEl.querySelectorAll('.imgf-chip').forEach(c => c.addEventListener('click', () => { imgf.filter = c.dataset.f; imgfRenderResults(); }));
     const none = !imgf.results.length;
     status.className = 'imgf-status' + (none ? ' warn' : '');
-    status.innerHTML = (none ? 'No free pictures found for that. Try the brand + product (for example “Coca-Cola 500ml”), or fewer words — or paste a picture\'s web address below, or use Google / Bing / DuckDuckGo from the product form.'
+    status.innerHTML = (none ? 'No free pictures found for that. Try the brand + product (for example “Coca-Cola 500ml”), or fewer words — or paste a picture\'s web address below, or use Google Images from the product form.'
       : `${imgf.results.length} picture${imgf.results.length === 1 ? '' : 's'} found — tap one to choose it.` + (imgf.lastMode === 'more' && !imgf.lastAdded ? ' No more were found.' : ''))
       + (imgf.notes.length ? `<div class="imgf-notes">${imgf.notes.map(n => escHtml(n)).join('<br>')}</div>` : '');
     const canMore = imgf.results.length && !(imgf.lastMode === 'more' && !imgf.lastAdded) && Math.max(0, ...Object.values(imgf.pages)) < 6;
@@ -5258,15 +5286,18 @@ const AureumSync = (function(){
   function imgfShortcut(kind){
     const name = document.getElementById('pfName').value.trim();
     if(!name){ document.getElementById('pfName').focus(); aureumToast('Type the product name first.', 'danger'); return; }
-    const url = { google: 'https://www.google.com/search?tbm=isch&tbs=sur:fmc&q=', bing: 'https://www.bing.com/images/search?q=', ddg: 'https://duckduckgo.com/?iax=images&ia=images&q=' }[kind] + imgfEnc(name);
+    const url = { google: 'https://www.google.com/search?tbm=isch&tbs=sur:fmc&q=' }[kind] + imgfEnc(name);
     window.open(url, '_blank', 'noopener,noreferrer');
     aureumToast('Found one? Right-click it → Copy image, then click the picture box here and press Ctrl+V (or drag it onto the box). Only use pictures you may use.', 'ok');
   }
   document.getElementById('pfGoogleImgBtn').addEventListener('click', () => imgfShortcut('google'));
-  document.getElementById('pfBingImgBtn').addEventListener('click', () => imgfShortcut('bing'));
-  document.getElementById('pfDdgImgBtn').addEventListener('click', () => imgfShortcut('ddg'));
-  document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#pfFindImageBtn, #pfGoogleImgBtn, #pfBingImgBtn, #pfDdgImgBtn, #imgfSearch, #imgfUse, #imgfOpenverse, #imgfMoreBtn, #imgfUrlBtn, #imgfKeysSave, #imgfProxy')){ e.preventDefault(); e.target.click(); } });
+  document.addEventListener('keydown', e => { if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#pfFindImageBtn, #pfGoogleImgBtn, #imgfSearch, #imgfUse, #imgfOpenverse, #imgfMoreBtn, #imgfUrlBtn, #imgfKeysSave, #imgfProxy')){ e.preventDefault(); e.target.click(); } });
 
+  /* changing the shop on a document re-prices its untouched lines with THAT shop's cost */
+  [['poShop', () => poLineItems, () => renderPOLines()], ['grnShop', () => grnLineItems, () => renderGRNLines()], ['saShop', () => saLineItems, () => renderSALines()]].forEach(([id, get, redraw]) => {
+    const el = document.getElementById(id); if(!el) return;
+    el.addEventListener('change', () => { get().forEach(r => { const pp = PRODUCTS.find(x=>x.id===r.productId); if(pp && !r.costEdited) r.unitCost = Math.round(costAt(pp, el.value) * unitSizeOf(r) * 100) / 100; }); try{ redraw(); }catch(e){} });
+  });
   document.getElementById('addProductBtn').addEventListener('click', ()=> openProductForm(null));
   document.getElementById('productBackLink').addEventListener('click', switchToProductList);
   document.getElementById('productCancelBtn').addEventListener('click', switchToProductList);
@@ -5333,6 +5364,13 @@ const AureumSync = (function(){
       if(isNaN(v) || v < 0){ badShopPrice = inp.dataset.shop; return; }
       shopPrice[inp.dataset.shop] = Math.round(v * 100) / 100;
     });
+    const shopCost = {};
+    document.querySelectorAll('.pf-shop-cost').forEach(inp=>{
+      if(inp.value.trim() === '') return;
+      const v = parseFloat(inp.value);
+      if(isNaN(v) || v < 0){ badShopPrice = badShopPrice || inp.dataset.shop; return; }
+      shopCost[inp.dataset.shop] = Math.round(v * 100) / 100;
+    });
     if(badShopPrice){ alert('The price for ' + badShopPrice + ' must be a number of 0 or more (or leave it empty to use the regular price).'); return; }
     const shopStockSum = Object.values(shopStock).reduce((s,v)=>s+v,0);
     // Legacy products edited before ever touching the per-shop stock inputs
@@ -5358,6 +5396,7 @@ const AureumSync = (function(){
     // stock is only kept for shops the product is sold in
     Object.keys(shopStock).forEach(k=>{ if(!shops.includes(k)) delete shopStock[k]; });
     Object.keys(shopPrice).forEach(k=>{ if(!shops.includes(k)) delete shopPrice[k]; });
+    Object.keys(shopCost).forEach(k=>{ if(!shops.includes(k) || shopCost[k] === (isNaN(cost) ? 0 : Math.round(cost*100)/100)) delete shopCost[k]; });
     // shop prices equal to the regular price are not stored (so changing the regular price later moves those shops too)
     Object.keys(shopPrice).forEach(k=>{ if(shopPrice[k] === (isNaN(price) ? 0 : Math.round(price*100)/100)) delete shopPrice[k]; });
     if(stockControl && usePerShop) stock = Object.values(shopStock).reduce((a,v)=>a+v,0);
@@ -5382,14 +5421,19 @@ const AureumSync = (function(){
       taxable: document.getElementById('pfTaxableToggle').classList.contains('on'),
       barcode: document.getElementById('pfBarcode').value.trim(),
       description: document.getElementById('pfDescription').value.trim(),
-      stockControl, shops, lowStockThreshold, safetyStock, shopPrice,
+      stockControl, shops, lowStockThreshold, safetyStock, shopPrice, shopCost, cv: undefined,
       shopStock: stockControl && usePerShop ? shopStock : (existing ? existing.shopStock : undefined)
     };
+    const stockBefore = stockSnapshot(existing);
+    let savedProduct;
     if(editingProductId){
-      Object.assign(PRODUCTS.find(p=>p.id===editingProductId), data);
+      savedProduct = PRODUCTS.find(p=>p.id===editingProductId);
+      Object.assign(savedProduct, data);
     } else {
-      PRODUCTS.push({ id: nextProductId++, ...data });
+      savedProduct = { id: nextProductId++, ...data };
+      PRODUCTS.push(savedProduct);
     }
+    logProductStockChanges(savedProduct, stockBefore, existing ? 'Edited on the product' : 'Product created');
     renderCategoryFilter();
     renderCategoryDatalist();
     renderProducts();
@@ -5399,6 +5443,50 @@ const AureumSync = (function(){
     persistAureum();
   });
 
+  /* ===== PRODUCT HISTORY — every stock figure typed directly on a product; entries can never be deleted ===== */
+  function stockSnapshot(p){
+    const o = {};
+    if(!p || p.stockControl === false) return o;
+    SHOPS.forEach(sh => { o[sh] = Number(getStock(p, sh)) || 0; });
+    return o;
+  }
+  function logProductStockChanges(p, before, reason){
+    if(!p || p.stockControl === false) return;
+    const after = stockSnapshot(p), at = new Date().toISOString(), by = whoCreated() || 'Back Office';
+    SHOPS.forEach(sh => {
+      const b = Number(before[sh]) || 0, a = Number(after[sh]) || 0;
+      if(Math.abs(a - b) < 0.0005) return;
+      PRODUCT_HISTORY.unshift({ uid: AureumSync.uid(), at, productId: p.id, name: p.name, shop: sh, before: b, after: a, change: Math.round((a - b) * 1000) / 1000, by, reason });
+    });
+  }
+  function openProductHistory(){
+    const render = () => {
+      const from = document.getElementById('phFrom').value, to = document.getElementById('phTo').value, q = document.getElementById('phSearch').value.trim().toLowerCase();
+      let rows = PRODUCT_HISTORY.slice().sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      if(from) rows = rows.filter(h => { const d = new Date(h.at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` >= from; });
+      if(to) rows = rows.filter(h => { const d = new Date(h.at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` <= to; });
+      if(q) rows = rows.filter(h => String(h.name || '').toLowerCase().includes(q));
+      const shown = rows.slice(0, 500), fmtQ = n => (Math.round(n * 1000) / 1000).toString();
+      document.getElementById('phBody').innerHTML = shown.length ? shown.map(h => `<tr>
+        <td class="mono" style="white-space:nowrap;">${escHtml(new Date(h.at).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }))}</td>
+        <td>${escHtml(h.name || '—')}<div style="font-size:11px;color:var(--sage);">${escHtml(h.shop || '')}${h.reason ? ' · ' + escHtml(h.reason) : ''}${h.by ? ' · ' + escHtml(h.by) : ''}</div></td>
+        <td class="mono" style="text-align:right;white-space:nowrap;color:${h.change < 0 ? 'var(--danger)' : 'var(--gold-bright)'};"><b>${h.change > 0 ? '+' : ''}${fmtQ(h.change)}</b><div style="font-size:11px;color:var(--sage);">${fmtQ(h.before)} → ${fmtQ(h.after)}</div></td></tr>`).join('')
+        : '<tr><td colspan="3" style="text-align:center;padding:30px;color:var(--sage);">No stock changes recorded for this filter.</td></tr>';
+      document.getElementById('phNote').textContent = rows.length > shown.length ? `Showing the latest ${shown.length} of ${rows.length}. Narrow the dates to see older ones.` : `${rows.length} change${rows.length === 1 ? '' : 's'}.`;
+    };
+    openDetailModal('Product history', `<div style="font-size:12px;color:var(--sage);margin-bottom:10px;">Every time stock was typed directly on a product. This log is permanent — entries cannot be edited or deleted.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+        <label style="font-size:12px;">From <input type="date" class="modal-field" id="phFrom" style="width:auto;display:inline-block;"></label>
+        <label style="font-size:12px;">To <input type="date" class="modal-field" id="phTo" style="width:auto;display:inline-block;"></label>
+        <input type="search" class="modal-field" id="phSearch" placeholder="Search product…" style="flex:1;min-width:140px;">
+      </div>
+      <div style="max-height:52vh;overflow:auto;"><table class="detail-table" style="width:100%;"><thead><tr><th>Date &amp; time</th><th>Product</th><th style="text-align:right;">Adjustment</th></tr></thead><tbody id="phBody"></tbody></table></div>
+      <div id="phNote" style="font-size:11.5px;color:var(--sage);margin-top:8px;"></div>`);
+    ['phFrom','phTo'].forEach(id => document.getElementById(id).addEventListener('change', render));
+    document.getElementById('phSearch').addEventListener('input', render);
+    render();
+  }
+  document.getElementById('productHistoryBtn').addEventListener('click', openProductHistory);
   document.getElementById('productSearch').addEventListener('input', renderProducts);
   document.getElementById('productCatFilter').addEventListener('change', function(){
     productCatFilterValue = this.value;
@@ -5483,7 +5571,7 @@ const AureumSync = (function(){
     }
     const discounts = 0;
     const net = gross - refunds - discounts;
-    const cost = qty * p.cost;
+    const cost = qty * costAt(p, viewingShop);
     const profit = net - cost;
     const margin = net > 0 ? (profit / net * 100) : 0;
     return { qty, gross, refunds, discounts, net, cost, profit, margin };
@@ -6111,7 +6199,7 @@ const AureumSync = (function(){
     wireUnitCells('poLineBody', poLineItems, 'qty', (i, r) => {
       if(poLineItems.indexOf(r) < 0) return;
       const pp = PRODUCTS.find(x=>x.id===r.productId);
-      if(pp && !r.costEdited) r.unitCost = Math.round((Number(pp.cost)||0) * unitSizeOf(r) * 100) / 100;
+      if(pp && !r.costEdited) r.unitCost = Math.round(costAt(pp, document.getElementById('poShop').value) * unitSizeOf(r) * 100) / 100;
       renderPOLines();
     });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){ poLineItems.splice(this.dataset.idx,1); renderPOLines(); }));
@@ -6129,7 +6217,7 @@ const AureumSync = (function(){
   function addPOProduct(match){
     let idx = poLineItems.findIndex(r=>r.productId===match.id);
     if(idx === -1){
-      poLineItems.push({ productId: match.id, qty: 1, unitCost: match.cost });
+      poLineItems.push({ productId: match.id, qty: 1, unitCost: costAt(match, document.getElementById('poShop').value) });
       idx = poLineItems.length - 1;
     }
     renderPOLines();
@@ -6178,7 +6266,7 @@ const AureumSync = (function(){
     if(validLines.length < withProduct.length){ alert(`${withProduct.length - validLines.length} line item(s) with a quantity of 0 were skipped.`); }
     const validCosts = poCostItems.filter(c=> c.name && c.name.trim() && (c.amount||0) > 0);
     const total = validLines.reduce((s,r)=>s+((r.qty*r.unitCost)||0),0) + validCosts.reduce((s,c)=>s+c.amount,0);
-    validLines.forEach(r => syncCostFromLine(PRODUCTS.find(x=>x.id===r.productId), r));
+    validLines.forEach(r => syncCostFromLine(PRODUCTS.find(x=>x.id===r.productId), r, document.getElementById('poShop').value));
     const data = {
       date: document.getElementById('poDate').value || todayStr(),
       expected: document.getElementById('poExpected').value || todayStr(),
@@ -6377,7 +6465,7 @@ const AureumSync = (function(){
     wireUnitCells('grnLineBody', grnLineItems, 'qty', (i, r) => {
       if(grnLineItems.indexOf(r) < 0) return;
       const pp = PRODUCTS.find(x=>x.id===r.productId);
-      if(pp && !r.costEdited) r.unitCost = Math.round((Number(pp.cost)||0) * unitSizeOf(r) * 100) / 100;
+      if(pp && !r.costEdited) r.unitCost = Math.round(costAt(pp, document.getElementById('grnShop').value) * unitSizeOf(r) * 100) / 100;
       renderGRNLines();
     });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){ grnLineItems.splice(this.dataset.idx,1); renderGRNLines(); }));
@@ -6395,7 +6483,7 @@ const AureumSync = (function(){
   function addGRNProduct(match){
     let idx = grnLineItems.findIndex(r=>r.productId===match.id);
     if(idx === -1){
-      grnLineItems.push({ productId: match.id, qty: 1, unitCost: match.cost, expiry: '' });
+      grnLineItems.push({ productId: match.id, qty: 1, unitCost: costAt(match, document.getElementById('grnShop').value), expiry: '' });
       idx = grnLineItems.length - 1;
     }
     renderGRNLines();
@@ -6475,7 +6563,7 @@ const AureumSync = (function(){
       row.totalQty = unitTotalQty(row);
       row.price = p ? priceAt(p, grnShopVal) : 0;
       if(p) addStock(p, grnShopVal, row.totalQty);
-      syncCostFromLine(p, row);
+      syncCostFromLine(p, row, grnShopVal);
     });
     GRN_RECORDS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(),
@@ -6700,7 +6788,7 @@ const AureumSync = (function(){
     wireUnitCells('saLineBody', saLineItems, 'counted', (i, r) => {
       if(saLineItems.indexOf(r) < 0) return;
       const pp = PRODUCTS.find(x=>x.id===r.productId);
-      if(pp && !r.costEdited) r.unitCost = Math.round((Number(pp.cost)||0) * unitSizeOf(r) * 100) / 100;
+      if(pp && !r.costEdited) r.unitCost = Math.round(costAt(pp, document.getElementById('saShop').value) * unitSizeOf(r) * 100) / 100;
       renderSALines();
     });
     tbody.querySelectorAll('.line-rm').forEach(el=> el.addEventListener('click', function(){ saLineItems.splice(this.dataset.idx,1); renderSALines(); }));
@@ -6738,7 +6826,7 @@ const AureumSync = (function(){
       // Override starts from the current count (the user edits it to the
       // true counted number); Add/Reduce start at 0 since they're deltas.
       const startCounted = type === 'Override' ? getStock(match, document.getElementById('saShop').value) : 0;
-      saLineItems.push({ productId: match.id, counted: startCounted, unitCost: match.cost });
+      saLineItems.push({ productId: match.id, counted: startCounted, unitCost: costAt(match, document.getElementById('saShop').value) });
       idx = saLineItems.length - 1;
     }
     renderSALines();
@@ -6776,7 +6864,7 @@ const AureumSync = (function(){
       const beforeStock = p ? getStock(p, saShopVal) : 0;
       if(p && p.soldBy === 'weight') row.unitSize = 1;
       const size = unitSizeOf(row), eff = Math.round((row.counted || 0) * size * 1000) / 1000;
-      syncCostFromLine(p, row);
+      syncCostFromLine(p, row, saShopVal);
       if(p){
         // Add/Reduce apply the entered quantity as a delta on top of
         // whatever the current stock is; Override replaces it outright.
@@ -7690,7 +7778,7 @@ const AureumSync = (function(){
         <td>${p.cat || 'Uncategorized'}</td>
         <td>${productShopLabel(p)}</td>
         <td class="mono" style="text-align:right;">${p.stockControl===false ? '—' : getStock(p, shopFilter)}</td>
-        <td class="mono" style="text-align:right;">${curSym()}${p.cost.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${costLabel(p, shopFilter)}</td>
         <td class="gold" style="text-align:right;">${curSym()}${priceLabel(p, shopFilter)}</td>
       </tr>`).join('');
     renderPaginationControls('repInventoryPagination', items.length, repInvPage, renderReportInventory);
@@ -7704,7 +7792,7 @@ const AureumSync = (function(){
       // value only stock that physically exists — oversold (negative) units aren't an asset
       // and must not drag down the value of everything else; the true count still shows
       const valued = Math.max(0, stock);
-      const costVal = valued * p.cost, retailVal = retailValueOf(p, shopCtx);
+      const costVal = costValueOf(p, shopCtx), retailVal = retailValueOf(p, shopCtx);
       totCostVal += costVal; totRetailVal += retailVal;
       return { p, stock, costVal, retailVal };
     });
@@ -7717,7 +7805,7 @@ const AureumSync = (function(){
       <tr>
         <td>${r.p.name}</td><td>${r.p.cat || 'Uncategorized'}</td>
         <td class="mono" style="text-align:right;">${r.stock}</td>
-        <td class="mono" style="text-align:right;">${curSym()}${r.p.cost.toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${curSym()}${costLabel(r.p, shopCtx)}</td>
         <td class="mono" style="text-align:right;">${curSym()}${r.costVal.toFixed(2)}</td>
         <td class="mono" style="text-align:right;">${curSym()}${priceLabel(r.p, shopCtx)}</td>
         <td class="gold" style="text-align:right;">${curSym()}${r.retailVal.toFixed(2)}</td>
@@ -7730,7 +7818,7 @@ const AureumSync = (function(){
     const cats = getProductCategories();
     const totalSKUs = PRODUCTS.length;
     const totalUnits = PRODUCTS.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
-    const totalCostVal = PRODUCTS.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx)) * p.cost), 0);
+    const totalCostVal = PRODUCTS.reduce((s,p)=> s + costValueOf(p, shopCtx), 0);
     const lowStockCount = PRODUCTS.filter(p=> p.stockControl!==false && getStock(p, shopCtx) <= 15).length;
     document.getElementById('repSumKpiRow').innerHTML = `
       <div class="kpi-card"><div class="lbl"><span>Total SKUs</span></div><div class="val">${totalSKUs}</div></div>
@@ -7742,7 +7830,7 @@ const AureumSync = (function(){
       const inCat = PRODUCTS.filter(p=>p.cat===cat);
       const skus = inCat.length;
       const units = inCat.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
-      const costVal = inCat.reduce((s,p)=> s + ((p.stockControl===false?0:getStock(p, shopCtx))*p.cost), 0);
+      const costVal = inCat.reduce((s,p)=> s + costValueOf(p, shopCtx), 0);
       const retailVal = inCat.reduce((s,p)=> s + retailValueOf(p, shopCtx), 0);
       return `<tr><td>${cat}</td><td class="mono" style="text-align:right;">${skus}</td><td class="mono" style="text-align:right;">${units}</td><td class="mono" style="text-align:right;">${curSym()}${costVal.toFixed(2)}</td><td class="gold" style="text-align:right;">${curSym()}${retailVal.toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--sage);">No categories yet.</td></tr>`;
@@ -7776,8 +7864,8 @@ const AureumSync = (function(){
     tbody.innerHTML = paginateSlice(rows, repLowPage).map(r => `
       <tr><td>${r.p.name}</td><td>${r.p.cat || 'Uncategorized'}</td><td>${r.shop}</td>
         <td class="mono" style="text-align:right; color:var(--danger); ${r.neg ? 'font-weight:700;' : ''}">${r.qty}</td>
-        <td class="mono" style="text-align:right;">${curSym()}${r.p.cost.toFixed(2)}</td>
-        <td class="mono" style="text-align:right;">${r.neg ? '—' : curSym() + (r.p.cost * 20).toFixed(2)}</td></tr>`).join('');
+        <td class="mono" style="text-align:right;">${curSym()}${costAt(r.p, r.shop).toFixed(2)}</td>
+        <td class="mono" style="text-align:right;">${r.neg ? '—' : curSym() + (costAt(r.p, r.shop) * 20).toFixed(2)}</td></tr>`).join('');
     renderPaginationControls('repLowStockPagination', rows.length, repLowPage, renderReportLowStock);
   }
 
@@ -7944,7 +8032,7 @@ const AureumSync = (function(){
       Object.keys(p.shopPrice || {}).forEach(sh => {
         const sp = p.shopPrice[sh];
         if(!SHOPS.includes(sh)) add('Low', 'Product: ' + p.name, 'Has a price for "' + sh + '", a shop that no longer exists.', 'Open the product and save it to clear it.');
-        else if(cost > 0 && sp < cost) add('High', 'Product: ' + p.name + ' @ ' + sh, 'Price at ' + sh + ' (' + sp.toFixed(2) + ') is below the cost (' + cost.toFixed(2) + ').', 'Raise the price at that shop.');
+        else if(costAt(p, sh) > 0 && sp < costAt(p, sh)) add('High', 'Product: ' + p.name + ' @ ' + sh, 'Price at ' + sh + ' (' + sp.toFixed(2) + ') is below the cost (' + costAt(p, sh).toFixed(2) + ').', 'Raise the price at that shop.');
       });
       if(p.stockControl !== false){
         ensureShopStock(p);
@@ -7958,15 +8046,16 @@ const AureumSync = (function(){
         if(p.soldBy !== 'weight' && Object.values(p.shopStock).some(v => Number(v) % 1 !== 0)) add('Medium', 'Stock: ' + p.name, 'Has a part-unit quantity but is sold by "each".', 'Use a Stock Adjustment (Override) with a whole number.');
       }
     });
+    const nearCv = (a, b, cv) => cv ? Math.abs(a - b) <= Math.max(0.05, Math.abs(b) * 0.01) : near(a, b);   // converted records carry small rounding differences
     const lineSum = d => (d.items || []).reduce((t, it) => t + (Number(it.qty) || 0) * (Number(it.unitCost) || 0), 0) + (d.costs || []).reduce((t, c) => t + (Number(c.amount) || 0), 0);
-    GRN_RECORDS.forEach(g => { if(g.items && g.items.length && !near(lineSum(g), Number(g.total) || 0)) add('High', 'Goods Received ' + g.id, 'The total (' + r2(g.total).toFixed(2) + ') does not match the lines (' + r2(lineSum(g)).toFixed(2) + ').', 'Open the note and check each line.'); });
-    PURCHASE_ORDERS.forEach(o => { if(o.items && o.items.length && !near(lineSum(o), Number(o.total) || 0)) add('High', 'Purchase Order ' + o.id, 'The total (' + r2(o.total).toFixed(2) + ') does not match the lines (' + r2(lineSum(o)).toFixed(2) + ').', 'Open the order and check each line.'); });
+    GRN_RECORDS.forEach(g => { if(g.items && g.items.length && !nearCv(lineSum(g), Number(g.total) || 0, g.cv)) add('High', 'Goods Received ' + g.id, 'The total (' + r2(g.total).toFixed(2) + ') does not match the lines (' + r2(lineSum(g)).toFixed(2) + ').', 'Open the note and check each line.'); });
+    PURCHASE_ORDERS.forEach(o => { if(o.items && o.items.length && !nearCv(lineSum(o), Number(o.total) || 0, o.cv)) add('High', 'Purchase Order ' + o.id, 'The total (' + r2(o.total).toFixed(2) + ') does not match the lines (' + r2(lineSum(o)).toFixed(2) + ').', 'Open the order and check each line.'); });
     let badRcp = 0;
     RECEIPTS.forEach(r => {
       if(r.refund || !Array.isArray(r.items) || typeof r.subtotal !== 'number') return;
       const items = r.items.reduce((t, i) => t + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
       const expect = r.taxInclusive ? r.subtotal - (r.discountAmount || 0) : r.subtotal - (r.discountAmount || 0) + (r.tax || 0);
-      if(!near(items, r.subtotal) || !near(expect, Number(r.total) || 0)){ if(badRcp++ < 25) add('High', 'Receipt ' + r.id, 'The receipt does not add up (lines ' + r2(items).toFixed(2) + ', subtotal ' + r2(r.subtotal).toFixed(2) + ', total ' + r2(r.total).toFixed(2) + ').', 'Open the receipt and compare with the till.'); }
+      if(!nearCv(items, r.subtotal, r.cv) || !nearCv(expect, Number(r.total) || 0, r.cv)){ if(badRcp++ < 25) add('High', 'Receipt ' + r.id, 'The receipt does not add up (lines ' + r2(items).toFixed(2) + ', subtotal ' + r2(r.subtotal).toFixed(2) + ', total ' + r2(r.total).toFixed(2) + ').', 'Open the receipt and compare with the till.'); }
     });
     if(badRcp > 25) add('High', 'Receipts', (badRcp - 25) + ' more receipts do not add up.', 'Filter Receipts by date and check them.');
     (OPEN_SHIFTS || []).forEach(sh => { const t = Date.parse(sh.openedAt || sh.start || sh.dateTime || ''); if(t && Date.now() - t > 36 * 3600 * 1000) add('Medium', 'Shift ' + (sh.id || ''), 'A shift has been open for more than 36 hours.', 'Close it from Reports → Shifts so cash is reconciled.'); });
@@ -8291,6 +8380,7 @@ const AureumSync = (function(){
         prod.shopStock = ss;
       }
       PRODUCTS.push(prod); added++;
+      logProductStockChanges(prod, {}, 'Imported');
     });
     ensureProductCodes();
     persistAureum();
@@ -8590,6 +8680,111 @@ const AureumSync = (function(){
     });
   }
 
+  /* ===== CURRENCY CHANGE: convert existing figures at a market rate you can see and change ===== */
+  const CV_MONEY = new Set(['price','cost','unitCost','listPrice','total','subtotal','discountAmount','tax','tendered','change','amount','openingFloat','countedCash','variance','expectedCash','cashSales','cardSales','mobileSales','otherSales','grossSales','refunds','cashRefunds','netSales','discounts','sales','spent']);
+  const CV_PRECISE = new Set(['cost','unitCost']);
+  const CV_TREES = () => ({ products:PRODUCTS, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, customers:CUSTOMERS });
+  function cvScale(node, f){
+    if(Array.isArray(node)){ node.forEach(x => cvScale(x, f)); return; }
+    if(!node || typeof node !== 'object') return;
+    Object.keys(node).forEach(k => {
+      const v = node[k];
+      if(typeof v === 'number' && CV_MONEY.has(k)){ const d = CV_PRECISE.has(k) ? 10000 : 100; node[k] = Math.round(v * f * d) / d; }
+      else if((k === 'shopPrice' || k === 'shopCost') && v && typeof v === 'object'){ Object.keys(v).forEach(sh => { if(typeof v[sh] === 'number') v[sh] = Math.round(v[sh] * f * 100) / 100; }); }
+      else if(v && typeof v === 'object') cvScale(v, f);
+    });
+  }
+  function hasMoneyHistory(){
+    const t = CV_TREES();
+    return ['receipts','purchaseOrders','grnRecords','stockAdjustments','transfers','expenses','shiftClosures'].some(k => t[k].length) || PRODUCTS.some(p => Number(p.price) || Number(p.cost));
+  }
+  /* factor = new units per 1 old unit. only: a conversion id => rescale just the records that conversion tagged. */
+  function cvApply(factor, convId, only){
+    const t = CV_TREES(); let n = 0;
+    Object.keys(t).forEach(k => t[k].forEach(rec => {
+      if(!rec || typeof rec !== 'object') return;
+      if(only && rec.cv !== only) return;
+      if(!only && k === 'openShifts' && false) return;
+      cvScale(rec, factor); rec.cv = convId; n++;
+    }));
+    return n;
+  }
+  async function fetchFxRate(from, to){
+    const tries = [
+      ['https://open.er-api.com/v6/latest/' + encodeURIComponent(from), j => j && j.rates && j.rates[to], 'open.er-api.com (market rates)'],
+      ['https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/' + from.toLowerCase() + '.json', j => j && j[from.toLowerCase()] && j[from.toLowerCase()][to.toLowerCase()], 'currency-api (market rates)']
+    ];
+    for(const [url, pick, src] of tries){
+      try{
+        const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 7000);
+        const r = await fetch(url, { signal: ac.signal }); clearTimeout(tm);
+        if(!r.ok) continue;
+        const rate = Number(pick(await r.json()));
+        if(rate > 0 && isFinite(rate)) return { rate, source: src };
+      }catch(e){}
+    }
+    return null;
+  }
+  function renderConversionLog(){
+    const el = document.getElementById('stConvLog'); if(!el) return;
+    const log = POS_SETTINGS.currencyConversions || [];
+    if(!log.length){ el.innerHTML = ''; return; }
+    const last = log[log.length - 1], fmt = d => new Date(d).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    el.innerHTML = `<div class="field-label" style="margin-top:14px;">Currency conversion</div>
+      <div style="font-size:12.5px;color:var(--ivory-dim);line-height:1.7;">
+        ${log.map(c => `<div>${escHtml(fmt(c.at))} — ${escHtml(c.from)} → ${escHtml(c.to)} at <b>1 ${escHtml(c.from)} = ${escHtml(String(c.rate))} ${escHtml(c.to)}</b> <span style="color:var(--sage)">(${escHtml(c.source || 'entered by hand')}${c.by ? ', by ' + escHtml(c.by) : ''})</span></div>`).join('')}
+      </div>
+      <div class="btn-ghost-sm" id="stConvChange" role="button" tabindex="0" style="margin-top:8px;display:inline-block;">Change the rate used for ${escHtml(last.from)} → ${escHtml(last.to)}</div>
+      <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">Sales, stock documents and expenses recorded before the change were converted with this rate. Changing it re-converts only those older records.</div>`;
+    document.getElementById('stConvChange').addEventListener('click', () => cvChangeRateDialog());
+  }
+  function cvChangeRateDialog(){
+    const log = POS_SETTINGS.currencyConversions || [], last = log[log.length - 1]; if(!last) return;
+    openDetailModal('Change the conversion rate', `<div style="font-size:13px;line-height:1.6;">Records converted from <b>${escHtml(last.from)}</b> to <b>${escHtml(last.to)}</b> used <b>1 ${escHtml(last.from)} = ${escHtml(String(last.rate))} ${escHtml(last.to)}</b>.<br>Enter the rate that should have been used:
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">1 ${escHtml(last.from)} = <input class="modal-field" id="cvNewRate" type="number" min="0" step="any" value="${last.rate}" style="width:140px;"> ${escHtml(last.to)}</div>
+      <div id="cvNewErr" style="color:var(--danger);font-size:12px;margin-top:6px;"></div></div>`,
+      `<div class="modal-btn" data-close="detailModal">Cancel</div><div class="modal-btn solid" id="cvNewGo">Re-convert</div>`);
+    document.getElementById('cvNewGo').addEventListener('click', () => {
+      const nr = parseFloat(document.getElementById('cvNewRate').value);
+      if(!(nr > 0)){ document.getElementById('cvNewErr').textContent = 'Enter a rate above 0.'; return; }
+      if(nr !== last.rate){
+        cvApply(nr / last.rate, last.id, last.id);
+        last.previous = (last.previous || []).concat([last.rate]); last.rate = nr; last.source = 'entered by hand'; last.by = whoCreated();
+        persistAureum(); try{ renderAllData(); }catch(e){}
+      }
+      closeModal('detailModal'); renderConversionLog();
+    });
+  }
+  /* asks what to do with existing figures; calls done(true/false). done(null) = cancelled */
+  function cvAskDialog(from, to, done){
+    const t = CV_TREES();
+    const counts = [[RECEIPTS.length,'sales'],[GRN_RECORDS.length,'goods received notes'],[PURCHASE_ORDERS.length,'purchase orders'],[STOCK_ADJUSTMENTS.length,'stock adjustments'],[TRANSFERS.length,'transfers'],[EXPENSES.length,'expenses'],[PRODUCTS.length,'products']].filter(c => c[0]).map(c => c[0] + ' ' + c[1]).join(', ');
+    openDetailModal('You are changing currency', `<div style="font-size:13px;line-height:1.6;">Your records (${escHtml(counts || 'none yet')}) are in <b>${escHtml(from)}</b>. What should happen to them?
+      <label style="display:flex;gap:8px;margin-top:12px;cursor:pointer;"><input type="radio" name="cvMode" value="convert" checked> <span><b>Convert them to ${escHtml(to)}</b> using a market exchange rate (shown below — you can change it).</span></label>
+      <div style="margin:8px 0 0 24px;"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">1 ${escHtml(from)} = <input class="modal-field" id="cvRate" type="number" min="0" step="any" placeholder="…" style="width:140px;"> ${escHtml(to)}</div>
+        <div id="cvSrc" style="font-size:11px;color:var(--sage);margin-top:4px;">Looking up today's rate…</div></div>
+      <label style="display:flex;gap:8px;margin-top:12px;cursor:pointer;"><input type="radio" name="cvMode" value="keep"> <span><b>Keep the numbers as they are</b> and only change the symbol (use this if the figures were already in ${escHtml(to)}).</span></label>
+      <div id="cvErr" style="color:var(--danger);font-size:12px;margin-top:8px;"></div></div>`,
+      `<div class="modal-btn" id="cvCancel">Cancel</div><div class="modal-btn solid" id="cvGo">Change currency</div>`);
+    let src = '';
+    const rateEl = document.getElementById('cvRate');
+    fetchFxRate(from, to).then(r => {
+      if(!document.getElementById('cvSrc')) return;
+      if(r && !rateEl.value){ rateEl.value = Math.round(r.rate * 1e6) / 1e6; src = r.source; document.getElementById('cvSrc').textContent = 'Market rate from ' + r.source + ' — check it, and change it if you use a different rate.'; }
+      else if(!r) document.getElementById('cvSrc').textContent = "Couldn't look up a rate (offline?). Type the rate you want to use.";
+    });
+    rateEl.addEventListener('input', () => { src = 'entered by hand'; document.getElementById('cvSrc').textContent = 'Rate entered by hand.'; });
+    document.getElementById('cvCancel').addEventListener('click', () => { closeModal('detailModal'); done(null); });
+    document.getElementById('cvGo').addEventListener('click', () => {
+      const mode = document.querySelector('input[name=cvMode]:checked').value;
+      if(mode === 'keep'){ closeModal('detailModal'); done({ convert:false }); return; }
+      const rate = parseFloat(rateEl.value);
+      if(!(rate > 0)){ document.getElementById('cvErr').textContent = 'Enter an exchange rate above 0, or choose to keep the numbers.'; return; }
+      closeModal('detailModal'); done({ convert:true, rate, source: src || 'entered by hand' });
+    });
+  }
+
+  let cvChoice = null;
   document.getElementById('stSaveGeneral').addEventListener('click', ()=>{
     const email = document.getElementById('stBizEmail').value.trim();
     const emailErr = document.getElementById('stBizEmailError');
@@ -8604,11 +8799,25 @@ const AureumSync = (function(){
     { const tz = document.getElementById('stTimezone'); if(tz && tz.value){ POS_SETTINGS.timezone = tz.value; AureumCountries.setTimezone(tz.value); } }
     if(settingsCountryPicker && settingsCountryPicker.value) POS_SETTINGS.country = settingsCountryPicker.value;
     const curCode = document.getElementById('stCurrency').value;
+    const oldCode = POS_SETTINGS.currencyCode || 'USD';
+    if(curCode !== oldCode && hasMoneyHistory() && !(cvChoice && cvChoice.to === curCode)){
+      cvAskDialog(oldCode, curCode, choice => { if(!choice) return; cvChoice = Object.assign({ to: curCode, from: oldCode }, choice); document.getElementById('stSaveGeneral').click(); });
+      return;
+    }
+    if(cvChoice && cvChoice.to === curCode && curCode !== oldCode){
+      if(cvChoice.convert){
+        const id = 'cv' + Date.now().toString(36);
+        cvApply(cvChoice.rate, id, null);
+        (POS_SETTINGS.currencyConversions = POS_SETTINGS.currencyConversions || []).push({ id, at: new Date().toISOString(), from: cvChoice.from, to: cvChoice.to, rate: cvChoice.rate, source: cvChoice.source, by: whoCreated() });
+      }
+      if(POS_SETTINGS.currencyCode2 === curCode) POS_SETTINGS.dualCurrency = false;
+    }
+    cvChoice = null;
     POS_SETTINGS.currencyCode = curCode;
     POS_SETTINGS.currency = CURRENCY_SYMBOLS[curCode] || '$';
     document.querySelectorAll('.cur-code').forEach(e => { e.textContent = curCode; });
     try{ renderAllData(); }catch(e){}
-    POS_SETTINGS.dualCurrency = document.getElementById('stDualCurrency').classList.contains('on');
+    POS_SETTINGS.dualCurrency = document.getElementById('stDualCurrency').classList.contains('on') && document.getElementById('stCurrency2').value !== curCode;
     if(POS_SETTINGS.dualCurrency){
       const cur2 = document.getElementById('stCurrency2').value;
       const fxRate = parseFloat(document.getElementById('stFxRate').value);
@@ -8798,6 +9007,7 @@ const AureumSync = (function(){
 
   /* ===== SETTINGS: POS DEVICES ===== */
   let POS_DEVICES = [];
+  let PRODUCT_HISTORY = [];   // append-only log of stock typed directly on a product — there is deliberately no way to delete or edit an entry
   let nextPosId = 1;
   let editingPosId = null;
 
@@ -9217,7 +9427,7 @@ const AureumSync = (function(){
         <td class="mono" data-label="Stock (${escHtml(toShop || 'To')})" style="text-align:right;">${toStock}</td>
         <td data-label="Quantity"><input type="number" inputmode="numeric" min="1" step="1" value="${row.qty}" data-idx="${i}" class="tr-qty"></td>
         <td data-label="Unit">${p ? unitCellHtml(i, row, p) : '—'}</td>
-        <td class="mono" data-label="Cost">${p ? money2(p.cost) : '—'}</td>
+        <td class="mono" data-label="Cost">${p ? money2(costAt(p, fromShop)) : '—'}</td>
         <td class="mono" data-label="Price">${p ? money2(priceAt(p, toShop)) : '—'}</td>
         <td class="rm"><span class="line-rm" data-idx="${i}">&#10005;</span></td>
       </tr>`;
@@ -9369,7 +9579,7 @@ const AureumSync = (function(){
       const beforeFrom = getStock(p, from), beforeTo = getStock(p, to);
       addStock(p, from, -moved);
       addStock(p, to, moved);
-      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: moved, cost: p ? (Number(p.cost) || 0) : 0, price: p ? priceAt(p, to) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
+      return { productId: r.productId, name: p ? p.name : '', qty: r.qty, unitSize: size, unit: unitText({unitSize:size}, p), totalQty: moved, cost: p ? costAt(p, from) : 0, price: p ? priceAt(p, to) : 0, beforeFrom, afterFrom: getStock(p, from), beforeTo, afterTo: getStock(p, to) };
     });
     TRANSFERS.unshift({
       uid: AureumSync.uid(), createdAt: new Date().toISOString(), createdBy: whoCreated(),
@@ -9690,7 +9900,7 @@ const AureumSync = (function(){
      resolves), then keeps saving/subscribing so both apps stay
      live-in-sync across any device signed into the same business. */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, posDevices:POS_DEVICES, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, posDevices:POS_DEVICES, productHistory:PRODUCT_HISTORY, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
   function renderSyncStatus(){
@@ -9763,6 +9973,9 @@ const AureumSync = (function(){
     const nameEl = document.getElementById('stBizName');
     if(nameEl && (!nameEl.value || nameEl.value === 'Aureum Retail')) nameEl.value = POS_SETTINGS.businessName;
     fillTimezones(); fillCurrencySelects();
+    ['stCurrency','stCurrency2'].forEach(id => AureumCountries.enhanceSelect(document.getElementById(id), { placeholder:'Search currency (name or code)…' }));
+    AureumCountries.enhanceSelect(document.getElementById('stTimezone'), { placeholder:'Search time zone (city or region)…' });
+    renderConversionLog();
     if(settingsCountryPicker) settingsCountryPicker.set(POS_SETTINGS.country || '');
     document.querySelectorAll('.cur-code').forEach(e => { e.textContent = POS_SETTINGS.currencyCode || 'USD'; });
     const tzEl = document.getElementById('stTimezone');
@@ -10431,7 +10644,7 @@ const AureumSync = (function(){
       const tone = d.connection_status === 'connected' ? 'ok' : (d.connection_status === 'unreachable' || d.connection_status === 'error') ? 'bad' : 'warn';
       const conn = d.connection || {}, where = d.connection_type === 'network' ? ` · ${escHtml(conn.host||'')}:${escHtml(conn.port||'')}` : d.connection_type === 'local_connector' ? ' · ' + escHtml(conn.connectorUrl||'') : d.connection_type === 'vendor_api' ? ' · ' + escHtml(conn.endpoint||'') : '';
       return `<tr style="${d.active?'':'opacity:.55;'}"><td><b>${escHtml(d.name)}</b>${d.active?'':' '+fxPill('Deactivated','mute')}</td><td>${escHtml(d.shop)}</td>
-        <td>${escHtml([d.manufacturer,d.model].filter(Boolean).join(' ')||'—')}<br><span style="color:var(--sage);font-size:11.5px;">S/N ${escHtml(d.serial_number||'—')}${d.zimra_device_id?' · ZIMRA ID '+escHtml(d.zimra_device_id):''}</span></td>
+        <td>${escHtml([d.manufacturer,d.model].filter(Boolean).join(' ')||'—')}<br><span style="color:var(--sage);font-size:11.5px;">S/N ${escHtml(d.serial_number||'—')}${d.zimra_device_id?' · Tax authority device ID '+escHtml(d.zimra_device_id):''}</span></td>
         <td>${escHtml(ct ? ct.label.split(' (')[0] : d.connection_type)}${where}</td>
         <td>${fxPill(L.REGISTRATION_LABEL[d.registration_status]||d.registration_status, d.registration_status==='registered'?'ok':'mute')}</td>
         <td>${fxPill(cs, tone)}</td><td>${fxFmt(d.last_connected_at)}</td>
@@ -10446,12 +10659,12 @@ const AureumSync = (function(){
     const d = id ? FX.cfg.devices.find(x => x.id === id) : null, L = AureumFiscal, c = (d && d.connection) || {};
     const typeOpts = Object.keys(L.CONNECTION_TYPES).map(k => `<option value="${k}" ${d && d.connection_type===k?'selected':''}>${escHtml(L.CONNECTION_TYPES[k].label)}</option>`).join('');
     const body = `<div class="fx-form">
-      <label>Device name</label><input class="modal-field" id="fxfName" maxlength="80" value="${escHtml(d?d.name:'')}" placeholder="e.g. Harare till 1 fiscal device">
+      <label>Device name</label><input class="modal-field" id="fxfName" maxlength="80" value="${escHtml(d?d.name:'')}" placeholder="e.g. Main shop till 1 fiscal device">
       <label>Shop</label><select class="modal-field" id="fxfShop">${SHOPS.map(sh => `<option ${d && d.shop===sh?'selected':''}>${escHtml(sh)}</option>`).join('')}</select>
       <label>Manufacturer</label><input class="modal-field" id="fxfMan" value="${escHtml(d?d.manufacturer||'':'')}" placeholder="As printed on the device">
       <label>Model</label><input class="modal-field" id="fxfModel" value="${escHtml(d?d.model||'':'')}">
       <label>Serial number</label><input class="modal-field" id="fxfSerial" value="${escHtml(d?d.serial_number||'':'')}">
-      <label>ZIMRA fiscal device ID / registration identifier (if you have one)</label><input class="modal-field" id="fxfZim" value="${escHtml(d?d.zimra_device_id||'':'')}">
+      <label>Tax authority device ID / registration identifier (if you have one)</label><input class="modal-field" id="fxfZim" value="${escHtml(d?d.zimra_device_id||'':'')}">
       <label>Registration status</label><select class="modal-field" id="fxfReg">${['unregistered','test','registered'].map(k => `<option value="${k}" ${d && d.registration_status===k?'selected':''}>${escHtml(L.REGISTRATION_LABEL[k])}</option>`).join('')}</select>
       ${FX.cfg.v2 ? (() => { const meta = (FX.cfg.shopMeta || {})[(d && d.shop) || SHOPS[0]] || {}, os = meta.country ? fxDeviceOptions(meta.country) : []; return `<label>Integration</label><select class="modal-field" id="fxfInteg"><option value="">None — just record this device</option>${os.map(i => `<option value="${escHtml(i.id)}" ${d && d.integration_id === i.id ? 'selected' : ''}>${escHtml(i.name)}</option>`).join('')}</select><div class="note">${os.length ? 'Only integrations approved for this shop\'s country are listed.' : 'No approved device integration exists for this shop\'s country yet, so the device can only be recorded.'}</div>`; })() : ''}
       <label>Connection type</label><select class="modal-field" id="fxfType"><option value="">Choose…</option>${typeOpts}</select>
@@ -10640,6 +10853,8 @@ const AureumSync = (function(){
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     POS_DEVICES = has('posDevices') ? shared.posDevices : (live ? [] : POS_DEVICES);
     POS_DEVICES.forEach(d => { if(!d.uid) d.uid = AureumSync.uid(); });
+    PRODUCT_HISTORY = has('productHistory') ? shared.productHistory : (live ? [] : PRODUCT_HISTORY);
+    PRODUCT_HISTORY.forEach(h => { if(!h.uid) h.uid = AureumSync.uid(); });
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // the business name typed when the account was created is the starting business name
     try{
@@ -11947,8 +12162,8 @@ E('product-tax','Products','How do I make a product tax-free?',
   ['taxes-settings','tax-wrong']),
 E('product-picture','Products','How do I add a picture to a product?',
   ['how do i add a product picture','upload a photo for an item','find a picture online','search google images for product','download image for product','product image','how do i paste a picture from a website'],
-  'photo image upload picture online google bing duckduckgo free openverse wikimedia credit paste drag address barcode',
-  `Under the picture box in the product form:\n\n- **Click the box** to upload, **drag a picture onto it**, or copy any picture and press **Ctrl+V**.\n- **Find a picture online** searches several free picture libraries at once, with an **exact match** if the product has a **barcode**. **Show more pictures** goes further; **Also search Openverse** adds many more sites.\n- Inside the finder you can **paste a picture's web address** from any website.\n- **Google, Bing or DuckDuckGo** open in a new tab: right-click a picture → **Copy image**, then **Ctrl+V** on the box.\n\nPictures on ordinary websites are usually copyrighted — only use ones you may use. Press **Save product** to keep it.`,
+  'photo image upload picture online google free openverse wikimedia credit paste drag address barcode',
+  `Under the picture box in the product form:\n\n- **Click the box** to upload, **drag a picture onto it**, or copy any picture and press **Ctrl+V**.\n- **Find a picture online** searches several free picture libraries at once, with an **exact match** if the product has a **barcode**. **Show more pictures** goes further; **Also search Openverse** adds many more sites.\n- Inside the finder you can **paste a picture's web address** from any website.\n- **Google Images** opens in a new tab: right-click a picture → **Copy image**, then **Ctrl+V** on the box.\n\nPictures on ordinary websites are usually copyrighted — only use ones you may use. Press **Save product** to keep it.`,
   ['product-picture-help','product-picture-stock','add-product']),
 E('product-picture-help','Products','The picture finder finds nothing, the wrong picture, or won\'t download',
   ['picture finder found nothing','no pictures found for my product','the picture finder shows the wrong picture','cant download the picture from a website','picture could not be downloaded','how do i get a picture for any product'],
@@ -12488,11 +12703,11 @@ E('new-chat','Help & support','How do I start a new chat with AUREUM Bot?',
   `Press the gold **+ New chat** button under the chat box. It clears this conversation and starts a fresh one. Chats are only kept for the current browser session anyway.`,
   ['bot-data'], { pages:['settings-help'] }),
 E('fiscal-what','Settings','What is fiscalisation and do I have to use it?',
-  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','zimra fiscal','fiscal receipts','what does fiscalise mean','tax authority receipts','fdms','fiscal printer'],
+  ['what is fiscalisation','do i need a fiscal device','is fiscalisation compulsory','zimra fiscal','tax authority device','fiscal receipts','what does fiscalise mean','tax authority receipts','fdms','fiscal printer'],
   'fiscalisation fiscalization fiscal device zimra tax authority receipts compliance country optional virtual fdms',
-  `Fiscalisation means each sale is also reported to your country's **tax authority** (in Zimbabwe, ZIMRA) through an approved fiscal device, so the receipt can carry an official fiscal reference.
+  `Fiscalisation means each sale is also reported to your country's **tax authority** (for example ZIMRA in Zimbabwe, ZRA in Zambia, TRA in Tanzania) through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference.
 
-It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**, and only for countries AUREUM has enabled. **Zimbabwe (ZIMRA) is still in development**: until it is tested and approved, sales are saved normally and clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
+It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**, and only for countries AUREUM has enabled. **Each country is switched on only after it has been tested and approved** (Zimbabwe is still in development): until then, sales are saved normally and clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
   ['fiscal-setup','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
 E('fiscal-setup','Settings','How do I set up fiscalisation?',
   ['set up fiscalisation','turn on fiscalisation','add a fiscal device','configure zimra','connect my fiscal device','enable fiscal receipts','fiscalisation settings'],
