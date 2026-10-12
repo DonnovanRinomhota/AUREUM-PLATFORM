@@ -1,5 +1,12 @@
 # Changelog
 
+## Guided tours & Guide centre
+- New shared engine `guide.js` (spotlight, tooltip, progress, Back/Skip/Exit/Resume, Guide centre, first-run welcome card, one-time screen hints). Keyboard (Esc exits), screen-reader announcements, reduced-motion, phone layout.
+- POS journeys (`guide-pos.js`): Find your way around, Complete your first sale, Find a receipt, Understand stock, Close your shift and sign out. Steps complete from real till state (ticket, receipts, open pop-ups); nothing is added, charged or saved by the guide.
+- Back Office journeys (`guide-bo.js`): Explore the Back Office, Add or edit a product, Review sales and receipts, Stock alerts, Receive goods, Adjust stock, Transfer goods, short tours for Customers / Employees / Suppliers / Reports / Settings, Sign out safely. Role-aware: areas a person cannot open are never offered.
+- Progress is stored per person in their account preferences (and on the device); usage counters hold no names, customers or amounts and go nowhere else.
+- `tests/guide-journeys.test.js` checks every tour target exists and that tours cannot act on a sale.
+
 ## Per-shop cost, searchable currency, product history, currency conversion
 - Cost typed on a Goods Received Note, Purchase Order or Stock Adjustment now changes the cost of that shop only (`shopCost`); other shops keep theirs. Product form has a per-shop Cost box; lists, valuation and reports use each shop's cost; the till records the shop's cost on each sale.
 - Fiscalisation screens no longer mention ZIMRA by default; wording is country-neutral.

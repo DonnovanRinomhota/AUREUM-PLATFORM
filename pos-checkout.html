@@ -796,6 +796,7 @@
       <div class="topbar-icon-btn" id="shiftBtn" title="Shift — summary, close shift, closed shifts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9201; <span id="shiftBtnLabel">Shift</span></div>
       <div class="topbar-icon-btn" id="backOfficeBtn" title="Open Back Office">&#8599;</div>
       <div class="topbar-icon-btn" id="recentSalesBtn" title="Recent sales">&#8635;</div>
+      <div class="topbar-icon-btn" id="guideBtn" title="Guide — step-by-step help on the real screen" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#10022; Guide</div>
       <div class="topbar-icon-btn" id="helpBtn" title="Help">?</div>
       <div class="clerk" id="clerkSwitch" title="Switch cashier" style="cursor:pointer;">
         <div class="who" id="clerkName">Cashier</div>
@@ -3509,6 +3510,7 @@ async function aureumSignIn(email, password){
     renderCatalog();
     renderTicket();
     renderShiftBtn();
+    try{ if(window.AureumGuidePos) AureumGuidePos.signedIn(); }catch(e){}
   }
   // Signing out does NOT end the shift — the next person who signs in at this shop carries on with it.
   function signOutOfTill(){
@@ -3926,6 +3928,8 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
 }
 </script>
+<script src="/guide.js"></script>
+<script src="/guide-pos.js"></script>
 <script src="/a11y.js" defer></script>
 </body>
 </html>

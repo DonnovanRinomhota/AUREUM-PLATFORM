@@ -1154,6 +1154,7 @@
       <div id="syncStatus" title="Sync status" style="font-size:10.5px;color:var(--sage);">&#9679; <span id="syncStatusLabel">Synced</span></div>
       <div class="sf-actions">
         <div id="openPosBtn" class="sf-btn gold" title="Open POS Checkout">Open POS Checkout &#8599;</div>
+        <div id="guideBtn" class="sf-btn" title="Guide — step-by-step walkthroughs on the real screen" role="button" tabindex="0">&#10022; Guide</div>
         <div id="helpBtn" class="sf-btn" title="Help &amp; support" role="button" tabindex="0">Help &amp; support <span class="help-dot" id="helpDot" hidden></span></div>
         <div id="logoutBtn" class="sf-btn" title="Sign out">Sign out &#10132;</div>
       </div>
@@ -3681,6 +3682,7 @@ const AureumSync = (function(){
       // at the POS in another tab could silently revert a toggle the owner
       // just clicked here before they'd had a chance to hit Save.
       if(target === 'settings') applySettingsToForm();
+      try{ if(window.AureumGuideBo && !AureumGuide.active()) AureumGuideBo.pageOpened(target); }catch(e){}
     });
   });
 
@@ -10968,6 +10970,7 @@ const AureumSync = (function(){
       banner.style.display = 'block';
     }
     await startApp();
+    try{ if(window.AureumGuideBo) AureumGuideBo.ready(); }catch(e){}
   }
   /* ===== AUTH GATE UI ===== */
   let authMode = 'signin';
@@ -13630,6 +13633,8 @@ if(typeof module !== 'undefined' && module.exports) module.exports = api; else r
 })(typeof window !== 'undefined' ? window : globalThis);
 /* ==== END AUREUM HELP BOT ==== */
 </script>
+<script src="/guide.js"></script>
+<script src="/guide-bo.js"></script>
 <script src="/a11y.js" defer></script>
 </body>
 </html>
