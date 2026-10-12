@@ -1,5 +1,7 @@
 # AUREUM — Fiscalisation (optional, per country)
 
+> **Launch switch:** fiscalisation is currently shown as "Coming soon" and is inert everywhere. To launch it set `window.FISCAL_COMING_SOON = false` in `fiscal/flag.js` (and bump `sw.js`).
+>
 > **v3 (country-driven setup + fiscal connector)** — see the section "Country-driven setup (v3)" at the end. Everything below describes the engine and the Zimbabwe work it grew from; nothing in the app defaults to any country any more.
 
 **Status: framework only.** The settings screen, database, security rules, safe transaction engine and the

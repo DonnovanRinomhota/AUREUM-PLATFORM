@@ -117,6 +117,16 @@ E('product-code','Products','How do product codes work?',
   'sku code number unique automatic generated 100001 duplicate',
   `Every product always has a **code**. New codes are automatic (six digits, continuing after the highest code in use, like 100007). You can type your own, but **two products cannot share a code** — you'll be told which product already has it. Leave the box empty and one is generated. Products that had no code get one automatically when the Back Office opens.`,
   ['product-barcode','add-product']),
+E('print-labels','Products','How do I print barcode labels?',
+  ['how do i print labels','print barcode labels','print price tags','print product labels','label printer','how do i print barcodes','sticker labels','shelf labels'],
+  'print labels barcode stickers price tag shelf roll sheet a4 label printer zebra thermal template ean code 128 quantity',
+  `1. Open **Products** and press **Print labels** (tick products first to start with just those).\n2. Add products: **search**, or add a whole **category** or a **supplier's** products. Set **how many labels** each.\n3. Choose the **Label type** (a roll size, or an A4 / Letter sheet), where the barcode comes from (**Barcode**, **SKU** or **Barcode, else SKU**), the **shop price** and whether to show the name, price and number.\n4. Check the **preview**, then press **Print labels** and pick your printer in the print window (scale **100% / Actual size**, margins **None**).\n\nYou can also open **Print labels** from a **purchase order**, **goods received note**, **stock adjustment** or **transfer** — the quantities are filled in for you.`,
+  ['product-barcode','print-labels-fix','product-code'], { pages:['products'] }),
+E('print-labels-fix','Products','Why is my label printing in the wrong place, or not scanning?',
+  ['label prints off the label','labels are cut off','barcode will not scan','barcode not scanning','label misaligned','label printed too small','label printer wrong size','blank label between prints'],
+  'label alignment offset move margin scale actual size scan scanner barcode thin long code paper size',
+  `- In the print window choose the **paper size that matches your labels**, scale **100% / Actual size** and margins **None**.\n- If print is a little off, use **Move right / Move down (mm)** in the label screen (negative moves left / up). The numbers are remembered.\n- For sheets use **Start at label** to continue a partly used sheet.\n- A barcode that is very long gets thin bars. Use a **shorter code** (up to 18 characters is best), a **wider label**, or the **Custom size** option.\n- Products with **no barcode or SKU**, or a code with unusual characters, print without a barcode — the screen tells you which.\n- To give products their own barcode numbers, choose **Barcode** as the source and press **Create barcodes** (they start with 2, so they never clash with a maker's barcode).`,
+  ['print-labels','product-barcode']),
 E('product-barcode','Products','How do barcodes and searching work?',
   ['how do i add a barcode','how do i scan products','barcode scanner','search by barcode at the till','can i use a scanner','find a product quickly'],
   'barcode scan scanner search code find lookup ean upc',
@@ -679,12 +689,14 @@ E('fiscal-what','Settings','What is fiscalisation and do I have to use it?',
   'fiscalisation fiscalization fiscal device tax authority receipts compliance country optional etims efris zimra zra tra',
   `Fiscalisation means each sale is also reported to **your country's tax authority** through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference. What is required, and how, depends on the country — AUREUM asks for your shop's country and then for that country's details.
 
-It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**. **Each country is switched on only after it has been tested and approved.** Until then you can still enter your device and tax details, sales are saved normally and are clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
+**Fiscalisation is coming soon.** It is still being finished and tested, so it is switched off for everyone for now — sales and receipts work exactly as before and nothing is sent to any tax authority. When it launches it will be **optional and off by default**: an **owner or manager** will turn it on in **Settings → Fiscalisation**. **Each country is switched on only after it has been tested and approved.** Until then you can still enter your device and tax details, sales are saved normally and are clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
   ['fiscal-setup','fiscal-requirements','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
 E('fiscal-setup','Settings','How do I set up fiscalisation?',
   ['set up fiscalisation','turn on fiscalisation','add a fiscal device','connect my fiscal device','enable fiscal receipts','fiscalisation settings','set up fiscal device for my country'],
   'fiscalisation setup enable turn on shop country device configure test connection serial number model portal tax details checklist',
-  `1. Open **Settings → Fiscalisation** (owners and managers).
+  `**Fiscalisation is coming soon**, so there is nothing to set up yet — the Settings → Fiscalisation page is greyed out until it launches. When it is ready, this is how it will work:
+
+1. Open **Settings → Fiscalisation** (owners and managers).
 2. For each shop, **choose its country** (your business country is suggested). AUREUM then shows that country's tax authority and what it usually asks for.
 3. Press **Set up device & tax details** and enter the device **model**, serial number, how sales are reported, your **tax number** and the authority **portal** address. Never type passwords or keys.
 4. Choose how it connects — usually a **fiscal connector** on this computer — and press **Test**.

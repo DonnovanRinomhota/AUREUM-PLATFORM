@@ -711,6 +711,10 @@
   .fx-shop .sub{ font-size:11.5px; color:var(--sage); display:block; margin-top:2px; }
   .fx-pill{ display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid var(--line); white-space:nowrap; }
   .fx-pill.ok{ color:#7fd6a0; border-color:rgba(127,214,160,.45); } .fx-pill.warn{ color:var(--gold-bright); border-color:rgba(212,168,67,.5); } .fx-pill.bad{ color:#ef8a8a; border-color:rgba(224,98,98,.5); } .fx-pill.mute{ color:var(--sage); }
+  .fx-soon{ display:inline-block; margin-left:6px; padding:1px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:.02em; border:1px solid var(--line); color:var(--sage); white-space:nowrap; }
+  .settings-tab-item.fx-soon-tab{ opacity:.6; }
+  #settings-fiscal.fx-off > :not(.settings-panel-head):not(#fxSoon){ display:none !important; }
+  #settings-fiscal.fx-off .settings-panel-head{ opacity:.6; }
   .fx-check{ list-style:none; margin:8px 0 2px; padding:0; font-size:12px; color:var(--ivory-dim); } .fx-check li{ padding:1px 0; } .fx-check li.ok{ color:#7fd6a0; } .fx-check li span{ display:inline-block; width:14px; }
   .fx-act{ display:inline-block; margin-left:6px; padding:3px 9px; border:1px solid var(--line); border-radius:7px; font-size:11.5px; cursor:pointer; color:var(--gold-bright); } .fx-act:hover{ border-color:var(--gold-bright); }
   .fx-form label{ display:block; font-size:11.5px; color:var(--sage); margin:10px 0 4px; } .fx-form .note{ font-size:11.5px; color:var(--sage); margin-top:6px; line-height:1.5; }
@@ -938,6 +942,51 @@
   }
   .auth-field:focus{ border-color:var(--gold-dim); }
   button.auth-field{ text-align:left; cursor:pointer; margin-bottom:0; font-family:inherit; }
+  /* Print labels */
+  #labelsModal .modal-panel{ max-width:1080px; max-height:92vh; }
+  .lbl-grid{ display:grid; grid-template-columns:minmax(280px,340px) 1fr; gap:22px; align-items:start; }
+  @media (max-width:860px){ .lbl-grid{ grid-template-columns:1fr; } }
+  .lbl-col .lbl-h{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--sage); margin:16px 0 8px; font-weight:600; }
+  .lbl-col .lbl-h:first-child{ margin-top:0; }
+  .lbl-row{ display:flex; align-items:center; gap:10px; margin:8px 0; font-size:13px; }
+  .lbl-row > label{ flex:0 0 112px; color:var(--ivory-dim); font-size:12.5px; }
+  .lbl-row select, .lbl-row input[type=number], .lbl-row input[type=text]{ flex:1; min-width:0; }
+  .lbl-check{ display:flex; align-items:center; gap:9px; font-size:13px; margin:7px 0; cursor:pointer; }
+  .lbl-check input{ width:17px; height:17px; accent-color:var(--gold-bright); }
+  .lbl-custom{ border:1px dashed var(--line-strong); border-radius:10px; padding:8px 10px; margin:6px 0 10px; }
+  .lbl-custom .lbl-row > label{ flex-basis:86px; }
+  .lbl-note{ font-size:12px; color:var(--sage); line-height:1.5; }
+  .lbl-warn{ font-size:12.5px; line-height:1.5; color:var(--gold-bright); background:rgba(212,175,55,.08); border:1px solid rgba(212,175,55,.3); border-radius:10px; padding:9px 12px; margin:10px 0; }
+  .lbl-warn.bad{ color:var(--danger); background:rgba(220,90,90,.08); border-color:rgba(220,90,90,.35); }
+  .lbl-warn button{ margin-top:6px; }
+  .lbl-add{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; position:relative; }
+  .lbl-add .modal-field{ flex:1 1 180px; min-width:0; }
+  .lbl-add select{ flex:0 1 150px; min-width:0; }
+  .lbl-results{ position:absolute; left:0; top:100%; z-index:5; width:min(100%,420px); max-height:220px; overflow:auto; background:var(--panel-alt); border:1px solid var(--line-strong); border-radius:10px; box-shadow:0 12px 28px rgba(0,0,0,.45); }
+  .lbl-results div{ padding:9px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:10px; }
+  .lbl-results div:hover, .lbl-results div:focus{ background:rgba(212,175,55,.1); outline:none; }
+  .lbl-results .mono{ color:var(--sage); font-size:11.5px; }
+  .lbl-items{ max-height:210px; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  .lbl-items table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .lbl-items th{ position:sticky; top:0; background:var(--panel-alt); text-align:left; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sage); padding:7px 10px; }
+  .lbl-items td{ padding:6px 10px; border-top:1px solid var(--line); vertical-align:middle; }
+  .lbl-items td.q input{ width:64px; text-align:right; }
+  .lbl-items .nobc{ color:var(--danger); font-size:11.5px; }
+  .lbl-rm{ cursor:pointer; color:var(--sage); padding:4px 8px; border-radius:6px; background:none; border:0; font-size:14px; }
+  .lbl-rm:hover{ color:var(--danger); }
+  .lbl-sum{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--sage); margin:8px 0; }
+  #lblFrame{ width:100%; height:340px; border:1px solid var(--line-strong); border-radius:10px; background:#d8d8d4; }
+  .pw-wrap:has(> input[style*="display: none"]){ display:none !important; }   /* the eye button leaves with its hidden password box */
+  .auth-verify{ text-align:center; margin:2px 0 8px; }
+  .auth-verify .av-icon{ font-size:34px; line-height:1; color:var(--gold-bright); margin-bottom:6px; }
+  .auth-verify .av-title{ font-size:17px; font-weight:600; margin-bottom:6px; }
+  .auth-verify .av-text{ font-size:13px; color:var(--cream, #e8e4d4); margin:0 0 8px; line-height:1.5; overflow-wrap:anywhere; }
+  .auth-verify .av-hint{ font-size:11.5px; color:var(--sage); margin:0 0 12px; }
+  .auth-verify .av-msg{ font-size:12px; min-height:16px; margin-top:8px; color:var(--gold-bright); }
+  .auth-verify .av-msg.err{ color:var(--danger); }
+  .auth-verify .av-links{ display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:10px; font-size:12px; color:var(--sage); }
+  .auth-verify .av-links span{ cursor:pointer; text-decoration:underline; padding:6px 2px; }
+  .auth-btn.is-disabled{ opacity:.55; pointer-events:none; }
   .auth-error{ font-size:11.5px; color:var(--danger); min-height:16px; margin-bottom:6px; }
   .auth-btn{
     background: linear-gradient(135deg, var(--gold-bright), var(--gold));
@@ -1009,6 +1058,15 @@
       <input class="auth-field" id="authFullName" placeholder="Your full name">
       <div id="authCountry" style="margin-bottom:10px;"></div>
       <div style="font-size:11px;color:var(--sage);margin:6px 0 10px;text-align:left;">Your country sets your starting currency and time zone. You can change both later in Settings.</div>
+    </div>
+    <div id="authVerify" class="auth-verify" style="display:none;" role="status" aria-live="polite">
+      <div class="av-icon" aria-hidden="true">&#9993;</div>
+      <div class="av-title">Check your email</div>
+      <p class="av-text">We sent a confirmation link to <b id="authVerifyEmail"></b>. Open it to activate your account &mdash; then come back and sign in.</p>
+      <p class="av-hint">Nothing there? Look in Spam or Promotions, and allow a minute or two.</p>
+      <div class="auth-btn" id="authResendBtn" role="button" tabindex="0">Resend email</div>
+      <div class="av-msg" id="authResendMsg"></div>
+      <div class="av-links"><span id="authVerifyDone">I've confirmed &mdash; sign in</span><span id="authVerifyChange">Use a different email</span></div>
     </div>
     <div id="authForgotFields" style="display:none;">
       <div style="font-size:12px;color:var(--sage);margin-bottom:10px;">Enter the email on your account and we'll send you a link to reset your password.</div>
@@ -1365,6 +1423,7 @@
             </div>
           </div>
           <div class="btn-ghost-sm" id="productImportBtn">Import</div>
+          <div class="btn-ghost-sm" id="productLabelsBtn" role="button" tabindex="0" title="Print price labels with barcodes">&#127991; Print labels</div>
           <div class="btn-ghost-sm" id="productFixNamesBtn" title="Restore spaces in names that were saved with _ or - instead">Fix names</div>
           <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls,.xlsm,.txt,.tsv,text/csv" style="display:none;">
           <div class="icon-btn-sm" title="More">&#8942;</div>
@@ -2910,6 +2969,7 @@
               <div class="t">Fiscalisation</div>
               <div class="s">Optional. Connect a fiscal device for your country's tax authority, shop by shop. Shops that don't switch it on work exactly as before.</div>
             </div>
+            <div class="fx-banner warn" id="fxSoon" role="status" hidden><b>Coming soon.</b> Fiscalisation (reporting sales to your tax authority) is still being finished and tested, so it is switched off for everyone for now. Nothing is sent to any tax authority and your sales and receipts work exactly as before. We will announce it here when it is ready.</div>
             <div class="fx-banner warn" id="fxAdapterNote"></div>
             <div class="fx-banner" id="fxDbNote" hidden></div>
             <div class="fx-banner" id="fxRoleNote" hidden>Only the owner or a manager can change fiscalisation settings. You can view them.</div>
@@ -2991,7 +3051,68 @@
   </div>
 </div>
 
+<!-- Print labels (barcode + name + price) -->
+<div class="modal-overlay" id="labelsModal">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="lblTitle">
+    <div class="modal-head">
+      <div class="title" id="lblTitle">Print labels</div>
+      <div class="modal-close" data-close="labelsModal" role="button" tabindex="0" aria-label="Close">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <div class="lbl-grid">
+        <div class="lbl-col" id="lblSettings">
+          <div class="lbl-h">Label</div>
+          <div class="lbl-row"><label for="lblTpl">Label type</label><select id="lblTpl" class="modal-field"></select></div>
+          <div class="lbl-custom" id="lblCustom" hidden>
+            <div class="lbl-row"><label for="lblCMode">Paper</label><select id="lblCMode" class="modal-field"><option value="roll">Roll (one row per label)</option><option value="sheet">Sheet (grid)</option></select></div>
+            <div class="lbl-row"><label for="lblCW">Label W × H</label><input type="number" step="0.1" min="10" id="lblCW" class="modal-field" value="50" aria-label="Label width mm"><input type="number" step="0.1" min="8" id="lblCH" class="modal-field" value="30" aria-label="Label height mm"></div>
+            <div class="lbl-row"><label for="lblCCols">Across × down</label><input type="number" min="1" max="12" id="lblCCols" class="modal-field" value="1" aria-label="Labels across"><input type="number" min="1" max="40" id="lblCRows" class="modal-field" value="1" aria-label="Labels down"></div>
+            <div class="lbl-row"><label for="lblCGapX">Gap across/down</label><input type="number" step="0.1" min="0" id="lblCGapX" class="modal-field" value="0" aria-label="Gap across mm"><input type="number" step="0.1" min="0" id="lblCGapY" class="modal-field" value="0" aria-label="Gap down mm"></div>
+            <div class="lbl-row" data-sheet-only><label for="lblCML">Margin L / T</label><input type="number" step="0.1" min="0" id="lblCML" class="modal-field" value="0" aria-label="Left margin mm"><input type="number" step="0.1" min="0" id="lblCMT" class="modal-field" value="0" aria-label="Top margin mm"></div>
+            <div class="lbl-row" data-sheet-only><label for="lblCPW">Page W × H</label><input type="number" step="0.1" min="50" id="lblCPW" class="modal-field" value="210" aria-label="Page width mm"><input type="number" step="0.1" min="50" id="lblCPH" class="modal-field" value="297" aria-label="Page height mm"></div>
+            <div class="lbl-note">All sizes in millimetres.</div>
+          </div>
+          <div class="lbl-row" id="lblStartRow"><label for="lblStart">Start at label</label><input type="number" min="1" id="lblStart" class="modal-field" value="1"></div>
+          <div class="lbl-h">Contents</div>
+          <div class="lbl-row"><label for="lblSource">Barcode from</label><select id="lblSource" class="modal-field"><option value="either">Barcode, else SKU</option><option value="barcode">Barcode</option><option value="sku">SKU (product code)</option><option value="none">No barcode</option></select></div>
+          <div class="lbl-row" id="lblKindRow"><label for="lblKind" title="Automatic uses EAN-13 / UPC-A / EAN-8 when the number is a valid retail barcode, and Code 128 for everything else">Barcode type</label><select id="lblKind" class="modal-field"><option value="auto">Automatic</option><option value="code128">Code 128 only</option></select></div>
+          <div class="lbl-row"><label for="lblShop">Price from</label><select id="lblShop" class="modal-field"></select></div>
+          <label class="lbl-check"><input type="checkbox" id="lblName" checked> Print name</label>
+          <label class="lbl-check"><input type="checkbox" id="lblPrice" checked> Print price</label>
+          <label class="lbl-check" id="lblCodeRow"><input type="checkbox" id="lblCode" checked> Print the number under the barcode</label>
+          <div class="lbl-h">Fine-tune printer alignment</div>
+          <div class="lbl-row"><label for="lblOX">Move right (mm)</label><input type="number" step="0.1" id="lblOX" class="modal-field" value="0"></div>
+          <div class="lbl-row"><label for="lblOY">Move down (mm)</label><input type="number" step="0.1" id="lblOY" class="modal-field" value="0"></div>
+          <div class="lbl-note">If print lands a little off the label, nudge it here (negative numbers move left / up). Your choices are remembered on this device.</div>
+        </div>
+        <div class="lbl-col">
+          <div class="lbl-h">Products</div>
+          <div class="lbl-add">
+            <input type="search" id="lblSearch" class="modal-field" placeholder="Search a product to add…" autocomplete="off" aria-label="Search a product to add">
+            <select id="lblByCat" class="modal-field" aria-label="Add all products in a category"></select>
+            <select id="lblBySup" class="modal-field" aria-label="Add products from a supplier"></select>
+            <div class="lbl-results" id="lblResults" hidden></div>
+          </div>
+          <div class="lbl-items"><table><thead><tr><th>Product</th><th>Code</th><th style="text-align:right;">Labels</th><th></th></tr></thead><tbody id="lblRows"></tbody></table></div>
+          <div class="lbl-sum"><span id="lblSum"></span><span><span class="btn-ghost-sm" id="lblSetAll" role="button" tabindex="0">Set all to 1</span> <span class="btn-ghost-sm" id="lblClear" role="button" tabindex="0">Remove all</span></span></div>
+          <div id="lblWarns" role="status" aria-live="polite"></div>
+          <div class="lbl-h">Preview</div>
+          <iframe id="lblFrame" title="Label preview"></iframe>
+          <div class="lbl-note" id="lblPageNote" style="margin-top:6px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" data-close="labelsModal" role="button" tabindex="0">Close</div>
+      <div class="modal-btn ghost" id="lblOpenBtn" role="button" tabindex="0">Open in new tab</div>
+      <div class="modal-btn solid" id="lblPrintBtn" role="button" tabindex="0">Print labels</div>
+    </div>
+  </div>
+</div>
+
 <script src="/vendor/supabase.js"></script>
+<script src="/labels.js"></script>
+<script src="/fiscal/flag.js"></script>
 <script src="/fiscal/fiscal-core.js"></script>
 <script src="/fiscal/profiles.js"></script>
 <script src="/fiscal/countries/zw.js"></script>
@@ -3544,7 +3665,17 @@ const AureumSync = (function(){
     return { byCollection: out, total };
   }
 
-  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same,
+  /* Which records has the server already got? Built from the server's last-known copy (`base`; right after an offline start, the copy saved
+     in this device's cache). Returns null when there is no cloud (nothing to sync to), else (record) => true if the server has it. */
+  function syncChecker(name){
+    if(!cfg || !cfg.isCloud()) return null;
+    let b = base; if(!b){ const c = readCache(); b = c && c.base; }
+    const spec = COLLECTIONS[name], have = new Set();
+    if(b && spec && Array.isArray(b[name])) b[name].forEach(r => { try{ have.add(spec.key(r)); }catch(e){} });
+    return rec => { try{ return !!spec && have.has(spec.key(rec)); }catch(e){ return false; } };
+  }
+
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker,
            findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
 })();
 /* ==== END AUREUM SYNC CORE ==== */
@@ -3572,7 +3703,7 @@ const AureumSync = (function(){
   if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
   const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
     email, password,
-    options: { data: { business_name: businessName, full_name: fullName, country: country || '' } }
+    options: { emailRedirectTo: window.location.origin + window.location.pathname, data: { business_name: businessName, full_name: fullName, country: country || '' } }
   });
   if(signUpErr) throw signUpErr;
   // Supabase deliberately doesn't throw an error when the email is already
@@ -5492,6 +5623,182 @@ const AureumSync = (function(){
     document.getElementById('phSearch').addEventListener('input', render);
     render();
   }
+
+  /* ===== PRINT LABELS =====
+     Pick products (search, whole category, or a supplier's products), set how many labels each, choose a label size, and print.
+     Barcodes come from AureumLabels (labels.js): Code 128, or EAN-13 / UPC-A / EAN-8 when the number is a valid one. */
+  const LBL_KEY = 'aureum_label_settings_v1';
+  const lbl = { rows: [], from: '' };
+  const lblSet = (() => { try{ return JSON.parse(localStorage.getItem(LBL_KEY) || '{}') || {}; }catch(e){ return {}; } })();
+  const lblEl = id => document.getElementById(id);
+  function lblSave(){
+    const g = id => lblEl(id), v = {};
+    ['lblTpl','lblSource','lblKind','lblShop','lblOX','lblOY','lblCMode','lblCW','lblCH','lblCCols','lblCRows','lblCGapX','lblCGapY','lblCML','lblCMT','lblCPW','lblCPH'].forEach(id => v[id] = g(id).value);
+    ['lblName','lblPrice','lblCode'].forEach(id => v[id] = g(id).checked);
+    try{ localStorage.setItem(LBL_KEY, JSON.stringify(v)); }catch(e){}
+  }
+  function lblTemplate(){
+    const id = lblEl('lblTpl').value;
+    if(id === 'custom') return AureumLabels.customTemplate({ mode: lblEl('lblCMode').value, w: lblEl('lblCW').value, h: lblEl('lblCH').value, cols: lblEl('lblCCols').value, rows: lblEl('lblCRows').value,
+      gapX: lblEl('lblCGapX').value, gapY: lblEl('lblCGapY').value, marginL: lblEl('lblCML').value, marginT: lblEl('lblCMT').value, pageW: lblEl('lblCPW').value, pageH: lblEl('lblCPH').value });
+    return AureumLabels.templateById(id) || AureumLabels.TEMPLATES[0];
+  }
+  const lblCode = p => { const src = lblEl('lblSource').value; return src === 'none' ? '' : src === 'sku' ? String(p.code || '').trim() : src === 'barcode' ? String(p.barcode || '').trim() : (String(p.barcode || '').trim() || String(p.code || '').trim()); };
+  function lblBuildItems(){
+    const shop = lblEl('lblShop').value, kind = lblEl('lblKind').value, src = lblEl('lblSource').value, items = [];
+    lbl.rows.forEach(r => {
+      const p = PRODUCTS.find(x => x.id === r.pid); if(!p) return;
+      const v = lblCode(p);
+      items.push({ pid: p.id, name: p.name, priceText: curSym() + priceAt(p, shop).toFixed(2), qty: r.qty, value: v, barcode: src === 'none' ? { ok:false, error:'off' } : (v ? AureumLabels.makeBarcode(v, kind) : { ok:false, error:'empty' }) });
+    });
+    return items;
+  }
+  function lblOptions(extra){ return Object.assign({ template: lblTemplate(), showName: lblEl('lblName').checked, showPrice: lblEl('lblPrice').checked, showCode: lblEl('lblCode').checked,
+    offsetX: lblEl('lblOX').value, offsetY: lblEl('lblOY').value, startAt: lblEl('lblStart').value, title: 'AUREUM labels' }, extra || {}); }
+  const LBL_MAX = 5000;
+  function lblRenderRows(){
+    const body = lblEl('lblRows'), items = lblBuildItems(), src = lblEl('lblSource').value;
+    body.innerHTML = items.length ? items.map((it, i) => {
+      const bad = src !== 'none' && !it.barcode.ok;
+      return `<tr><td>${escHtml(it.name)}${bad ? `<div class="nobc">${it.error === 'empty' || it.barcode.error === 'empty' ? 'No ' + (src === 'sku' ? 'SKU' : src === 'barcode' ? 'barcode' : 'barcode or SKU') + ' — prints without a barcode' : 'Barcode ' + escHtml(it.barcode.error || '') + ' — prints without a barcode'}</div>` : ''}</td>
+        <td class="mono">${escHtml(it.value || '—')}</td><td class="q"><input type="number" class="modal-field" min="0" max="999" step="1" value="${it.qty}" data-i="${i}" aria-label="Labels for ${escHtml(it.name)}"></td>
+        <td><button type="button" class="lbl-rm" data-i="${i}" aria-label="Remove ${escHtml(it.name)}">&#10005;</button></td></tr>`;
+    }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--sage);padding:18px;">No products yet. Search above, or add a whole category or supplier.</td></tr>';
+    body.querySelectorAll('input[data-i]').forEach(inp => inp.addEventListener('input', () => { const v = Math.max(0, Math.min(999, Math.floor(+inp.value || 0))); lbl.rows[+inp.dataset.i].qty = v; lblRefresh(true); }));
+    body.querySelectorAll('.lbl-rm').forEach(b => b.addEventListener('click', () => { lbl.rows.splice(+b.dataset.i, 1); lblRefresh(); }));
+  }
+  let lblTimer = null;
+  function lblRefresh(keepRows){
+    if(!keepRows) lblRenderRows();
+    const t = lblTemplate(), isSheet = t.kind === 'sheet', custom = lblEl('lblTpl').value === 'custom';
+    lblEl('lblCustom').hidden = !custom;
+    lblEl('lblCustom').querySelectorAll('[data-sheet-only]').forEach(r => r.style.display = lblEl('lblCMode').value === 'sheet' ? '' : 'none');
+    lblEl('lblStartRow').style.display = isSheet ? '' : 'none';
+    const none = lblEl('lblSource').value === 'none';
+    lblEl('lblKindRow').style.display = none ? 'none' : ''; lblEl('lblCodeRow').style.display = none ? 'none' : '';
+    const items = lblBuildItems(), total = items.reduce((s, i) => s + i.qty, 0), src = lblEl('lblSource').value;
+    const noCode = items.filter(i => i.qty && src !== 'none' && !i.barcode.ok), warns = [];
+    let html = '';
+    if(custom && isSheet){ const f = AureumLabels.gridFits(t); if(!f.ok) html += `<div class="lbl-warn bad">This grid is ${f.needW.toFixed(1)} × ${f.needH.toFixed(1)} mm but the page is ${t.pageW} × ${t.pageH} mm — labels would be cut off. Reduce the labels across/down, the gaps or the margins.</div>`; }
+    if(noCode.length){
+      const missing = noCode.filter(i => !i.value), invalid = noCode.filter(i => i.value);
+      if(missing.length){
+        html += `<div class="lbl-warn">${missing.length} product${missing.length === 1 ? ' has' : 's have'} no ${src === 'sku' ? 'SKU' : 'barcode'} (${escHtml(missing.slice(0, 3).map(i => i.name).join(', '))}${missing.length > 3 ? '…' : ''}) — ${missing.length === 1 ? 'it prints' : 'they print'} without a barcode.` +
+          (src === 'barcode' ? ` <br><button type="button" class="btn-ghost-sm" id="lblGenBtn">Create ${missing.length} barcode${missing.length === 1 ? '' : 's'} for ${missing.length === 1 ? 'it' : 'them'}</button> <span class="lbl-note">Makes our own store numbers (they start with 2, so they never clash with a maker's barcode) and saves them on the products.</span>` : '') + '</div>';
+      }
+      if(invalid.length) html += `<div class="lbl-warn bad">${invalid.length} product${invalid.length === 1 ? '' : 's'} ${invalid.length === 1 ? 'has a code' : 'have codes'} that can't be a barcode: ${escHtml(invalid.slice(0, 3).map(i => i.name + ' (' + i.barcode.error + ')').join('; '))}${invalid.length > 3 ? '…' : ''}. Fix ${invalid.length === 1 ? 'it' : 'them'} on the product, or ${invalid.length === 1 ? 'it prints' : 'they print'} without a barcode.</div>`;
+    }
+    const over = total > LBL_MAX;
+    if(over) html += `<div class="lbl-warn bad">${total} labels is more than the ${LBL_MAX} that can be printed in one go. Lower the quantities.</div>`;
+    const dupe = (() => { const seen = {}; const d = []; items.forEach(i => { if(i.qty && i.barcode.ok){ const k = i.barcode.value; if(seen[k] && seen[k] !== i.pid) d.push(i.name); seen[k] = i.pid; } }); return d; })();
+    if(dupe.length) html += `<div class="lbl-warn">Two products share the same code${dupe.length ? ' (' + escHtml(dupe.slice(0, 2).join(', ')) + ')' : ''} — a scanner can't tell them apart.</div>`;
+    const doc = over ? null : AureumLabels.buildDocument(items, lblOptions({ maxPages: 6, previewWidth: Math.max(200, (lblEl('lblFrame').clientWidth || 560) - 24) }));
+    if(doc) doc.warnings.forEach(w => { html += `<div class="lbl-warn">${escHtml(w)}</div>`; });
+    lblEl('lblWarns').innerHTML = html;
+    const g = lblEl('lblGenBtn'); if(g) g.addEventListener('click', lblGenerate);
+    lblEl('lblSum').textContent = `${items.length} product${items.length === 1 ? '' : 's'} · ${total} label${total === 1 ? '' : 's'}` + (doc && doc.pages ? ` · ${doc.pages} ${isSheet ? 'sheet' : 'page'}${doc.pages === 1 ? '' : 's'}` : '');
+    lblEl('lblPageNote').textContent = isSheet ? `Printing on ${t.pageW} × ${t.pageH} mm sheets, ${AureumLabels.perPage(t)} labels each. In the print window choose paper size “${t.pageW > 212 ? 'Letter' : 'A4'}”, scale “100%” / “Actual size”, margins “None”.` : `Printing on ${t.pageW} × ${t.pageH} mm labels. In the print window choose your label printer and the matching paper size, scale “100%” / “Actual size”, margins “None”.`;
+    lblEl('lblPrintBtn').classList.toggle('is-disabled', !total || over); lblEl('lblOpenBtn').classList.toggle('is-disabled', !total || over);
+    clearTimeout(lblTimer); lblTimer = setTimeout(() => { if(doc) lblEl('lblFrame').srcdoc = doc.html; }, 120);
+  }
+  function lblAdd(pids, qtyFor){
+    let added = 0;
+    pids.forEach(pid => { if(!lbl.rows.some(r => r.pid === pid)){ lbl.rows.push({ pid, qty: Math.max(1, qtyFor ? qtyFor(pid) : 1) }); added++; } });
+    return added;
+  }
+  function lblGenerate(){
+    const btn = lblEl('lblGenBtn'); if(!btn) return;
+    if(btn.dataset.sure !== '1'){ btn.dataset.sure = '1'; btn.textContent = 'Yes — create and save them'; return; }
+    const used = new Set(); let maxSerial = 0;
+    PRODUCTS.forEach(p => [p.barcode, p.code].forEach(c => { c = String(c || '').trim(); if(c) used.add(c); if(/^2\d{12}$/.test(c) && AureumLabels.validEan(c, 13)) maxSerial = Math.max(maxSerial, +c.slice(1, 12)); }));
+    let n = 0;
+    lbl.rows.forEach(r => { const p = PRODUCTS.find(x => x.id === r.pid); if(!p || String(p.barcode || '').trim()) return;
+      let c; do{ maxSerial++; c = AureumLabels.makeInternalEan(maxSerial); }while(used.has(c));
+      used.add(c); p.barcode = c; n++; });
+    if(n){ try{ persistAureum(); }catch(e){} try{ renderProducts(); }catch(e){} aureumToast(n + ' barcode' + (n === 1 ? '' : 's') + ' created and saved on the product' + (n === 1 ? '' : 's') + '.', 'ok'); }
+    lblRefresh();
+  }
+  function lblPrintHtml(){ return AureumLabels.buildDocument(lblBuildItems(), lblOptions({})).html; }
+  function lblPrint(){
+    if(lblEl('lblPrintBtn').classList.contains('is-disabled')) return;
+    const f = document.createElement('iframe'); f.setAttribute('aria-hidden', 'true'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    f.onload = () => { try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ aureumToast('Could not open the print window — use “Open in new tab” instead.', 'danger'); } setTimeout(() => f.remove(), 60000); };
+    f.srcdoc = lblPrintHtml(); document.body.appendChild(f);
+  }
+  function lblOpenTab(){
+    if(lblEl('lblOpenBtn').classList.contains('is-disabled')) return;
+    const url = URL.createObjectURL(new Blob([lblPrintHtml()], { type: 'text/html' }));
+    const w = window.open(url, '_blank'); if(!w) aureumToast('Your browser blocked the new tab — allow pop-ups for this site.', 'danger');
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  }
+  function lblFillSelects(){
+    const tpl = lblEl('lblTpl'); let g = '', html = '';
+    AureumLabels.TEMPLATES.forEach(t => { if(t.group !== g){ if(g) html += '</optgroup>'; html += `<optgroup label="${escHtml(t.group)}">`; g = t.group; } html += `<option value="${t.id}">${escHtml(t.name)}</option>`; });
+    tpl.innerHTML = html + '</optgroup>';
+    const shops = ['All Shops'].concat(SHOPS);
+    lblEl('lblShop').innerHTML = shops.map(s => `<option value="${escHtml(s)}">${s === 'All Shops' ? 'Regular price' : escHtml(s)}</option>`).join('');
+    const cats = [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))].sort();
+    lblEl('lblByCat').innerHTML = '<option value="">Add a category…</option>' + cats.map(c => `<option value="${escHtml(c)}">${escHtml(c)} (${PRODUCTS.filter(p => p.cat === c).length})</option>`).join('');
+    const sup = lblSuppliers();
+    lblEl('lblBySup').innerHTML = '<option value="">Add a supplier…</option>' + Object.keys(sup).sort().map(s => `<option value="${escHtml(s)}">${escHtml(s)} (${sup[s].size})</option>`).join('');
+  }
+  /* products each supplier has sold us, from purchase orders and goods received notes */
+  function lblSuppliers(){
+    const m = {};
+    [PURCHASE_ORDERS, GRN_RECORDS].forEach(list => (list || []).forEach(d => { const s = String(d.supplier || '').trim(); if(!s || s === 'N/A') return; (d.items || []).forEach(it => { if(it.productId != null && PRODUCTS.some(p => p.id === it.productId)){ (m[s] = m[s] || new Set()).add(it.productId); } }); }));
+    return m;
+  }
+  /* "Print labels" button on a purchase order / GRN / adjustment / transfer: the quantities come pre-filled from the document */
+  function wireDocLabels(title, rows){
+    const b = document.getElementById('detailLabelsBtn'); if(!b) return;
+    b.addEventListener('click', () => { const r = rows.filter(x => x.productId != null && x.qty > 0); closeModal('detailModal'); openLabels(r, title); if(!r.length) aureumToast('No products on this document can be labelled.', 'danger'); });
+  }
+  function lblQtyFromDoc(it){ const q = unitTotalQty(it); return q > 0 ? Math.max(1, Math.min(999, Math.round(q))) : 0; }
+  /* from = '' (Products screen), or a document: [{ productId, qty }] with a title for the note */
+  function openLabels(rows, from){
+    lblFillSelects();
+    const keep = (id, d) => { if(lblSet[id] != null){ const el = lblEl(id); if(el.type === 'checkbox') el.checked = !!lblSet[id]; else if([...(el.options || [])].length ? [...el.options].some(o => o.value === String(lblSet[id])) : true) el.value = lblSet[id]; } else if(d != null) lblEl(id).value = d; };
+    ['lblTpl','lblSource','lblKind','lblShop','lblOX','lblOY','lblCMode','lblCW','lblCH','lblCCols','lblCRows','lblCGapX','lblCGapY','lblCML','lblCMT','lblCPW','lblCPH','lblName','lblPrice','lblCode'].forEach(id => keep(id));
+    if(lblSet.lblShop == null){ const f = lblEl('productShopFilter') && lblEl('productShopFilter').value; if(f && [...lblEl('lblShop').options].some(o => o.value === f)) lblEl('lblShop').value = f; }
+    lblEl('lblStart').value = 1; lblEl('lblSearch').value = ''; lblEl('lblResults').hidden = true;
+    lbl.rows = []; lbl.from = from || '';
+    (rows || []).forEach(r => { if(PRODUCTS.some(p => p.id === r.productId) && r.qty > 0){ const x = lbl.rows.find(y => y.pid === r.productId); if(x) x.qty = Math.min(999, x.qty + r.qty); else lbl.rows.push({ pid: r.productId, qty: r.qty }); } });
+    lblEl('lblTitle').textContent = from ? 'Print labels — ' + from : 'Print labels';
+    openModal('labelsModal'); lblRefresh();
+    setTimeout(() => lblEl('lblSearch').focus(), 50);
+  }
+  (function wireLabels(){
+    const act = (id, fn) => { const el = lblEl(id); el.addEventListener('click', fn); el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fn(); } }); };
+    ['lblTpl','lblSource','lblKind','lblShop','lblCMode'].forEach(id => lblEl(id).addEventListener('change', () => { lblSave(); lblRefresh(); }));
+    ['lblName','lblPrice','lblCode'].forEach(id => lblEl(id).addEventListener('change', () => { lblSave(); lblRefresh(true); }));
+    ['lblOX','lblOY','lblStart','lblCW','lblCH','lblCCols','lblCRows','lblCGapX','lblCGapY','lblCML','lblCMT','lblCPW','lblCPH'].forEach(id => lblEl(id).addEventListener('input', () => { lblSave(); lblRefresh(true); }));
+    const search = lblEl('lblSearch'), results = lblEl('lblResults');
+    const showResults = () => {
+      const q = search.value.trim().toLowerCase(); if(!q){ results.hidden = true; return; }
+      const words = q.split(/\s+/), hits = PRODUCTS.filter(p => { const hay = (p.name + ' ' + (p.code || '') + ' ' + (p.barcode || '')).toLowerCase(); return words.every(w => hay.includes(w)); }).slice(0, 30);
+      results.innerHTML = hits.length ? hits.map(p => `<div role="option" tabindex="0" data-id="${p.id}"><span>${escHtml(p.name)}</span><span class="mono">${escHtml(p.barcode || p.code || '')}</span></div>`).join('') : '<div style="cursor:default;color:var(--sage);">No product found.</div>';
+      results.hidden = false;
+      results.querySelectorAll('[data-id]').forEach(d => { const pick = () => { const id = PRODUCTS.find(p => String(p.id) === d.dataset.id).id; if(!lblAdd([id])){ const r = lbl.rows.find(x => x.pid === id); if(r) r.qty = Math.min(999, r.qty + 1); } search.value = ''; results.hidden = true; lblRefresh(); search.focus(); };
+        d.addEventListener('click', pick); d.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); pick(); } }); });
+    };
+    search.addEventListener('input', showResults);
+    search.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); const f = results.querySelector('[data-id]'); if(f) f.click(); } if(e.key === 'Escape' && !results.hidden){ e.stopPropagation(); results.hidden = true; } });
+    document.addEventListener('click', e => { if(!results.hidden && !e.target.closest('.lbl-add')) results.hidden = true; });
+    lblEl('lblByCat').addEventListener('change', function(){ if(!this.value) return; const n = lblAdd(PRODUCTS.filter(p => p.cat === this.value).map(p => p.id)); this.value = ''; aureumToast(n ? n + ' product' + (n === 1 ? '' : 's') + ' added.' : 'Those products are already in the list.', n ? 'ok' : undefined); lblRefresh(); });
+    lblEl('lblBySup').addEventListener('change', function(){ if(!this.value) return; const set = lblSuppliers()[this.value] || new Set(); const n = lblAdd([...set]); this.value = ''; aureumToast(n ? n + ' product' + (n === 1 ? '' : 's') + ' added.' : 'Those products are already in the list.', n ? 'ok' : undefined); lblRefresh(); });
+    act('lblSetAll', () => { lbl.rows.forEach(r => r.qty = 1); lblRefresh(); });
+    act('lblClear', () => { lbl.rows = []; lblRefresh(); });
+    act('lblPrintBtn', lblPrint); act('lblOpenBtn', lblOpenTab);
+    act('productLabelsBtn', () => {
+      // Products screen: ticked products, else what the list shows, 1 label each — or start empty if there are very many
+      let ids = []; try{
+        if(selectedProductIds && selectedProductIds.size) ids = Array.from(selectedProductIds);                       // ticked products first
+        else ids = Array.from(document.querySelectorAll('#productTableBody tr[data-id]')).map(tr => +tr.dataset.id);    // otherwise what the list shows
+      }catch(e){}
+      ids = ids.filter(id => PRODUCTS.some(p => p.id === id));
+      openLabels((ids.length <= 60 ? ids : []).map(id => ({ productId: id, qty: 1 })), '');
+    });
+  })();
   document.getElementById('productHistoryBtn').addEventListener('click', openProductHistory);
   document.getElementById('productSearch').addEventListener('input', renderProducts);
   document.getElementById('productCatFilter').addEventListener('change', function(){
@@ -6072,8 +6379,10 @@ const AureumSync = (function(){
     if(!po) return;
     openDetailModal(`Purchase Order ${po.id}`, renderPODetailBody(po), `
       <div class="modal-btn ghost" data-close="detailModal">Close</div>
+      <div class="modal-btn ghost" id="detailLabelsBtn">Print labels</div>
       <div class="modal-btn solid" id="detailEditPOBtn">Edit order</div>
     `);
+    wireDocLabels(`Purchase Order ${po.id}`, (po.items || []).map(it => ({ productId: it.productId, qty: lblQtyFromDoc(it) })));
     document.getElementById('detailEditPOBtn').addEventListener('click', ()=>{ closeModal('detailModal'); switchToPOCreate(id); });
   }
 
@@ -6336,7 +6645,8 @@ const AureumSync = (function(){
   function viewGRN(id){
     const g = GRN_RECORDS.find(x=>x.id===id);
     if(!g) return;
-    openDetailModal(`Goods Received Note ${g.id}`, renderGRNDetailBody(g));
+    openDetailModal(`Goods Received Note ${g.id}`, renderGRNDetailBody(g), `<div class="modal-btn ghost" data-close="detailModal">Close</div><div class="modal-btn solid" id="detailLabelsBtn">Print labels</div>`);
+    wireDocLabels(`GRN ${g.id}`, (g.items || []).map(it => ({ productId: it.productId, qty: lblQtyFromDoc(it) })));
   }
 
   // Note: GRNs can no longer be deleted — they're permanent purchasing/inventory
@@ -6635,7 +6945,10 @@ const AureumSync = (function(){
   function viewSA(id){
     const a = STOCK_ADJUSTMENTS.find(x=>x.id===id);
     if(!a) return;
-    openDetailModal(`Stock Adjustment ${a.id}`, renderSADetailBody(a));
+    openDetailModal(`Stock Adjustment ${a.id}`, renderSADetailBody(a), a.type === 'Reduce' ? undefined : `<div class="modal-btn ghost" data-close="detailModal">Close</div><div class="modal-btn solid" id="detailLabelsBtn">Print labels</div>`);
+    if(a.type !== 'Reduce') wireDocLabels(`Stock Adjustment ${a.id}`, (a.items || []).map(it => {      // labels for what was ADDED (for an override: the increase)
+      const eff = unitTotalQty(it, 'counted'), before = it.beforeStock || 0, q = a.type === 'Add' ? eff : eff - before;
+      return { productId: it.productId, qty: q > 0 ? Math.max(1, Math.min(999, Math.round(q))) : 0 }; }));
   }
 
   // Note: stock adjustments can no longer be deleted — they're permanent
@@ -8631,7 +8944,7 @@ const AureumSync = (function(){
   let activeSettingsTab = "general";
   function renderSettingsNav(){
     document.getElementById('settingsNav').innerHTML = SETTINGS_TABS.map(t=>
-      `<div class="settings-tab-item ${t.id===activeSettingsTab?'active':''}" data-stab="${t.id}">${t.label}</div>`
+      `<div class="settings-tab-item ${t.id===activeSettingsTab?'active':''}${t.id==='fiscal' && window.FISCAL_COMING_SOON ? ' fx-soon-tab' : ''}" data-stab="${t.id}">${t.label}${t.id==='fiscal' && window.FISCAL_COMING_SOON ? ' <span class="fx-soon">Coming soon</span>' : ''}</div>`
     ).join('');
     document.querySelectorAll('.settings-tab-item').forEach(el=>{
       el.addEventListener('click', ()=>{
@@ -9519,8 +9832,9 @@ const AureumSync = (function(){
     const t = TRANSFERS.find(x => x.id === id);
     if(!t) return;
     openDetailModal(`Stock Transfer ${t.id}`, renderTransferDetailBody(t),
-      `<div class="modal-btn ghost" id="trDetailPdfBtn">Download PDF</div><div class="modal-btn solid" data-close="detailModal">Close</div>`);
+      `<div class="modal-btn ghost" id="trDetailPdfBtn">Download PDF</div><div class="modal-btn ghost" id="detailLabelsBtn">Print labels</div><div class="modal-btn solid" data-close="detailModal">Close</div>`);
     document.getElementById('trDetailPdfBtn').addEventListener('click', () => transferPdf(t));
+    wireDocLabels(`Transfer ${t.id}`, (t.items || []).map(it => ({ productId: it.productId, qty: lblQtyFromDoc(it) })));
   }
   let transferPageState = { page:1, pageSize:10 };
   let transferDateRangeFilter = null;
@@ -10573,6 +10887,10 @@ const AureumSync = (function(){
   const fxPill = (txt, tone) => `<span class="fx-pill ${tone||'mute'}">${escHtml(txt)}</span>`;
   const fxStateTone = st => ({ fiscalised:'ok', rejected:'bad', failed:'bad', uncertain:'warn', not_configured:'warn', pending:'mute', submitting:'mute' }[st] || 'mute');
   async function fxLoad(){
+    const panel = document.getElementById('settings-fiscal'), soon = !!window.FISCAL_COMING_SOON;
+    if(panel) panel.classList.toggle('fx-off', soon);
+    document.getElementById('fxSoon').hidden = !soon;
+    if(soon) return;                                   // launch switch off: no lookups, nothing to configure
     const note = document.getElementById('fxDbNote'), roleNote = document.getElementById('fxRoleNote');
     roleNote.hidden = fxCan();
     if(!fxCloud()){
@@ -11003,6 +11321,7 @@ const AureumSync = (function(){
      backend to work. To re-enable real accounts + cross-device sync
      later, fill in SUPABASE_CONFIG near the top of this <script> and
      restore the original boot() body (kept below, commented out). */
+  const justConfirmedEmail = /[#&?]type=signup\b/.test(window.location.hash);   // arrived from the confirmation email
   async function boot(){
     if(checkForPasswordRecovery()) return;
     if(!supaReady){
@@ -11043,6 +11362,7 @@ const AureumSync = (function(){
       banner.style.display = 'block';
     }
     await startApp();
+    if(justConfirmedEmail){ try{ aureumToast('Email confirmed — welcome to AUREUM!', 'ok'); }catch(e){} }
     try{ if(window.AureumGuideBo) AureumGuideBo.ready(); }catch(e){}
   }
   /* ===== AUTH GATE UI ===== */
@@ -11067,6 +11387,50 @@ const AureumSync = (function(){
   document.getElementById('authForgotLink').addEventListener('click', ()=> setAuthMode('forgot'));
   document.getElementById('authBackToSignIn').addEventListener('click', ()=> setAuthMode('signin'));
   setAuthMode('signin');
+  /* ---- "Check your email" step after Create Business, and "Email not confirmed" at sign-in ---- */
+  let verifyEmail = '', resendTimer = null;
+  function showVerify(email, note){
+    verifyEmail = email;
+    document.getElementById('authVerifyEmail').textContent = email;
+    document.getElementById('authVerify').style.display = 'block';
+    ['authTabs','authSignupFields','authForgotFields','authForgotLinkRow','authRememberRow','authPassword','authEmail','authSubmitBtn','authError'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+    document.getElementById('authGateMsg').textContent = 'One more step.';
+    const m = document.getElementById('authResendMsg'); m.className = 'av-msg'; m.textContent = note || '';
+    startResendCooldown(30);
+  }
+  function hideVerify(mode){
+    document.getElementById('authVerify').style.display = 'none';
+    if(resendTimer){ clearInterval(resendTimer); resendTimer = null; }
+    ['authEmail','authSubmitBtn','authError'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
+    document.getElementById('authGateMsg').textContent = mode === 'signin' ? 'Sign in to manage your business.' : 'Create your business account to start your 14-day free trial.';
+    setAuthMode(mode);
+  }
+  function startResendCooldown(sec){
+    const b = document.getElementById('authResendBtn'); let left = sec;
+    if(resendTimer) clearInterval(resendTimer);
+    const tick = () => { if(left > 0){ b.textContent = 'Resend email (' + left + 's)'; b.classList.add('is-disabled'); b.setAttribute('aria-disabled','true'); left--; } else { b.textContent = 'Resend email'; b.classList.remove('is-disabled'); b.removeAttribute('aria-disabled'); clearInterval(resendTimer); resendTimer = null; } };
+    tick(); resendTimer = setInterval(tick, 1000);
+  }
+  async function resendConfirmation(){
+    const m = document.getElementById('authResendMsg'); m.className = 'av-msg';
+    if(resendTimer || !verifyEmail) return;
+    m.textContent = 'Sending…';
+    try{
+      const { error } = await sb.auth.resend({ type: 'signup', email: verifyEmail, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
+      if(error) throw error;
+      m.textContent = 'Sent again — check your inbox.';
+    }catch(e){
+      m.className = 'av-msg err';
+      m.textContent = /rate|seconds|too many/i.test(e && e.message || '') ? 'Please wait a minute before asking for another email.' : ((e && e.message) || 'Could not send the email. Try again shortly.');
+    }
+    startResendCooldown(30);
+  }
+  (function(){
+    const act = (id, fn) => { const el = document.getElementById(id); el.addEventListener('click', fn); el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fn(); } }); };
+    act('authResendBtn', resendConfirmation);
+    act('authVerifyDone', () => { hideVerify('signin'); document.getElementById('authEmail').value = verifyEmail; document.getElementById('authPassword').focus(); });
+    act('authVerifyChange', () => { hideVerify('signup'); document.getElementById('authEmail').focus(); });
+  })();
   // The public website links here: ?mode=signup opens "Create Business" (the free trial), ?mode=signin the sign-in tab.
   // With no parameter nothing changes. A signed-in visitor goes straight into the app as before.
   (function(){
@@ -11116,7 +11480,12 @@ const AureumSync = (function(){
         if(!bizName){ errEl.textContent = 'Business name is required.'; return; }
         const country = authCountryPicker ? authCountryPicker.value : '';
         if(!country){ errEl.textContent = 'Please choose your country.'; errEl.classList.add('show'); return; }
-        await aureumSignUp(email, password, bizName, fullName, country);
+        const su = await aureumSignUp(email, password, bizName, fullName, country);
+        if(!su || !su.session){        // the project asks people to confirm their email first: no session until they click the link
+          btn.textContent = 'Create Business';
+          showVerify(email);
+          return;
+        }
       } else {
         applyRememberChoice(email);
         await aureumSignIn(email, password);
@@ -11125,6 +11494,10 @@ const AureumSync = (function(){
     }catch(err){
       btn.textContent = authMode==='signup' ? 'Create Business' : authMode==='forgot' ? 'Send reset link' : 'Sign In';
       errEl.style.color = '';
+      if(authMode === 'signin' && /not confirmed|email_not_confirmed/i.test((err && (err.message || err.code)) || '')){
+        showVerify(email, 'Your email isn\'t confirmed yet. Open the link we sent — or press Resend.');
+        return;
+      }
       errEl.textContent = err.message || 'Something went wrong.';
     }
   });
@@ -12221,6 +12594,16 @@ E('product-code','Products','How do product codes work?',
   'sku code number unique automatic generated 100001 duplicate',
   `Every product always has a **code**. New codes are automatic (six digits, continuing after the highest code in use, like 100007). You can type your own, but **two products cannot share a code** — you'll be told which product already has it. Leave the box empty and one is generated. Products that had no code get one automatically when the Back Office opens.`,
   ['product-barcode','add-product']),
+E('print-labels','Products','How do I print barcode labels?',
+  ['how do i print labels','print barcode labels','print price tags','print product labels','label printer','how do i print barcodes','sticker labels','shelf labels'],
+  'print labels barcode stickers price tag shelf roll sheet a4 label printer zebra thermal template ean code 128 quantity',
+  `1. Open **Products** and press **Print labels** (tick products first to start with just those).\n2. Add products: **search**, or add a whole **category** or a **supplier's** products. Set **how many labels** each.\n3. Choose the **Label type** (a roll size, or an A4 / Letter sheet), where the barcode comes from (**Barcode**, **SKU** or **Barcode, else SKU**), the **shop price** and whether to show the name, price and number.\n4. Check the **preview**, then press **Print labels** and pick your printer in the print window (scale **100% / Actual size**, margins **None**).\n\nYou can also open **Print labels** from a **purchase order**, **goods received note**, **stock adjustment** or **transfer** — the quantities are filled in for you.`,
+  ['product-barcode','print-labels-fix','product-code'], { pages:['products'] }),
+E('print-labels-fix','Products','Why is my label printing in the wrong place, or not scanning?',
+  ['label prints off the label','labels are cut off','barcode will not scan','barcode not scanning','label misaligned','label printed too small','label printer wrong size','blank label between prints'],
+  'label alignment offset move margin scale actual size scan scanner barcode thin long code paper size',
+  `- In the print window choose the **paper size that matches your labels**, scale **100% / Actual size** and margins **None**.\n- If print is a little off, use **Move right / Move down (mm)** in the label screen (negative moves left / up). The numbers are remembered.\n- For sheets use **Start at label** to continue a partly used sheet.\n- A barcode that is very long gets thin bars. Use a **shorter code** (up to 18 characters is best), a **wider label**, or the **Custom size** option.\n- Products with **no barcode or SKU**, or a code with unusual characters, print without a barcode — the screen tells you which.\n- To give products their own barcode numbers, choose **Barcode** as the source and press **Create barcodes** (they start with 2, so they never clash with a maker's barcode).`,
+  ['print-labels','product-barcode']),
 E('product-barcode','Products','How do barcodes and searching work?',
   ['how do i add a barcode','how do i scan products','barcode scanner','search by barcode at the till','can i use a scanner','find a product quickly'],
   'barcode scan scanner search code find lookup ean upc',
@@ -12783,12 +13166,14 @@ E('fiscal-what','Settings','What is fiscalisation and do I have to use it?',
   'fiscalisation fiscalization fiscal device tax authority receipts compliance country optional etims efris zimra zra tra',
   `Fiscalisation means each sale is also reported to **your country's tax authority** through an approved fiscal device or e-invoicing system, so the receipt can carry an official fiscal reference. What is required, and how, depends on the country — AUREUM asks for your shop's country and then for that country's details.
 
-It is **optional and off by default** — AUREUM works exactly as before until an **owner or manager** turns it on in **Settings → Fiscalisation**. **Each country is switched on only after it has been tested and approved.** Until then you can still enter your device and tax details, sales are saved normally and are clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
+**Fiscalisation is coming soon.** It is still being finished and tested, so it is switched off for everyone for now — sales and receipts work exactly as before and nothing is sent to any tax authority. When it launches it will be **optional and off by default**: an **owner or manager** will turn it on in **Settings → Fiscalisation**. **Each country is switched on only after it has been tested and approved.** Until then you can still enter your device and tax details, sales are saved normally and are clearly marked **not fiscalised** — they are never presented as fiscalised when they aren't.`,
   ['fiscal-setup','fiscal-requirements','fiscal-not-fiscalised'], { pages:['settings-fiscal'] }),
 E('fiscal-setup','Settings','How do I set up fiscalisation?',
   ['set up fiscalisation','turn on fiscalisation','add a fiscal device','connect my fiscal device','enable fiscal receipts','fiscalisation settings','set up fiscal device for my country'],
   'fiscalisation setup enable turn on shop country device configure test connection serial number model portal tax details checklist',
-  `1. Open **Settings → Fiscalisation** (owners and managers).
+  `**Fiscalisation is coming soon**, so there is nothing to set up yet — the Settings → Fiscalisation page is greyed out until it launches. When it is ready, this is how it will work:
+
+1. Open **Settings → Fiscalisation** (owners and managers).
 2. For each shop, **choose its country** (your business country is suggested). AUREUM then shows that country's tax authority and what it usually asks for.
 3. Press **Set up device & tax details** and enter the device **model**, serial number, how sales are reported, your **tax number** and the authority **portal** address. Never type passwords or keys.
 4. Choose how it connects — usually a **fiscal connector** on this computer — and press **Test**.

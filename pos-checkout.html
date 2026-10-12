@@ -593,6 +593,17 @@
   .rf-amt{ grid-column:1 / -1; text-align:right; font-size:12px; color:var(--gold-bright); min-height:14px; }
   /* ---- history rows / negative stock ---- */
   .sale-row.clickable{ cursor:pointer; }
+  .sync-pill{ display:inline-block; font-size:10px; font-weight:600; letter-spacing:.02em; padding:1px 7px; border-radius:999px; border:1px solid var(--line); margin-left:6px; white-space:nowrap; vertical-align:1px; }
+  .sync-pill.ok{ color:#7fd6a0; border-color:rgba(127,214,160,.45); } .sync-pill.warn{ color:var(--gold-bright); border-color:rgba(212,168,67,.55); background:rgba(212,168,67,.08); } .sync-pill.mute{ color:var(--sage); }
+  .sales-tabs{ display:flex; gap:6px; margin:0 0 10px; flex-wrap:wrap; align-items:center; }
+  .sales-tab{ padding:6px 12px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--ivory-dim); cursor:pointer; user-select:none; }
+  .sales-tab.active{ color:var(--gold-bright); border-color:var(--gold-bright); background:rgba(212,168,67,.08); }
+  .sales-tab .n{ display:inline-block; min-width:16px; margin-left:5px; padding:0 5px; border-radius:999px; background:var(--gold-bright); color:#10261a; font-size:10.5px; font-weight:700; text-align:center; }
+  .sync-now{ margin-left:auto; padding:6px 12px; border:1px solid var(--line); border-radius:8px; font-size:12px; color:var(--gold-bright); cursor:pointer; }
+  .sync-chip{ margin:0 0 10px; padding:7px 11px; border-radius:10px; font-size:12px; border:1px solid var(--line); color:var(--ivory-dim); }
+  .sync-chip.ok{ color:#7fd6a0; border-color:rgba(127,214,160,.4); } .sync-chip.warn{ color:var(--gold-bright); border-color:rgba(212,168,67,.5); background:rgba(212,168,67,.08); }
+  #recentSalesBtn{ position:relative; }
+  .sync-dot{ position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--gold-bright); color:#10261a; font-size:10px; font-weight:700; line-height:16px; text-align:center; }
   .sale-row .refund-btn{ border:1px solid var(--line-strong); border-radius:8px; color:var(--gold-bright); font-weight:600; cursor:pointer; white-space:nowrap; }
   .sale-row .refund-btn:hover{ border-color:var(--gold-bright); background:rgba(231,199,102,0.08); }
   .sale-row.clickable:hover{ background:rgba(231,199,102,0.05); }
@@ -795,7 +806,7 @@
       <div class="topbar-icon-btn" id="shopSwitchBtn" title="Switch shop" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9733; <span id="shopChipLabel">All Shops</span></div>
       <div class="topbar-icon-btn" id="shiftBtn" title="Shift — summary, close shift, closed shifts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9201; <span id="shiftBtnLabel">Shift</span></div>
       <div class="topbar-icon-btn" id="backOfficeBtn" title="Open Back Office">&#8599;</div>
-      <div class="topbar-icon-btn" id="recentSalesBtn" title="Recent sales">&#8635;</div>
+      <div class="topbar-icon-btn" id="recentSalesBtn" title="Recent sales" role="button" aria-label="Recent sales">&#8635;<span class="sync-dot" id="recentSalesDot" hidden></span></div>
       <div class="topbar-icon-btn" id="guideBtn" title="Guide — step-by-step help on the real screen" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#10022; Guide</div>
       <div class="topbar-icon-btn" id="helpBtn" title="Help">?</div>
       <div class="clerk" id="clerkSwitch" title="Switch cashier" style="cursor:pointer;">
@@ -929,6 +940,11 @@
       <div class="modal-close" data-close="recentSalesOverlay">&#10005;</div>
     </div>
     <div class="modal-body">
+      <div class="sales-tabs" role="tablist" aria-label="Sales view">
+        <div class="sales-tab active" id="salesTabToday" role="tab" tabindex="0" aria-selected="true">Today</div>
+        <div class="sales-tab" id="salesTabUnsynced" role="tab" tabindex="0" aria-selected="false">Not synced<span class="n" id="salesTabUnsyncedN" hidden></span></div>
+        <div class="sync-now" id="syncNowBtn" role="button" tabindex="0" hidden>Sync now</div>
+      </div>
       <div class="today-sum" id="recentSalesSub"></div>
       <div id="recentSalesBody"></div>
     </div>
@@ -989,6 +1005,7 @@
       <div class="modal-close" data-close="receiptOverlay">&#10005;</div>
     </div>
     <div class="modal-body">
+      <div class="sync-chip" id="receiptSyncChip" role="status" hidden></div>
       <div class="receipt-body" id="receiptBody"></div>
     </div>
     <div class="modal-actions">
@@ -1168,6 +1185,7 @@
 </div>
 
 <script src="/vendor/supabase.js"></script>
+<script src="/fiscal/flag.js"></script>
 <script src="/fiscal/fiscal-core.js"></script>
 <script src="/fiscal/profiles.js"></script>
 <script src="/fiscal/countries/zw.js"></script>
@@ -1702,7 +1720,17 @@ const AureumSync = (function(){
     return { byCollection: out, total };
   }
 
-  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same,
+  /* Which records has the server already got? Built from the server's last-known copy (`base`; right after an offline start, the copy saved
+     in this device's cache). Returns null when there is no cloud (nothing to sync to), else (record) => true if the server has it. */
+  function syncChecker(name){
+    if(!cfg || !cfg.isCloud()) return null;
+    let b = base; if(!b){ const c = readCache(); b = c && c.base; }
+    const spec = COLLECTIONS[name], have = new Set();
+    if(b && spec && Array.isArray(b[name])) b[name].forEach(r => { try{ have.add(spec.key(r)); }catch(e){} });
+    return rec => { try{ return !!spec && have.has(spec.key(rec)); }catch(e){ return false; } };
+  }
+
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker,
            findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
 })();
 /* ==== END AUREUM SYNC CORE ==== */
@@ -2494,29 +2522,64 @@ async function aureumSignIn(email, password){
   /* ===== RECENT SALES ===== */
   const recentSales = [];
   /* ===== TODAY'S SALES (this shop, today only — older receipts live in Back Office → Receipts) ===== */
+  /* A receipt is "synced" once the server's copy holds it. null = no cloud account here, so there is nothing to sync to. */
+  let recentView = 'today';
+  const syncCheck = () => { try{ return AureumSync.syncChecker('receipts'); }catch(e){ return null; } };
+  const unsyncedReceipts = () => { const chk = syncCheck(); return chk ? RECEIPTS.filter(r => !chk(r)) : []; };
+  function syncPill(chk, r){ return !chk ? '<span class="sync-pill mute">On this device</span>' : chk(r) ? '<span class="sync-pill ok">&#10003; Synced</span>' : '<span class="sync-pill warn">&#8987; Not synced</span>'; }
+  function renderUnsyncedBadge(){
+    const n = unsyncedReceipts().length, dot = document.getElementById('recentSalesDot'), btn = document.getElementById('recentSalesBtn');
+    if(dot){ dot.hidden = !n; dot.textContent = n > 99 ? '99+' : String(n); }
+    if(btn) btn.title = n ? 'Recent sales — ' + n + ' not synced yet' : 'Recent sales';
+  }
+  function updateReceiptSyncChip(){
+    const el = document.getElementById('receiptSyncChip'); if(!el) return;
+    const chk = syncCheck(), rec = lastSale && lastSale.uid ? RECEIPTS.find(x => x.uid === lastSale.uid) : null;
+    if(!chk || !rec){ el.hidden = true; return; }
+    el.hidden = false;
+    if(chk(rec)){ el.className = 'sync-chip ok'; el.textContent = '✓ Synced — this receipt is saved in your cloud account.'; }
+    else { el.className = 'sync-chip warn'; el.textContent = '⌛ Not synced yet — saved on this device. It uploads by itself as soon as the connection allows.'; }
+  }
   function renderRecentSales(){
     const body = document.getElementById('recentSalesBody'), sub = document.getElementById('recentSalesSub');
-    const now = new Date();
-    const list = RECEIPTS.filter(r => r.shop === activeShop && sameDay(new Date(r.dateTime), now))
-      .sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
-    const sales = list.filter(r => !r.refund), refunds = list.filter(r => r.refund);
-    const net = sales.reduce((s,r)=> s + r.total, 0) - refunds.reduce((s,r)=> s + r.total, 0);
-    sub.innerHTML = `<b>${now.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</b> · ${sales.length} sale${sales.length===1?'':'s'}` +
-      `${refunds.length ? `, ${refunds.length} refund${refunds.length===1?'':'s'}` : ''} · net <b>${money(net)}</b>`;
+    const chk = syncCheck(), now = new Date(), cloud = !!chk;
+    const unsynced = chk ? RECEIPTS.filter(r => !chk(r)) : [];
+    // tabs
+    const tn = document.getElementById('salesTabUnsyncedN'), tab2 = document.getElementById('salesTabUnsynced'), tab1 = document.getElementById('salesTabToday'), nowBtn = document.getElementById('syncNowBtn');
+    tab2.style.display = cloud ? '' : 'none'; if(!cloud) recentView = 'today';
+    tn.hidden = !unsynced.length; tn.textContent = String(unsynced.length);
+    tab1.classList.toggle('active', recentView === 'today'); tab1.setAttribute('aria-selected', String(recentView === 'today'));
+    tab2.classList.toggle('active', recentView === 'unsynced'); tab2.setAttribute('aria-selected', String(recentView === 'unsynced'));
+    nowBtn.hidden = !(cloud && unsynced.length);
+    document.querySelector('#recentSalesOverlay .modal-head .title').textContent = recentView === 'unsynced' ? 'Receipts not synced' : "Today's Sales";
+    const list = (recentView === 'unsynced' ? unsynced : RECEIPTS.filter(r => r.shop === activeShop && sameDay(new Date(r.dateTime), now)))
+      .slice().sort((a,b)=> new Date(b.dateTime) - new Date(a.dateTime));
+    if(recentView === 'unsynced'){
+      sub.innerHTML = list.length ? `<b>${list.length}</b> receipt${list.length===1?'':'s'} on this device ${list.length===1?'is':'are'} not in your cloud account yet (all days and shops). ${list.length===1?'It':'They'} upload automatically when the connection allows — you can also press <b>Sync now</b>.`
+        : 'Everything on this device is synced.';
+    } else {
+      const sales = list.filter(r => !r.refund), refunds = list.filter(r => r.refund);
+      const net = sales.reduce((s,r)=> s + r.total, 0) - refunds.reduce((s,r)=> s + r.total, 0);
+      sub.innerHTML = `<b>${now.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</b> · ${sales.length} sale${sales.length===1?'':'s'}` +
+        `${refunds.length ? `, ${refunds.length} refund${refunds.length===1?'':'s'}` : ''} · net <b>${money(net)}</b>` +
+        (cloud ? ` · ${unsynced.filter(r => r.shop === activeShop && sameDay(new Date(r.dateTime), now)).length ? `<span style="color:var(--gold-bright)">${unsynced.filter(r => r.shop === activeShop && sameDay(new Date(r.dateTime), now)).length} not synced</span>` : '<span style="color:#7fd6a0">all synced</span>'}` : '');
+    }
     if(list.length === 0){
-      body.innerHTML = `<div class="empty-state" style="margin-top:6px;"><p>No sales yet today at ${escHtml(activeShop || 'this shop')}.</p></div>`;
+      body.innerHTML = recentView === 'unsynced' ? `<div class="empty-state" style="margin-top:6px;"><p>Nothing waiting to sync.</p></div>`
+        : `<div class="empty-state" style="margin-top:6px;"><p>No sales yet today at ${escHtml(activeShop || 'this shop')}.</p></div>`;
       return;
     }
     body.innerHTML = list.map(r => {
       const key = receiptKey(r), d = new Date(r.dateTime), qty = receiptQty(r);
       const when = d.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',hour12:true});
+      const where = recentView === 'unsynced' ? d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + when + ' · ' + escHtml(r.shop || '') + ' · ' : when + ' · ';
       let tag = '';
       if(!r.refund){ const rf = refundedSoFar(r); if(rf.count) tag = remainingQty(r, rf) === 0 ? ' · <span style="color:var(--danger)">Refunded</span>' : ' · <span style="color:#E39A4B">Partly refunded</span>'; }
       return `
       <div class="sale-row clickable" data-key="${escHtml(key)}" title="Tap to view the full receipt">
         <div class="info">
-          <div class="no">${r.refund ? 'Refund ' : 'No. '}${escHtml(r.id)}</div>
-          <div class="meta">${when} · ${qty} item${qty===1?'':'s'}${r.refund && r.refundOf ? ' · of No. ' + escHtml(r.refundOf) : ''}${tag}</div>
+          <div class="no">${r.refund ? 'Refund ' : 'No. '}${escHtml(r.id)}${syncPill(chk, r)}</div>
+          <div class="meta">${where}${qty} item${qty===1?'':'s'}${r.refund && r.refundOf ? ' · of No. ' + escHtml(r.refundOf) : ''}${tag}</div>
         </div>
         <div class="amt">
           <div class="val ${r.refund ? 'neg' : ''}">${r.refund ? '-' : ''}${money(r.total)}</div>
@@ -2526,8 +2589,15 @@ async function aureumSignIn(email, password){
     }).join('');
     body.querySelectorAll('.sale-row').forEach(row => row.addEventListener('click', ()=> openReceiptByKey(row.dataset.key)));
   }
+  (function wireSalesTabs(){
+    const set = v => { recentView = v; renderRecentSales(); };
+    const act = (id, fn) => { const el = document.getElementById(id); el.addEventListener('click', fn); el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fn(); } }); };
+    act('salesTabToday', () => set('today')); act('salesTabUnsynced', () => set('unsynced'));
+    act('syncNowBtn', async () => { const b = document.getElementById('syncNowBtn'); b.textContent = 'Syncing…'; try{ await AureumSync.retryNow(); }catch(e){} b.textContent = 'Sync now'; renderRecentSales(); renderUnsyncedBadge(); });
+  })();
   // Same pop-up serves three moments: "sale just completed", "looking back at a receipt", "a shift report".
   function setReceiptChrome(fromHistory, sale){
+    try{ updateReceiptSyncChip(); }catch(e){}
     const title = document.querySelector('#receiptOverlay .modal-head .title');
     if(title) title.textContent = fromHistory ? (sale.refund ? 'Refund receipt' : 'Receipt') : 'Sale Complete';
     document.getElementById('receiptCloseBtn').textContent = fromHistory ? 'Close' : 'New Sale';
@@ -2687,6 +2757,7 @@ async function aureumSignIn(email, password){
   });
   document.getElementById('recentSalesBtn').addEventListener('click', ()=>{
     if(!cashierMay('reports')){ aureumToast("Today's Sales isn't enabled for your role.", 'danger'); return; }
+    recentView = 'today';
     renderRecentSales();
     openModal('recentSalesOverlay');
   });
@@ -2995,12 +3066,14 @@ async function aureumSignIn(email, password){
     return FISCAL.cfg;
   }
   function fiscalReceiptBlock(sale){
+    if(window.FISCAL_COMING_SOON) return '';
     const fx = sale && (sale.fiscal || (sale.uid && FISCAL.byUid[sale.uid]));
     if(!fx) return '';
     if(!fx.fiscal) return `<div class="r-dash"></div><div class="r-center" style="font-weight:700;">${escHtml(fx.text)}</div>`;
     return `<div class="r-dash"></div><div class="r-center" style="font-weight:700;">${escHtml(fx.text)}</div><div class="r-row"><span>Fiscal ref</span><span>${escHtml(fx.ref||'')}</span></div>${fx.verification ? `<div class="r-row"><span>Verification</span><span>${escHtml(fx.verification)}</span></div>` : ''}${fx.qr ? `<div class="r-center r-sub" style="word-break:break-all;">${escHtml(fx.qr)}</div>` : ''}`;
   }
   async function fiscaliseReceipt(rec, kind){
+    if(window.FISCAL_COMING_SOON) return;                 // fiscalisation is not launched yet: the till does nothing fiscal
     try{
       const cfg = await fiscalConfig();
       if(!cfg || !cfg.available || !cfg.shops[rec.shop]) return;                  // off / not set up → exactly as before
@@ -3129,6 +3202,7 @@ async function aureumSignIn(email, password){
     });
     persistAureum();
     renderCatalog();
+    try{ renderUnsyncedBadge(); }catch(e){}
 
     cart = {};
     tenderedAmt = 0;
@@ -3334,6 +3408,7 @@ async function aureumSignIn(email, password){
   }
 
   function renderSyncStatus(){
+    try{ renderUnsyncedBadge(); if(document.getElementById('recentSalesOverlay').classList.contains('open')) renderRecentSales(); if(document.getElementById('receiptOverlay').classList.contains('open')) updateReceiptSyncChip(); }catch(e){}
     const el = document.getElementById('syncStatus');
     const label = document.getElementById('syncStatusLabel');
     if(!el || !label) return;

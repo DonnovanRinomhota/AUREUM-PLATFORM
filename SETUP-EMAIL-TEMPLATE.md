@@ -1,3 +1,21 @@
+# Sign-up confirmation email — turn it ON first
+
+AUREUM sends **no email itself**: Supabase does. The app now shows a "Check your email" screen
+(with Resend, and a friendly message if someone tries to sign in before confirming), but the email
+only goes out when this is switched on in Supabase:
+
+1. Supabase dashboard → **Authentication → Providers → Email** (older dashboards: *Sign In / Up*)
+2. Turn **Confirm email** ON → Save.
+3. **Authentication → URL Configuration**: set **Site URL** to `https://aureum-platform.vercel.app`
+   and add `https://aureum-platform.vercel.app/backoffice.html` under **Redirect URLs** (the
+   confirmation link brings the person back there and signs them in).
+4. Before real customers sign up, add your own sender: **Project Settings → Authentication → SMTP Settings**
+   (Supabase's built-in sender is rate-limited to a few emails per hour and often lands in spam).
+
+If "Confirm email" is OFF, people are signed in immediately and no email is sent — the app handles both.
+
+---
+
 # Customizing the "Welcome / Confirm Email" message
 
 This part isn't code — it's a template inside Supabase's dashboard.
