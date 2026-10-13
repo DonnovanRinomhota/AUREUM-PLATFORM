@@ -144,7 +144,7 @@ G.init({
       }).then(function(r){ if(r && r.data && r.data.user) currentUser.user_metadata = r.data.user.user_metadata; }).catch(function(){});
     }catch(e){} }
   },
-  links: [{ label: 'Keyboard shortcuts & help', desc: 'Existing quick help for this till.', run: function(){ try{ openModal('helpOverlay'); }catch(e){} } }]
+  links: [{ label: 'Till help', desc: 'Existing quick help for this till.', run: function(){ try{ openModal('helpOverlay'); }catch(e){} } }]
 });
 /* progress belongs to the person at the till: reload it whenever a different cashier signs in */
 window.AureumGuidePos = {

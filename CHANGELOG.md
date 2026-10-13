@@ -1,5 +1,14 @@
 # Changelog
 
+## View-only mode, Billing back in Settings, phone & till improvements
+- **Expired trial / subscription no longer blocks sign-in.** The owner can log in and see everything, but the app is **view only**: a gold strip across the top says *Free trial period has ended · Subscribe to keep enjoying Aureum* (or *Subscription has expired · Subscribe to keep enjoying Aureum*), and every add, edit, delete, save and sale is switched off until they subscribe. Billing, Help, exports, search and navigation keep working. A suspended account is still blocked. The till switches to the same view-only mode (products cannot be added, no sales, holds, discounts or voids). New file `viewonly.js`.
+- **Billing & Subscription is a Settings tab again**, and the left-menu entry (between Reports and Settings) is a shortcut that opens Settings on that tab.
+- **Product form – Shops table shows real numbers** (e.g. 12.00 and 6.00) for every shop instead of "Same as ...", for new and saved products. A shop only keeps its own price/cost if you type a different number; otherwise it follows the regular price.
+- **People menu order:** Employees, Suppliers, Customers.
+- **Fiscalisation greyed out as "Coming soon"** again (switch in `fiscal/flag.js`).
+- **Till:** product pictures now fill the card (no empty gap between picture and name/price); the arrow is labelled **Back Office** and the history button **Receipts**; the keyboard-shortcuts list was removed from Help and the Guide; fixed a product appearing in the cart before one was chosen (a stray tap through the closing sign-in screen); the receipt print no longer shows a dark-green area beside the receipt.
+- **Phones & small screens:** the till's top bar wraps so every button is visible and labelled; search/scan and categories fit the width; the ticket panel and pop-ups sit below the subscription strip. In the Back Office, list pages no longer scroll sideways, Settings tabs scroll cleanly, and the Print labels window fits.
+
 ## Shop filters everywhere, Billing page, Income Statement export, product list fixes
 - **Shop viewing filter now drives every section.** The shop picker at the top sets the starting shop for Sales by Product, Receipts, Products, Purchase Orders, Goods Received, Stock Adjustments, Transfer of Goods, Accounting and Reports (the dashboard as before). Each section has its own **Shop** filter: changing it only changes that section — the top picker and the other sections stay put. Picking a shop at the top again resets them all to it. New Shop filters: Purchase Orders, Transfer of Goods (from or to), Accounting, Reports (one filter for all report tabs).
 - Expenses can now be assigned to a shop (or left business-wide). A shop's Accounting statement shows the expenses recorded for that shop; business-wide expenses appear under All Shops.

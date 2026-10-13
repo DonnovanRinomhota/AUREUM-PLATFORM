@@ -31,7 +31,7 @@
       var hasLabel = (el.id && document.querySelector('label[for="' + el.id.replace(/"/g, '') + '"]')) || el.closest('label'); if(hasLabel && hasLabel.textContent.trim()) return;
       var n = nameFor(el); if(n) el.setAttribute('aria-label', n);
     });
-    document.querySelectorAll('th').forEach(function(th){ if(!th.textContent.trim() && !th.querySelector('input,select,button')){ th.setAttribute('aria-label', 'Actions'); var sp = document.createElement('span'); sp.textContent = 'Actions'; sp.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;'; th.appendChild(sp); } });
+    document.querySelectorAll('th').forEach(function(th){ if(!th.textContent.trim() && !th.querySelector('input,select,button')){ th.setAttribute('aria-label', 'Actions'); var sp = document.createElement('span'); sp.textContent = 'Actions'; sp.style.cssText = 'position:absolute;left:0;top:0;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;'; th.appendChild(sp); } });
     document.querySelectorAll('button, [role=button]').forEach(function(b){ if(!b.textContent.trim() && !b.getAttribute('aria-label') && !b.getAttribute('title') && !b.querySelector('img[alt]')) b.setAttribute('aria-label', hum(b.id || b.className.split(' ')[0] || 'button')); });
   }
   var timer = null, again = function(){ clearTimeout(timer); timer = setTimeout(run, 400); };

@@ -788,7 +788,11 @@
   .save-confirm.show{ opacity:1; }
   @media (max-width: 760px){
     .settings-layout{ grid-template-columns: 1fr; }
-    .settings-nav{ position:static; flex-direction:row; overflow-x:auto; }
+    .settings-layout > *{ min-width:0; }
+    .settings-nav{ position:static; flex-direction:row; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:4px; }
+    .settings-nav::-webkit-scrollbar{ display:none; }
+    .settings-tab-item{ flex:0 0 auto; white-space:nowrap; padding:9px 13px; }
+    .settings-content{ padding:16px 14px; min-width:0; }
     .form-grid-2{ grid-template-columns: 1fr; }
   }
   .form-section:last-child{ border-bottom:none; margin-bottom:0; }
@@ -944,13 +948,15 @@
   button.auth-field{ text-align:left; cursor:pointer; margin-bottom:0; font-family:inherit; }
   /* Print labels */
   #labelsModal .modal-panel{ max-width:1080px; max-height:92vh; }
-  .lbl-grid{ display:grid; grid-template-columns:minmax(280px,340px) 1fr; gap:22px; align-items:start; }
-  @media (max-width:860px){ .lbl-grid{ grid-template-columns:1fr; } }
+  .lbl-grid{ display:grid; grid-template-columns:minmax(280px,340px) minmax(0,1fr); gap:22px; align-items:start; }
+  .lbl-grid > *{ min-width:0; }
+  @media (max-width:860px){ .lbl-grid{ grid-template-columns:minmax(0,1fr); } }
   .lbl-col .lbl-h{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--sage); margin:16px 0 8px; font-weight:600; }
   .lbl-col .lbl-h:first-child{ margin-top:0; }
   .lbl-row{ display:flex; align-items:center; gap:10px; margin:8px 0; font-size:13px; }
   .lbl-row > label{ flex:0 0 112px; color:var(--ivory-dim); font-size:12.5px; }
   .lbl-row select, .lbl-row input[type=number], .lbl-row input[type=text]{ flex:1; min-width:0; }
+  @media (max-width:600px){ .lbl-row{ flex-wrap:wrap; gap:4px; } .lbl-row > label, .lbl-custom .lbl-row > label{ flex:1 1 100%; } .lbl-row select, .lbl-row input{ flex:1 1 100%; } .lbl-grid{ gap:14px; } #labelsModal .modal-body{ overflow-x:hidden; } }
   .lbl-check{ display:flex; align-items:center; gap:9px; font-size:13px; margin:7px 0; cursor:pointer; }
   .lbl-check input{ width:17px; height:17px; accent-color:var(--gold-bright); }
   .lbl-custom{ border:1px dashed var(--line-strong); border-radius:10px; padding:8px 10px; margin:6px 0 10px; }
@@ -1174,10 +1180,6 @@
       </div>
 
       <div class="nav-label">People</div>
-      <div class="nav-item" data-page="customers">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15.8 14.2c2.7.2 4.7 2.6 4.7 5.4"/></svg>
-        Customers
-      </div>
       <div class="nav-item" data-page="employees">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>
         Employees
@@ -1185,6 +1187,10 @@
       <div class="nav-item" data-page="suppliers">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="6" rx="1.4"/><rect x="3" y="14" width="18" height="6" rx="1.4"/><path d="M7 10v4M17 10v4"/></svg>
         Suppliers
+      </div>
+      <div class="nav-item" data-page="customers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15.8 14.2c2.7.2 4.7 2.6 4.7 5.4"/></svg>
+        Customers
       </div>
 
       <div class="nav-label">Insights</div>
@@ -2596,10 +2602,15 @@
       </div>
     </div>
 
-    <div class="page" data-page="billing">
-      <div class="main-top"><div><div class="page-title">Billing &amp; Subscription</div><div class="page-sub">Your plan, shops, card and payment history.</div></div></div>
-      <div class="settings-content">
-          <div class="settings-panel active" id="settings-billing">
+    <div class="page" data-page="settings">
+      <div class="main-top"><div><div class="page-title">Settings</div><div class="page-sub">Shop profile, currency, taxes, and users.</div></div></div>
+
+      <div class="settings-layout">
+        <div class="settings-nav" id="settingsNav" tabindex="0" aria-label="Settings sections"></div>
+
+        <div class="settings-content">
+
+          <div class="settings-panel" id="settings-billing">
             <div class="settings-panel-head">
               <div class="t">Billing &amp; Subscription</div>
               <div class="s web-only">$5 per shop, per month, paid by card (Stripe). Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. We never see or store your card number or CVV — payment is entered directly on Stripe's own page.</div>
@@ -2642,16 +2653,6 @@
               </div>
             </div>
           </div>
-      </div>
-    </div>
-
-    <div class="page" data-page="settings">
-      <div class="main-top"><div><div class="page-title">Settings</div><div class="page-sub">Shop profile, currency, taxes, and users.</div></div></div>
-
-      <div class="settings-layout">
-        <div class="settings-nav" id="settingsNav" tabindex="0" aria-label="Settings sections"></div>
-
-        <div class="settings-content">
 
           <!-- General / Business Profile -->
           <div class="settings-panel active" id="settings-general">
@@ -3122,6 +3123,7 @@
 
 <script src="/vendor/supabase.js"></script>
 <script src="/labels.js"></script>
+<script src="/viewonly.js"></script>
 <script src="/fiscal/flag.js"></script>
 <script src="/fiscal/fiscal-core.js"></script>
 <script src="/fiscal/profiles.js"></script>
@@ -3538,6 +3540,7 @@ const AureumSync = (function(){
   // and saves if anything differs from what the server last had.
   function touch(){
     if(!cfg) return;
+    if(window.AureumViewOnly && AureumViewOnly.active()) return;      // view-only (trial over / subscription expired): nothing is ever saved
     const local = cfg.getSnapshot();
     const s = stable(local);
     if(!cfg.isCloud()){                       // demo / no cloud backend: this device is the only store
@@ -3777,10 +3780,10 @@ const AureumSync = (function(){
     const now = new Date();
     const DAY = 86400000;
     if(biz.subscription_status === 'cancelled'){
-      return { ok:false, billingLock:true, message: AUREUM_STORE_MODE ? 'Your subscription has been cancelled.' + MANAGE_ON_WEB : 'Your subscription has been cancelled. Resubscribe below to continue.' };
+      return { ok:true, viewOnly:true, kind:'expired', text:'Subscription has expired' };    // still signs in — view only
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at && new Date(biz.trial_ends_at) < now){
-      return { ok:false, billingLock:true, message: AUREUM_STORE_MODE ? 'Your free trial has ended.' + MANAGE_ON_WEB : 'Your free trial has ended. Subscribe below to keep using AUREUM.' };
+      return { ok:true, viewOnly:true, kind:'trial', text:'Free trial period has ended' };       // still signs in — view only
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at){
       const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - now) / DAY);
@@ -3793,7 +3796,7 @@ const AureumSync = (function(){
       const end = new Date(biz.current_period_end);
       // A paid period that ended more than the grace window ago is a lock-out.
       if(now > new Date(end.getTime() + SUBSCRIPTION_GRACE_DAYS * DAY)){
-        return { ok:false, billingLock:true, message: AUREUM_STORE_MODE ? 'Your subscription period has ended.' + MANAGE_ON_WEB : 'Your subscription period has ended. Renew below to continue.' };
+        return { ok:true, viewOnly:true, kind:'expired', text:'Subscription has expired' };       // still signs in — view only
       }
       const daysLeft = Math.ceil((end - now) / DAY);
       if(daysLeft <= 3){
@@ -3814,7 +3817,9 @@ const AureumSync = (function(){
     item.addEventListener('click', ()=>{
       document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
       item.classList.add('active');
-      const target = item.dataset.page;
+      const navTarget = item.dataset.page;
+      // "Billing & Subscription" in the menu is a shortcut: it opens Settings on its Billing tab
+      const target = navTarget === 'billing' ? 'settings' : navTarget;
       currentPage = target;
       document.querySelectorAll('.page').forEach(p=>{
         p.classList.toggle('active', p.dataset.page === target);
@@ -3827,7 +3832,15 @@ const AureumSync = (function(){
       // at the POS in another tab could silently revert a toggle the owner
       // just clicked here before they'd had a chance to hit Save.
       if(target === 'settings') applySettingsToForm();
-      if(target === 'billing'){ try{ renderBilling(); }catch(e){} }      // always show the current shops and total when Billing is opened
+      if(navTarget === 'billing'){
+        activeSettingsTab = 'billing'; renderSettingsNav();
+        document.querySelectorAll('.settings-panel').forEach(p=> p.classList.toggle('active', p.id === 'settings-billing'));
+        try{ renderBilling(); }catch(e){}      // always show the current shops and total when Billing is opened
+      } else if(target === 'settings'){
+        // opening Settings from its own menu entry: highlight the Settings entry, not Billing
+        document.querySelectorAll('.settings-panel').forEach(p=> p.classList.toggle('active', p.id === 'settings-' + activeSettingsTab));
+        renderSettingsNav();
+      }
       if(target === 'reports'){ activeReportTab = 'inventory'; try{ renderReportTabs(); showReportPanel(); renderActiveReport(); }catch(e){} }   // Reports always opens on Available Inventory (links such as "View low stock" then choose their own tab)
       try{ if(window.AureumGuideBo && !AureumGuide.active()) AureumGuideBo.pageOpened(target); }catch(e){}
     });
@@ -4985,13 +4998,16 @@ const AureumSync = (function(){
     });
   });
 
-  /* the empty price / cost boxes in the Shops table say what they fall back to: "Same as 4.50" (the regular price / cost typed above) */
-  function sameAsText(id){ const el = document.getElementById(id), v = el ? String(el.value).trim() : ''; return (v !== '' && isFinite(+v)) ? 'Same as ' + (+v).toFixed(2) : 'Same as regular'; }
+  /* The Shops table always shows real numbers: a shop with its own price/cost shows that, every other shop shows the regular price / cost typed above (e.g. 12.00 and 6.00) — never words. */
+  function regularNum(id){ const el = document.getElementById(id), v = el ? String(el.value).trim() : ''; return (v !== '' && isFinite(+v)) ? (+v).toFixed(2) : ''; }
   function refreshSameAsPlaceholders(){
-    document.querySelectorAll('.pf-shop-price').forEach(i => i.placeholder = sameAsText('pfPrice'));
-    document.querySelectorAll('.pf-shop-cost').forEach(i => i.placeholder = sameAsText('pfCost'));
+    document.querySelectorAll('.pf-shop-price[data-auto="1"]').forEach(i => i.value = regularNum('pfPrice'));
+    document.querySelectorAll('.pf-shop-cost[data-auto="1"]').forEach(i => i.value = regularNum('pfCost'));
   }
   ['pfPrice','pfCost'].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', refreshSameAsPlaceholders); });
+  document.getElementById('pfShopTable').addEventListener('input', function(e){
+    const t = e.target; if(t.classList && (t.classList.contains('pf-shop-price') || t.classList.contains('pf-shop-cost'))) t.removeAttribute('data-auto');
+  });
   let shopTableExpanded = true;
   let shopStockTouched = false;
   function renderProductShopTable(p){
@@ -5005,8 +5021,8 @@ const AureumSync = (function(){
       <div class="shop-table-row">
         <input type="checkbox" class="cb pf-shop-cb" value="${s}" ${checked?'checked':''}>
         <div>${s}</div>
-        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-price" data-shop="${s}" value="${(p && p.shopPrice && typeof p.shopPrice[s] === 'number') ? p.shopPrice[s] : ''}" placeholder="${sameAsText('pfPrice')}" aria-label="Price at ${s}" style="padding:6px 8px;font-size:12px;">
-        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-cost" data-shop="${s}" value="${(p && p.shopCost && typeof p.shopCost[s] === 'number') ? p.shopCost[s] : ''}" placeholder="${sameAsText('pfCost')}" aria-label="Cost at ${s}" style="padding:6px 8px;font-size:12px;">
+        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-price" data-shop="${s}" ${(p && p.shopPrice && typeof p.shopPrice[s] === 'number') ? `value="${p.shopPrice[s].toFixed(2)}"` : `value="${regularNum('pfPrice')}" data-auto="1"`} aria-label="Price at ${s}" style="padding:6px 8px;font-size:12px;">
+        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-cost" data-shop="${s}" ${(p && p.shopCost && typeof p.shopCost[s] === 'number') ? `value="${p.shopCost[s].toFixed(2)}"` : `value="${regularNum('pfCost')}" data-auto="1"`} aria-label="Cost at ${s}" style="padding:6px 8px;font-size:12px;">
         <input type="number" min="0" step="any" class="modal-field pf-shop-stock" data-shop="${s}" value="${stockVal}" placeholder="0" style="padding:6px 8px;font-size:12px;">
       </div>`;
     }).join('');
@@ -5533,14 +5549,14 @@ const AureumSync = (function(){
     const shopPrice = {};
     let badShopPrice = '';
     document.querySelectorAll('.pf-shop-price').forEach(inp=>{
-      if(inp.value.trim() === '') return;
+      if(inp.value.trim() === '' || inp.dataset.auto === '1') return;
       const v = parseFloat(inp.value);
       if(isNaN(v) || v < 0){ badShopPrice = inp.dataset.shop; return; }
       shopPrice[inp.dataset.shop] = Math.round(v * 100) / 100;
     });
     const shopCost = {};
     document.querySelectorAll('.pf-shop-cost').forEach(inp=>{
-      if(inp.value.trim() === '') return;
+      if(inp.value.trim() === '' || inp.dataset.auto === '1') return;
       const v = parseFloat(inp.value);
       if(isNaN(v) || v < 0){ badShopPrice = badShopPrice || inp.dataset.shop; return; }
       shopCost[inp.dataset.shop] = Math.round(v * 100) / 100;
@@ -8975,6 +8991,7 @@ const AureumSync = (function(){
     { id:"taxes", label:"Taxes" },
     { id:"receipts", label:"Receipts" },
     { id:"payments", label:"Payment Methods" },
+    { id:"billing", label:"Billing &amp; Subscription" },
     { id:"notifications", label:"Notifications" },
     { id:"users", label:"Users &amp; Permissions" },
     { id:"fiscal", label:"Fiscalisation" },
@@ -8989,6 +9006,7 @@ const AureumSync = (function(){
       el.addEventListener('click', ()=>{
         activeSettingsTab = el.dataset.stab;
         renderSettingsNav();
+        if(activeSettingsTab === 'billing'){ try{ renderBilling(); }catch(e){} }
         if(activeSettingsTab === 'fiscal'){ try{ fxLoad(); }catch(e){} }
         if(activeSettingsTab === 'help'){ try{ loadHelpChat(); setHelpPane('ask'); }catch(e){} }
         document.querySelectorAll('.settings-panel').forEach(p=> p.classList.toggle('active', p.id === 'settings-' + activeSettingsTab));
@@ -11423,6 +11441,12 @@ const AureumSync = (function(){
       return;
     }
     document.getElementById('authGate').classList.remove('show');
+    if(subCheck.viewOnly && window.AureumViewOnly){
+      // Trial over / subscription expired: let them in to LOOK at everything, but change nothing.
+      AureumViewOnly.enable({ kind:subCheck.kind, text:subCheck.text,
+        onSubscribe: AUREUM_STORE_MODE ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
+        allow:'#logoutBtn,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
+    }
     document.getElementById('sfWho').textContent = profile.full_name || currentUser.email;
     document.getElementById('sfEmail').textContent = profile.full_name ? currentUser.email : '';
     document.getElementById('sfRole').textContent = profile.role;
@@ -11432,6 +11456,7 @@ const AureumSync = (function(){
       banner.style.display = 'block';
     }
     await startApp();
+    if(/[?&]go=billing\b/.test(location.search)){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} }
     if(justConfirmedEmail){ try{ aureumToast('Email confirmed — welcome to AUREUM!', 'ok'); }catch(e){} }
     try{ if(window.AureumGuideBo) AureumGuideBo.ready(); }catch(e){}
   }
