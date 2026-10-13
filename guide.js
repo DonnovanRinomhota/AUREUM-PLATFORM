@@ -289,6 +289,11 @@ function tick(initial){
       if(r0.top < 0 || r0.bottom > root.innerHeight){ try{ el.scrollIntoView({ block: 'center', behavior: rm() ? 'auto' : 'smooth' }); }catch(e){} }
     }
     render(st, el); run.lastRect = '';
+    // an entry step: put the cursor in the box it is talking about, so typing lands there and not in some other field
+    if(el && !el._union && st.done && (st.focus || /^(INPUT|TEXTAREA)$/.test(el.tagName))){
+      var fe = /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) ? el : (el.querySelector && el.querySelector('input:not([type=hidden]):not([type=checkbox]):not([readonly]),textarea'));
+      if(fe) setTimeout(function(){ try{ if(S.run === run && run.i === run.stepRendered) fe.focus({ preventScroll: true }); }catch(x){} }, 60);
+    }
   }
   // a pop-up the person opened that this step is not about (customer, discount…): step aside until they close it
   var pms = S.cfg.modalSel ? Array.prototype.filter.call(doc.querySelectorAll(S.cfg.modalSel), visible) : [];

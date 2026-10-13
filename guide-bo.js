@@ -29,17 +29,17 @@ var journeys = [
 
 /* ---------------------------------------------------------------- A/E. orientation + dashboard */
 { id: 'bo-welcome', group: 'start', title: 'Explore the Back Office', desc: 'The menu, the dashboard numbers, stock alerts and where to go next.', roles: ['*'],
-  next: function(){ return can('products') ? { id: 'bo-products', label: 'Add or edit a product' } : { id: 'bo-receipts', label: 'Review your sales' }; },
+  next: function(){ return can('employees') ? { id: 'bo-till-login', label: 'Create a till login before your first sale' } : (can('products') ? { id: 'bo-products', label: 'Add or edit a product' } : { id: 'bo-receipts', label: 'Review your sales' }); },
   steps: [
     { id: 'hello', title: 'Welcome to the Back Office', body: 'This is where you <b>manage</b> the business. Sales are rung up in the <b>POS</b>; everything behind them — products, stock, reports, settings — lives here. This tour only points things out.', nextLabel: 'Show me', before: function(){ closePopups(); if(page() !== 'dashboard') go('dashboard'); } },
-    { id: 'menu', target: '#navGroup', title: 'The menu', placement: 'right', body: 'Each entry opens one area: <b>Products</b> and the stock documents (<b>Purchase Orders, Goods Received, Stock Adjustments, Transfer of Goods</b>), <b>Receipts</b>, <b>Customers</b>, <b>Reports</b> and <b>Settings</b>. You only see the areas your role may use.' },
+    { id: 'menu', target: '#navGroup', title: 'The menu', placement: 'right', body: '<b>Sales Tracking &amp; Visualisation</b>, <b>Product Entry &amp; Inventory Management</b> and <b>Control Panel</b>.' },
     { id: 'shop', target: '#sidebarShopTrigger', title: 'Which shop are you viewing?', placement: 'right', body: 'Choose <b>All Shops</b> or a single shop. Stock, sales and reports follow this choice, so check it before reading any number.' },
     { id: 'kpis', target: '#kpiRow', title: 'The four numbers', placement: 'bottom', before: function(){ go('dashboard'); },
       body: '<b>Gross Sales</b>: everything sold, tax included, before refunds. <b>Net Sales</b>: gross sales minus refunds. <b>Cost of Sales</b>: what the items you sold cost you (the cost saved on each sale). <b>Gross Profit</b>: net sales minus the sales tax you collected minus cost of sales. Use the shop and date controls above to change what they cover.' },
     { id: 'alerts', target: '#alertsPanel', title: 'Alerts: what needs attention', placement: 'top', before: function(){ go('dashboard'); },
       body: function(){ var neg = document.querySelector('#alertsList [data-alert="neg"]'), low = document.querySelector('#alertsList [data-alert="low"]');
         return '<b>Negative stock</b> means more was sold than was ever recorded as received; <b>low stock</b> means an item is running out. Click an alert to open the list. Fix negative stock by recording the missing delivery on <b>Goods Received</b> or correcting it with a <b>Stock Adjustment</b> — never by ignoring it.'; } },
-    { id: 'pos', target: '#openPosBtn', title: 'Switch to the POS', placement: 'right', when: function(){ return shown('openPosBtn'); }, body: '<b>Open POS Checkout</b> opens the till in a new tab. Your guide progress is kept in both.' },
+    { id: 'pos', target: '#openPosBtn', title: 'Ready to sell?', placement: 'right', when: function(){ return shown('openPosBtn'); }, body: '<b>Ready To Sell ? Switch To POS Check-Out</b> opens the till in a new tab. Your guide progress is kept in both.' },
     { id: 'guide', target: '#guideBtn', title: 'Your guide is always here', placement: 'right', body: 'Open <b>Guide</b> any time to start, pause or restart a walkthrough. Short guides for Receipts, Products and stock tasks are listed there.' }
   ] },
 
@@ -125,6 +125,39 @@ var journeys = [
   ] },
 
 /* ---------------------------------------------------------------- G. short area tours */
+
+/* ---------------------------------------------------------------- till login (before the first sale) */
+{ id: 'bo-till-login', group: 'start', title: 'Create a till login (owner or cashier)', desc: 'You cannot sign in at the till without one: add yourself or a cashier with a role and a 4-digit PIN.', roles: ['*'],
+  available: function(){ return can('employees'); },
+  next: function(){ return { id: 'bo-employee-calendar', label: 'Plan who works when' }; },
+  steps: [
+    { id: 'why', title: 'Before your first sale', body: 'The till signs in with a <b>name and a 4-digit PIN</b> from your Employees list. Without at least one employee who may sell, nobody can sign in. We will add one now &mdash; <b>yourself</b> (role <b>Administrator</b>) or a <b>Cashier</b>.', nextLabel: 'Let\'s do it' },
+    { id: 'open', target: '.nav-item[data-page="employees"]', title: 'Open Employees', body: 'Click <b>Employees</b> in the menu.', placement: 'right', before: function(){ closePopups(); }, done: function(){ return page() === 'employees'; }, doneText: 'Employees opened' },
+    { id: 'add', target: '#addEmployeeBtn', title: 'Add an employee', placement: 'bottom', body: 'Press <b>Add employee</b>.', before: function(){ if(!shown('addEmployeeBtn') && !shown('efName')) go('employees'); }, done: function(){ return shown('efName'); }, doneText: 'Form open' },
+    { id: 'name', target: '#efName', title: 'Type the name', placement: 'bottom', focus: true, body: 'Click in the box and type the person\'s name, for example your own name or &ldquo;Chipo Ndlovu&rdquo;. This is the name the till will show.', done: function(){ return ($('efName').value || '').trim().length > 1; }, doneText: 'Name entered' },
+    { id: 'role', target: '#efRole', title: 'Choose the role', placement: 'bottom', body: 'Pick <b>Administrator</b> for the owner (can use everything), <b>Shop Manager</b> to run a shop, or <b>Cashier</b> for someone who only sells.', nextLabel: 'Got it' },
+    { id: 'shop', target: '#efShop', title: 'Which shop?', placement: 'bottom', body: 'Choose the shop this person works in.', nextLabel: 'Got it' },
+    { id: 'pin', target: '#efPin', title: 'Give a 4-digit PIN', placement: 'bottom', focus: true, body: 'Click in the box and type <b>4 digits</b>. This is the PIN used to sign in at the till &mdash; no two people can share one.', done: function(){ return /^\d{4}$/.test(($('efPin').value || '').trim()); }, doneText: 'PIN entered' },
+    { id: 'save', target: '#employeeSaveBtn', title: 'Save', placement: 'top', snap: function(){ try{ return EMPLOYEES.length; }catch(e){ return 0; } },
+      body: '<b>Saving creates a real employee.</b> Not ready? Choose <b>Finish without saving</b> and nothing is created.',
+      actions: [{ label: 'Finish without saving', finish: true }],
+      done: function(c, snap){ try{ return EMPLOYEES.length > snap; }catch(e){ return false; } }, doneText: 'Employee saved' },
+    { id: 'pos', target: '#openPosBtn', title: 'Ready to sell?', placement: 'right', when: function(){ return shown('openPosBtn'); }, body: 'Press <b>Ready To Sell ? Switch To POS Check-Out</b>. At the till, sign in with your business email and password, then choose the <b>shop</b>, the <b>name</b> you just added and the <b>PIN</b>.' }
+  ] },
+
+/* ---------------------------------------------------------------- employee calendar */
+{ id: 'bo-employee-calendar', group: 'more', title: 'Use the Employee Calendar', desc: 'Plan who works on which day, with shop and hours, and save the schedule.', roles: ['*'],
+  available: function(){ return can('employees'); },
+  steps: [
+    { id: 'open', target: '.nav-item[data-page="employees"]', title: 'Open Employees', body: 'Click <b>Employees</b> in the menu.', placement: 'right', before: function(){ closePopups(); }, done: function(){ return page() === 'employees'; }, doneText: 'Employees opened' },
+    { id: 'tab', target: '#employeeTabs [data-etab="calendar"]', title: 'Open the Calendar tab', placement: 'bottom', body: 'Press <b>Calendar</b> (next to Employee List).', before: function(){ if(!shown('employeeTabs')) go('employees'); }, done: function(){ return shown('ecGrid'); }, doneText: 'Calendar open' },
+    { id: 'grid', target: '#ecGrid', title: 'Pick a day', placement: 'right', body: 'Tap a day. Days with a <b>gold dot</b> already have a team scheduled. Use the arrows above to change month, or <b>Today</b> to come back.', nextLabel: 'Got it' },
+    { id: 'add', target: '#ecAddRow', title: 'Add an employee to the day', placement: 'left', snap: function(){ return document.querySelectorAll('#ecRows .ec-row').length; }, body: 'Press <b>Add employee</b> to add a row for this day.', done: function(c, snap){ return document.querySelectorAll('#ecRows .ec-row').length > snap; }, doneText: 'Row added' },
+    { id: 'name', target: '#ecRows .ec-name', title: 'Choose who works', placement: 'top', focus: true, body: 'Click the <b>Name</b> box and pick or type the employee. Their role and shop fill in by themselves. (No names? Add employees first in the Employee List.)', done: function(){ var n = document.querySelector('#ecRows .ec-name'); return !!(n && n.value.trim() && !n.classList.contains('invalid')); }, doneText: 'Employee chosen' },
+    { id: 'times', target: '#ecRows .ec-row-grid', title: 'Set the hours', placement: 'top', body: 'Choose a <b>Shift</b> (Full Day, Morning&hellip;) or set <b>Start time</b> and <b>End time</b>. The hours worked are worked out for you below.', nextLabel: 'Got it' },
+    { id: 'save', target: '#ecSave', title: 'Save the schedule', placement: 'top', body: '<b>Save schedule</b> stores this day. Use <b>Copy previous day</b> to repeat yesterday\'s team. Not ready? Just close the guide &mdash; nothing is saved until you press Save.', nextLabel: 'Finish' }
+  ] },
+
 area('bo-customers', 'customers', 'Learn about Customers', 'Find customers and add new ones.', [
   { id: 'add', target: '#addCustomerBtn', title: 'Add a customer', placement: 'bottom', body: 'Customers you add here can be attached to sales at the till, and their orders and spending build up over time.' }
 ]),

@@ -1,5 +1,12 @@
 # Changelog
 
+## Guide and till labels
+- Back Office Guide, step "The menu", now simply says: Sales Tracking & Visualisation, Product Entry & Inventory Management and Control Panel.
+- The Back Office button is now **Ready To Sell ? Switch To POS Check-Out**.
+- Guide steps that ask you to type now put the cursor in the box they point at, so typing no longer lands in another field.
+- New guides: **Create a till login (owner or cashier)** (the till cannot be signed into without one) and **Use the Employee Calendar**.
+- Till: a **Sign Out** button next to the shop button at the top.
+
 ## View-only mode, Billing back in Settings, phone & till improvements
 - **Expired trial / subscription no longer blocks sign-in.** The owner can log in and see everything, but the app is **view only**: a gold strip across the top says *Free trial period has ended · Subscribe to keep enjoying Aureum* (or *Subscription has expired · Subscribe to keep enjoying Aureum*), and every add, edit, delete, save and sale is switched off until they subscribe. Billing, Help, exports, search and navigation keep working. A suspended account is still blocked. The till switches to the same view-only mode (products cannot be added, no sales, holds, discounts or voids). New file `viewonly.js`.
 - **Billing & Subscription is a Settings tab again**, and the left-menu entry (between Reports and Settings) is a shortcut that opens Settings on that tab.

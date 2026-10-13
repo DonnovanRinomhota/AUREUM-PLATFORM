@@ -662,7 +662,7 @@
     .topbar-icon-btn[style*="width:auto"]{ height:34px; padding:0 9px !important; font-size:11px !important; letter-spacing:0 !important; white-space:nowrap; }
     .clerk .when, .clerk .who{ display:none; }   /* avatar initials identify the cashier; tap it to end the shift */
     .topbar-icon-btn:not([style*="width:auto"]){ width:36px; height:36px; }
-    #syncStatus, #shopSwitchBtn, #shiftBtn{ padding:0 9px !important; }
+    #syncStatus, #shopSwitchBtn, #shiftBtn, #signOutBtn{ padding:0 9px !important; }
     #syncStatusLabel{ display:none; }            /* on a phone the coloured dot is enough (turns red when offline / failing) */
     .catalog{ flex:1 1 auto; min-height:0; padding:14px 12px 100px; gap:14px; }
     .grid{ gap:10px; min-height: calc(var(--rows, 3) * 150px); }
@@ -817,6 +817,7 @@
     <div class="topbar-right">
       <div class="topbar-icon-btn" id="syncStatus" title="Sync status" style="width:auto;padding:0 10px;font-size:10.5px;">&#9679; <span id="syncStatusLabel">Synced</span></div>
       <div class="topbar-icon-btn" id="shopSwitchBtn" title="Switch shop" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9733; <span id="shopChipLabel">All Shops</span></div>
+      <div class="topbar-icon-btn" id="signOutBtn" title="Sign out — your shift stays open" role="button" tabindex="0" aria-label="Sign Out" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9211; Sign Out</div>
       <div class="topbar-icon-btn" id="shiftBtn" title="Shift — summary, close shift, closed shifts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9201; <span id="shiftBtnLabel">Shift</span></div>
       <div class="topbar-icon-btn" id="backOfficeBtn" title="Open Back Office" role="button" aria-label="Back Office" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#8599; Back Office</div>
       <div class="topbar-icon-btn" id="recentSalesBtn" title="Receipts — history of recent sales" role="button" aria-label="Receipts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#8635; Receipts<span class="sync-dot" id="recentSalesDot" hidden></span></div>
@@ -3306,6 +3307,8 @@ async function aureumSignIn(email, password){
   document.getElementById('clerkSwitch').addEventListener('click', openShiftPanel);
   document.getElementById('shopSwitchBtn').addEventListener('click', openShiftPanel);
   document.getElementById('shiftBtn').addEventListener('click', openShiftPanel);
+  document.getElementById('signOutBtn').addEventListener('click', ()=>{ if(activeEmployee) signOutOfTill(); });
+  document.getElementById('signOutBtn').addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && activeEmployee){ e.preventDefault(); signOutOfTill(); } });
   document.getElementById('backOfficeBtn').addEventListener('click', ()=>{
     if(!activeEmployee || !BACK_OFFICE_ROLES.includes(activeEmployee.role)){
       aureumToast('Back Office is restricted to Shop Managers and Administrators.', 'danger');
@@ -3469,7 +3472,7 @@ async function aureumSignIn(email, password){
         AureumViewOnly.enable({ kind:vs.kind, text:vs.text,
           onSubscribe: function(){ try{ const w = window.open('backoffice.html?go=billing', '_blank'); if(!w) window.location.href = 'backoffice.html?go=billing'; }catch(e){} },
           deny:'.card,.qty-btn,.li-remove,.charge-btn,.pay-btn,.quick-chip,.ticket-icon-btn,.tender-chip,[data-act],#cartBar .cb-go',
-          allow:'#backOfficeBtn,#recentSalesBtn,#guideBtn,#helpBtn,#syncStatus,#shiftGate,.sales-tab,.sync-now,#clerkSwitch,#shopSwitchBtn,#shiftBtn,#cartBar,#catalogSort,#categories,.cat,.pill' });
+          allow:'#backOfficeBtn,#signOutBtn,#recentSalesBtn,#guideBtn,#helpBtn,#syncStatus,#shiftGate,.sales-tab,.sync-now,#clerkSwitch,#shopSwitchBtn,#shiftBtn,#cartBar,#catalogSort,#categories,.cat,.pill' });
       }
     }catch(e){}
     await startApp();
