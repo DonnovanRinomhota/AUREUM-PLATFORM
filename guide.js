@@ -105,7 +105,7 @@ function css(){
     '.ag-arrow{position:absolute;width:12px;height:12px;background:#14291c;border:1px solid var(--gold,#C9A24B);transform:rotate(45deg)}',
     '.ag-arrow.t{top:-7px;border-right:0;border-bottom:0}.ag-arrow.b{bottom:-7px;border-left:0;border-top:0}.ag-arrow.l{left:-7px;border-top:0;border-right:0}.ag-arrow.r{right:-7px;border-bottom:0;border-left:0}',
     '.ag-live{position:fixed;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}',
-    '.ag-welcome{position:fixed;right:18px;bottom:18px;z-index:2147481000;width:min(340px,calc(100vw - 28px));background:linear-gradient(180deg,#16301f,#10261a);border:1px solid var(--gold,#C9A24B);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:16px;color:var(--ivory,#F3EBD6);font:13.5px/1.5 var(--font-body,Inter,system-ui,sans-serif)}',
+    '.ag-welcome{position:fixed;right:18px;bottom:86px;z-index:2147481000;width:min(340px,calc(100vw - 28px));background:linear-gradient(180deg,#16301f,#10261a);border:1px solid var(--gold,#C9A24B);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:16px;color:var(--ivory,#F3EBD6);font:13.5px/1.5 var(--font-body,Inter,system-ui,sans-serif)}',
     '.ag-welcome h3{margin:0 0 4px;font-size:16px}.ag-welcome p{margin:0 0 12px;color:var(--ivory-dim,#D8D2BD)}',
     '.ag-center-back{position:fixed;inset:0;z-index:2147481500;background:rgba(3,12,8,.55);display:flex;justify-content:flex-end}',
     '.ag-center{width:min(420px,100vw);height:100%;background:linear-gradient(180deg,#14291c,#0E2016);border-left:1px solid var(--gold,#C9A24B);color:var(--ivory,#F3EBD6);display:flex;flex-direction:column;font:13.5px/1.5 var(--font-body,Inter,system-ui,sans-serif)}',
@@ -122,7 +122,7 @@ function css(){
     '.ag-launch-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold-bright,#E8C66A);margin-left:6px;vertical-align:middle}',
     '@media (prefers-reduced-motion:reduce){.ag-dim,.ag-ring,.ag-tip,.ag-bar i{transition:none!important}.ag-ring.pulse{animation:none!important}}',
     '.ag-tip .ag-x{position:absolute;top:10px;right:10px}',
-    '@media (max-width:720px){.ag-tip{left:8px!important;right:8px;width:auto;top:auto!important;bottom:8px}.ag-arrow{display:none}}'
+    '@media (max-width:720px){.ag-tip{left:8px!important;right:8px;width:auto;top:auto!important;bottom:84px}.ag-arrow{display:none}}'
   ].join('\n');
   doc.head.appendChild(st);
 }

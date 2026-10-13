@@ -1,5 +1,15 @@
 # Changelog
 
+## Shop filters everywhere, Billing page, Income Statement export, product list fixes
+- **Shop viewing filter now drives every section.** The shop picker at the top sets the starting shop for Sales by Product, Receipts, Products, Purchase Orders, Goods Received, Stock Adjustments, Transfer of Goods, Accounting and Reports (the dashboard as before). Each section has its own **Shop** filter: changing it only changes that section — the top picker and the other sections stay put. Picking a shop at the top again resets them all to it. New Shop filters: Purchase Orders, Transfer of Goods (from or to), Accounting, Reports (one filter for all report tabs).
+- Expenses can now be assigned to a shop (or left business-wide). A shop's Accounting statement shows the expenses recorded for that shop; business-wide expenses appear under All Shops.
+- **Reports always opens on Available Inventory** (it used to reopen on Low Stock after you had visited it). The "View low stock" links still open Low Stock.
+- **Accounting → Income Statement can be exported** (CSV, Excel, PDF) with business, shop, period, every line and expenses by category.
+- **Billing & Subscription is its own page** in the left menu, between Reports and Settings (it is no longer a Settings tab). The menu group "Operations" is now **Inventory Management**.
+- Product list: removed the static Refresh and ⋮ buttons; removed the "Price change" / "Quantity change" switches from the product form; the shop price/cost boxes now say what they fall back to ("Same as 4.50") using the regular price and cost typed above. **Long press now selects the product** (before, the release click undid it; swiping no longer counts as a long press and the browser's own menu is suppressed).
+- **Print labels** starts with only the products you ticked (empty if none), instead of everything on the page.
+- **The round ? Help button** could stay unresponsive: the first-visit guide card sat on top of it, touch drags cancelled the tap, and an open pop-up hid the Help screen. All three fixed. Service worker v52.
+
 ## Print labels, sign-up email, synced receipts at the till
 - **Print labels (Back Office → Products → Print labels)**, modelled on how the Loyverse label printer works: add products by search, by whole category or by supplier; set a quantity for each; choose a label type; choose where the barcode comes from (Barcode, SKU, or Barcode-else-SKU); pick which shop's price to show; switch the name, price and number on or off; preview, then print. Settings are remembered on the device. Also opens from purchase orders, goods received notes, stock adjustments (what was added) and transfers with the quantities filled in.
 - Own barcode engine (`labels.js`): Code 128 (letters, digits, symbols, up to 80 characters), plus EAN-13, UPC-A and EAN-8 when a number is a valid retail barcode. Drawn as vector at an exact bar width (whole printer dots), so it prints sharply. Long codes get a warning instead of an unreadable label.

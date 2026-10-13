@@ -721,7 +721,7 @@
   .fx-form .err{ color:#ef8a8a; font-size:12px; margin-top:10px; white-space:pre-line; }
   .chat-foot a.chat-new-btn{ display:inline-flex; align-items:center; gap:4px; padding:7px 16px; border-radius:999px; background:linear-gradient(135deg,var(--gold-bright),#b8892f); color:#1a1306; font-weight:700; font-size:13px; box-shadow:0 2px 10px rgba(212,168,67,.35); }
   .chat-foot a.chat-new-btn:hover{ text-decoration:none; filter:brightness(1.1); }
-  #helpFab{ position:fixed; right:18px; bottom:18px; width:54px; height:54px; border-radius:50%; z-index:900; display:none; align-items:center; justify-content:center;
+  #helpFab{ touch-action:none; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; position:fixed; right:18px; bottom:18px; width:54px; height:54px; border-radius:50%; z-index:900; display:none; align-items:center; justify-content:center;
     background:radial-gradient(circle at 30% 25%,#f3d98a,var(--gold-bright) 55%,#a67a24); color:#1a1306; font-size:28px; font-weight:800; font-family:Georgia,serif; border:2px solid rgba(255,255,255,.35);
     box-shadow:0 6px 20px rgba(0,0,0,.45),0 0 0 3px rgba(212,168,67,.25); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
   #helpFab.show{ display:flex; } #helpFab.drag{ cursor:grabbing; transform:scale(1.08); } #helpFab:focus-visible{ outline:3px solid #fff; }
@@ -976,6 +976,7 @@
   .lbl-rm:hover{ color:var(--danger); }
   .lbl-sum{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--sage); margin:8px 0; }
   #lblFrame{ width:100%; height:340px; border:1px solid var(--line-strong); border-radius:10px; background:#d8d8d4; }
+  #productTableBody tr{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
   .pw-wrap:has(> input[style*="display: none"]){ display:none !important; }   /* the eye button leaves with its hidden password box */
   .auth-verify{ text-align:center; margin:2px 0 8px; }
   .auth-verify .av-icon{ font-size:34px; line-height:1; color:var(--gold-bright); margin-bottom:6px; }
@@ -1150,7 +1151,7 @@
         Receipts
       </div>
 
-      <div class="nav-label">Operations</div>
+      <div class="nav-label">Inventory Management</div>
       <div class="nav-item" data-page="products">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 7.5 12 3 3 7.5l9 4.5 9-4.5Z"/><path d="M3 7.5V16l9 4.5 9-4.5V7.5"/><path d="M12 12v8.5"/></svg>
         Products
@@ -1194,6 +1195,10 @@
       <div class="nav-item" data-page="reports">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9"/><path d="M11 19V4"/><path d="M18 19v-7"/></svg>
         Reports
+      </div>
+      <div class="nav-item" data-page="billing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="19" height="14" rx="2.2"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>
+        Billing &amp; Subscription
       </div>
       <div class="nav-item" data-page="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.3-.9-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-.9c.8.7 1.6 1.2 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 0 0 2.6-1.5l2.3.9 2-3.4-2-1.5Z"/></svg>
@@ -1426,11 +1431,9 @@
           <div class="btn-ghost-sm" id="productLabelsBtn" role="button" tabindex="0" title="Print price labels with barcodes">&#127991; Print labels</div>
           <div class="btn-ghost-sm" id="productFixNamesBtn" title="Restore spaces in names that were saved with _ or - instead">Fix names</div>
           <input type="file" id="productImportInput" accept=".csv,.xlsx,.xls,.xlsm,.txt,.tsv,text/csv" style="display:none;">
-          <div class="icon-btn-sm" title="More">&#8942;</div>
           <div class="btn-ghost-sm" id="productHistoryBtn" role="button" tabindex="0" style="margin-left:auto;" title="Every stock change made directly on a product">&#128339; Product history</div>
           <div class="icon-btn-row">
             <div class="icon-btn-sm" title="Search" id="productSearchIconBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
-            <div class="icon-btn-sm" title="Refresh" id="productsRefreshBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v6h-6"/></svg></div>
             <div class="icon-btn-sm popover-anchor" title="Columns" id="productColumnsBtn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M10 4v16M15 4v16"/></svg>
               <div class="popover export-popover" id="productColumnsPopover"></div>
@@ -1539,18 +1542,10 @@
               <input type="number" id="pfPrice" class="modal-field" min="0" step="0.01" placeholder="0.00">
               <div class="field-error" id="pfPriceError">Enter a price of 0 or more</div>
             </div>
-            <div class="toggle-row" style="padding-top:26px;">
-              <div class="lbl">Price change</div>
-              <div class="switch on" data-toggle="pfPriceChange"></div>
-            </div>
             <div>
               <div class="field-label">Regular unit cost (<span class="cur-code">USD</span>)</div>
               <input type="number" id="pfCost" class="modal-field" min="0" step="0.01" placeholder="0.00">
               <div class="field-error" id="pfCostError">Enter a cost of 0 or more</div>
-            </div>
-            <div class="toggle-row" style="padding-top:26px;">
-              <div class="lbl">Quantity change</div>
-              <div class="switch" data-toggle="pfQtyChange"></div>
             </div>
           </div>
         </div>
@@ -1757,7 +1752,7 @@
             </div>
           </div>
         </div>
-        <div class="filters-bar"><div id="poDateSlot"></div></div>
+        <div class="filters-bar"><div class="filter-field"><div class="fl-label">Shop</div><select class="cat-select" id="poShopFilter"></select></div><div id="poDateSlot"></div></div>
         <div class="table-panel">
           <table>
             <thead>
@@ -2366,7 +2361,7 @@
             </div>
           </div>
         </div>
-        <div class="filters-bar"><div id="trDateSlot"></div></div>
+        <div class="filters-bar"><div class="filter-field"><div class="fl-label">Shop (from or to)</div><select class="cat-select" id="trShopFilter"></select></div><div id="trDateSlot"></div></div>
         <div class="table-panel">
           <table>
             <thead>
@@ -2423,6 +2418,7 @@
       </div>
 
       <div class="filters-bar">
+        <div class="filter-field"><div class="fl-label">Shop</div><select class="cat-select" id="acctShopFilter"></select></div>
         <div id="acctDateSlot"></div>
         <div class="filter-field tax-plate" style="margin-left:auto;">
           <label class="fl-label" for="acctTaxPct">Income tax %</label>
@@ -2434,8 +2430,16 @@
 
       <div class="panel">
         <div class="panel-head">
-          <div><div class="t">Income Statement</div><div class="s">For the selected period</div></div>
+          <div><div class="t">Income Statement</div><div class="s" id="acctIsSub">For the selected period</div></div>
+          <div class="btn-ghost-sm popover-anchor" id="acctExportBtn">Export <span class="car">&#9662;</span>
+            <div class="popover export-popover">
+              <div class="shop-opt export-opt" data-fmt="csv" data-source="acctExportBody" data-filename="income-statement" data-title="Income Statement">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="acctExportBody" data-filename="income-statement" data-title="Income Statement">Export as Excel</div>
+              <div class="shop-opt export-opt" data-fmt="pdf" data-source="acctExportBody" data-filename="income-statement" data-title="Income Statement">Export as PDF</div>
+            </div>
+          </div>
         </div>
+        <table style="display:none" aria-hidden="true"><thead><tr><th>Line</th><th>Amount</th></tr></thead><tbody id="acctExportBody"></tbody></table>
         <div id="acctIncomeStatement"></div>
       </div>
 
@@ -2455,7 +2459,7 @@
         </div>
         <table>
           <thead>
-            <tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right;">Amount</th><th style="width:70px;"></th></tr>
+            <tr><th>Date</th><th>Category</th><th>Description</th><th>Shop</th><th style="text-align:right;">Amount</th><th style="width:70px;"></th></tr>
           </thead>
           <tbody id="expenseTableBody"></tbody>
         </table>
@@ -2476,13 +2480,14 @@
             <div class="shop-opt export-opt" data-fmt="pdf" data-source="repInventoryBody" data-filename="report" data-title="Report">Export as PDF</div>
           </div>
         </div>
+        <div class="filter-field" id="repShopField"><div class="fl-label">Shop</div><select class="cat-select" id="repShopFilter"></select></div>
         <div style="font-size:12px;color:var(--sage);">Exports the report you are viewing — every row, not just this page.</div>
       </div>
 
       <!-- Available inventory -->
       <div class="report-panel active" id="report-inventory">
         <div class="filters-bar">
-          <div class="filter-field"><div class="fl-label">Shop</div><select class="cat-select" id="repInvShopFilter"></select></div>
+          <div class="filter-field" style="display:none"><div class="fl-label">Shop</div><select class="cat-select" id="repInvShopFilter"></select></div>
           <div class="filter-field"><div class="fl-label">Category</div><select class="cat-select" id="repInvCatFilter"></select></div>
         </div>
         <div class="table-panel">
@@ -2534,7 +2539,7 @@
       <!-- Expired products (from the expiry dates entered on Goods Received Notes) -->
       <div class="report-panel" id="report-expired">
         <div class="filter-row" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
-          <div class="filter-field"><div class="fl-label">Shop</div><select class="cat-select" id="repExpShopFilter"></select></div>
+          <div class="filter-field" style="display:none"><div class="fl-label">Shop</div><select class="cat-select" id="repExpShopFilter"></select></div>
           <div class="filter-field"><div class="fl-label">Show</div><select class="cat-select" id="repExpView" aria-label="Expiry view"><option value="expired">Expired</option><option value="soon">Expiring in 30 days</option><option value="both">Expired + expiring soon</option></select></div>
         </div>
         <div class="page-sub" id="repExpSub" style="margin-bottom:12px;"></div>
@@ -2588,6 +2593,55 @@
           </table>
           <div id="repClosedShiftsPagination"></div>
         </div>
+      </div>
+    </div>
+
+    <div class="page" data-page="billing">
+      <div class="main-top"><div><div class="page-title">Billing &amp; Subscription</div><div class="page-sub">Your plan, shops, card and payment history.</div></div></div>
+      <div class="settings-content">
+          <div class="settings-panel active" id="settings-billing">
+            <div class="settings-panel-head">
+              <div class="t">Billing &amp; Subscription</div>
+              <div class="s web-only">$5 per shop, per month, paid by card (Stripe). Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. We never see or store your card number or CVV — payment is entered directly on Stripe's own page.</div>
+              <div class="s store-only">Your AUREUM subscription is managed from your account on the web. This screen shows its current status.</div>
+            </div>
+            <div class="form-section">
+              <div class="create-form-grid" style="margin-bottom:0;">
+                <div class="detail-field"><div class="field-label">Current plan</div><div class="v" id="stPlanLabel" style="font-weight:700; color:var(--gold-bright);">$5 per shop / month</div></div>
+            <div class="detail-field"><div class="field-label">Shops</div><div class="v" id="stShopsVal">—</div></div>
+            <div class="detail-field"><div class="field-label" id="stMonthlyLabel">Monthly total</div><div class="v" id="stMonthlyVal">—</div></div>
+                <div class="detail-field"><div class="field-label">Status</div><div class="v"><span class="status-badge" id="stSubStatusBadge">—</span></div></div>
+                <div class="detail-field"><div class="field-label">Current period ends</div><div class="v" id="stNextBillDate">—</div></div>
+                <div class="detail-field"><div class="field-label">Last paid via</div><div class="v" id="stBillingProcessor">—</div></div>
+              </div>
+              <div id="stBillingBanner" style="display:none; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(201,162,39,0.12); border:1px solid var(--gold-bright); font-size:12.5px; color:var(--ivory-dim);"></div>
+              <div class="settings-save-row" style="margin-top:16px;">
+                <div class="btn-gold" id="stPayStripeBtn">Subscribe with card</div>
+              <div class="btn-gold" id="stSyncShopsBtn" style="display:none;">Update subscription</div>
+                
+                <div class="btn-outline" id="stManageStripeBtn" style="display:none;">Manage card on Stripe</div>
+              </div>
+              <div id="stBillingError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;"></div>
+            </div>
+            <div class="form-section">
+              <div class="data-toolbar" style="padding:0 0 14px;">
+                <div class="form-section-title" style="margin:0;">Payment history</div>
+                <div class="btn-ghost-sm popover-anchor" id="stInvoiceExportBtn" style="margin-left:auto;">Export <span class="car">&#9662;</span>
+                  <div class="popover export-popover align-left">
+                    <div class="shop-opt export-opt" data-fmt="csv" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as CSV</div>
+              <div class="shop-opt export-opt" data-fmt="excel" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as Excel</div>
+                    <div class="shop-opt export-opt" data-fmt="pdf" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as PDF</div>
+                  </div>
+                </div>
+              </div>
+              <div class="table-panel">
+                <table>
+                  <thead><tr><th>Date</th><th>Method</th><th>Period</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead>
+                  <tbody id="stInvoiceTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
       </div>
     </div>
 
@@ -2919,50 +2973,6 @@
           </div>
 
           <!-- Billing & Subscription -->
-          <div class="settings-panel" id="settings-billing">
-            <div class="settings-panel-head">
-              <div class="t">Billing &amp; Subscription</div>
-              <div class="s web-only">$5 per shop, per month, paid by card (Stripe). Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. We never see or store your card number or CVV — payment is entered directly on Stripe's own page.</div>
-              <div class="s store-only">Your AUREUM subscription is managed from your account on the web. This screen shows its current status.</div>
-            </div>
-            <div class="form-section">
-              <div class="create-form-grid" style="margin-bottom:0;">
-                <div class="detail-field"><div class="field-label">Current plan</div><div class="v" id="stPlanLabel" style="font-weight:700; color:var(--gold-bright);">$5 per shop / month</div></div>
-            <div class="detail-field"><div class="field-label">Shops</div><div class="v" id="stShopsVal">—</div></div>
-            <div class="detail-field"><div class="field-label" id="stMonthlyLabel">Monthly total</div><div class="v" id="stMonthlyVal">—</div></div>
-                <div class="detail-field"><div class="field-label">Status</div><div class="v"><span class="status-badge" id="stSubStatusBadge">—</span></div></div>
-                <div class="detail-field"><div class="field-label">Current period ends</div><div class="v" id="stNextBillDate">—</div></div>
-                <div class="detail-field"><div class="field-label">Last paid via</div><div class="v" id="stBillingProcessor">—</div></div>
-              </div>
-              <div id="stBillingBanner" style="display:none; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(201,162,39,0.12); border:1px solid var(--gold-bright); font-size:12.5px; color:var(--ivory-dim);"></div>
-              <div class="settings-save-row" style="margin-top:16px;">
-                <div class="btn-gold" id="stPayStripeBtn">Subscribe with card</div>
-              <div class="btn-gold" id="stSyncShopsBtn" style="display:none;">Update subscription</div>
-                
-                <div class="btn-outline" id="stManageStripeBtn" style="display:none;">Manage card on Stripe</div>
-              </div>
-              <div id="stBillingError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;"></div>
-            </div>
-            <div class="form-section">
-              <div class="data-toolbar" style="padding:0 0 14px;">
-                <div class="form-section-title" style="margin:0;">Payment history</div>
-                <div class="btn-ghost-sm popover-anchor" id="stInvoiceExportBtn" style="margin-left:auto;">Export <span class="car">&#9662;</span>
-                  <div class="popover export-popover align-left">
-                    <div class="shop-opt export-opt" data-fmt="csv" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as CSV</div>
-              <div class="shop-opt export-opt" data-fmt="excel" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as Excel</div>
-                    <div class="shop-opt export-opt" data-fmt="pdf" data-source="stInvoiceTableBody" data-filename="payment-history" data-title="Payment History">Export as PDF</div>
-                  </div>
-                </div>
-              </div>
-              <div class="table-panel">
-                <table>
-                  <thead><tr><th>Date</th><th>Method</th><th>Period</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead>
-                  <tbody id="stInvoiceTableBody"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
           <!-- Fiscalisation (optional) -->
           <div class="settings-panel" id="settings-fiscal">
             <div class="settings-panel-head">
@@ -3817,6 +3827,8 @@ const AureumSync = (function(){
       // at the POS in another tab could silently revert a toggle the owner
       // just clicked here before they'd had a chance to hit Save.
       if(target === 'settings') applySettingsToForm();
+      if(target === 'billing'){ try{ renderBilling(); }catch(e){} }      // always show the current shops and total when Billing is opened
+      if(target === 'reports'){ activeReportTab = 'inventory'; try{ renderReportTabs(); showReportPanel(); renderActiveReport(); }catch(e){} }   // Reports always opens on Available Inventory (links such as "View low stock" then choose their own tab)
       try{ if(window.AureumGuideBo && !AureumGuide.active()) AureumGuideBo.pageOpened(target); }catch(e){}
     });
   });
@@ -4266,12 +4278,20 @@ const AureumSync = (function(){
     input.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); addShop(); } });
   }
 
+  /* The shop picker at the top sets the starting shop for every section. Each section also has its own Shop filter: changing that one only
+     changes that section (the top picker and the other sections stay as they are). Picking a shop at the top again resets them all to it. */
+  const SECTION_SHOP_FILTERS = ["productShopFilter","sbpShopFilter","rcpShopFilter","poShopFilter","grnShopFilter","saShopFilter","trShopFilter","acctShopFilter","repShopFilter","repInvShopFilter","repExpShopFilter"];
   function setViewingShop(s){
     viewingShop = s;
     document.getElementById('sidebarShopVal').textContent = s;
     document.getElementById('dashShopLabel').textContent = s;
     closeAllPopovers();
-    refreshDataForCurrentShop();
+    SECTION_SHOP_FILTERS.forEach(id => { const el = document.getElementById(id); if(el && [...el.options].some(o => o.value === s)) el.value = s; });
+    rerenderAllSections();
+  }
+  function rerenderAllSections(){
+    [renderDashboardSales, renderAlerts, renderProducts, renderReceiptsTable, renderSalesByProduct, renderSalesCategoryChart, renderPOTable, renderGRNTable, renderStockAdjTable, renderTransfers, renderAccountingData, renderActiveReport]
+      .forEach(fn => { try{ if(typeof fn === 'function') fn(); }catch(e){ console.error(e); } });
   }
   // Every page that shows numbers (sales, stock, cost, profit) must react
   // when the shop being viewed changes — otherwise the shop selector is just
@@ -4296,7 +4316,7 @@ const AureumSync = (function(){
     document.getElementById('dashShopLabel').textContent = viewingShop;
 
     // shop *filter* selects (include an "All Shops" option)
-    ["productShopFilter","sbpShopFilter","grnShopFilter","saShopFilter","rcpShopFilter","repInvShopFilter","repExpShopFilter"].forEach(id=>{
+    SECTION_SHOP_FILTERS.forEach(id=>{
       const el = document.getElementById(id); if(!el) return;
       const prev = el.value || "All Shops";
       el.innerHTML = ["All Shops", ...SHOPS].map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -4734,6 +4754,7 @@ const AureumSync = (function(){
 
   let productSelectionMode = false;
   let selectedProductIds = new Set();
+  let lastRowLongPressAt = 0, swallowRowClick = false, lastRowTouchAt = 0;      // the click that ends a long press must not undo it
 
   /* ===== GENERIC PAGINATION (reusable across any long list) ===== */
   let EXPORT_ALL_ROWS = false;   // while true, lists render every row (used by the exports so they aren't cut to one page)
@@ -4866,24 +4887,33 @@ const AureumSync = (function(){
       let pressTimer = null;
       let longPressed = false;
       const LONG_PRESS_MS = 500;
-      const startPress = ()=>{
-        longPressed = false;
+      let px = 0, py = 0;
+      const startPress = (e)=>{
+        if(e.target.closest && e.target.closest('[data-act],.row-select-check')) return;      // the edit / delete / tick buttons keep their own behaviour
+        const pt = (e.touches && e.touches[0]) || e; px = pt.clientX; py = pt.clientY;
+        longPressed = false; swallowRowClick = false; clearTimeout(pressTimer);      // a new press starts a new gesture
         pressTimer = setTimeout(()=>{
-          longPressed = true;
+          longPressed = true; swallowRowClick = true; lastRowLongPressAt = Date.now();
+          try{ const sel = window.getSelection && window.getSelection(); if(sel) sel.removeAllRanges(); }catch(_){}
           if(!productSelectionMode) enterProductSelectionMode();
-          toggleProductSelection(id);
+          if(!selectedProductIds.has(id)) toggleProductSelection(id);          // a long press always SELECTS (it never un-selects)
           if(navigator.vibrate) navigator.vibrate(15);
         }, LONG_PRESS_MS);
       };
       const cancelPress = ()=>{ clearTimeout(pressTimer); };
-      tr.addEventListener('mousedown', startPress);
-      tr.addEventListener('touchstart', startPress, {passive:true});
+      const movePress = (e)=>{ const pt = (e.touches && e.touches[0]) || e; if(Math.hypot(pt.clientX - px, pt.clientY - py) > 10) cancelPress(); };   // a scroll or a slipping finger is not a long press
+      tr.addEventListener('mousedown', e => { if(Date.now() - lastRowTouchAt < 1200) return; startPress(e); });      // the mouse events a touch screen adds after a touch are not a second press
+      tr.addEventListener('touchstart', e => { lastRowTouchAt = Date.now(); startPress(e); }, {passive:true});
       tr.addEventListener('mouseup', cancelPress);
       tr.addEventListener('mouseleave', cancelPress);
-      tr.addEventListener('touchend', cancelPress);
-      tr.addEventListener('touchmove', cancelPress);
+      tr.addEventListener('touchend', () => { lastRowTouchAt = Date.now(); cancelPress(); });
+      tr.addEventListener('touchcancel', cancelPress);
+      tr.addEventListener('touchmove', movePress, {passive:true});
+      tr.addEventListener('mousemove', e => { if(e.buttons) movePress(e); });
+      tr.addEventListener('contextmenu', e => { if(Date.now() - lastRowLongPressAt < 1200 || longPressed) e.preventDefault(); });   // no browser menu on a long press
       tr.addEventListener('click', ()=>{
-        if(longPressed){ longPressed = false; return; } // the long-press itself already handled selection
+        // the list is redrawn when a row gets selected, so the click that ends a long press lands on a NEW row — ignore it by time, not by this row
+        if(swallowRowClick){ swallowRowClick = false; longPressed = false; return; }
         if(productSelectionMode) toggleProductSelection(id);
         else openProductForm(id);
       });
@@ -4955,6 +4985,13 @@ const AureumSync = (function(){
     });
   });
 
+  /* the empty price / cost boxes in the Shops table say what they fall back to: "Same as 4.50" (the regular price / cost typed above) */
+  function sameAsText(id){ const el = document.getElementById(id), v = el ? String(el.value).trim() : ''; return (v !== '' && isFinite(+v)) ? 'Same as ' + (+v).toFixed(2) : 'Same as regular'; }
+  function refreshSameAsPlaceholders(){
+    document.querySelectorAll('.pf-shop-price').forEach(i => i.placeholder = sameAsText('pfPrice'));
+    document.querySelectorAll('.pf-shop-cost').forEach(i => i.placeholder = sameAsText('pfCost'));
+  }
+  ['pfPrice','pfCost'].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('input', refreshSameAsPlaceholders); });
   let shopTableExpanded = true;
   let shopStockTouched = false;
   function renderProductShopTable(p){
@@ -4968,8 +5005,8 @@ const AureumSync = (function(){
       <div class="shop-table-row">
         <input type="checkbox" class="cb pf-shop-cb" value="${s}" ${checked?'checked':''}>
         <div>${s}</div>
-        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-price" data-shop="${s}" value="${(p && p.shopPrice && typeof p.shopPrice[s] === 'number') ? p.shopPrice[s] : ''}" placeholder="Same as regular" aria-label="Price at ${s}" style="padding:6px 8px;font-size:12px;">
-        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-cost" data-shop="${s}" value="${(p && p.shopCost && typeof p.shopCost[s] === 'number') ? p.shopCost[s] : ''}" placeholder="Same as regular" aria-label="Cost at ${s}" style="padding:6px 8px;font-size:12px;">
+        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-price" data-shop="${s}" value="${(p && p.shopPrice && typeof p.shopPrice[s] === 'number') ? p.shopPrice[s] : ''}" placeholder="${sameAsText('pfPrice')}" aria-label="Price at ${s}" style="padding:6px 8px;font-size:12px;">
+        <input type="number" inputmode="decimal" min="0" step="0.01" class="modal-field pf-shop-cost" data-shop="${s}" value="${(p && p.shopCost && typeof p.shopCost[s] === 'number') ? p.shopCost[s] : ''}" placeholder="${sameAsText('pfCost')}" aria-label="Cost at ${s}" style="padding:6px 8px;font-size:12px;">
         <input type="number" min="0" step="any" class="modal-field pf-shop-stock" data-shop="${s}" value="${stockVal}" placeholder="0" style="padding:6px 8px;font-size:12px;">
       </div>`;
     }).join('');
@@ -5791,12 +5828,10 @@ const AureumSync = (function(){
     act('lblPrintBtn', lblPrint); act('lblOpenBtn', lblOpenTab);
     act('productLabelsBtn', () => {
       // Products screen: ticked products, else what the list shows, 1 label each — or start empty if there are very many
-      let ids = []; try{
-        if(selectedProductIds && selectedProductIds.size) ids = Array.from(selectedProductIds);                       // ticked products first
-        else ids = Array.from(document.querySelectorAll('#productTableBody tr[data-id]')).map(tr => +tr.dataset.id);    // otherwise what the list shows
-      }catch(e){}
+      // Starts with ONLY the products you ticked in the list; if none are ticked it starts empty (search or add a category / supplier inside)
+      let ids = []; try{ ids = Array.from(selectedProductIds || []); }catch(e){}
       ids = ids.filter(id => PRODUCTS.some(p => p.id === id));
-      openLabels((ids.length <= 60 ? ids : []).map(id => ({ productId: id, qty: 1 })), '');
+      openLabels(ids.map(id => ({ productId: id, qty: 1 })), '');
     });
   })();
   document.getElementById('productHistoryBtn').addEventListener('click', openProductHistory);
@@ -5807,7 +5842,6 @@ const AureumSync = (function(){
   });
   document.getElementById('productShopFilter').addEventListener('change', renderProducts);
   document.getElementById('productSortFilter').addEventListener('change', renderProducts);
-  document.getElementById('productsRefreshBtn').addEventListener('click', renderProducts);
   document.getElementById('productSearchIconBtn').addEventListener('click', ()=> document.getElementById('productSearch').focus({preventScroll:true}));
   renderProductColumnsPopover();
 
@@ -6387,12 +6421,14 @@ const AureumSync = (function(){
   }
 
   let poPageState = { page:1, pageSize:10 };
+  document.getElementById('poShopFilter').addEventListener('change', ()=>{ poPageState.page = 1; renderPOTable(); });
   let poDateRangeFilter = null;
   const dateInFilter = (iso, f) => { if(!f) return true; const d = new Date(String(iso).slice(0,10) + 'T00:00:00').getTime(); return isNaN(d) || (d >= f.start.getTime() && d <= f.end.getTime()); };
   function renderPOTable(){
     const tbody = document.getElementById('poTableBody');
-    const poList = PURCHASE_ORDERS.filter(po => dateInFilter(po.date, poDateRangeFilter));
-    if(poList.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">${PURCHASE_ORDERS.length === 0 ? 'No purchase orders yet. Create one to start tracking incoming stock.' : 'No purchase orders in this date range.'}</td></tr>`; const pg=document.getElementById('poPagination'); if(pg) pg.innerHTML=''; return; }
+    const poShopF = (document.getElementById('poShopFilter').value || 'All Shops');
+    const poList = PURCHASE_ORDERS.filter(po => dateInFilter(po.date, poDateRangeFilter) && (poShopF === 'All Shops' || po.shop === poShopF));
+    if(poList.length === 0){ tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">${PURCHASE_ORDERS.length === 0 ? 'No purchase orders yet. Create one to start tracking incoming stock.' : 'No purchase orders for this shop and date range.'}</td></tr>`; const pg=document.getElementById('poPagination'); if(pg) pg.innerHTML=''; return; }
     const totalFiltered = poList.length;
     const pageItems = paginateSlice(poList, poPageState);
     tbody.innerHTML = pageItems.map(po=>`
@@ -8070,7 +8106,9 @@ const AureumSync = (function(){
     if(ex) document.querySelectorAll('#reportExportBtn .export-opt').forEach(o=>{ o.dataset.source = ex[0]; o.dataset.filename = ex[1]; o.dataset.title = ex[2]; });
     document.querySelectorAll('.report-panel').forEach(p=> p.classList.toggle('active', p.id === 'report-' + activeReportTab));
   }
+  function reportShop(){ const el = document.getElementById('repShopFilter'); return (el && el.value) || 'All Shops'; }
   function renderActiveReport(){
+    const sf = document.getElementById('repShopField'); if(sf) sf.style.display = (activeReportTab === 'datacheck') ? 'none' : '';
     if(activeReportTab === 'inventory') renderReportInventory();
     else if(activeReportTab === 'valuation') renderReportValuation();
     else if(activeReportTab === 'summary') renderReportSummary();
@@ -8086,7 +8124,7 @@ const AureumSync = (function(){
         repLowPage = { page:1, pageSize:10 }, repStaffPage = { page:1, pageSize:10 };
   function clearPager(id){ const el = document.getElementById(id); if(el) el.innerHTML = ''; }
   function renderReportInventory(){
-    const shopFilter = document.getElementById('repInvShopFilter').value || 'All Shops';
+    const shopFilter = reportShop();
     const catFilter = document.getElementById('repInvCatFilter').value || 'All';
     const items = PRODUCTS.filter(p => productInShop(p, shopFilter) && (catFilter === 'All' || p.cat === catFilter));
     const tbody = document.getElementById('repInventoryBody');
@@ -8104,7 +8142,7 @@ const AureumSync = (function(){
   }
 
   function renderReportValuation(){
-    const shopCtx = viewingShop;
+    const shopCtx = reportShop();
     let totCostVal=0, totRetailVal=0;
     const rows = PRODUCTS.map(p=>{
       const stock = p.stockControl===false ? 0 : getStock(p, shopCtx);
@@ -8133,7 +8171,7 @@ const AureumSync = (function(){
   }
 
   function renderReportSummary(){
-    const shopCtx = viewingShop;
+    const shopCtx = reportShop();
     const cats = getProductCategories();
     const totalSKUs = PRODUCTS.length;
     const totalUnits = PRODUCTS.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
@@ -8158,7 +8196,7 @@ const AureumSync = (function(){
 
   let lowStockView = 'all';      // 'all' | 'negative' | 'low'
   function renderReportLowStock(){
-    const { shopCtx, negativeStock, lowItems } = computeStockAlerts();
+    const { shopCtx, negativeStock, lowItems } = computeStockAlerts(reportShop());
     const rowsNeg = negativeStock.map(e => ({ p:e.p, shop:e.shop, qty:e.qty, neg:true }));
     const rowsLow = lowItems.map(it => ({ p:it.p, shop: shopCtx, qty:getStock(it.p, shopCtx), neg:false }));
     const views = [
@@ -8285,14 +8323,15 @@ const AureumSync = (function(){
   }
   function renderReportShifts(){
     const openBody = document.getElementById('repOpenShiftsBody');
-    openBody.innerHTML = OPEN_SHIFTS.length ? OPEN_SHIFTS.map(sh => {
+    const shiftShop = reportShop(), openList = OPEN_SHIFTS.filter(sh => shiftShop === 'All Shops' || sh.shop === shiftShop);
+    openBody.innerHTML = openList.length ? openList.map(sh => {
       const opened = new Date(sh.openedAt), now = new Date();
       const old = !(opened.getFullYear() === now.getFullYear() && opened.getMonth() === now.getMonth() && opened.getDate() === now.getDate());
       return `<tr><td class="mono">${sh.id}</td><td>${sh.shop}</td><td>${shiftOwner(sh)}</td><td>${fmtReceiptTime(sh.openedAt)}${old ? ' <span style="color:#E39A4B;font-size:11px;">· from an earlier day, not closed</span>' : ''}</td>
         <td>${runningFor(sh.openedAt)}</td><td class="mono" style="text-align:right;">${usd(sh.openingFloat)}</td><td class="gold" style="text-align:right;">${usd(shiftNet(sh))}</td></tr>`;
     }).join('') : `<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--sage);">No shift is open right now.</td></tr>`;
 
-    const closed = SHIFT_CLOSURES.map(normShift).filter(c => c.closedAt).sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
+    const closed = SHIFT_CLOSURES.map(normShift).filter(c => c.closedAt && (shiftShop === 'All Shops' || c.shop === shiftShop)).sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
     const body = document.getElementById('repClosedShiftsBody');
     if(!closed.length){ body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--sage);">No shifts have been closed yet.</td></tr>`; document.getElementById('repClosedShiftsPagination').innerHTML = ''; return; }
     body.innerHTML = paginateSlice(closed, repShiftPage).map(c => {
@@ -8327,10 +8366,11 @@ const AureumSync = (function(){
 
   function renderReportStaff(){
     const tbody = document.getElementById('repStaffBody');
-    if(EMPLOYEES.length===0){ tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--sage);">No employees added yet.</td></tr>`; clearPager('repStaffPagination'); return; }
-    tbody.innerHTML = paginateSlice(EMPLOYEES, repStaffPage).map(e=>`
+    const staffList = EMPLOYEES.filter(e => reportShop() === 'All Shops' || e.shop === reportShop());
+    if(staffList.length===0){ tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--sage);">${EMPLOYEES.length ? 'No employees assigned to this shop.' : 'No employees added yet.'}</td></tr>`; clearPager('repStaffPagination'); return; }
+    tbody.innerHTML = paginateSlice(staffList, repStaffPage).map(e=>`
       <tr><td>${e.name}</td><td>${e.role}</td><td>${e.shop||'—'}</td><td><span class="status-badge ${e.active?'completed':'pending'}">${e.active?'Active':'Inactive'}</span></td></tr>`).join('');
-    renderPaginationControls('repStaffPagination', EMPLOYEES.length, repStaffPage, renderReportStaff);
+    renderPaginationControls('repStaffPagination', staffList.length, repStaffPage, renderReportStaff);
   }
 
   /* Data Check: scans products, documents and sales for numbers that cannot be right (read-only — it never changes anything). */
@@ -8411,7 +8451,7 @@ const AureumSync = (function(){
     return out.sort((a, b) => a.days - b.days);
   }
   function renderReportExpired(){
-    const shopFilter = document.getElementById('repExpShopFilter').value || 'All Shops';
+    const shopFilter = reportShop();
     const view = document.getElementById('repExpView').value || 'expired';
     const rows = expiredRows(shopFilter, view);
     const tbody = document.getElementById('repExpiredBody');
@@ -8426,7 +8466,7 @@ const AureumSync = (function(){
       <td class="mono" style="text-align:right;">${r.qty}</td><td class="mono" style="text-align:right;">${r.stock}</td></tr>`).join('');
     renderPaginationControls('repExpiredPagination', rows.length, repExpPage, renderReportExpired);
   }
-  document.getElementById('repExpShopFilter').addEventListener('change', ()=>{ repExpPage.page = 1; renderReportExpired(); });
+  document.getElementById('repShopFilter').addEventListener('change', ()=>{ [repInvPage, repValPage, repSumPage, repLowPage, repStaffPage, repExpPage].forEach(p => p.page = 1); try{ repShiftPage.page = 1; }catch(e){} renderActiveReport(); });
   document.getElementById('repExpView').addEventListener('change', ()=>{ repExpPage.page = 1; renderReportExpired(); });
   document.getElementById('repInvShopFilter').addEventListener('change', renderReportInventory);
   document.getElementById('repInvCatFilter').addEventListener('change', renderReportInventory);
@@ -8937,7 +8977,6 @@ const AureumSync = (function(){
     { id:"payments", label:"Payment Methods" },
     { id:"notifications", label:"Notifications" },
     { id:"users", label:"Users &amp; Permissions" },
-    { id:"billing", label:"Billing &amp; Subscription" },
     { id:"fiscal", label:"Fiscalisation" },
     { id:"help", label:"Help &amp; FAQ" },
   ];
@@ -8950,7 +8989,6 @@ const AureumSync = (function(){
       el.addEventListener('click', ()=>{
         activeSettingsTab = el.dataset.stab;
         renderSettingsNav();
-        if(activeSettingsTab === 'billing'){ try{ renderBilling(); }catch(e){} }      // always show the current shops and total when Billing is opened
         if(activeSettingsTab === 'fiscal'){ try{ fxLoad(); }catch(e){} }
         if(activeSettingsTab === 'help'){ try{ loadHelpChat(); setHelpPane('ask'); }catch(e){} }
         document.querySelectorAll('.settings-panel').forEach(p=> p.classList.toggle('active', p.id === 'settings-' + activeSettingsTab));
@@ -9460,9 +9498,9 @@ const AureumSync = (function(){
   }
   // The single source of truth for "what is negative / low": the dashboard alerts and the Low Stock report
   // both read this, so their counts can never disagree.
-  function computeStockAlerts(){
+  function computeStockAlerts(shop){
     const DEFAULT_LOW_STOCK_THRESHOLD = 15;
-    const shopCtx = viewingShop; // "All Shops" sums across shops via getStock; a real shop scopes to just that shop
+    const shopCtx = shop || viewingShop; // "All Shops" sums across shops via getStock; a real shop scopes to just that shop
     // Only ever flag a product for THIS shop if the product is actually
     // meant to be sold there — a product never assigned to this shop was
     // never "supposed" to have stock here, so it isn't a stockout, it's
@@ -9838,11 +9876,13 @@ const AureumSync = (function(){
   }
   let transferPageState = { page:1, pageSize:10 };
   let transferDateRangeFilter = null;
+  document.getElementById('trShopFilter').addEventListener('change', ()=>{ transferPageState.page = 1; renderTransfers(); });
   function renderTransfers(){
     const tbody = document.getElementById('transferTableBody');
-    const trList = TRANSFERS.filter(t => dateInFilter(t.date, transferDateRangeFilter));
+    const trShopF = (document.getElementById('trShopFilter').value || 'All Shops');
+    const trList = TRANSFERS.filter(t => dateInFilter(t.date, transferDateRangeFilter) && (trShopF === 'All Shops' || t.from === trShopF || t.to === trShopF || t.fromShop === trShopF || t.toShop === trShopF));
     if(trList.length === 0){
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px 20px;color:var(--sage);">${TRANSFERS.length === 0 ? 'No stock transfers yet.' : 'No transfers in this date range.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px 20px;color:var(--sage);">${TRANSFERS.length === 0 ? 'No stock transfers yet.' : 'No transfers for this shop and date range.'}</td></tr>`;
       const pg=document.getElementById('transferPagination'); if(pg) pg.innerHTML='';
       return;
     }
@@ -9931,10 +9971,13 @@ const AureumSync = (function(){
   let editingExpenseId = null;
   let acctDateState = null;
 
+  function acctShop(){ const el = document.getElementById('acctShopFilter'); return (el && el.value) || 'All Shops'; }
+  /* a shop's statement shows the expenses recorded for that shop; business-wide expenses (no shop chosen) appear under All Shops */
   function expensesInRange(state){
-    if(!state) return EXPENSES;
+    const shop = acctShop(), byShop = x => shop === 'All Shops' || x.shop === shop;
+    if(!state) return EXPENSES.filter(byShop);
     const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
-    return EXPENSES.filter(x=>{ const t = stripTime(new Date(x.date+'T00:00:00')).getTime(); return t>=s && t<=e; });
+    return EXPENSES.filter(x=>{ const t = stripTime(new Date(x.date+'T00:00:00')).getTime(); return t>=s && t<=e && byShop(x); });
   }
   function receiptsInRange(state){
     let items = RECEIPTS;
@@ -9942,8 +9985,8 @@ const AureumSync = (function(){
       const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
       items = items.filter(r=>{ const t = stripTime(new Date(r.dateTime)).getTime(); return t>=s && t<=e; });
     }
-    if(viewingShop && viewingShop !== 'All Shops'){
-      items = items.filter(r=> r.shop === viewingShop);
+    if(acctShop() !== 'All Shops'){
+      items = items.filter(r=> r.shop === acctShop());
     }
     return items;
   }
@@ -10007,15 +10050,28 @@ const AureumSync = (function(){
       <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Profit after tax</div><div class="pct" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${profitAfterTax.toFixed(2)}</div></div>
     `;
 
+    { // the same figures as a plain table, for Export (CSV / Excel / PDF)
+      const shopTxt = acctShop() === 'All Shops' ? 'All shops' : acctShop(), iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+        lab = ((document.getElementById('acctDateLabel') || {}).textContent || '').trim(),
+        per = fmtDisplay(iso(acctDateState.rangeStart)) + (iso(acctDateState.rangeStart) === iso(acctDateState.rangeEnd) ? '' : ' – ' + fmtDisplay(iso(acctDateState.rangeEnd))) + (lab ? ' (' + lab + ')' : '');
+      const m = n => (Number(n) < 0 ? '-' : '') + curSym() + Math.abs(Number(n)).toFixed(2), neg = n => (Number(n) > 0 ? '-' : '') + curSym() + Math.abs(Number(n)).toFixed(2);
+      const rows = [['Business', docBusiness() || 'AUREUM'], ['Shop', shopTxt], ['Period', per], ['Revenue', m(revenue)], ['Cost of revenue', neg(cogs)], ['Gross profit', m(grossProfit)], ['Operating expenses', neg(totalOpex)], ['Profit before tax', m(netIncome)], ['Income tax (' + taxPct + '%)', neg(incomeTax)], ['Profit after tax', m(profitAfterTax)]];
+      if(rcAcct.tax) rows.push(['Sales tax collected (owed to the tax authority — not counted in revenue)', m(rcAcct.tax)]);
+      const byCat = {}; rangeExpenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+      Object.keys(byCat).sort().forEach(c => rows.push(['  Expense — ' + c, neg(byCat[c])]));
+      document.getElementById('acctExportBody').innerHTML = rows.map(r => '<tr><td>' + escHtml(r[0]) + '</td><td>' + escHtml(r[1]) + '</td></tr>').join('');
+      document.getElementById('acctIsSub').textContent = 'For the selected period · ' + shopTxt + (acctShop() !== 'All Shops' ? ' · expenses recorded for this shop only' : '');
+    }
     const tbody = document.getElementById('expenseTableBody');
     if(rangeExpenses.length === 0){
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:48px 20px;color:var(--sage);">No operating expenses recorded for this period.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:48px 20px;color:var(--sage);">No operating expenses recorded for this period${acctShop() !== 'All Shops' ? ' for ' + escHtml(acctShop()) : ''}.</td></tr>`;
     } else {
       tbody.innerHTML = [...rangeExpenses].sort((a,b)=> new Date(b.date) - new Date(a.date)).map(e=>`
         <tr>
           <td>${fmtDisplay(e.date)}</td>
           <td>${e.category}</td>
           <td>${e.description || '—'}</td>
+          <td>${escHtml(e.shop || 'All shops')}</td>
           <td class="mono" style="text-align:right;">${curSym()}${e.amount.toFixed(2)}</td>
           <td onclick="event.stopPropagation()">
             <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end;">
@@ -10034,6 +10090,7 @@ const AureumSync = (function(){
     }
   }
 
+  document.getElementById('acctShopFilter').addEventListener('change', ()=> renderAccountingData());
   function renderAccounting(){
     if(!acctDateState){
       acctDateState = mountDateFilterField('acctDateSlot', 'acctDate', renderAccountingData, true);
@@ -10061,6 +10118,10 @@ const AureumSync = (function(){
         <div style="grid-column:1/-1;">
           <div class="field-label">Description (Optional)</div>
           <input type="text" class="modal-field" id="expDescription" placeholder="What was this expense for?" value="${ex ? ex.description.replace(/"/g,'&quot;') : ''}">
+        </div>
+        <div>
+          <div class="field-label">Shop</div>
+          <select class="modal-field" id="expShop"><option value="">All shops (business-wide)</option>${SHOPS.map(sh => `<option value="${escHtml(sh)}"${ex && ex.shop === sh ? ' selected' : ''}>${escHtml(sh)}</option>`).join('')}</select>
         </div>
         <div>
           <div class="field-label">Amount (<span class="cur-code">USD</span>)</div>
@@ -10100,7 +10161,7 @@ const AureumSync = (function(){
       document.getElementById('expAmount').focus();
       return;
     }
-    const data = { date, category, description, amount };
+    const data = { date, category, description, amount, shop: (document.getElementById('expShop') && document.getElementById('expShop').value) || '' };
     if(editingExpenseId){
       Object.assign(EXPENSES.find(e=>e.id===editingExpenseId), data);
     } else {
@@ -10563,6 +10624,7 @@ const AureumSync = (function(){
       const result = params.get('billing');
       setTimeout(()=>{
         if(result === 'success') aureumToast('Payment successful — thank you!', 'ok');
+        try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){}
         renderBilling();
       }, 800);
       const clean = window.location.pathname;
@@ -10599,6 +10661,7 @@ const AureumSync = (function(){
   }
   // "Take me to …" buttons in the chat
   function botGo(page, tab){
+    if(page === 'settings' && tab === 'billing'){ page = 'billing'; tab = null; }
     const nav = document.querySelector('.nav-item[data-page="' + page + '"]'); if(!nav) return;
     nav.click();
     if(page === 'reports' && tab){ activeReportTab = tab; try{ if(tab === 'lowstock'){ lowStockView = 'all'; repLowPage.page = 1; } renderReportTabs(); showReportPanel(); renderActiveReport(); }catch(e){} }
@@ -10714,6 +10777,8 @@ const AureumSync = (function(){
   function openHelp(pane){
     helpFromPage = currentPageLabel(); helpFromKey = currentPageKey();
     if(/Help/.test(helpFromPage)){ helpFromPage = ''; helpFromKey = ''; }          // already on Help: no earlier screen to remember
+    document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));      // a pop-up left open would hide the Help screen behind it
+    try{ if(window.AureumGuide && AureumGuide.active()) AureumGuide.stop && AureumGuide.stop(); }catch(e){}
     document.querySelector('.nav-item[data-page="settings"]').click();
     document.querySelector('.settings-tab-item[data-stab="help"]').click();
     setHelpPane(pane || 'ask');
@@ -10738,12 +10803,17 @@ const AureumSync = (function(){
       if(!moved && Math.hypot(dx, dy) < 6) return;
       moved = true; fab.classList.add('drag'); place(ox + dx, oy + dy);
     });
+    let openedAt = 0;
+    const openOnce = () => { if(Date.now() - openedAt < 600) return; openedAt = Date.now(); openHelp('ask'); };   // pointerup and click both try; only one opens
     const end = () => {
       if(!down) return; down = false; fab.classList.remove('drag');
       if(moved){ try{ const r = fab.getBoundingClientRect(); localStorage.setItem(KEY, JSON.stringify({ fx: r.left / window.innerWidth, fy: r.top / window.innerHeight })); }catch(e){} }
-      else openHelp('ask');
+      else openOnce();
     };
-    fab.addEventListener('pointerup', end); fab.addEventListener('pointercancel', () => { down = false; fab.classList.remove('drag'); });
+    fab.addEventListener('pointerup', end);
+    // a pointer that is cancelled or loses capture without having moved far was still a tap (this is what made the ? sometimes do nothing)
+    fab.addEventListener('pointercancel', () => { const wasTap = down && !moved; down = false; fab.classList.remove('drag'); if(wasTap) openOnce(); });
+    fab.addEventListener('click', () => { if(!moved) openOnce(); });
     fab.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openHelp('ask'); } });
     window.addEventListener('resize', () => { if(fab.style.left){ const r = fab.getBoundingClientRect(); place(r.left, r.top); } });
     // only visible once signed in (hidden behind the sign-in screen)
@@ -12912,7 +12982,7 @@ E('till-offline','The till','What happens to sales when the till is offline?',
 E('settings-overview','Settings','What can I change in Settings?',
   ['what is in settings','where are the settings','list of settings','what can i configure'],
   'settings tabs options configure profile stores devices taxes receipts payment notifications permissions billing help',
-  `**Settings** has ten tabs: **Business Profile**, **Stores**, **POS Devices**, **Taxes**, **Receipts**, **Payment Methods**, **Notifications**, **Users & Permissions**, **Billing & Subscription** and **Help & FAQ**. After changing a switch press **Save changes** — an "Unsaved changes" hint reminds you. Tills pick up changes within seconds.`,
+  `**Settings** has these tabs: **Business Profile**, **Stores**, **POS Devices**, **Taxes**, **Receipts**, **Payment Methods**, **Notifications**, **Users & Permissions**, **Fiscalisation** and **Help & FAQ**. **Billing & Subscription** has its own page in the left menu. After changing a switch press **Save changes** — an "Unsaved changes" hint reminds you. Tills pick up changes within seconds.`,
   ['settings-not-saving'], { pages:['settings'] }),
 E('business-profile','Settings','How do I change my business name or currency?',
   ['how do i change my business name','change currency','business email','business profile','set my currency'],
@@ -12974,13 +13044,13 @@ E('price','Billing','How much does AUREUM cost?',
 E('free-trial','Billing','How long is the free trial?',
   ['how long is the free trial','trial period','when does my trial end','can i extend my trial','free trial days'],
   'free trial 14 days end extend expires',
-  `The free trial is **14 days** and includes every shop. **Settings → Billing & Subscription** shows when it ends. Need more time? Send a **ticket** and the AUREUM team can extend it.`,
+  `The free trial is **14 days** and includes every shop. **Billing & Subscription** (in the left menu) shows when it ends. Need more time? Send a **ticket** and the AUREUM team can extend it.`,
   ['subscribe','price'], { human:true, pay:true, store:STORE }),
 E('subscribe','Billing','How do I subscribe?',
   ['how do i subscribe','how do i pay for aureum','pay my subscription','start paying','subscribe with card'],
   'subscribe subscription pay card stripe billing owner button',
-  `The **owner** opens **Settings → Billing & Subscription** and presses **Subscribe with card — $X/month (N shops × $5)**, then pays on Stripe's own page. Your card details are never stored by AUREUM.`,
-  ['price','add-shop-cost'], { pay:true, store:STORE, pages:['settings-billing'] }),
+  `The **owner** opens **Billing & Subscription** (in the left menu) and presses **Subscribe with card — $X/month (N shops × $5)**, then pays on Stripe's own page. Your card details are never stored by AUREUM.`,
+  ['price','add-shop-cost'], { pay:true, store:STORE, pages:['billing'] }),
 E('add-shop-cost','Billing','What does adding a shop cost?',
   ['what does an extra shop cost','how much to add a shop','pay for a new shop','do i pay more for another shop','additional shop price'],
   'extra additional shop cost charge five dollars prorated confirm declined second another',
@@ -12994,12 +13064,12 @@ E('remove-shop-billing','Billing','What happens to my bill if I remove a shop?',
 E('change-card','Billing','How do I change my card or cancel?',
   ['how do i change my card','update payment method','cancel my subscription','stop my subscription','manage card on stripe'],
   'card change update cancel stop stripe portal payment method',
-  `As the owner, open **Settings → Billing & Subscription** and press **Manage card on Stripe**. There you can update your card or cancel. After cancelling you keep access until the period you paid for ends.`,
+  `As the owner, open **Billing & Subscription** (in the left menu) and press **Manage card on Stripe**. There you can update your card or cancel. After cancelling you keep access until the period you paid for ends.`,
   ['payment-failed'], { pay:true, store:STORE }),
 E('payment-failed','Billing','My payment failed / status says Past due',
   ['my payment failed','past due','card declined','why is my account past due','subscription payment problem'],
   'payment failed past due declined card problem retry fix',
-  `A failed payment makes the status **Past due**. Open **Settings → Billing & Subscription → Manage card on Stripe** and update or retry your card. While past due you can't add shops. If it keeps failing after you've fixed the card, send a **ticket**.`,
+  `A failed payment makes the status **Past due**. Open **Billing & Subscription → Manage card on Stripe** and update or retry your card. While past due you can't add shops. If it keeps failing after you've fixed the card, send a **ticket**.`,
   ['change-card','locked-out'], { human:true, pay:true, store:STORE }),
 E('locked-out','Billing','The app is locked / says my subscription ended',
   ['app is locked','subscription has ended','i cant access my account because of billing','trial has ended locked out','grace period','my trial ended and i cant get in'],
@@ -13019,7 +13089,7 @@ E('plan-update','Billing','It says my subscription covers fewer shops than I hav
 E('payment-history','Billing','Where are my invoices and payment history?',
   ['where are my invoices','payment history','receipt for my subscription','download invoice','billing history'],
   'invoice payment history receipts billing statements export',
-  `**Settings → Billing & Subscription → Payment history** lists every payment (date, method, period, amount, status) with **Export**. Stripe also emails receipts to the owner's email address.`,
+  `**Billing & Subscription → Payment history** lists every payment (date, method, period, amount, status) with **Export**. Stripe also emails receipts to the owner's email address.`,
   ['subscribe'], { pay:true, store:STORE }),
 E('billing-dispute','Billing','I was charged twice / I want a refund of my subscription',
   ['i was charged twice','refund my subscription','wrong amount charged','dispute a charge','unauthorised charge','money taken from my card'],
