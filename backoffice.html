@@ -1513,8 +1513,7 @@
             <div>
               <div class="field-label">Sold by</div>
               <select id="pfSoldBy" class="modal-select">
-                <option value="each">Sold by each</option>
-                <option value="weight">Sold by weight</option>
+                <option value="each">Quantity</option>
               </select>
             </div>
             <div>
@@ -2437,13 +2436,6 @@
       <div class="panel">
         <div class="panel-head">
           <div><div class="t">Income Statement</div><div class="s" id="acctIsSub">For the selected period</div></div>
-          <div class="btn-ghost-sm popover-anchor" id="acctExportBtn">Export <span class="car">&#9662;</span>
-            <div class="popover export-popover">
-              <div class="shop-opt export-opt" data-fmt="csv" data-source="acctExportBody" data-filename="income-statement" data-title="Income Statement">Export as CSV</div>
-              <div class="shop-opt export-opt" data-fmt="excel" data-source="acctExportBody" data-filename="income-statement" data-title="Income Statement">Export as Excel</div>
-              <div class="shop-opt export-opt" data-fmt="pdf" data-source="acctExportBody" data-filename="income-statement" data-title="Income Statement">Export as PDF</div>
-            </div>
-          </div>
         </div>
         <table style="display:none" aria-hidden="true"><thead><tr><th>Line</th><th>Amount</th></tr></thead><tbody id="acctExportBody"></tbody></table>
         <div id="acctIncomeStatement"></div>
@@ -5072,7 +5064,7 @@ const AureumSync = (function(){
     if(id){
       const p = PRODUCTS.find(x=>x.id===id);
       document.getElementById('pfName').value = p.name;
-      document.getElementById('pfSoldBy').value = p.soldBy || 'each';
+      { const sb = document.getElementById('pfSoldBy'); if((p.soldBy || 'each') === 'weight' && !sb.querySelector('option[value=weight]')) sb.insertAdjacentHTML('beforeend', '<option value="weight">Weight (existing product)</option>'); else if((p.soldBy || 'each') !== 'weight'){ const w = sb.querySelector('option[value=weight]'); if(w) w.remove(); } sb.value = p.soldBy || 'each'; }
       document.getElementById('pfCategory').value = p.cat || '';
       document.getElementById('pfCode').value = p.code || nextProductCode();
       document.getElementById('pfBarcode').value = p.barcode || '';
@@ -5089,7 +5081,7 @@ const AureumSync = (function(){
       pendingImage = p.image || null; pendingImageCredit = p.imageCredit || '';
     } else {
       document.getElementById('pfName').value = '';
-      document.getElementById('pfSoldBy').value = 'each';
+      { const w = document.querySelector('#pfSoldBy option[value=weight]'); if(w) w.remove(); document.getElementById('pfSoldBy').value = 'each'; }
       document.getElementById('pfCategory').value = '';
       document.getElementById('pfCode').value = nextProductCode();
       document.getElementById('pfBarcode').value = '';
@@ -7331,7 +7323,7 @@ const AureumSync = (function(){
       ${items.length ? `
       <div class="table-panel" style="margin-bottom:14px;">
         <table>
-          <thead><tr><th>Product name</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Total</th></tr></thead>
+          <thead><tr><th>Product name</th><th style="text-align:right;">Quantity</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
           <tbody>
             ${items.map(it=>`<tr><td>${escHtml(it.name)}</td><td class="mono" style="text-align:right;">${it.qty}</td><td class="mono" style="text-align:right;">${money(it.price)}</td><td class="mono" style="text-align:right;">${money(it.qty*it.price)}</td></tr>`).join('')}
           </tbody>
@@ -10044,6 +10036,7 @@ const AureumSync = (function(){
     const rangeExpenses = expensesInRange(acctDateState);
     const totalOpex = rangeExpenses.reduce((s,e)=>s+e.amount,0);
     const netIncome = grossProfit - totalOpex;              // profit before tax
+    if(!window.__acctTaxInit){ window.__acctTaxInit = true; POS_SETTINGS.incomeTaxPercent = 0; }   // Income tax % starts at zero each time
     const taxPct = Math.max(0, Math.min(100, Number(POS_SETTINGS.incomeTaxPercent) || 0));
     const incomeTax = netIncome > 0 ? netIncome * taxPct / 100 : 0;   // no tax is charged on a loss
     const profitAfterTax = netIncome - incomeTax;
@@ -10203,8 +10196,7 @@ const AureumSync = (function(){
   document.getElementById('addExpenseBtn').addEventListener('click', ()=> openExpenseModal(null));
   document.getElementById('acctTaxPct').addEventListener('input', function(){
     let v = parseFloat(this.value); if(isNaN(v) || v < 0) v = 0; if(v > 100) v = 100;
-    POS_SETTINGS.incomeTaxPercent = v;
-    persistAureum();
+    POS_SETTINGS.incomeTaxPercent = v;      // only for what is on screen — never saved, so it always starts at 0
     renderAccountingData();
   });
 

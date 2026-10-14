@@ -1,5 +1,12 @@
 # Changelog
 
+## Receipt, phone and guide fixes
+- **Receipts** (till, Back Office receipt view, thermal print) now label the unit column **Price**, not Cost. The "Synced" note no longer prints on the paper receipt (it still shows on screen at the till).
+- **Phone till:** the top bar, the "Back to products" bar and pop-ups now sit below the phone's clock/notch, so Sign Out, Shift and Back to products are always tappable; the page no longer slides up under the status bar; the receipt pop-up's buttons (including Print Receipt) wrap and fit instead of running off the side.
+- **Income Statement:** the Export button is removed; Income tax % always starts at 0 (it is no longer remembered).
+- **Product form:** "Sold by" now offers **Quantity** (existing weight products keep their weight option).
+- **Guide:** an info step whose button you press no longer shows "I can't find that on this screen" (it moves on); the Adjust stock guide now makes you pick the type and reason and type the quantity, so Save no longer fails with a pop-up.
+
 ## Guide and till labels
 - Back Office Guide, step "The menu", now simply says: Sales Tracking & Visualisation, Product Entry & Inventory Management and Control Panel.
 - The Back Office button is now **Ready To Sell ? Switch To POS Check-Out**.

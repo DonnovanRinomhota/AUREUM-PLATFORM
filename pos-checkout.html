@@ -699,8 +699,18 @@
     .cart-bar .cb-go{ font-size:14px; font-weight:700; }
     .cart-bar.empty{ filter:saturate(.45) brightness(.9); }
     body.ticket-open .cart-bar{ display:none; }
-    .modal-overlay{ padding:12px; }
-    .modal-panel{ max-height:88vh; }
+    .modal-overlay{ padding:12px; padding-top:calc(12px + env(safe-area-inset-top)); padding-bottom:calc(12px + env(safe-area-inset-bottom)); }
+    .modal-panel{ max-height:88vh; max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); display:flex; flex-direction:column; }
+    .modal-panel .modal-body{ overflow-y:auto; min-height:0; flex:1 1 auto; -webkit-overflow-scrolling:touch; }
+    /* buttons wrap onto extra rows so none is cut off (Print Receipt used to slide out of reach) */
+    .modal-actions{ flex-wrap:wrap; padding:12px 16px calc(14px + env(safe-area-inset-bottom)); gap:8px; flex:0 0 auto; }
+    .modal-actions .modal-btn{ flex:1 1 calc(50% - 8px); min-width:0; }
+    .modal-actions .modal-btn.solid{ flex:1 1 100%; }
+    /* nothing may sit under the phone's clock / notch */
+    html, body{ overflow-y:hidden; overscroll-behavior:none; }
+    .topbar{ padding-top:calc(8px + env(safe-area-inset-top)); }
+    .ticket-back{ padding-top:calc(16px + env(safe-area-inset-top)); min-height:48px; position:relative; z-index:3; }
+    .auth-gate{ padding-top:calc(16px + env(safe-area-inset-top)); }
   }
 
   @media print{
@@ -714,7 +724,7 @@
       max-width:80mm; width:80mm; max-height:none; margin:0; box-shadow:none !important;
       background:#fff !important; border:none !important; border-radius:0 !important; padding:8px 6px !important;
     }
-    #receiptOverlay .modal-head, #receiptOverlay .modal-actions{ display:none !important; }
+    #receiptOverlay .modal-head, #receiptOverlay .modal-actions, #receiptOverlay .sync-chip{ display:none !important; }
     #receiptOverlay .receipt-body{ color:#111 !important; font-size:11.5px !important; }
     #receiptOverlay .r-table th, #receiptOverlay .r-table td{ color:#111 !important; border-color:#bbb !important; }
     #receiptOverlay .receipt-body .r-brand{ color:#000 !important; }
@@ -2876,10 +2886,10 @@ async function aureumSignIn(email, password){
     const cur = POS_SETTINGS.currency;
     const cashier = sale.employee || (activeEmployee ? activeEmployee.name : 'Cashier');
     const shop = sale.shop || activeShop;
-    // Items are a real table with headings so Product / Quantity / Cost (each) / Total line up in columns
+    // Items are a real table with headings so Product / Quantity / Price (each) / Total line up in columns
     const rows = `
       <table class="r-table">
-        <thead><tr><th class="l">Product</th><th class="c">Quantity</th><th class="r">Cost</th><th class="r">Total</th></tr></thead>
+        <thead><tr><th class="l">Product</th><th class="c">Quantity</th><th class="r">Price</th><th class="r">Total</th></tr></thead>
         <tbody>${sale.items.map(i => `<tr><td class="l">${escHtml(i.name)}</td><td class="c">${i.qty}</td><td class="r">${cur}${i.price.toFixed(2)}</td><td class="r">${cur}${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
       </table>`;
     const showLogo = POS_SETTINGS.toggles ? POS_SETTINGS.toggles.stReceiptLogo !== false : true;
@@ -2947,9 +2957,9 @@ async function aureumSignIn(email, password){
     { const shopName = sale.shop || activeShop; if(shopName && shopName !== 'All Shops') text(`Shop: ${shopName}\n`); }
     if(sale.customer) text(`Customer: ${sale.customer}\n`);
     text('--------------------------------\n');
-    { // columns on a 32-character line:  Qty (6) | Cost (12) | Total (14)
+    { // columns on a 32-character line:  Qty (6) | Price (12) | Total (14)
       const cols = (qty, cost, total) => String(qty).padEnd(6) + String(cost).padStart(12) + String(total).padStart(14);
-      push(ESC, 0x45, 0x01); text('Product\n' + cols('Qty', 'Cost', 'Total') + '\n'); push(ESC, 0x45, 0x00);
+      push(ESC, 0x45, 0x01); text('Product\n' + cols('Qty', 'Price', 'Total') + '\n'); push(ESC, 0x45, 0x00);
       (sale.items||[]).forEach(it=>{
         text(String(it.name).slice(0, 64).replace(/(.{1,32})(\s+|$)/g, '$1\n').replace(/\n+$/, '\n'));
         text(cols(it.qty, `${POS_SETTINGS.currency}${it.price.toFixed(2)}`, `${POS_SETTINGS.currency}${(it.qty*it.price).toFixed(2)}`) + '\n');

@@ -275,6 +275,8 @@ function tick(initial){
     if(run.found){   // it was on screen and has gone (e.g. the pop-up this step was about got closed): finished, or lost?
       var dn0 = false; if(st.done){ try{ dn0 = !!st.done(ctx(), run.snap, run); }catch(e){} }
       if(dn0){ if(!run.doneAt) run.doneAt = Date.now(); advance(1); return; }
+      // an information-only step whose target went away because the person acted on it (e.g. pressed the very button it pointed at): that is progress, not an error
+      if(!st.done){ advance(1); return; }
       if(!run.lostAt) run.lostAt = Date.now();
       if(Date.now() - run.lostAt > 1800){ clearInterval(S.timer); run.found = false; run.lostAt = 0; renderMissing(st); }
       return;
