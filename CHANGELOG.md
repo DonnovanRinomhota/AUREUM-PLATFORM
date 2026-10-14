@@ -1,5 +1,8 @@
 # Changelog
 
+## Barcode scanning
+- The till now also recognises a UPC-A label that a scanner reads as a 13-digit number with a 0 in front. Labels made by Print labels (barcode or, if empty, the product code) are found at the till by scanning.
+
 ## Receipt, phone and guide fixes
 - **Receipts** (till, Back Office receipt view, thermal print) now label the unit column **Price**, not Cost. The "Synced" note no longer prints on the paper receipt (it still shows on screen at the till).
 - **Phone till:** the top bar, the "Back to products" bar and pop-ups now sit below the phone's clock/notch, so Sign Out, Shift and Back to products are always tappable; the page no longer slides up under the status bar; the receipt pop-up's buttons (including Print Receipt) wrap and fit instead of running off the side.

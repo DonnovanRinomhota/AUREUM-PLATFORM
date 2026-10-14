@@ -2341,7 +2341,11 @@ async function aureumSignIn(email, password){
   let scanLastTime = 0;
   const SCAN_GAP_MS = 80; // per-character gap ceiling; generous enough for Bluetooth's extra latency
   function tryHandleBarcode(code){
-    const p = PRODUCTS.find(p => (p.barcode && p.barcode === code) || p.code === code);
+    // exact match first; then a numeric code ignoring leading zeros, because a scanner reads a UPC-A label (12 digits) as the 13-digit EAN with a 0 in front
+    code = String(code).trim();
+    const nz = v => String(v == null ? '' : v).trim().replace(/^0+/, '');
+    const same = v => !!v && (String(v).trim() === code || (/^\d{8,14}$/.test(code) && /^\d{8,14}$/.test(String(v).trim()) && nz(v) === nz(code)));
+    const p = PRODUCTS.find(p => same(p.barcode)) || PRODUCTS.find(p => same(p.code));
     // No stock gate here — scanning should behave exactly like tapping the
     // product tile, which never blocks on stock (products with stock
     // tracking off, or already at 0, are still sellable either way).
