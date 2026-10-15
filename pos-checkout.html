@@ -830,6 +830,7 @@
       <div class="topbar-icon-btn" id="signOutBtn" title="Sign out — your shift stays open" role="button" tabindex="0" aria-label="Sign Out" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9211; Sign Out</div>
       <div class="topbar-icon-btn" id="shiftBtn" title="Shift — summary, close shift, closed shifts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#9201; <span id="shiftBtnLabel">Shift</span></div>
       <div class="topbar-icon-btn" id="backOfficeBtn" title="Open Back Office" role="button" aria-label="Back Office" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#8599; Back Office</div>
+      <div class="topbar-icon-btn" id="drawerBtn" title="Open the cash drawer" role="button" aria-label="Open cash drawer" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;display:none;">&#9638; Open Drawer</div>
       <div class="topbar-icon-btn" id="recentSalesBtn" title="Receipts — history of recent sales" role="button" aria-label="Receipts" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#8635; Receipts<span class="sync-dot" id="recentSalesDot" hidden></span></div>
       <div class="topbar-icon-btn" id="guideBtn" title="Guide — step-by-step help on the real screen" style="width:auto;padding:0 12px;font-size:11.5px;letter-spacing:.04em;">&#10022; Guide</div>
       <div class="topbar-icon-btn" id="helpBtn" title="Help">?</div>
@@ -2935,6 +2936,44 @@ async function aureumSignIn(email, password){
   document.getElementById('thermalPrintBtn').addEventListener('click', ()=> printToThermalPrinter(lastSale));
   document.getElementById('thermalPrintBtnBt').addEventListener('click', ()=> printToThermalPrinterBluetooth(lastSale));
 
+  /* ===== CASH DRAWER (ESC/POS kick through the receipt printer) =====
+     Most cash drawers plug into the receipt printer's RJ11 "DK" port. The printer opens the drawer when it gets the
+     standard pulse command below. So the drawer works whenever a printer is connected with "Print via USB / Bluetooth"
+     (connect once per session). Drawers wired straight to a computer (serial / USB-only) are not covered. */
+  const DRAWER_KICK = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA,  0x1B, 0x70, 0x01, 0x19, 0xFA]); // ESC p pin2, then pin5
+  function drawerEnabled(){ return settingOn('stCashDrawer', false); }
+  function syncDrawerBtn(){ const b = document.getElementById('drawerBtn'); if(b) b.style.display = drawerEnabled() ? '' : 'none'; }
+  function drawerToast(msg){
+    let t = document.getElementById('drawerToast');
+    if(!t){ t = document.createElement('div'); t.id = 'drawerToast'; t.setAttribute('role', 'status');
+      t.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel,#10201a);color:var(--gold-bright,#E7C766);border:1px solid var(--gold,#C9A24B);border-radius:10px;padding:10px 16px;font-size:13px;z-index:99999;max-width:90vw;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+      document.body.appendChild(t); }
+    t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = 'none'; }, 4200);
+  }
+  async function sendDrawerKick(allowConnect){
+    if(usbPrinterDevice){ await usbPrinterDevice.device.transferOut(usbPrinterDevice.endpointNumber, DRAWER_KICK); return true; }
+    if(btPrinterCharacteristic){ await btPrinterCharacteristic.writeValue(DRAWER_KICK); return true; }
+    if(!allowConnect) return false;
+    if('usb' in navigator){ const pr = await getUsbPrinter(); await pr.device.transferOut(pr.endpointNumber, DRAWER_KICK); return true; }
+    const ch = await getBluetoothPrinter(); await ch.writeValue(DRAWER_KICK); return true;
+  }
+  async function openCashDrawer(manual){
+    if(window.AureumViewOnly && AureumViewOnly.active()) return;
+    try{
+      const ok = await sendDrawerKick(!!manual);
+      if(ok) { if(manual) drawerToast('Cash drawer opened'); }
+      else drawerToast('Cash drawer not connected. Press Print via USB or Bluetooth once to connect your printer.');
+    }catch(err){
+      drawerToast((manual && err && err.message) ? err.message : 'Could not open the cash drawer. Check the printer connection.');
+    }
+  }
+  function maybeOpenDrawerAfterSale(sale, method){
+    if(!drawerEnabled() || method !== 'cash' || !sale || sale.refund) return;
+    openCashDrawer(false);
+  }
+  document.getElementById('drawerBtn').addEventListener('click', () => openCashDrawer(true));
+  syncDrawerBtn();
+
   /* ===== THERMAL PRINTER (WebUSB + ESC/POS) =====
      Talks directly to a USB thermal receipt printer using the real
      WebUSB API and standard ESC/POS control codes — no drivers, no
@@ -3253,6 +3292,7 @@ async function aureumSignIn(email, password){
     buildReceipt(sale);
     setReceiptChrome(false, sale);
     openModal('receiptOverlay');
+    maybeOpenDrawerAfterSale(sale, payMethod);
     maybeAutoPrint();
     fiscaliseReceipt(RECEIPTS[RECEIPTS.length - 1], 'sale');       // optional; no-op unless this shop has fiscalisation on
   });
@@ -3273,6 +3313,7 @@ async function aureumSignIn(email, password){
   function applyPermissionUI(){
     const d = document.getElementById('discountChip'); if(d) d.style.display = (!activeEmployee || cashierMay('discount')) ? '' : 'none';
     const r = document.getElementById('recentSalesBtn'); if(r) r.style.display = (!activeEmployee || cashierMay('reports')) ? '' : 'none';
+    syncDrawerBtn();
     if(Object.keys(cart).length) renderTicket();                       // shows / hides the tap-to-change-price hint
   }
   function renderClerkUI(){
@@ -4055,6 +4096,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 </script>
 <script src="/guide.js"></script>
 <script src="/guide-pos.js"></script>
+<script src="/noautofill.js"></script>
 <script src="/a11y.js" defer></script>
 </body>
 </html>

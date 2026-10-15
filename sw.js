@@ -7,10 +7,10 @@
      • it never touches your data. Anything going to Supabase, Stripe, Paynow or any other site (and every
        non-GET request) is left completely alone — data is kept offline by the app itself, not by this file.
    Bump VERSION on each release so old copies are cleared. */
-const VERSION = 'aureum-v56';
+const VERSION = 'aureum-v57';
 const SHELL = [
   '/offline.html', '/backoffice.html', '/pos-checkout.html', '/labels.js', '/viewonly.js', '/fiscal/flag.js', '/fiscal/fiscal-core.js', '/fiscal/profiles.js', '/fiscal/countries/generic.js', '/fiscal/devices/local-connector.js',
-  '/a11y.js', '/safe-html.js', '/countries.js', '/guide.js', '/guide-pos.js', '/guide-bo.js', '/fiscal/countries/zw.js', '/fiscal/devices/zw-virtual-fdms.js',
+  '/a11y.js', '/noautofill.js', '/safe-html.js', '/countries.js', '/guide.js', '/guide-pos.js', '/guide-bo.js', '/fiscal/countries/zw.js', '/fiscal/devices/zw-virtual-fdms.js',
   '/manifest.webmanifest', '/manifest-pos.webmanifest',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png', '/icons/favicon.svg',
   '/vendor/supabase.js', '/vendor/xlsx.full.min.js', '/vendor/fonts/fonts.css', '/vendor/fonts/fonts-serif.css',

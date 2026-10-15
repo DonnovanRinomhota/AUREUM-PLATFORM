@@ -2847,6 +2847,10 @@
                 <div class="switch" id="stReceiptAutoPrint" data-toggle></div>
               </div>
               <div class="toggle-row">
+                <div class="lbl">Open cash drawer after cash sales<span class="hint">Needs a cash drawer plugged into your receipt printer. Connect the printer at the till (Print via USB / Bluetooth) and the drawer pops open after each cash sale. A manual “Open Drawer” button also appears at the till.</span></div>
+                <div class="switch" id="stCashDrawer" data-toggle></div>
+              </div>
+              <div class="toggle-row">
                 <div class="lbl">Show an “Email receipt” button on receipts<span class="hint">Opens your email app with the receipt already written in it.</span></div>
                 <div class="switch on" id="stReceiptEmail" data-toggle></div>
               </div>
@@ -9163,6 +9167,7 @@ const AureumSync = (function(){
     const bizName = document.getElementById('stBizName').value.trim();
     if(!bizName){ alert('Business name is required.'); document.getElementById('stBizName').focus(); return; }
     POS_SETTINGS.businessName = bizName;
+    { const g = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; }; POS_SETTINGS.businessPhone = g('stBizPhone'); POS_SETTINGS.businessEmail = g('stBizEmail'); POS_SETTINGS.businessAddress = g('stBizAddress'); }
     { const tz = document.getElementById('stTimezone'); if(tz && tz.value){ POS_SETTINGS.timezone = tz.value; AureumCountries.setTimezone(tz.value); } }
     if(settingsCountryPicker && settingsCountryPicker.value) POS_SETTINGS.country = settingsCountryPicker.value;
     const curCode = document.getElementById('stCurrency').value;
@@ -9206,6 +9211,7 @@ const AureumSync = (function(){
     rateEl.classList.toggle('invalid', !rateOk);
     if(!rateOk){ rateEl.focus(); return; }
     POS_SETTINGS.taxPercent = rate;
+    { const tn = document.getElementById('stTaxName'); if(tn && tn.value.trim()) POS_SETTINGS.taxLabel = tn.value.trim(); }
     POS_SETTINGS.taxInclusive = document.getElementById('stTaxInclusive').classList.contains('on');
     POS_SETTINGS.taxDefaultOnNewProducts = document.getElementById('stTaxDefault').classList.contains('on');
     saveSettingsPanel('settings-taxes');
@@ -10362,7 +10368,10 @@ const AureumSync = (function(){
     const acctEmailEl = document.getElementById('stAccountEmail');
     if(acctEmailEl && currentUser) acctEmailEl.textContent = 'Signed in as ' + (currentUser.email || '—');
     const nameEl = document.getElementById('stBizName');
-    if(nameEl && (!nameEl.value || nameEl.value === 'Aureum Retail')) nameEl.value = POS_SETTINGS.businessName;
+    if(nameEl && (!nameEl.value || nameEl.value === 'Aureum Retail' || /^(any date|\d{4}\/\d{2}\/\d{2})$/i.test(nameEl.value.trim()))) nameEl.value = POS_SETTINGS.businessName;
+    { const setIf = (id, v) => { const e = document.getElementById(id); if(e && v !== undefined && v !== null && document.activeElement !== e) e.value = v; };
+      setIf('stBizPhone', POS_SETTINGS.businessPhone); setIf('stBizEmail', POS_SETTINGS.businessEmail); setIf('stBizAddress', POS_SETTINGS.businessAddress);
+      if(POS_SETTINGS.taxLabel && POS_SETTINGS.taxLabel !== 'Tax') setIf('stTaxName', POS_SETTINGS.taxLabel); }
     fillTimezones(); fillCurrencySelects();
     ['stCurrency','stCurrency2'].forEach(id => AureumCountries.enhanceSelect(document.getElementById(id), { placeholder:'Search currency (name or code)…' }));
     AureumCountries.enhanceSelect(document.getElementById('stTimezone'), { placeholder:'Search time zone (city or region)…' });
@@ -14192,6 +14201,7 @@ if(typeof module !== 'undefined' && module.exports) module.exports = api; else r
 </script>
 <script src="/guide.js"></script>
 <script src="/guide-bo.js"></script>
+<script src="/noautofill.js"></script>
 <script src="/a11y.js" defer></script>
 </body>
 </html>

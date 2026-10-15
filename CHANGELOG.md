@@ -1,5 +1,10 @@
 # Changelog
 
+## Search boxes, Business Profile & cash drawer (sw v57)
+- Fixed: Products/Employees search, Business name/phone and Tax name sometimes started with a date or "Any date". The browser was restoring text from the date-picker boxes into unrelated fields. New `noautofill.js` switches browser autofill/restore off for the app's boxes (login fields untouched) and clears any such stray date text; all three apps use it.
+- Business phone, email, address and Tax name now save and reload (they were not being stored).
+- New: Settings -> Receipts -> "Open cash drawer after cash sales" (on/off). Opens a printer-connected drawer (ESC/POS pulse over the USB/Bluetooth receipt printer); an "Open Drawer" button appears at the till when it is on.
+
 ## Barcode scanning
 - The till now also recognises a UPC-A label that a scanner reads as a 13-digit number with a 0 in front. Labels made by Print labels (barcode or, if empty, the product code) are found at the till by scanning.
 
