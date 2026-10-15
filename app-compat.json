@@ -1,0 +1,6 @@
+{
+  "_doc": "Compatibility contract between the live web app and installed Android apps. Raise minNativeVersionCode ONLY when a web change needs a newer native build; older apps then show an 'update the app' notice but keep working until you decide to block them.",
+  "contract": 1,
+  "backoffice": { "minNativeVersionCode": 1, "latestNativeVersionCode": 1 },
+  "pos": { "minNativeVersionCode": 1, "latestNativeVersionCode": 1 }
+}

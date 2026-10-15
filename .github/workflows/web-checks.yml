@@ -1,0 +1,32 @@
+name: Web checks
+# Runs on every push and pull request. A failing check means: do not merge / do not ship.
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Unit tests
+        run: for t in tests/*.test.js; do echo "== $t"; node "$t" || exit 1; done
+      - name: Script syntax
+        run: |
+          for f in sw.js viewonly.js noautofill.js native-bridge.js a11y.js labels.js guide.js guide-bo.js guide-pos.js; do node --check "$f" || exit 1; done
+      - name: Inline scripts compile
+        run: |
+          node -e '
+          const fs=require("fs");let bad=0;
+          for(const f of ["backoffice.html","pos-checkout.html","admin.html"]){
+            const s=fs.readFileSync(f,"utf8");const re=/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g;let m,i=0;
+            while((m=re.exec(s))){try{new Function(m[1])}catch(e){console.error(f,"block",i,e.message);bad=1}i++}
+          }
+          process.exit(bad)'
+      - name: JSON files valid
+        run: node -e 'for(const f of ["vercel.json","app-compat.json","manifest.webmanifest","manifest-pos.webmanifest"]) JSON.parse(require("fs").readFileSync(f,"utf8"))'
+      - name: No secret keys in the repo
+        run: |
+          if grep -rIl --exclude-dir=node_modules --exclude-dir=.git -E "service_role|sk_live_|sk_test_|whsec_|-----BEGIN (RSA |EC )?PRIVATE KEY" . | grep -v -E "^\./(supabase|tests|\.github|android/docs|[A-Z-]+\.md)" ; then echo "Possible secret found above"; exit 1; fi

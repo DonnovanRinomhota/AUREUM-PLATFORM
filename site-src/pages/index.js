@@ -3,3 +3,5 @@ export { features } from './features.js';
 export { pricing } from './pricing.js';
 export { about } from './about.js';
 export { support } from './support.js';
+export { privacy } from './privacy.js';
+export { deleteAccount } from './delete-account.js';

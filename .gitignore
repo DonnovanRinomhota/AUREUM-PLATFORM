@@ -3,3 +3,14 @@ node_modules/
 .env
 .env.local
 supabase/.temp/
+
+# Android
+android/*/android/build/
+android/*/android/app/build/
+android/*/android/.gradle/
+android/*/android/local.properties
+*.jks
+*.keystore
+keystore.properties
+*.aab
+*.apk

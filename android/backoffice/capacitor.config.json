@@ -1,0 +1,13 @@
+{
+  "appId": "com.aureum.backoffice",
+  "appName": "AUREUM Back Office",
+  "webDir": "www",
+  "server": {
+    "url": "https://aureum-platform.vercel.app/backoffice.html?store=1&app=backoffice",
+    "allowNavigation": ["aureum-platform.vercel.app", "*.supabase.co"],
+    "cleartext": false,
+    "errorPath": "index.html"
+  },
+  "android": { "allowMixedContent": false, "backgroundColor": "#0A1B16" },
+  "plugins": { "SplashScreen": { "launchShowDuration": 0 } }
+}

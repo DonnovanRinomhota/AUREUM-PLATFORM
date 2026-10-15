@@ -40,7 +40,7 @@
     'body.vo-on .vo-blocked{opacity:.45;cursor:not-allowed !important;}';
 
   function toast(msg){ try{ if(typeof window.aureumToast === 'function') return window.aureumToast(msg, 'danger'); }catch(e){} }
-  function say(){ toast('View only — ' + (state.kind === 'trial' ? 'your free trial has ended' : 'your subscription has expired') + '. Subscribe to make changes.'); }
+  function say(){ toast('View only — ' + (state.kind === 'trial' ? 'your free trial has ended' : 'your subscription has expired') + '.' + (state.opts && state.opts.storeMode ? '' : ' Subscribe to make changes.')); }
 
   var ACTION_SEL = 'button,[role="button"],.btn-gold,.btn-outline,.btn-ghost-sm,.icon-btn-sm,.icon-btn-row,.modal-btn,.add-line-btn,.switch,[data-act]';
   var HARD_SEL = '.btn-gold,.modal-btn.solid,.icon-btn-row,.switch,.add-line-btn';
@@ -82,7 +82,7 @@
     var bar = document.createElement('div'); bar.id = 'vo-strip'; bar.setAttribute('role', 'status');
     bar.innerHTML = '<span><b></b> &middot; <span class="vo-tail"></span></span>';
     bar.querySelector('b').textContent = opts.text || (state.kind === 'trial' ? TRIAL_TEXT : EXPIRED_TEXT);
-    bar.querySelector('.vo-tail').textContent = TAIL;
+    bar.querySelector('.vo-tail').textContent = opts.storeMode ? 'Your subscription is managed from your account on the web' : TAIL;
     if(typeof opts.onSubscribe === 'function'){
       var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'vo-btn'; btn.textContent = 'Subscribe';
       btn.addEventListener('click', function(ev){ ev.stopPropagation(); opts.onSubscribe(); });

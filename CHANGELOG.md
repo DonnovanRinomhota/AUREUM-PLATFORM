@@ -1,5 +1,11 @@
 # Changelog
 
+## Android apps, privacy pages (sw v58)
+- New: two Android apps (Capacitor) in `android/backoffice` (com.aureum.backoffice) and `android/pos` (com.aureum.pos), loading the live site with a bundled offline recovery page; separate icons, permissions and release signing. Build with GitHub Actions -> "Android build". See `android/README.md`.
+- New: `native-bridge.js` (no effect in a normal browser): store-app mode, camera barcode scan, Bluetooth-LE printer and cash drawer, file save/share, "Print" shares the receipt text.
+- POS: view-only strip in the app shows no Subscribe button (store rules).
+- New: `/privacy/` and `/delete-account/` pages; footer links; `app-compat.json` (minimum native version); CI workflow `web-checks.yml`.
+
 ## Search boxes, Business Profile & cash drawer (sw v57)
 - Fixed: Products/Employees search, Business name/phone and Tax name sometimes started with a date or "Any date". The browser was restoring text from the date-picker boxes into unrelated fields. New `noautofill.js` switches browser autofill/restore off for the app's boxes (login fields untouched) and clears any such stray date text; all three apps use it.
 - Business phone, email, address and Tax name now save and reload (they were not being stored).

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/native-bridge.js"></script>
 <script src="/safe-html.js"></script>
 <script src="/countries.js"></script>
 <meta charset="UTF-8">
@@ -604,6 +605,7 @@
   .sync-chip{ margin:0 0 10px; padding:7px 11px; border-radius:10px; font-size:12px; border:1px solid var(--line); color:var(--ivory-dim); }
   .sync-chip.ok{ color:#7fd6a0; border-color:rgba(127,214,160,.4); } .sync-chip.warn{ color:var(--gold-bright); border-color:rgba(212,168,67,.5); background:rgba(212,168,67,.08); }
   #recentSalesBtn{ position:relative; }
+  .native-app #thermalPrintBtn{ display:none !important; }   /* WebUSB isn't available inside the Android app */
   .sync-dot{ position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--gold-bright); color:#10261a; font-size:10px; font-weight:700; line-height:16px; text-align:center; }
   .sale-row .refund-btn{ border:1px solid var(--line-strong); border-radius:8px; color:var(--gold-bright); font-weight:600; cursor:pointer; white-space:nowrap; }
   .sale-row .refund-btn:hover{ border-color:var(--gold-bright); background:rgba(231,199,102,0.08); }
@@ -2386,6 +2388,10 @@ async function aureumSignIn(email, password){
     }
   });
   document.getElementById('scanBtn').addEventListener('click', ()=>{
+    if(window.AureumNative && AureumNative.canScan && AureumNative.canScan()){        // Android app: use the camera
+      AureumNative.scan().then(code => { if(code) tryHandleBarcode(code); }).catch(e => { try{ aureumToast((e && e.message) || 'Could not scan.', 'danger'); }catch(_){} });
+      return;
+    }
     // The button can't fabricate a scan — it just arms the field and
     // tells the cashier to use the physical scanner now.
     searchInput.focus();
@@ -2881,6 +2887,7 @@ async function aureumSignIn(email, password){
     const to = (c && c.email) ? c.email : '';
     return `mailto:${encodeURIComponent(to).replace(/%40/g, '@')}?subject=${encodeURIComponent('Your receipt from ' + POS_SETTINGS.businessName + ' (' + sale.orderNo + ')')}&body=${encodeURIComponent(receiptPlainText(sale))}`;
   }
+  window.AureumReceiptText = () => { const s = shownSale || lastSale; return s ? receiptPlainText(s) : ''; };
   function emailReceipt(){ if(shownSale) location.href = receiptMailtoUrl(shownSale); }
   // "Print receipt automatically after sale": a paired USB printer if there is one, otherwise the browser's print
   function maybeAutoPrint(){
@@ -3082,6 +3089,12 @@ async function aureumSignIn(email, password){
 
   async function getBluetoothPrinter(){
     if(btPrinterCharacteristic) return btPrinterCharacteristic;
+    if(window.AureumNative && AureumNative.isNative){            // Android app: the browser's Bluetooth is not available, use the native bridge
+      if(!AureumNative.hasBle()) throw new Error('Bluetooth printing is not available in this app version.');
+      await AureumNative.bleConnect();
+      btPrinterCharacteristic = { writeValue: data => AureumNative.bleWrite(data) };
+      return btPrinterCharacteristic;
+    }
     if(!('bluetooth' in navigator)) throw new Error('Web Bluetooth isn\'t supported in this browser. Use Chrome or Edge, or print via USB / the regular print dialog instead.');
     const device = await navigator.bluetooth.requestDevice({
       filters: BLE_PRINTER_SERVICES.map(s => ({ services: [s.service] })),
@@ -3525,7 +3538,8 @@ async function aureumSignIn(email, password){
       const vs = window.AureumViewOnly ? AureumViewOnly.statusFrom(biz, 3) : { viewOnly:false };
       if(vs.viewOnly){
         AureumViewOnly.enable({ kind:vs.kind, text:vs.text,
-          onSubscribe: function(){ try{ const w = window.open('backoffice.html?go=billing', '_blank'); if(!w) window.location.href = 'backoffice.html?go=billing'; }catch(e){} },
+          onSubscribe: (window.AureumNative && AureumNative.isNative) ? null : function(){ try{ const w = window.open('backoffice.html?go=billing', '_blank'); if(!w) window.location.href = 'backoffice.html?go=billing'; }catch(e){} },
+          storeMode: !!(window.AureumNative && AureumNative.isNative),
           deny:'.card,.qty-btn,.li-remove,.charge-btn,.pay-btn,.quick-chip,.ticket-icon-btn,.tender-chip,[data-act],#cartBar .cb-go',
           allow:'#backOfficeBtn,#signOutBtn,#recentSalesBtn,#guideBtn,#helpBtn,#syncStatus,#shiftGate,.sales-tab,.sync-now,#clerkSwitch,#shopSwitchBtn,#shiftBtn,#cartBar,#catalogSort,#categories,.cat,.pill' });
       }

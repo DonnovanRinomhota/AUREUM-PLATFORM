@@ -1,0 +1,13 @@
+{
+  "appId": "com.aureum.pos",
+  "appName": "AUREUM POS",
+  "webDir": "www",
+  "server": {
+    "url": "https://aureum-platform.vercel.app/pos-checkout.html?store=1&app=pos",
+    "allowNavigation": ["aureum-platform.vercel.app", "*.supabase.co"],
+    "cleartext": false,
+    "errorPath": "index.html"
+  },
+  "android": { "allowMixedContent": false, "backgroundColor": "#0A1B16" },
+  "plugins": { "SplashScreen": { "launchShowDuration": 0 } }
+}

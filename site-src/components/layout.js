@@ -42,7 +42,7 @@ export const footer = () => `<footer class="site-footer">
       ${skyline()}
     </div>
   </div>
-  <div class="wrap f-bottom"><p>&copy; ${new Date().getFullYear()} AUREUM. All rights reserved.</p></div>
+  <div class="wrap f-bottom"><p>&copy; ${new Date().getFullYear()} AUREUM. All rights reserved. &nbsp;·&nbsp; <a href="/privacy/">Privacy Policy</a> &nbsp;·&nbsp; <a href="/delete-account/">Delete your account</a></p></div>
 </footer>`;
 
 /* Watch Demo: shows the real video once DEMO.videoUrl is set; until then it says plainly that the demo is coming. */

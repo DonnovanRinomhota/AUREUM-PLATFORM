@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/native-bridge.js"></script>
 <script src="/safe-html.js"></script>
 <script src="/countries.js"></script>
 <meta charset="UTF-8">
@@ -11445,6 +11446,7 @@ const AureumSync = (function(){
     if(subCheck.viewOnly && window.AureumViewOnly){
       // Trial over / subscription expired: let them in to LOOK at everything, but change nothing.
       AureumViewOnly.enable({ kind:subCheck.kind, text:subCheck.text,
+        storeMode: AUREUM_STORE_MODE,
         onSubscribe: AUREUM_STORE_MODE ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
         allow:'#logoutBtn,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
     }
