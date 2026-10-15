@@ -48,7 +48,7 @@ jobs:
         env:
           AUREUM_VERSION_CODE: ${{ inputs.version_code }}
           AUREUM_VERSION_NAME: ${{ inputs.version_name }}
-        run: ./gradlew assembleDebug
+        run: chmod +x ./gradlew && ./gradlew assembleDebug --stacktrace
       - name: Restore signing key (only if the secrets exist)
         if: steps.pick.outputs.go == 'yes'
         id: key
@@ -66,7 +66,7 @@ jobs:
           AUREUM_KEYSTORE_PASSWORD: ${{ matrix.app == 'pos' && secrets.POS_KEYSTORE_PASSWORD || secrets.BACKOFFICE_KEYSTORE_PASSWORD }}
           AUREUM_KEY_ALIAS: ${{ matrix.app == 'pos' && secrets.POS_KEY_ALIAS || secrets.BACKOFFICE_KEY_ALIAS }}
           AUREUM_KEY_PASSWORD: ${{ matrix.app == 'pos' && secrets.POS_KEY_PASSWORD || secrets.BACKOFFICE_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease
+        run: chmod +x ./gradlew && ./gradlew bundleRelease --stacktrace
       - name: Upload files
         if: steps.pick.outputs.go == 'yes'
         uses: actions/upload-artifact@v4
