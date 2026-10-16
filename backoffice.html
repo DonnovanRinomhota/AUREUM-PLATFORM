@@ -612,7 +612,7 @@
   .seg-btn.active{ background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1B140A; }
   .seg-n{ font-family:'JetBrains Mono',monospace; font-size:11px; opacity:.85; margin-left:4px; }
   /* store-app mode: no way to pay is shown anywhere inside the app */
-  .store-app #stPayStripeBtn, .store-app #stSyncShopsBtn, .store-app #stManageStripeBtn, .store-app #authPayBlock, .store-app .web-only{ display:none !important; }
+  .store-app #stPayStripeBtn, .store-app #stSyncShopsBtn, .store-app #stManageStripeBtn, .store-app #stCancelSubBtn, .store-app #stRenewNote, .store-app #authPayBlock, .store-app .web-only{ display:none !important; }
   .store-only{ display:none; }
   .store-app .store-only{ display:block; }
   /* ----- product import dialog ----- */
@@ -2618,12 +2618,14 @@
                 <div class="detail-field"><div class="field-label">Current period ends</div><div class="v" id="stNextBillDate">—</div></div>
                 <div class="detail-field"><div class="field-label">Last paid via</div><div class="v" id="stBillingProcessor">—</div></div>
               </div>
+              <div id="stRenewNote" style="display:none; margin-top:14px; font-size:13px; line-height:1.6; color:var(--ivory-dim);"></div>
               <div id="stBillingBanner" style="display:none; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(201,162,39,0.12); border:1px solid var(--gold-bright); font-size:12.5px; color:var(--ivory-dim);"></div>
               <div class="settings-save-row" style="margin-top:16px;">
                 <div class="btn-gold" id="stPayStripeBtn">Subscribe with card</div>
               <div class="btn-gold" id="stSyncShopsBtn" style="display:none;">Update subscription</div>
                 
-                <div class="btn-outline" id="stManageStripeBtn" style="display:none;">Manage card on Stripe</div>
+                <div class="btn-outline" id="stManageStripeBtn" style="display:none;">Update card details</div>
+                <div class="btn-outline" id="stCancelSubBtn" style="display:none;">Cancel subscription</div>
               </div>
               <div id="stBillingError" style="font-size:11.5px;color:var(--danger);margin-top:8px;min-height:14px;"></div>
             </div>
@@ -2737,6 +2739,11 @@
               <div style="font-size:12px;color:var(--sage);line-height:1.6;margin-bottom:12px;">Records (purchase orders, goods received, expenses, adjustments, transfers, receipts) that went missing before this update may still be saved as a copy on a device you used. Check this device for anything your account doesn't have — demo records are never restored.</div>
               <div class="btn-outline" id="stRecoverCheckBtn">Check this device</div>
               <div id="stRecoverResult" style="margin-top:12px;font-size:12.5px;line-height:1.7;"></div>
+            </div>
+            <div class="form-section" id="stDangerZone" style="margin-top:8px;border:1px solid var(--danger);border-radius:12px;padding:18px;">
+              <div class="form-section-title" style="margin-bottom:10px;color:var(--danger);">Delete account</div>
+              <div style="font-size:12px;color:var(--sage);line-height:1.6;margin-bottom:12px;">Permanently deletes your business, every shop, product, customer, employee, sale and receipt, and all staff logins. Your card subscription is cancelled. <b>This cannot be undone.</b> Export any reports you need first. Only the business owner can do this.</div>
+              <div class="btn-outline" id="stDeleteAccountBtn" style="border-color:var(--danger);color:var(--danger);">Delete my account…</div>
             </div>
           </div>
 
@@ -3056,6 +3063,29 @@
     </div>
     <div class="modal-body" id="detailModalBody"></div>
     <div class="modal-actions" id="detailModalActions"></div>
+  </div>
+</div>
+
+<!-- Delete account (owner only; the server re-checks everything) -->
+<div class="modal-overlay" id="delAcctModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div class="title" style="color:var(--danger);">Delete your account</div>
+      <div class="modal-close" data-close="delAcctModal" role="button" tabindex="0" aria-label="Close">&#10005;</div>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;line-height:1.6;margin:0 0 12px;">This permanently deletes <b id="delAcctBizName"></b> and everything in it: shops, products, stock, customers, employees, sales and receipts, plus all staff logins. Your subscription is cancelled. It cannot be undone.</p>
+      <div class="field-label">Type the business name to confirm</div>
+      <input type="text" class="modal-field" id="delAcctType" autocomplete="off" aria-label="Type the business name to confirm">
+      <div class="field-label" style="margin-top:12px;">Your password</div>
+      <input type="password" class="modal-field" id="delAcctPw" autocomplete="current-password" aria-label="Your password">
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:12.5px;line-height:1.5;"><input type="checkbox" id="delAcctOk" style="margin-top:3px;"> I understand this deletes all my data for good.</label>
+      <div class="field-error" id="delAcctErr" style="display:block;min-height:16px;margin-top:8px;"></div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" data-close="delAcctModal">Keep my account</div>
+      <div class="modal-btn solid" id="delAcctGo" style="background:var(--danger);border-color:var(--danger);color:#fff;opacity:.5;pointer-events:none;" role="button" tabindex="0">Delete everything</div>
+    </div>
   </div>
 </div>
 
@@ -10432,7 +10462,9 @@ const AureumSync = (function(){
     document.getElementById('stMonthlyLabel').textContent = live ? 'Monthly total' : 'Monthly total once subscribed';
     document.getElementById('stMonthlyVal').textContent = live ? `${money0(covered * PRICE_PER_SHOP)}  (${covered} × $5)` : `${money0(nShops * PRICE_PER_SHOP)}  (${nShops} × $5)`;
     payStripe.textContent = `Subscribe with card — ${money0(nShops * PRICE_PER_SHOP)}/month (${nShops} shop${nShops === 1 ? '' : 's'} × $5)`;
-    payStripe.style.display = live ? 'none' : '';
+    const nowD = new Date(), pEnd = business.current_period_end ? new Date(business.current_period_end) : null;
+    const paidActive = !business.is_exempt && business.billing_processor !== 'paynow' && business.subscription_status === 'active' && (live || (pEnd && pEnd > nowD));   // paid up: no "Subscribe" any more, manage it instead
+    payStripe.style.display = (live || paidActive) ? 'none' : '';
     syncBtn.style.display = (live && business.subscription_status === 'active' && have > covered) ? '' : 'none';
     syncBtn.textContent = `Update subscription to cover all ${have} shops — ${money0(have * PRICE_PER_SHOP)}/month`;
 
@@ -10474,11 +10506,19 @@ const AureumSync = (function(){
       }
     }
 
-    manageBtn.style.display = business.stripe_customer_id ? '' : 'none';
+    const cancelBtn = document.getElementById('stCancelSubBtn'), renewEl = document.getElementById('stRenewNote');
+    manageBtn.style.display = (business.stripe_customer_id || paidActive) ? '' : 'none';
+    cancelBtn.style.display = (paidActive || live) ? '' : 'none';
+    if(paidActive || live){
+      const amt = money0(Math.max(1, covered || have) * PRICE_PER_SHOP);
+      renewEl.style.display = 'block';
+      renewEl.innerHTML = `<b>Recurring monthly billing.</b> Your card is charged ${amt} automatically every month${periodEnd ? `; the next payment is on <b>${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</b>` : ''}. A receipt is emailed to you after every payment. You can change your card or cancel any time; if you cancel you keep access until the end of the period you have paid for.`;
+    } else { renewEl.style.display = 'none'; }
     if(live && business.subscription_status === 'active' && covered > Math.max(1, have) && Date.now() - lastShopReconcile > 60000) scheduleShopReconcile(1500);   // shops were removed: lower next month's bill
 
     const { data: payments } = await sb.from('subscription_payments')
       .select('*').eq('business_id', currentBusinessId).order('created_at', { ascending:false }).limit(50);
+    if(!business.billing_processor && payments && payments[0]) procEl.textContent = payments[0].processor === 'stripe' ? 'Stripe (card)' : payments[0].processor === 'manual' ? 'Complimentary (admin)' : '—';
     const tbody = document.getElementById('stInvoiceTableBody');
     if(!payments || payments.length === 0){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--sage);">No payments yet.</td></tr>`;
@@ -10618,7 +10658,7 @@ const AureumSync = (function(){
     }
   }
   document.getElementById('stPayStripeBtn').addEventListener('click', ()=> startBillingPayment('stripe'));
-  document.getElementById('stManageStripeBtn').addEventListener('click', async ()=>{
+  async function openStripePortal(flow){
     const errEl = document.getElementById('stBillingError');
     errEl.textContent = '';
     if(!sb) return;
@@ -10627,7 +10667,7 @@ const AureumSync = (function(){
       const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/billing-stripe-portal`, {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ returnUrl: window.location.href.split('?')[0] })
+        body: JSON.stringify({ returnUrl: window.location.href.split('?')[0], flow: flow || '' })
       });
       const json = await resp.json();
       if(json.error) throw new Error(json.error);
@@ -10635,6 +10675,11 @@ const AureumSync = (function(){
     }catch(err){
       errEl.textContent = err.message;
     }
+  }
+  document.getElementById('stManageStripeBtn').addEventListener('click', () => openStripePortal('card'));
+  document.getElementById('stCancelSubBtn').addEventListener('click', () => {
+    if(!confirm('Cancel your subscription?\n\nYou keep access until the end of the period you have already paid for. After that the account becomes view-only.')) return;
+    openStripePortal('cancel');
   });
   // If we've just come back from Stripe/Paynow, refresh billing data and
   // clean the URL so a reload doesn't repeat the message.
@@ -11448,7 +11493,7 @@ const AureumSync = (function(){
       AureumViewOnly.enable({ kind:subCheck.kind, text:subCheck.text,
         storeMode: AUREUM_STORE_MODE,
         onSubscribe: AUREUM_STORE_MODE ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
-        allow:'#logoutBtn,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
+        allow:'#logoutBtn,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#stCancelSubBtn,#stDeleteAccountBtn,#delAcctModal,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
     }
     document.getElementById('sfWho').textContent = profile.full_name || currentUser.email;
     document.getElementById('sfEmail').textContent = profile.full_name ? currentUser.email : '';
@@ -11600,6 +11645,45 @@ const AureumSync = (function(){
     }
   });
   document.getElementById('logoutBtn').addEventListener('click', aureumSignOut);
+
+  /* ===== DELETE ACCOUNT (Settings -> Business Profile) ===== */
+  (function(){
+    const $ = id => document.getElementById(id);
+    const bizName = () => ((POS_SETTINGS && POS_SETTINGS.businessName) || ($('stBizName') && $('stBizName').value) || '').trim();
+    function ready(){
+      const ok = $('delAcctType').value.trim() === bizName() && bizName() !== '' && $('delAcctPw').value !== '' && $('delAcctOk').checked;
+      const b = $('delAcctGo'); b.style.opacity = ok ? '1' : '.5'; b.style.pointerEvents = ok ? 'auto' : 'none';
+      return ok;
+    }
+    ['input','change'].forEach(ev => ['delAcctType','delAcctPw','delAcctOk'].forEach(id => $(id).addEventListener(ev, ready)));
+    $('stDeleteAccountBtn').addEventListener('click', () => {
+      if(currentRole && currentRole !== 'owner'){ aureumToast('Only the business owner can delete the account.', 'danger'); return; }
+      $('delAcctBizName').textContent = bizName();
+      $('delAcctType').value = ''; $('delAcctPw').value = ''; $('delAcctOk').checked = false; $('delAcctErr').textContent = '';
+      ready(); openModal('delAcctModal');
+    });
+    let busy = false;
+    $('delAcctGo').addEventListener('click', async () => {
+      if(busy || !ready() || !sb) return;
+      busy = true; const b = $('delAcctGo'), err = $('delAcctErr'); err.textContent = ''; b.textContent = 'Deleting…';
+      try{
+        const { data: { session } } = await sb.auth.getSession();
+        const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/delete-account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': SUPABASE_CONFIG.anonKey },
+          body: JSON.stringify({ confirmName: $('delAcctType').value.trim(), password: $('delAcctPw').value })
+        });
+        const json = await resp.json().catch(() => ({}));
+        if(!resp.ok || json.error) throw new Error(json.error || 'Could not delete the account. Nothing was deleted.');
+        try{ await sb.auth.signOut({ scope: 'local' }); }catch(e){}
+        try{ localStorage.clear(); sessionStorage.clear(); }catch(e){}
+        closeModal('delAcctModal');
+        document.body.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0A1B16;color:#EDE6D2;font-family:system-ui,sans-serif;text-align:center;padding:24px"><div style="max-width:380px"><h1 style="color:#E7C766;font-size:22px">Your account has been deleted</h1><p style="line-height:1.6;color:#B8C4BC">Your business data and logins have been removed and your subscription cancelled. Thank you for using AUREUM.</p><a href="/" style="color:#E7C766">Back to the AUREUM website</a></div></div>';
+      }catch(e){
+        err.textContent = e.message || 'Something went wrong. Nothing was deleted.'; b.textContent = 'Delete everything';
+      }finally{ busy = false; }
+    });
+  })();
 
   // Arriving here via a password-reset email link — Supabase puts
   // type=recovery in the URL hash. Show the "set new password" screen

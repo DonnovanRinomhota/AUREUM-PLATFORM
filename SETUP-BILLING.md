@@ -65,3 +65,24 @@ Switch Stripe to live mode, replace the secrets with the live ones (`sk_live_...
 - The shop limit is enforced by the **database**, so it can't be bypassed from the browser.
 - Adding a shop mid-month creates a small *proration* invoice. The webhook records it as a payment but does **not** treat it as a new billing period.
 - App-store builds (`?store=1`) never show payment buttons: adding a shop that needs payment tells the owner to manage the subscription from their account on the web.
+
+## 8. Payment invoice emails (to the owner's registration email)
+**Easiest, no code (do this anyway):** Stripe Dashboard → Settings → Customer emails → switch on **Successful payments** (receipts). Stripe then emails a receipt with a link to the invoice every time a card payment succeeds.
+
+**AUREUM-branded invoice email (optional, uses Resend):**
+1. Create a free account at resend.com, verify your sending domain (or use their test sender while testing), and create an API key.
+2. Set the two secrets (the key stays in Supabase, never in the website):
+```
+supabase secrets set RESEND_API_KEY=re_...
+supabase secrets set BILLING_FROM_EMAIL="AUREUM <billing@yourdomain.com>"
+supabase functions deploy billing-stripe-webhook --no-verify-jwt
+```
+3. Pay a test subscription: the owner's registration email receives the invoice (amount, period, invoice number, links to view/download the PDF). Each Stripe invoice is emailed only once, even if Stripe re-sends the event.
+If the two secrets are not set, nothing is sent from AUREUM (Stripe's own receipts still work).
+
+## 9. Update card / Cancel subscription
+Both buttons open Stripe's Customer Portal. In Stripe Dashboard → Settings → Billing → **Customer portal** make sure **Update payment methods** and **Cancel subscriptions** are switched on, then Save. Deploy: `supabase functions deploy billing-stripe-portal`.
+The portal function also repairs accounts where a paid subscription was never linked (it looks the subscription up in Stripe the first time the owner clicks the button).
+
+## 10. Delete account
+Deploy once: `supabase functions deploy delete-account` (no extra secrets; it reuses the Stripe secret). Owner-only, asks for the business name and password, cancels the Stripe subscription, deletes the business and every login. Stripe keeps its own payment records.

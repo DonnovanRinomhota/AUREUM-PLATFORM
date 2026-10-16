@@ -1,5 +1,11 @@
 # Changelog
 
+## Billing: manage after paying, invoice emails, Delete account (sw v59)
+- Settings -> Billing: once a subscription is paid, "Subscribe with card" is hidden; the page shows a "Recurring monthly billing" note with the next payment date, plus **Update card details** and **Cancel subscription** (Stripe's portal).
+- Accounts that paid but were never linked to Stripe are repaired automatically (webhook and portal).
+- Invoice/payment email to the owner's registration email after each payment (needs Resend secrets, or switch on Stripe receipts - see SETUP-BILLING.md section 8). Each invoice is recorded/emailed once.
+- Settings -> Business Profile: **Delete account** (owner only; business name + password; cancels subscription; deletes the business and all logins). New edge function `delete-account`.
+
 ## Android apps, privacy pages (sw v58)
 - New: two Android apps (Capacitor) in `android/backoffice` (com.aureum.backoffice) and `android/pos` (com.aureum.pos), loading the live site with a bundled offline recovery page; separate icons, permissions and release signing. Build with GitHub Actions -> "Android build". See `android/README.md`.
 - New: `native-bridge.js` (no effect in a normal browser): store-app mode, camera barcode scan, Bluetooth-LE printer and cash drawer, file save/share, "Print" shares the receipt text.
