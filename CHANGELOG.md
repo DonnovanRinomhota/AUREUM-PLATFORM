@@ -1,5 +1,15 @@
 # Changelog
 
+## Accuracy, split payments, Hold, image receipts, QA fixes (sw v60)
+- **One sales calculation** for Dashboard, Sales by Product (and its CSV), Sales by Category and Accounting. Ticket discounts and sales tax are shared out per item in whole cents, cost is the cost recorded at the time of sale, refunds reverse revenue, tax, discount and cost, and products that were later deleted still count. Net sales = after discounts and refunds, excluding sales tax; profit = net sales - cost. The pages now reconcile to the cent. (QA F02, F03, F09)
+- Dashboard chart renamed "Net sales" (it plots net sales). Sales by Employee / Payment now show totals net of refunds; split payments are counted per method. Sales by Category shows which period/shop it uses. (F06, F09)
+- POS: starts every ticket on the tax rate saved in Settings -> Taxes. Settings used to display an unsaved "15" that the till never received; it now shows the real rate. (F01)
+- POS: percentage discount above 100 and fixed discount above the ticket are corrected visibly. (F04)
+- POS: **Hold** saves the ticket (items, changed prices, discount, customer, note, tax) on this till; **Held** lists them to Resume (add items, complete the sale) or Delete. Survives reload and sign-out. (F11)
+- POS: **Split** payment replaces "Other" (Other is still a choice inside Split). Receipts, shift totals (cash expected in drawer), drawer kick, refunds (shared back in proportion) and reports understand split payments.
+- POS: **Email receipt** now makes a branded picture (business logo/name/details + AUREUM mark) to Share/Email (attached on phones/tablets), Save, or Open email.
+- Back Office: stock boxes are switched off while Stock control is off (F05); Inventory Summary lists uncategorised products so rows add up (F07); Data Check page size matches its selector (F08); switches have a role, name, state and keyboard use, and common click-only controls are focusable (F10).
+
 ## Billing: manage after paying, invoice emails, Delete account (sw v59)
 - Settings -> Billing: once a subscription is paid, "Subscribe with card" is hidden; the page shows a "Recurring monthly billing" note with the next payment date, plus **Update card details** and **Cancel subscription** (Stripe's portal).
 - Accounts that paid but were never linked to Stripe are repaired automatically (webhook and portal).

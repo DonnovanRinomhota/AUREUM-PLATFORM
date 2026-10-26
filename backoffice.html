@@ -1294,10 +1294,10 @@
         <div class="panel-head">
           <div>
             <div class="t">Sales Summary</div>
-            <div class="s" id="salesSummarySub">Gross sales vs. gross profit, last 7 days</div>
+            <div class="s" id="salesSummarySub">Net sales vs. gross profit, last 7 days</div>
           </div>
           <div class="legend-row">
-            <div class="legend-item"><span class="legend-dot" style="background:var(--emerald-light)"></span>Gross sales</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--emerald-light)"></span>Net sales</div>
             <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>Gross profit</div>
           </div>
         </div>
@@ -1545,12 +1545,12 @@
           <div class="create-form-grid">
             <div>
               <div class="field-label">Regular unit price (<span class="cur-code">USD</span>)</div>
-              <input type="number" id="pfPrice" class="modal-field" min="0" step="0.01" placeholder="0.00">
+              <input type="number" id="pfPrice" class="modal-field" min="0" step="0.01" placeholder="0.00" aria-label="Selling price">
               <div class="field-error" id="pfPriceError">Enter a price of 0 or more</div>
             </div>
             <div>
               <div class="field-label">Regular unit cost (<span class="cur-code">USD</span>)</div>
-              <input type="number" id="pfCost" class="modal-field" min="0" step="0.01" placeholder="0.00">
+              <input type="number" id="pfCost" class="modal-field" min="0" step="0.01" placeholder="0.00" aria-label="Cost price">
               <div class="field-error" id="pfCostError">Enter a cost of 0 or more</div>
             </div>
           </div>
@@ -1570,6 +1570,7 @@
             <div class="lbl">Stock control</div>
             <div class="switch" id="pfStockControlToggle" data-toggle="pfStockControl"></div>
           </div>
+          <div id="pfStockOffNote" style="display:none;font-size:11px;color:var(--sage);margin-top:8px;">Stock control is off, so this product's quantity is not tracked and stock can not be entered. Turn it on to enter stock for each shop.</div>
           <div id="pfStockQtyWrap" style="display:none; margin-top:10px; max-width:280px;">
             <input type="hidden" id="pfStock" value="0">
             <div class="field-label">Low stock alert threshold</div>
@@ -1620,7 +1621,7 @@
     <!-- SALES BY PRODUCT PAGE -->
     <div class="page" data-page="sales-by-product">
       <div class="main-top">
-        <div><div class="page-title">Sales by Products</div><div class="page-sub">See which products are driving revenue and profit.</div></div>
+        <div><div class="page-title">Sales by Products</div><div class="page-sub">See which products are driving revenue and profit. Net sales exclude sales tax; discounts and refunds are shared out per item, so the totals match the Dashboard.</div></div>
       </div>
 
       <div class="filters-bar">
@@ -1684,7 +1685,7 @@
         <div class="panel-head">
           <div>
             <div class="t">Sales by Category</div>
-            <div class="s">Share of net sales by product category</div>
+            <div class="s" id="salesCatScope">Share of net sales (excluding sales tax) by product category</div>
           </div>
           <div style="display:flex; gap:8px;">
             <input type="text" class="cat-select" id="salesCatFilter" list="salesCatFilterOptions" placeholder="All categories" style="padding:6px 10px; max-width:160px;" autocomplete="off">
@@ -2800,7 +2801,7 @@
                 </div>
                 <div>
                   <div class="field-label">Default tax rate (%)</div>
-                  <input type="number" class="modal-field" id="stTaxRate" value="15" min="0" max="100" step="0.1">
+                  <input type="number" class="modal-field" id="stTaxRate" value="0" min="0" max="100" step="0.1">
                   <div class="field-error" id="stTaxRateError">Enter a rate between 0 and 100</div>
                 </div>
               </div>
@@ -3893,13 +3894,10 @@ const AureumSync = (function(){
       if(viewingShop && viewingShop !== 'All Shops' && r.shop !== viewingShop) return false;
       return true;
     });
-    const grossSales = receipts.filter(r=>!r.refund).reduce((sum,r)=>sum+r.total,0);
-    const refunds = receipts.filter(r=>r.refund).reduce((sum,r)=>sum+r.total,0);
-    const netSales = grossSales - refunds;
-    // exact: the cost saved on every item sold (less items refunded); sales tax collected is not profit
-    const rc = receiptCosts(receipts);
-    const costOfSales = rc.cogs;
-    const grossProfit = netSales - rc.tax - costOfSales;
+    // same calculation as Sales by Product and Accounting: net sales exclude sales tax, discounts and refunds are allocated per item
+    const st = salesTotals(receipts);
+    const grossSales = st.gross, netSales = st.net, costOfSales = Math.max(0, st.cogs);
+    const grossProfit = r2c(netSales - costOfSales);
     return { grossSales, netSales, costOfSales, grossProfit };
   }
 
@@ -3990,7 +3988,7 @@ const AureumSync = (function(){
     document.getElementById('barsGrid').innerHTML = axisSteps.map(()=> `<span></span>`).join('');
     document.getElementById('barsWrap').innerHTML = chartData.map(d => `
       <div class="bar-group">
-        <div class="bar gross" style="height:${Math.max(0,(d.gross/maxVal*100)).toFixed(1)}%" title="Gross sales: ${fmtMoney(d.gross)}"></div>
+        <div class="bar gross" style="height:${Math.max(0,(d.gross/maxVal*100)).toFixed(1)}%" title="Net sales: ${fmtMoney(d.gross)}"></div>
         <div class="bar net" style="height:${Math.max(0,(d.profit/maxVal*100)).toFixed(1)}%" title="Gross profit: ${fmtMoney(d.profit)}"></div>
       </div>
     `).join('');
@@ -4001,7 +3999,7 @@ const AureumSync = (function(){
       const label = dashDateState.activePreset === 'Custom range'
         ? `${fmtSlash(dashDateState.rangeStart)} – ${fmtSlash(dashDateState.rangeEnd)}`
         : dashDateState.activePreset;
-      sub.textContent = `Gross sales vs. gross profit, ${label}`;
+      sub.textContent = `Net sales vs. gross profit, ${label}`;
     }
     renderSalesByEmployee();
     renderSalesByPayment();
@@ -4822,7 +4820,7 @@ const AureumSync = (function(){
         <div class="pagination-size">
           Rows per page
           <select class="pg-size-select cat-select" style="padding:4px 8px;">
-            ${[10,20,30,50].map(n=>`<option value="${n}" ${n===state.pageSize?'selected':''}>${n}</option>`).join('')}
+            ${[...new Set([10,20,30,50,state.pageSize])].sort((x,y)=>x-y).map(n=>`<option value="${n}" ${n===state.pageSize?'selected':''}>${n}</option>`).join('')}
           </select>
         </div>
         <div class="pagination-nav">
@@ -5014,6 +5012,13 @@ const AureumSync = (function(){
   function setSwitchOn(id, on){
     const el = document.getElementById(id);
     if(el) el.classList.toggle('on', on);
+    if(id === 'pfStockControlToggle') syncStockInputs();
+  }
+  /* with Stock control off nothing is tracked, so the per-shop stock boxes are switched off (they used to accept a number and silently drop it) */
+  function syncStockInputs(){
+    const t = document.getElementById('pfStockControlToggle'), on = !!(t && t.classList.contains('on'));
+    document.querySelectorAll('.pf-shop-stock').forEach(i => { i.disabled = !on; i.title = on ? '' : 'Turn Stock control on to enter stock'; i.placeholder = on ? '0' : 'Off'; if(!on) i.value = ''; });
+    const n = document.getElementById('pfStockOffNote'); if(n) n.style.display = on ? 'none' : 'block';
   }
   document.querySelectorAll('[data-toggle]').forEach(sw=>{
     sw.addEventListener('click', function(){
@@ -5021,6 +5026,7 @@ const AureumSync = (function(){
       markSettingsDirty(this);
       if(this.id === 'pfStockControlToggle'){
         document.getElementById('pfStockQtyWrap').style.display = this.classList.contains('on') ? 'block' : 'none';
+        syncStockInputs();
       }
     });
   });
@@ -5059,6 +5065,7 @@ const AureumSync = (function(){
     document.querySelectorAll('.pf-shop-stock').forEach(inp=>{
       inp.addEventListener('input', ()=>{ shopStockTouched = true; recomputeShopStockTotal(); });
     });
+    syncStockInputs();
   }
   function recomputeShopStockTotal(){
     const sum = [...document.querySelectorAll('.pf-shop-stock')].reduce((s,inp)=> s + (document.getElementById('pfSoldBy').value === 'weight' ? (parseFloat(inp.value)||0) : (parseInt(inp.value)||0)), 0);
@@ -5919,52 +5926,38 @@ const AureumSync = (function(){
   // Computes real sales figures for a product from actual receipts, honoring
   // every filter on the Sales by Products page (date range, time of day,
   // shop, customer, cashier) — not a static seed number.
-  function computeProductSales(p, filters){
-    const f = filters || sbpCurrentFilters();
-    let qty = 0, gross = 0, refunds = 0;
-    RECEIPTS.forEach(r=>{
-      if(!r.items) return;
-      if(!receiptMatchesFilters(r, f)) return;
-      r.items.forEach(it=>{
-        if(it.productId !== p.id) return;
-        if(r.refund){ refunds += it.qty * it.price; return; }
-        qty += it.qty;
-        gross += it.qty * it.price;
-      });
-    });
-    return finishProductSales(p, qty, gross, refunds, RECEIPTS.some(r=>r.items && r.items.length));
-  }
-  // The same figures for EVERY product in one pass over the receipts (the page used to rescan every receipt once per
-  // product, which froze the screen for shops with thousands of products and receipts).
+  function computeProductSales(p, filters){ return computeAllProductSales(filters).get(p.id) || finishProductSales(p, null, false); }
+  // Every product in one pass over the receipts, through the shared receiptLines() calculation (see "ONE SALES CALCULATION").
+  // Also returns `_other` = products no longer in the catalogue, so the page total can still equal the Dashboard.
   function computeAllProductSales(filters){
     const f = filters || sbpCurrentFilters(), acc = new Map(); let hasAny = false;
     RECEIPTS.forEach(r=>{
       if(!r.items) return;
       if(r.items.length) hasAny = true;
       if(!receiptMatchesFilters(r, f)) return;
-      r.items.forEach(it=>{
-        let o = acc.get(it.productId); if(!o){ o = { qty:0, gross:0, refunds:0 }; acc.set(it.productId, o); }
-        if(r.refund){ o.refunds += it.qty * it.price; return; }
-        o.qty += it.qty; o.gross += it.qty * it.price;
+      receiptLines(r).forEach(l=>{
+        let o = acc.get(l.productId); if(!o){ o = { qty:0, gross:0, refunds:0, discounts:0, tax:0, net:0, cost:0, refundQty:0 }; acc.set(l.productId, o); }
+        if(l.refund){ o.refunds += -(l.gross - l.discount); o.refundQty += -l.qty; }
+        else { o.qty += l.qty; o.gross += l.gross; o.discounts += l.discount; }
+        o.tax += l.tax; o.net += l.net; o.cost += l.cost;
       });
     });
-    const out = new Map();
-    PRODUCTS.forEach(p=>{ const o = acc.get(p.id) || { qty:0, gross:0, refunds:0 }; out.set(p.id, finishProductSales(p, o.qty, o.gross, o.refunds, hasAny)); });
+    const out = new Map(), ids = new Set();
+    PRODUCTS.forEach(p=>{ ids.add(p.id); out.set(p.id, finishProductSales(p, acc.get(p.id), hasAny)); });
+    acc.forEach((o, id)=>{ if(!ids.has(id)){ out.set(id, finishProductSales(null, o, hasAny)); } });   // deleted products still count
     return out;
   }
-  function finishProductSales(p, qty, gross, refunds, hasAnyRealReceipts){
+  function finishProductSales(p, o, hasAnyRealReceipts){
+    o = o || { qty:0, gross:0, refunds:0, discounts:0, tax:0, net:0, cost:0, refundQty:0 };
     // Demo seed volume is only ever shown in the no-backend preview file (opening this HTML directly, no Supabase
     // connected) — a real, Supabase-connected business always shows its true numbers, zero included.
-    if(!supaReady && !hasAnyRealReceipts && qty === 0 && refunds === 0){
-      qty = SALES_QTY[p.id] || 0;
-      gross = qty * p.price;
+    if(p && !supaReady && !hasAnyRealReceipts && o.qty === 0 && o.refunds === 0){
+      const q = SALES_QTY[p.id] || 0;
+      o = { qty:q, gross:q * p.price, refunds:0, discounts:0, tax:0, net:q * p.price, cost:q * costAt(p, viewingShop), refundQty:0 };
     }
-    const discounts = 0;
-    const net = gross - refunds - discounts;
-    const cost = qty * costAt(p, viewingShop);
-    const profit = net - cost;
+    const net = r2c(o.net), cost = Math.max(0, r2c(o.cost)), profit = r2c(net - cost);
     const margin = net > 0 ? (profit / net * 100) : 0;
-    return { qty, gross, refunds, discounts, net, cost, profit, margin };
+    return { qty:o.qty, refundQty:o.refundQty, gross:r2c(o.gross), refunds:r2c(o.refunds), discounts:r2c(o.discounts), tax:r2c(o.tax), net, cost, profit, margin };
   }
 
   const PIE_COLORS = ["var(--gold-bright)","var(--emerald-light)","var(--blue)","var(--purple)","var(--sage-dim)","var(--danger)"];
@@ -5988,8 +5981,16 @@ const AureumSync = (function(){
       (catFilter === 'All' || p.cat === catFilter) &&
       (q === '' || p.name.toLowerCase().includes(q)) &&
       productInShop(p, shopFilter) &&
-      salesByProduct.get(p.id).qty > 0
+      (salesByProduct.get(p.id).qty > 0 || salesByProduct.get(p.id).refundQty > 0)
     );
+    // products that were sold and later deleted still belong in the totals (and match the Dashboard)
+    const knownIds = new Set(PRODUCTS.map(p=>p.id));
+    if(q === '' && catFilter === 'All' && shopFilter === 'All Shops'){
+      salesByProduct.forEach((s, id)=>{ if(!knownIds.has(id) && (s.qty > 0 || s.refundQty > 0)){
+        const nm = (RECEIPTS.flatMap(r=>r.items||[]).find(i=>i.productId===id)||{}).name || 'Deleted product';
+        items.push({ id, name: nm + ' (deleted)', code: '', cat: 'Deleted', price: 0, cost: 0 });
+      } });
+    }
 
     let totGross=0, totNet=0, totCost=0, totProfit=0;
     items.forEach(p=>{ const s = salesByProduct.get(p.id); totGross+=s.gross; totNet+=s.net; totCost+=s.cost; totProfit+=s.profit; });
@@ -7350,7 +7351,7 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Date / time</div><div class="v">${fmtReceiptTime(r.dateTime)}</div></div>
         <div class="detail-field"><div class="field-label">Type</div><div class="v">${kind}</div></div>
         <div class="detail-field"><div class="field-label">Shop</div><div class="v">${escHtml(r.shop || '—')}</div></div>
-        <div class="detail-field"><div class="field-label">Payment type</div><div class="v">${escHtml(r.payment)}</div></div>
+        <div class="detail-field"><div class="field-label">Payment type</div><div class="v">${escHtml(payText(r))}</div></div>
         <div class="detail-field"><div class="field-label">Employee</div><div class="v">${escHtml(r.employee)}</div></div>
         <div class="detail-field"><div class="field-label">Customer</div><div class="v">${escHtml(r.customer)}</div></div>
         <div class="detail-field"><div class="field-label">Items</div><div class="v">${receiptQty(r)}</div></div>
@@ -7479,7 +7480,7 @@ const AureumSync = (function(){
         <td>${fmtReceiptTime(r.dateTime)}</td>
         <td><div title="${escHtml((r.items||[]).map(i=>i.qty+' × '+i.name).join(', '))}" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${receiptQty(r)} item${receiptQty(r)===1?'':'s'}${(r.items||[]).length ? ': ' + escHtml((r.items||[]).map(i=>i.qty+' × '+i.name).join(', ')) : ''}</div></td>
         <td class="gold" style="text-align:right;${r.refund ? 'color:var(--danger);' : ''}">${r.refund ? '-' : ''}${r.total.toFixed(2)}</td>
-        <td>${escHtml(r.payment)}</td>
+        <td>${escHtml(payText(r))}</td>
         <td>${escHtml(r.customer)}</td>
         <td>${escHtml(r.employee)}</td>
         <td>${r.refund ? 'Yes' : ({ full:'No (fully refunded)', partial:'No (partly refunded)' }[refundStatusOf(r)] || 'No')}</td>
@@ -8215,7 +8216,8 @@ const AureumSync = (function(){
 
   function renderReportSummary(){
     const shopCtx = reportShop();
-    const cats = getProductCategories();
+    // every category in use is listed — including products with no category — so the rows always add up to the totals above
+    const cats = [...new Set([...getProductCategories(), ...PRODUCTS.map(p => p.cat || 'Uncategorized')])];
     const totalSKUs = PRODUCTS.length;
     const totalUnits = PRODUCTS.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
     const totalCostVal = PRODUCTS.reduce((s,p)=> s + costValueOf(p, shopCtx), 0);
@@ -8227,7 +8229,7 @@ const AureumSync = (function(){
       <div class="kpi-card"><div class="lbl"><span>Low stock items</span></div><div class="val ${lowStockCount>0?'gold':''}">${lowStockCount}</div></div>
     `;
     document.getElementById('repSummaryBody').innerHTML = paginateSlice(cats, repSumPage).map(cat=>{
-      const inCat = PRODUCTS.filter(p=>p.cat===cat);
+      const inCat = PRODUCTS.filter(p=>(p.cat || 'Uncategorized')===cat);
       const skus = inCat.length;
       const units = inCat.reduce((s,p)=> s + (p.stockControl===false?0:getStock(p, shopCtx)), 0);
       const costVal = inCat.reduce((s,p)=> s + costValueOf(p, shopCtx), 0);
@@ -8298,16 +8300,16 @@ const AureumSync = (function(){
       if(shop && shop !== 'All Shops' && r.shop !== shop) return false;
       return true;
     });
+    { const sc = document.getElementById('salesCatScope'), per = document.getElementById('salesCatPeriod');
+      if(sc) sc.textContent = 'Net sales excl. tax · ' + per.options[per.selectedIndex].text.toLowerCase() + ' · ' + (shop && shop !== 'All Shops' ? shop : 'all shops') + ' · uses its own period selector, not the product search or date range above'; }
     const catTotals = {};
     inRangeReceipts.forEach(r=>{
-      if(!r.items) return;
-      const sign = r.refund ? -1 : 1;
-      r.items.forEach(it=>{
-        const p = PRODUCTS.find(x=>x.id===it.productId);
-        const cat = p ? (p.cat || 'Others') : 'Others';
+      receiptLines(r).forEach(l=>{
+        const p = PRODUCTS.find(x=>x.id===l.productId);
+        const cat = p ? (p.cat || 'Uncategorized') : 'Others';
         if(!catTotals[cat]) catTotals[cat] = { qty:0, net:0 };
-        catTotals[cat].qty += sign * it.qty;
-        catTotals[cat].net += sign * it.qty * it.price;
+        catTotals[cat].qty += l.qty;
+        catTotals[cat].net += l.net;          // ex-tax, after discounts and refunds — same basis as Sales by Product
       });
     });
     const cats = Object.keys(catTotals).filter(c => catFilter === 'All' || c === catFilter);
@@ -8417,7 +8419,7 @@ const AureumSync = (function(){
   }
 
   /* Data Check: scans products, documents and sales for numbers that cannot be right (read-only — it never changes anything). */
-  const repCheckPage = { page:1, pageSize:15 };
+  const repCheckPage = { page:1, pageSize:10 };
   function dataCheckIssues(){
     const out = [], add = (sev, where, what, fix) => out.push({ sev, where, what, fix });
     const r2 = n => Math.round((Number(n) || 0) * 100) / 100, near = (a, b) => Math.abs(a - b) <= 0.011;
@@ -10044,10 +10046,70 @@ const AureumSync = (function(){
   // truly no real sales data yet to derive a ratio from.
   /* Exact cost of goods sold = the cost saved on each sold item, minus the cost of items refunded; and the sales tax collected
      (which belongs to the tax authority, so it is never revenue or profit). */
+
+  /* ===== ONE SALES CALCULATION — every report reads receipts through this =====
+     A receipt's discount, tax and cost are allocated to its lines in whole cents (largest remainder), so
+     sum(lines) == the receipt exactly. Refund receipts come back with negative signs. Per line:
+       gross    qty x price before the ticket discount        discount  this line's share of the ticket discount
+       tax      this line's share of the tax on the receipt    net       revenue EXCLUDING sales tax
+       cost     qty x the cost recorded at the time of sale    paid      what the customer paid for the line (net + tax)
+     Dashboard, Sales by Product (+ CSV), Sales by Category and Accounting all use it, so they cannot disagree. */
+  function allocCents(total, weights){
+    const n = weights.length; if(!n) return [];
+    const c = Math.round((Number(total) || 0) * 100), sgn = c < 0 ? -1 : 1, a = Math.abs(c);
+    const sw = weights.reduce((x, y) => x + Math.max(0, y), 0);
+    const raw = weights.map(w => sw > 0 ? a * Math.max(0, w) / sw : a / n), fl = raw.map(Math.floor);
+    let rem = a - fl.reduce((x, y) => x + y, 0);
+    raw.map((v, i) => [v - fl[i], i]).sort((x, y) => y[0] - x[0] || x[1] - y[1]).forEach(([, i]) => { if(rem > 0){ fl[i]++; rem--; } });
+    return fl.map(v => sgn * v / 100);
+  }
+  function r2c(n){ return Math.round((Number(n) || 0) * 100) / 100; }
+  function receiptLines(r){
+    const sign = r.refund ? -1 : 1, items = r.items || [], inc = !!r.taxInclusive;
+    if(!items.length) return [];
+    const vals = items.map(it => r2c((Number(it.qty) || 0) * (Number(it.price) || 0)));
+    const sub = vals.reduce((x, y) => x + y, 0);
+    const disc = Math.min(Math.max(0, Number(r.discountAmount) || 0), sub);
+    const dSh = allocCents(disc, vals), after = vals.map((v, i) => r2c(v - dSh[i]));
+    const tax = Number(r.tax) || 0;
+    let tw = items.map((it, i) => it.taxable === false ? 0 : after[i]);
+    if(tax && !tw.some(w => w > 0)) tw = after.slice();
+    const tSh = allocCents(tax, tw);
+    const net = after.map((v, i) => r2c(inc ? v - tSh[i] : v));
+    // a receipt always reconciles to its own recorded total (older receipts may not carry every field)
+    const target = r2c((Number(r.total) || 0) - tax), resid = r2c(target - net.reduce((x, y) => x + y, 0));
+    if(resid){ let big = 0; vals.forEach((v, i) => { if(v > vals[big]) big = i; }); net[big] = r2c(net[big] + resid); }
+    return items.map((it, i) => {
+      const p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(x => x.id === it.productId) : null;
+      const q = Number(it.qty) || 0;
+      return { productId: it.productId, name: it.name, refund: !!r.refund, sign,
+        qty: sign * q, gross: sign * vals[i], discount: sign * dSh[i], tax: sign * tSh[i], net: sign * net[i],
+        paid: sign * r2c(net[i] + tSh[i]), cost: sign * r2c(q * lineCost(it, p)) };
+    });
+  }
+  /* how a receipt was paid: one entry per tender (split payments carry r.payments), signed for refunds */
+  function payText(r){
+    if(Array.isArray(r.payments) && r.payments.length) return 'Split: ' + r.payments.map(x => (x.label || x.method) + ' ' + Number(x.amount || 0).toFixed(2)).join(' + ');
+    return r.payment || '';
+  }
+  function receiptPayments(r){
+    const sign = r.refund ? -1 : 1;
+    if(Array.isArray(r.payments) && r.payments.length) return r.payments.map(x => ({ label: x.label || x.method || 'Other', amount: sign * (Number(x.amount) || 0) }));
+    return [{ label: r.payment || 'Other', amount: sign * (Number(r.total) || 0) }];
+  }
+  function salesTotals(receipts){
+    const t = { gross:0, discounts:0, refunds:0, tax:0, net:0, cogs:0, qty:0 };
+    (receipts || []).forEach(r => receiptLines(r).forEach(l => {
+      if(l.refund){ t.refunds += -(l.gross - l.discount); } else { t.gross += l.gross; t.discounts += l.discount; t.qty += l.qty; }
+      t.tax += l.tax; t.net += l.net; t.cogs += l.cost;
+    }));
+    Object.keys(t).forEach(k => t[k] = r2c(t[k]));
+    t.profit = r2c(t.net - t.cogs);
+    return t;
+  }
   function receiptCosts(list){
-    let cogs = 0, tax = 0;
-    (list || []).forEach(r => { const sg = r.refund ? -1 : 1; (r.items || []).forEach(it => { cogs += sg * (Number(it.qty) || 0) * (Number(it.cost) || 0); }); tax += sg * (Number(r.tax) || 0); });
-    return { cogs: Math.max(0, Math.round(cogs * 100) / 100), tax: Math.round(tax * 100) / 100 };
+    const t = salesTotals(list);
+    return { cogs: Math.max(0, t.cogs), tax: t.tax };
   }
   function blendedCogsRatio(receiptsInView){
     let gross=0, cost=0;
@@ -10063,13 +10125,10 @@ const AureumSync = (function(){
   function renderAccountingData(){
     if(!acctDateState) return;
     const rangeReceipts = receiptsInRange(acctDateState);
-    const grossRevenue = rangeReceipts.filter(r=>!r.refund).reduce((s,r)=>s+r.total,0);
-    const refunds = rangeReceipts.filter(r=>r.refund).reduce((s,r)=>s+r.total,0);
-    const rcAcct = receiptCosts(rangeReceipts);
-    const salesInclTax = grossRevenue - refunds;
-    const revenue = salesInclTax - rcAcct.tax;                 // revenue excludes the sales tax collected
+    const rcAcct = receiptCosts(rangeReceipts), stAcct = salesTotals(rangeReceipts);
+    const revenue = stAcct.net;                                // revenue excludes the sales tax collected — same figure as Dashboard "Net Sales"
     const cogs = rcAcct.cogs;
-    const grossProfit = revenue - cogs;
+    const grossProfit = r2c(revenue - cogs);
     const rangeExpenses = expensesInRange(acctDateState);
     const totalOpex = rangeExpenses.reduce((s,e)=>s+e.amount,0);
     const netIncome = grossProfit - totalOpex;              // profit before tax
@@ -10251,7 +10310,7 @@ const AureumSync = (function(){
   function renderSalesByEmployee(){
     const el = document.getElementById('salesByEmployeeList');
     const totals = {};
-    receiptsForDashboardPeriod().filter(r=>!r.refund).forEach(r=>{ totals[r.employee] = (totals[r.employee]||0) + r.total; });
+    receiptsForDashboardPeriod().forEach(r=>{ totals[r.employee] = r2c((totals[r.employee]||0) + (r.refund ? -r.total : r.total)); });   // net of refunds
     const rows = Object.entries(totals).map(([name,total])=>({name,total})).sort((a,b)=>b.total-a.total);
     el.innerHTML = rows.length === 0
       ? `<div style="color:var(--sage); font-size:13px; padding:8px 0;">No receipts in this period${viewingShop && viewingShop!=='All Shops' ? ' for '+viewingShop : ''}.</div>`
@@ -10264,7 +10323,7 @@ const AureumSync = (function(){
     const legendEl = document.getElementById('salesByPaymentLegend');
     const palette = ['var(--gold-bright)','var(--emerald-light)','var(--blue)','var(--purple)','var(--sage-dim)'];
     const totals = {};
-    receiptsForDashboardPeriod().filter(r=>!r.refund).forEach(r=>{ totals[r.payment] = (totals[r.payment]||0) + r.total; });
+    receiptsForDashboardPeriod().forEach(r=>{ receiptPayments(r).forEach(x=>{ totals[x.label] = r2c((totals[x.label]||0) + x.amount); }); });   // net of refunds; split payments counted per tender
     const rows = Object.entries(totals).map(([label,total])=>({label,total})).sort((a,b)=>b.total-a.total);
     const grandTotal = rows.reduce((s,r)=>s+r.total,0);
     totalEl.textContent = curSym() + grandTotal.toFixed(grandTotal>=1000?0:2);
@@ -10412,7 +10471,7 @@ const AureumSync = (function(){
     const tzEl = document.getElementById('stTimezone');
     if(tzEl){ const want = POS_SETTINGS.timezone || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'); if([...tzEl.options].some(o => o.value === want)) tzEl.value = want; }
     const rateEl = document.getElementById('stTaxRate');
-    if(rateEl && !rateEl.value) rateEl.value = POS_SETTINGS.taxPercent;
+    if(rateEl && document.activeElement !== rateEl) rateEl.value = Number(POS_SETTINGS.taxPercent) || 0;   // always the rate the till really uses (the page used to show an unsaved "15")
     const curEl = document.getElementById('stCurrency');
     if(curEl) curEl.value = POS_SETTINGS.currencyCode || 'USD';
     const dualEl = document.getElementById('stDualCurrency');
@@ -12128,7 +12187,7 @@ E('shift-who-closes','Shifts','Who can close a shift?',
 E('sell-basic','The till','How do I make a sale?',
   ['how do i make a sale','how do i sell','ring up a customer','how does checkout work','process a sale','how to use the till'],
   'sell sale checkout charge ticket add product pay cash receipt basic',
-  `1. Tap products (or search by name, code or barcode) to add them to the **ticket**.\n2. Use **− / +** to change quantities.\n3. Optionally add a **Discount**, **Customer** or **Note**.\n4. Choose **Cash, Card, Mobile or Other**. For cash, type the amount received — the change is shown.\n5. Press **Charge** — the receipt appears.`,
+  `1. Tap products (or search by name, code or barcode) to add them to the **ticket**.\n2. Use **− / +** to change quantities.\n3. Optionally add a **Discount**, **Customer** or **Note**.\n4. Choose **Cash, Card, Mobile or Split** (Split combines methods, e.g. part cash and part card — "Other" such as a voucher is a choice inside Split). For cash, type the amount received — the change is shown.\n5. Press **Charge** — the receipt appears. Use the pause button to **Hold** a ticket and **Held** to resume or delete it. **Email receipt** makes a branded picture you can share or attach.`,
   ['payment-methods-till','discount-till','receipt-print']),
 E('till-search','The till','How do I find products quickly at the till?',
   ['how do i search for a product at the till','change page of products','swipe to next page','how many products per page','sort products at the till'],

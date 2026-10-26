@@ -877,7 +877,8 @@
           <div class="order-no" id="orderNo">No. 0512</div>
         </div>
         <div class="ticket-icon-actions">
-          <div class="ticket-icon-btn" id="holdBtn" title="Hold ticket">&#10074;&#10074;</div>
+          <div class="ticket-icon-btn" id="heldListBtn" title="Held tickets" style="position:relative;width:auto;padding:0 9px;font-size:11px;font-weight:700;">Held <span id="heldCount" style="margin-left:4px;color:var(--gold-bright);">0</span></div>
+          <div class="ticket-icon-btn" id="holdBtn" title="Hold this ticket — save it and come back to it">&#10074;&#10074;</div>
           <div class="ticket-icon-btn warn" id="voidBtn" title="Void ticket">&#10005;</div>
         </div>
       </div>
@@ -921,11 +922,12 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10 18.5h4"/></svg>
         Mobile
       </div>
-      <div class="pay-btn" data-pay="other">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 4 7v6c0 4 3.4 6.8 8 8 4.6-1.2 8-4 8-8V7l-8-4Z"/></svg>
-        Other
+      <div class="pay-btn" data-pay="split" title="Combine cash, card, mobile and other payments on one ticket">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v6M12 9 5 20M12 9l7 11"/><circle cx="12" cy="3.5" r="1.2"/><circle cx="5" cy="20" r="1.2"/><circle cx="19" cy="20" r="1.2"/></svg>
+        Split
       </div>
     </div>
+    <div id="splitSummary" style="display:none; margin:-4px 0 10px; padding:9px 12px; border:1px solid var(--line-strong); border-radius:10px; font-size:12px; color:var(--ivory-dim); cursor:pointer;" title="Tap to change the split"></div>
     <div class="other-pay-input" id="otherPayInput">
       <input type="text" id="otherPayLabel" placeholder="e.g. Voucher, Bank transfer, Store credit…" maxlength="30">
     </div>
@@ -1031,7 +1033,7 @@
       <div class="modal-btn ghost" id="receiptCloseBtn">New Sale</div>
       <div class="modal-btn ghost" id="thermalPrintBtn" title="Print directly to a USB thermal receipt printer (Chrome/Edge desktop)">Print via USB</div>
       <div class="modal-btn ghost" id="thermalPrintBtnBt" title="Print directly to a Bluetooth thermal receipt printer, already paired in this device's Bluetooth settings (Chrome/Edge)">Print via Bluetooth</div>
-      <div class="modal-btn ghost" id="receiptEmailBtn" title="Opens your email app with the receipt written in it">Email receipt</div>
+      <div class="modal-btn ghost" id="receiptEmailBtn" title="Makes a picture of the receipt you can email or share">Email receipt</div>
       <div class="modal-btn solid" id="receiptPrintBtn">Print Receipt</div>
     </div>
   </div>
@@ -1096,6 +1098,43 @@
     <div class="modal-actions">
       <div class="modal-btn ghost" id="discountRemoveBtn">Remove</div>
       <div class="modal-btn solid" id="discountApplyBtn">Apply Discount</div>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt picture -->
+<div class="modal-overlay" id="receiptImgOverlay">
+  <div class="modal-panel" style="max-width:440px;">
+    <div class="modal-head"><div class="title">Receipt image</div><div class="modal-close" data-close="receiptImgOverlay">&#10005;</div></div>
+    <div class="modal-body" style="text-align:center;">
+      <img id="receiptImgPreview" alt="Receipt" style="max-width:100%;max-height:56vh;border-radius:8px;border:1px solid var(--line);background:#fff;">
+      <div id="receiptImgNote" style="font-size:11.5px;color:var(--sage);margin-top:10px;line-height:1.45;"></div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" id="receiptImgDownload">Save image</div>
+      <div class="modal-btn ghost" id="receiptImgMail">Open email</div>
+      <div class="modal-btn solid" id="receiptImgShare">Share / Email</div>
+    </div>
+  </div>
+</div>
+
+<!-- Held tickets -->
+<div class="modal-overlay" id="heldOverlay">
+  <div class="modal-panel" style="max-width:460px;">
+    <div class="modal-head"><div class="title">Held tickets</div><div class="modal-close" data-close="heldOverlay">&#10005;</div></div>
+    <div class="modal-body" id="heldBody"></div>
+    <div class="modal-actions"><div class="modal-btn ghost" data-close="heldOverlay">Close</div></div>
+  </div>
+</div>
+
+<!-- Split payment -->
+<div class="modal-overlay" id="splitOverlay">
+  <div class="modal-panel" style="max-width:460px;">
+    <div class="modal-head"><div class="title">Split payment</div><div class="modal-close" data-close="splitOverlay">&#10005;</div></div>
+    <div class="modal-body" id="splitBody"></div>
+    <div class="modal-actions">
+      <div class="modal-btn ghost" data-close="splitOverlay">Cancel</div>
+      <div class="modal-btn solid" id="splitConfirmBtn">Use this split</div>
     </div>
   </div>
 </div>
@@ -1846,6 +1885,7 @@ async function aureumSignIn(email, password){
 
   let activeCat = "All";
   let payMethod = "cash";
+  let splitLines = null;   // confirmed split-payment lines for the ticket on screen: [{method,label,amount,tendered?}]
   let cart = {}; // id -> qty
   let taxPercent = 0; // tax % — pre-filled from Back Office settings, editable by the cashier
   let discount = { type: 'percent', value: 0 };
@@ -2137,6 +2177,7 @@ async function aureumSignIn(email, password){
   function removeItem(id){ delete cart[id]; renderTicket(); }
 
   function renderTicket(){
+    try{ renderSplitSummary(); renderHeldBadge(); }catch(e){}
     Object.keys(priceOverride).forEach(k => { if(!(k in cart)) delete priceOverride[k]; });   // a changed price lives only while its item is on the ticket
     const ids = Object.keys(cart);
     if(ids.length === 0){
@@ -2301,6 +2342,7 @@ async function aureumSignIn(email, password){
       el.classList.add('active');
       payMethod = el.dataset.pay;
       tenderedAmt = 0;
+      if(payMethod !== 'split') splitLines = null;
       const otherInput = document.getElementById('otherPayInput');
       if(payMethod === 'other'){
         otherInput.classList.add('show');
@@ -2312,9 +2354,106 @@ async function aureumSignIn(email, password){
       // entry form or mobile money phone-number prompt needed, same as
       // tapping Cash or Other.
       renderTicket();
+      if(payMethod === 'split') openSplitModal();
     });
   });
 
+  /* ===== SPLIT PAYMENT — combine cash, card, mobile and other on one ticket =====
+     Each line is a method + amount. Card / mobile / other lines can't exceed what is still owed; any extra cash is change.
+     The sale stores `payments` (what each method actually paid toward the bill) so reports, refunds and the drawer know. */
+  const SPLIT_METHODS = [['cash','Cash'],['card','Card'],['mobile','Mobile'],['other','Other (voucher, transfer…)']];
+  let splitDraft = [];
+  function splitMethodsEnabled(){
+    const en = POS_SETTINGS.enabledPaymentMethods;
+    return SPLIT_METHODS.filter(([m]) => !Array.isArray(en) || en.includes(m === 'other' ? 'credit' : m));
+  }
+  function splitLabel(l){ return l.method === 'other' ? ((l.label || '').trim() || 'Other') : l.method.charAt(0).toUpperCase() + l.method.slice(1); }
+  function splitCalc(){
+    const total = computeTotals().total, c = x => Math.round((Number(x) || 0) * 100) / 100;
+    const entered = splitDraft.map(l => c(l.amount)), paid = c(entered.reduce((a, b) => a + b, 0));
+    const nonCash = c(splitDraft.reduce((a, l, i) => a + (l.method === 'cash' ? 0 : entered[i]), 0)), cashIn = c(paid - nonCash);
+    const remaining = c(total - paid), change = c(Math.max(0, paid - total));
+    let err = '';
+    if(!(paid > 0)) err = 'Enter an amount for at least one payment.';
+    else if(remaining > 0.001) err = 'Still owed: ' + money(remaining);
+    else if(nonCash > total + 0.001) err = 'Card, mobile and other payments can not be more than the total — only cash can give change.';
+    else if(change > cashIn + 0.001) err = 'Change can only come from the cash received.';
+    return { total, entered, paid, nonCash, cashIn, remaining, change, err };
+  }
+  function renderSplit(){
+    const calc = splitCalc(), methods = splitMethodsEnabled();
+    const rows = splitDraft.map((l, i) => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+        <select class="modal-field" data-sm="${i}" style="flex:1 1 120px;margin:0;">${methods.map(([m, n]) => `<option value="${m}" ${l.method === m ? 'selected' : ''}>${n}</option>`).join('')}</select>
+        <input type="number" class="modal-field" data-sa="${i}" min="0" step="0.01" placeholder="0.00" value="${l.amount === '' ? '' : l.amount}" style="flex:1 1 90px;margin:0;" inputmode="decimal">
+        <div class="modal-btn ghost" data-sr="${i}" style="height:36px;padding:0 10px;" title="Put what is still owed on this line">Rest</div>
+        ${splitDraft.length > 1 ? `<div class="modal-btn ghost" data-sx="${i}" style="height:36px;padding:0 10px;" aria-label="Remove this payment">&#10005;</div>` : ''}
+        ${l.method === 'other' ? `<input type="text" class="modal-field" data-sl="${i}" maxlength="30" placeholder="What is it? e.g. Voucher, Bank transfer" value="${escHtml(l.label || '')}" style="flex:1 1 100%;margin:0;">` : ''}
+      </div>`).join('');
+    document.getElementById('splitBody').innerHTML = `
+      <div class="tender-row" style="font-weight:700;"><span>Total to pay</span><span class="mono">${money(calc.total)}</span></div>
+      <div style="margin:10px 0 6px;font-size:11px;color:var(--sage);">Add each payment the customer makes. Cash can be more than owed — you will see the change.</div>
+      ${rows}
+      <div class="modal-btn ghost" id="splitAdd" style="margin:2px 0 10px;">+ Add another payment</div>
+      <div class="tender-row"><span>Paid so far</span><span class="mono">${money(calc.paid)}</span></div>
+      <div class="tender-row" style="font-weight:700;color:${calc.remaining > 0.001 ? 'var(--danger)' : 'var(--gold-bright)'};"><span>${calc.remaining > 0.001 ? 'Still owed' : (calc.change > 0 ? 'Change to give' : 'Fully paid')}</span><span class="mono">${money(calc.remaining > 0.001 ? calc.remaining : calc.change)}</span></div>
+      <div id="splitErr" style="font-size:11.5px;color:var(--danger);min-height:16px;margin-top:6px;">${calc.err && calc.paid > 0 ? escHtml(calc.err) : ''}</div>
+      ${POS_SETTINGS.dualCurrency ? '<div style="font-size:10.5px;color:var(--sage);margin-top:4px;">Split payments are taken in ' + escHtml(POS_SETTINGS.currencyCode || 'the main currency') + '.</div>' : ''}`;
+    document.getElementById('splitConfirmBtn').classList.toggle('disabled', !!calc.err);
+    const b = document.getElementById('splitBody');
+    b.querySelectorAll('[data-sm]').forEach(e => e.addEventListener('change', () => { splitDraft[+e.dataset.sm].method = e.value; renderSplit(); }));
+    b.querySelectorAll('[data-sa]').forEach(e => e.addEventListener('input', () => { splitDraft[+e.dataset.sa].amount = e.value; softSplit(); }));
+    b.querySelectorAll('[data-sl]').forEach(e => e.addEventListener('input', () => { splitDraft[+e.dataset.sl].label = e.value; }));
+    b.querySelectorAll('[data-sr]').forEach(e => e.addEventListener('click', () => {
+      const i = +e.dataset.sr, others = splitDraft.reduce((a, l, j) => a + (j === i ? 0 : (Number(l.amount) || 0)), 0);
+      splitDraft[i].amount = Math.max(0, Math.round((computeTotals().total - others) * 100) / 100).toFixed(2); renderSplit(); }));
+    b.querySelectorAll('[data-sx]').forEach(e => e.addEventListener('click', () => { splitDraft.splice(+e.dataset.sx, 1); renderSplit(); }));
+    document.getElementById('splitAdd').addEventListener('click', () => {
+      const used = new Set(splitDraft.map(l => l.method)), next = (methods.find(([m]) => !used.has(m)) || methods[0] || ['cash'])[0];
+      splitDraft.push({ method: next, label: '', amount: '' }); renderSplit(); });
+  }
+  // typing in an amount refreshes the totals without rebuilding the inputs (so the cursor stays put)
+  function softSplit(){
+    const calc = splitCalc(), body = document.getElementById('splitBody'), rows = body.querySelectorAll('.tender-row');
+    if(rows.length >= 3){
+      rows[1].lastElementChild.textContent = money(calc.paid);
+      rows[2].firstElementChild.textContent = calc.remaining > 0.001 ? 'Still owed' : (calc.change > 0 ? 'Change to give' : 'Fully paid');
+      rows[2].lastElementChild.textContent = money(calc.remaining > 0.001 ? calc.remaining : calc.change);
+      rows[2].style.color = calc.remaining > 0.001 ? 'var(--danger)' : 'var(--gold-bright)';
+    }
+    document.getElementById('splitErr').textContent = (calc.err && calc.paid > 0) ? calc.err : '';
+    document.getElementById('splitConfirmBtn').classList.toggle('disabled', !!calc.err);
+  }
+  function openSplitModal(){
+    if(Object.keys(cart).length === 0){ aureumToast('Add items to the ticket first.', 'danger'); return; }
+    const m0 = (splitMethodsEnabled()[0] || ['cash'])[0];
+    splitDraft = splitLines ? splitLines.map(l => ({ method: l.method, label: l.label || '', amount: (l.method === 'cash' ? (l.tendered != null ? l.tendered : l.amount) : l.amount).toFixed(2) })) : [{ method: m0, label: '', amount: '' }, { method: (splitMethodsEnabled()[1] || [m0])[0], label: '', amount: '' }];
+    renderSplit(); openModal('splitOverlay');
+  }
+  function renderSplitSummary(){
+    const el = document.getElementById('splitSummary'); if(!el) return;
+    if(payMethod === 'split' && splitLines){
+      const t = computeTotals().total;
+      if(Math.abs(splitLines.reduce((a, l) => a + l.amount, 0) - t) > 0.005){ splitLines = null; }      // the ticket changed after the split was set
+    }
+    if(payMethod === 'split'){
+      el.style.display = 'block';
+      el.innerHTML = splitLines ? '<b style="color:var(--gold-bright);">Split:</b> ' + splitLines.map(l => escHtml(splitLabel(l)) + ' ' + money(l.amount)).join(' &nbsp;+&nbsp; ') + ' <span style="color:var(--sage);">· tap to change</span>' : '<b style="color:var(--gold-bright);">Split payment</b> — tap to choose how the customer pays';
+    } else el.style.display = 'none';
+  }
+  document.getElementById('splitSummary').addEventListener('click', openSplitModal);
+  document.getElementById('splitConfirmBtn').addEventListener('click', function(){
+    const calc = splitCalc(); if(calc.err){ document.getElementById('splitErr').textContent = calc.err; return; }
+    // what each method actually paid toward the bill: cards/mobile/other as typed, cash covers the rest (the change goes back to the customer)
+    let cashLeft = Math.round((calc.total - calc.nonCash) * 100) / 100;
+    const lines = [];
+    splitDraft.forEach((l, i) => {
+      const amt = Math.round((Number(l.amount) || 0) * 100) / 100; if(!(amt > 0)) return;
+      if(l.method === 'cash'){ const applied = Math.min(amt, cashLeft); cashLeft = Math.round((cashLeft - applied) * 100) / 100; lines.push({ method: 'cash', label: 'Cash', amount: applied, tendered: amt }); }
+      else lines.push({ method: l.method, label: splitLabel(l), amount: amt });
+    });
+    splitLines = lines.filter(l => l.amount > 0 || l.method === 'cash');
+    closeModal('splitOverlay'); renderTicket();
+  });
   document.getElementById('paymentAmountInput').addEventListener('input', function(){
     tenderedAmt = parseFloat(this.value) || 0;
     updateChange();
@@ -2401,17 +2540,76 @@ async function aureumSignIn(email, password){
     setTimeout(()=>{ btn.innerHTML = original; }, 1800);
   });
 
+  /* ===== HOLD TICKETS =====
+     "Hold" saves the whole ticket (items, changed prices, discount, customer, note, tax rate) on this till, clears the
+     screen for the next customer, and keeps it until it is resumed (to add items and complete the sale) or deleted.
+     It survives a reload, a sign-out and a closed browser. Held items are NOT reserved — stock is only taken when the sale is completed. */
+  const heldKey = () => 'aureum_held_' + (currentBusinessId || 'local') + '_' + (activeShop || 'shop');
+  function loadHeld(){ try{ const a = JSON.parse(localStorage.getItem(heldKey()) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+  function saveHeld(a){ try{ localStorage.setItem(heldKey(), JSON.stringify(a)); return true; }catch(e){ aureumToast('Could not save the held ticket on this device (storage is full or blocked).', 'danger'); return false; } }
+  function renderHeldBadge(){ const c = document.getElementById('heldCount'); if(c) c.textContent = loadHeld().length; }
+  function refreshQuickChips(){
+    resetQuickChips();
+    if(customer){ const c = document.getElementById('customerChip'); c.textContent = 'Customer: ' + customer.name; c.classList.add('set'); }
+    if(discount.value > 0){ const d = document.getElementById('discountChip'); d.textContent = 'Discount: ' + (discount.type === 'percent' ? discount.value + '%' : '$' + Number(discount.value).toFixed(2)); d.classList.add('set'); }
+    if(note){ const n = document.getElementById('noteChip'); n.textContent = 'Note: ' + (note.length > 22 ? note.slice(0, 22) + '…' : note); n.classList.add('set'); }
+  }
+  function holdCurrentTicket(silent){
+    if(Object.keys(cart).length === 0) return false;
+    const t = computeTotals(), now = new Date();
+    const rec = { id: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: now.toISOString(), by: activeEmployee ? activeEmployee.name : '',
+      cart: { ...cart }, priceOverride: { ...priceOverride }, discount: { ...discount }, customer: customer ? { ...customer } : null, note, taxPercent,
+      itemCount: Object.values(cart).reduce((a, b) => a + b, 0), total: t.total };
+    const list = loadHeld(); list.unshift(rec);
+    if(!saveHeld(list)) return false;
+    cart = {}; priceOverride = {}; discount = { type: 'percent', value: 0 }; customer = null; note = ''; tenderedAmt = 0; splitLines = null;
+    applyDefaultTax(); refreshQuickChips(); renderTicket(); renderHeldBadge();
+    document.body.classList.remove('ticket-open');
+    if(!silent) aureumToast('Ticket held — open "Held" to bring it back.', 'ok');
+    return true;
+  }
+  function renderHeldList(){
+    const list = loadHeld(), body = document.getElementById('heldBody');
+    if(!list.length){ body.innerHTML = '<div style="padding:22px 4px;text-align:center;color:var(--sage);font-size:13px;">No held tickets. Press the pause button on a ticket to hold it.</div>'; return; }
+    body.innerHTML = list.map(h => {
+      const names = Object.keys(h.cart).map(id => { const p = PRODUCTS.find(x => x.id == id); return p ? p.name + ' ×' + h.cart[id] : ''; }).filter(Boolean).join(', ');
+      return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;gap:8px;"><b>${new Date(h.at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} · ${h.itemCount} item${h.itemCount === 1 ? '' : 's'}${h.customer ? ' · ' + escHtml(h.customer.name) : ''}</b><b class="mono">${money(h.total)}</b></div>
+        <div style="font-size:11.5px;color:var(--sage);margin:4px 0 8px;line-height:1.4;">${escHtml(names) || 'Items no longer in the catalogue'}${h.note ? '<br>Note: ' + escHtml(h.note) : ''}${h.by ? '<br>Held by ' + escHtml(h.by) : ''}</div>
+        <div style="display:flex;gap:8px;"><div class="modal-btn solid" style="flex:1;" data-hresume="${h.id}">Resume</div><div class="modal-btn ghost" style="flex:0 0 auto;" data-hdelete="${h.id}">Delete</div></div></div>`;
+    }).join('');
+    body.querySelectorAll('[data-hresume]').forEach(el => el.addEventListener('click', () => resumeHeld(el.dataset.hresume)));
+    body.querySelectorAll('[data-hdelete]').forEach(el => el.addEventListener('click', () => {
+      if(el.dataset.armed !== '1'){ el.dataset.armed = '1'; el.textContent = 'Tap again to delete'; setTimeout(() => { if(el.isConnected){ el.dataset.armed = ''; el.textContent = 'Delete'; } }, 3500); return; }
+      saveHeld(loadHeld().filter(h => h.id !== el.dataset.hdelete)); renderHeldBadge(); renderHeldList(); aureumToast('Held ticket deleted.', 'ok');
+    }));
+  }
+  function resumeHeld(id){
+    const list = loadHeld(), h = list.find(x => x.id === id); if(!h) return;
+    if(Object.keys(cart).length && !holdCurrentTicket(true)) return;      // the ticket on screen is held first, so nothing is lost
+    const after = loadHeld().filter(x => x.id !== id); saveHeld(after);
+    cart = {}; let dropped = 0;
+    Object.keys(h.cart).forEach(k => { if(PRODUCTS.find(p => p.id == k)) cart[k] = h.cart[k]; else dropped++; });
+    priceOverride = { ...(h.priceOverride || {}) }; discount = h.discount || { type: 'percent', value: 0 }; customer = h.customer || null; note = h.note || '';
+    taxPercent = Number(h.taxPercent) || 0; const ti = document.getElementById('taxPercentInput'); if(ti) ti.value = taxPercent;
+    tenderedAmt = 0; splitLines = null;
+    refreshQuickChips(); renderTicket(); renderHeldBadge(); closeModal('heldOverlay');
+    aureumToast(dropped ? `Ticket resumed — ${dropped} item${dropped === 1 ? ' was' : 's were'} no longer in the catalogue.` : 'Ticket resumed — add items or take payment.', dropped ? 'danger' : 'ok');
+  }
   document.getElementById('holdBtn').addEventListener('click', function(){
-    if(Object.keys(cart).length===0) return;
-    this.textContent = 'Held';
-    setTimeout(()=>{ cart = {}; renderTicket(); this.innerHTML = '&#10074;&#10074;'; }, 700);
+    if(window.AureumViewOnly && AureumViewOnly.active()) return;
+    if(Object.keys(cart).length === 0){ renderHeldList(); openModal('heldOverlay'); return; }     // nothing on screen: show the held tickets
+    holdCurrentTicket(false);
   });
+  document.getElementById('heldListBtn').addEventListener('click', () => { renderHeldList(); openModal('heldOverlay'); });
 
   document.getElementById('voidBtn').addEventListener('click', ()=>{
     cart = {};
+    splitLines = null;
     discount = { type: 'percent', value: 0 };
     customer = null;
     note = '';
+    applyDefaultTax();
     resetQuickChips();
     renderTicket();
   });
@@ -2490,7 +2688,11 @@ async function aureumSignIn(email, password){
   document.getElementById('discountApplyBtn').addEventListener('click', ()=>{
     const type = document.querySelector('#discountTypeToggle .seg-btn.active').dataset.type;
     const value = parseFloat(document.getElementById('discountValueField').value) || 0;
-    discount = { type, value: Math.max(0, value) };
+    let dv = Math.max(0, value);
+    if(type === 'percent' && dv > 100){ aureumToast('A percentage discount can be 0 to 100 — set to 100%.', 'danger'); dv = 100; document.getElementById('discountValueField').value = 100; }
+    if(type !== 'percent'){ const sb = computeTotals().subtotal; if(dv > sb){ aureumToast('The discount can not be more than the ticket — set to ' + money(sb) + '.', 'danger'); dv = sb; } }
+    dv = Math.round(dv * 100) / 100;
+    discount = { type, value: dv };
     const chip = document.getElementById('discountChip');
     if(discount.value > 0){
       chip.textContent = `Discount: ${type==='percent' ? discount.value+'%' : '$'+discount.value.toFixed(2)}`;
@@ -2706,6 +2908,14 @@ async function aureumSignIn(email, password){
     return { lines, subtotal: r2(sub), discountAmount: disc, tax, total, clearsEverything, rf };
   }
 
+  // a refund of a split sale goes back across the same methods, in proportion (cents add up exactly)
+  function refundPayments(sale, amount){
+    if(!Array.isArray(sale.payments) || !sale.payments.length) return null;
+    const c = Math.round(amount * 100), w = sale.payments.map(x => Number(x.amount) || 0), sw = w.reduce((a, b) => a + b, 0) || 1;
+    const raw = w.map(x => c * x / sw), fl = raw.map(Math.floor); let rem = c - fl.reduce((a, b) => a + b, 0);
+    raw.map((v, i) => [v - fl[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if(rem > 0){ fl[i]++; rem--; } });
+    return sale.payments.map((x, i) => ({ method: x.method, label: x.label, amount: fl[i] / 100 }));
+  }
   let refundDraft = null;
   function openRefundModal(key){
     if(!canRefund()){ aureumToast('Refunds are not enabled for your role. Ask a Shop Manager or Administrator.', 'danger'); return; }
@@ -2731,7 +2941,7 @@ async function aureumSignIn(email, password){
         </div></div>`;
     }).join('');
     document.getElementById('refundBody').innerHTML = `
-      <div class="sp-meta">Sold <b>${fmtDT(r.dateTime)}</b> · paid by <b>${escHtml(r.payment || '')}</b> · cashier <b>${escHtml(r.employee || '')}</b></div>
+      <div class="sp-meta">Sold <b>${fmtDT(r.dateTime)}</b> · paid by <b>${escHtml(r.payment || '')}${Array.isArray(r.payments) && r.payments.length ? ' (' + r.payments.map(x => escHtml(x.label)).join(' + ') + ')' : ''}</b> · cashier <b>${escHtml(r.employee || '')}</b></div>
       ${lineHtml}
       <div style="display:flex;justify-content:flex-end;margin:10px 0 4px;"><div class="pager-btn" id="rfAll" style="height:34px;">Select everything left</div></div>
       <div class="field-label" style="margin-top:6px;">Reason (optional)</div>
@@ -2777,7 +2987,7 @@ async function aureumSignIn(email, password){
       uid: refundUid, shiftId: sh.id,
       id: 'R' + padReceiptNo(nextReceiptNumber()),
       dateTime: new Date().toISOString(),
-      total: calc.total, payment: sale.payment,
+      total: calc.total, payment: sale.payment, payments: refundPayments(sale, calc.total),
       customer: sale.customer || 'N/A', employee: activeEmployee.name, shop: sale.shop,
       refund: true, refundOf: sale.id, refundOfKey: receiptKey(sale),
       items: calc.lines, itemCount: calc.lines.reduce((s,l)=> s + l.qty, 0),
@@ -2848,6 +3058,7 @@ async function aureumSignIn(email, password){
       tax: r.tax || 0,
       total: r.total,
       payment: r.payment,
+      payments: Array.isArray(r.payments) && r.payments.length ? r.payments : null,
       tendered: r.tendered || null,
       change: r.change || 0,
       changeCurrencySymbol: r.changeCurrencySymbol,
@@ -2868,6 +3079,17 @@ async function aureumSignIn(email, password){
   const receiptHeaderText = () => (POS_SETTINGS.receiptText && POS_SETTINGS.receiptText.header) || '';
   const receiptFooterText = () => (POS_SETTINGS.receiptText && POS_SETTINGS.receiptText.footer) || POS_SETTINGS.receiptFooter;
   let shownSale = null;     // whichever receipt is on screen (used by Email)
+  /* how a receipt was paid — one line per method for split payments */
+  function paymentTextLines(sale){
+    const cur = POS_SETTINGS.currency, head = sale.refund ? 'Refunded to' : 'Paid via';
+    if(sale.payments && sale.payments.length) return [head + ' (split):'].concat(sale.payments.map(x => `  ${x.label}: ${cur}${Number(x.amount).toFixed(2)}`));
+    return [`${head}: ${sale.payment}`];
+  }
+  function payRowsHtml(sale){
+    const cur = POS_SETTINGS.currency, head = sale.refund ? 'Refunded to' : 'Paid via';
+    if(sale.payments && sale.payments.length) return `<div class="r-row"><span>${head}</span><span>Split</span></div>` + sale.payments.map(x => `<div class="r-row"><span>&nbsp;&nbsp;${escHtml(x.label)}</span><span>${cur}${Number(x.amount).toFixed(2)}</span></div>`).join('');
+    return `<div class="r-row"><span>${head}</span><span>${escHtml(sale.payment)}</span></div>`;
+  }
   function receiptPlainText(sale){
     const cur = POS_SETTINGS.currency, L = [];
     L.push(POS_SETTINGS.businessName); if(receiptHeaderText()) L.push(receiptHeaderText());
@@ -2879,7 +3101,7 @@ async function aureumSignIn(email, password){
     (sale.items || []).forEach(i => L.push(`${i.name}  ${i.qty} x ${cur}${i.price.toFixed(2)} = ${cur}${(i.qty * i.price).toFixed(2)}`));
     L.push('', `Subtotal: ${cur}${sale.subtotal.toFixed(2)}`);
     if(sale.discountAmount > 0) L.push(`Discount: -${cur}${sale.discountAmount.toFixed(2)}`);
-    L.push(`Tax${sale.taxInclusive ? ' (included)' : ''}: ${cur}${sale.tax.toFixed(2)}`, `${sale.refund ? 'Total refunded' : 'Total'}: ${sale.refund ? '-' : ''}${cur}${sale.total.toFixed(2)}`, `${sale.refund ? 'Refunded to' : 'Paid via'}: ${sale.payment}`, '', receiptFooterText());
+    L.push(`Tax${sale.taxInclusive ? ' (included)' : ''}: ${cur}${sale.tax.toFixed(2)}`, `${sale.refund ? 'Total refunded' : 'Total'}: ${sale.refund ? '-' : ''}${cur}${sale.total.toFixed(2)}`, paymentTextLines(sale).join('\n'), '', receiptFooterText());
     return L.join('\n');
   }
   function receiptMailtoUrl(sale){
@@ -2888,7 +3110,111 @@ async function aureumSignIn(email, password){
     return `mailto:${encodeURIComponent(to).replace(/%40/g, '@')}?subject=${encodeURIComponent('Your receipt from ' + POS_SETTINGS.businessName + ' (' + sale.orderNo + ')')}&body=${encodeURIComponent(receiptPlainText(sale))}`;
   }
   window.AureumReceiptText = () => { const s = shownSale || lastSale; return s ? receiptPlainText(s) : ''; };
-  function emailReceipt(){ if(shownSale) location.href = receiptMailtoUrl(shownSale); }
+
+  /* ===== RECEIPT AS A PICTURE =====
+     "Email receipt" draws the receipt as a branded PNG (the business's logo, name and details, with the AUREUM mark) so it
+     looks the same in every inbox. A browser/phone can not attach a file to an email by itself, so: Share / Email opens the
+     device's share sheet with the picture attached (pick Gmail / Mail / WhatsApp…); Save image downloads it; Open email starts a
+     message to the customer to attach it to. */
+  function loadImg(src){ return new Promise(res => { if(!src) return res(null); const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+  async function renderReceiptImage(sale){
+    const cur = POS_SETTINGS.currency, W = 640, SC = 2, PAD = 40;
+    const INK = '#1B1A17', MUTE = '#6E6A5F', GOLD = '#A8832B', DEEP = '#0F2A22', PAPER = '#FBF8F1';
+    const logo = (POS_SETTINGS.toggles ? POS_SETTINGS.toggles.stReceiptLogo !== false : true) ? await loadImg(POS_SETTINGS.logoImage) : null;
+    const cv = document.createElement('canvas'); cv.width = W * SC; cv.height = 6000 * SC;
+    const c = cv.getContext('2d'); c.scale(SC, SC);
+    c.fillStyle = PAPER; c.fillRect(0, 0, W, 6000);
+    const SERIF = 'Georgia, "Times New Roman", serif', SANS = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', MONO = '"SFMono-Regular", Consolas, "Liberation Mono", monospace';
+    let y = 0;
+    const text = (t, x, yy, font, color, align) => { c.font = font; c.fillStyle = color; c.textAlign = align || 'left'; c.fillText(String(t), x, yy); };
+    const wrap = (t, maxW, font) => { c.font = font; const words = String(t).split(/\s+/), lines = []; let cur2 = '';
+      words.forEach(w => { const test = cur2 ? cur2 + ' ' + w : w; if(c.measureText(test).width > maxW && cur2){ lines.push(cur2); cur2 = w; } else cur2 = test; }); if(cur2) lines.push(cur2); return lines; };
+    const row = (l, r, o) => { o = o || {}; const f = (o.bold ? '700 ' : '400 ') + (o.size || 15) + 'px ' + SANS;
+      text(l, PAD, y, f, o.color || INK); text(r, W - PAD, y, (o.bold ? '700 ' : '400 ') + (o.size || 15) + 'px ' + MONO, o.color || INK, 'right'); y += o.gap || 24; };
+    const rule = (dash) => { c.strokeStyle = '#CFC8B6'; c.lineWidth = 1; c.setLineDash(dash ? [4, 4] : []); c.beginPath(); c.moveTo(PAD, y); c.lineTo(W - PAD, y); c.stroke(); c.setLineDash([]); y += 18; };
+    // brand band: the business, with the AUREUM mark
+    c.fillStyle = DEEP; c.fillRect(0, 0, W, 8); y = 54;
+    if(logo){ const mh = 64, mw = 220, k = Math.min(mw / logo.width, mh / logo.height); const lw = logo.width * k, lh = logo.height * k;
+      c.drawImage(logo, (W - lw) / 2, y - 30, lw, lh); y += lh + 6; }
+    text(POS_SETTINGS.businessName || 'AUREUM', W / 2, y, '700 30px ' + SERIF, DEEP, 'center'); y += 26;
+    const sub = [POS_SETTINGS.businessAddress, POS_SETTINGS.businessPhone, POS_SETTINGS.businessEmail].filter(Boolean);
+    sub.forEach(t => wrap(t, W - PAD * 2, '400 13px ' + SANS).forEach(l => { text(l, W / 2, y, '400 13px ' + SANS, MUTE, 'center'); y += 18; }));
+    if(receiptHeaderText()) wrap(receiptHeaderText(), W - PAD * 2, '400 13px ' + SANS).forEach(l => { text(l, W / 2, y, '400 13px ' + SANS, MUTE, 'center'); y += 18; });
+    y += 4;
+    if(sale.refund){ text('REFUND' + (sale.refundOf ? ' of ' + sale.refundOf : ''), W / 2, y + 6, '700 18px ' + SANS, '#B3402F', 'center'); y += 30; }
+    rule(true);
+    row(sale.orderNo, [sale.date, sale.time].filter(Boolean).join('  '), { size: 14, color: MUTE });
+    if(!(POS_SETTINGS.toggles && POS_SETTINGS.toggles.stReceiptCashier === false)) row('Cashier', sale.employee || '', { size: 14, color: MUTE });
+    if(sale.shop && sale.shop !== 'All Shops') row('Shop', sale.shop, { size: 14, color: MUTE });
+    if(sale.customer) row('Customer', sale.customer, { size: 14, color: MUTE });
+    y += 4; rule(true);
+    // items
+    text('ITEM', PAD, y, '700 11px ' + SANS, MUTE); text('QTY', W - PAD - 190, y, '700 11px ' + SANS, MUTE, 'right'); text('PRICE', W - PAD - 100, y, '700 11px ' + SANS, MUTE, 'right'); text('TOTAL', W - PAD, y, '700 11px ' + SANS, MUTE, 'right'); y += 20;
+    (sale.items || []).forEach(i => {
+      const lines = wrap(i.name, W - PAD * 2 - 230, '500 15px ' + SANS);
+      lines.forEach((l, k) => { text(l, PAD, y + k * 19, '500 15px ' + SANS, INK); });
+      text(i.qty, W - PAD - 190, y, '400 14px ' + MONO, INK, 'right'); text(cur + i.price.toFixed(2), W - PAD - 100, y, '400 14px ' + MONO, MUTE, 'right'); text(cur + (i.qty * i.price).toFixed(2), W - PAD, y, '600 14px ' + MONO, INK, 'right');
+      y += Math.max(1, lines.length) * 19 + 8;
+    });
+    y += 2; rule(false);
+    row('Subtotal', cur + sale.subtotal.toFixed(2), { size: 14, color: MUTE });
+    if(sale.discountAmount > 0) row('Discount', '-' + cur + sale.discountAmount.toFixed(2), { size: 14, color: MUTE });
+    row((POS_SETTINGS.taxLabel || 'Tax') + (sale.taxInclusive ? ' (included in prices)' : ''), cur + sale.tax.toFixed(2), { size: 14, color: MUTE });
+    y += 6; c.fillStyle = DEEP; c.fillRect(PAD - 10, y - 22, W - PAD * 2 + 20, 44);
+    text(sale.refund ? 'Total refunded' : 'TOTAL', PAD, y + 7, '700 17px ' + SANS, '#F3E7C2'); text((sale.refund ? '-' : '') + cur + sale.total.toFixed(2), W - PAD, y + 7, '700 22px ' + MONO, '#F3E7C2', 'right'); y += 44;
+    y += 4;
+    if(sale.payments && sale.payments.length){
+      text((sale.refund ? 'Refunded to' : 'Paid') + ' · split', PAD, y, '700 13px ' + SANS, MUTE); y += 22;
+      sale.payments.forEach(x => row(x.label, cur + Number(x.amount).toFixed(2), { size: 14 }));
+    } else row(sale.refund ? 'Refunded to' : 'Paid via', sale.payment || '', { size: 14 });
+    if(sale.tendered > 0) row('Tendered', (sale.changeCurrencySymbol || cur) + Number(sale.tendered).toFixed(2), { size: 14, color: MUTE });
+    if(sale.change > 0) row('Change', (sale.changeCurrencySymbol || cur) + sale.change.toFixed(2), { size: 14, color: MUTE });
+    if(sale.note){ wrap('Note: ' + sale.note, W - PAD * 2, '400 13px ' + SANS).forEach(l => { text(l, PAD, y, '400 13px ' + SANS, MUTE); y += 18; }); }
+    y += 6; rule(true);
+    wrap(receiptFooterText() || '', W - PAD * 2, 'italic 400 16px ' + SERIF).forEach(l => { text(l, W / 2, y, 'italic 400 16px ' + SERIF, DEEP, 'center'); y += 22; });
+    y += 16;
+    text('✦  AUREUM', W / 2, y, '700 13px ' + SERIF, GOLD, 'center'); y += 17;
+    text('Point of sale & inventory', W / 2, y, '400 10.5px ' + SANS, MUTE, 'center'); y += 22;
+    c.fillStyle = DEEP; c.fillRect(0, y, W, 8); y += 8;
+    const out = document.createElement('canvas'); out.width = W * SC; out.height = Math.ceil(y * SC);
+    out.getContext('2d').drawImage(cv, 0, 0, W * SC, Math.ceil(y * SC), 0, 0, W * SC, Math.ceil(y * SC));
+    return new Promise(res => out.toBlob(b => res(b), 'image/png'));
+  }
+  let receiptImgBlob = null, receiptImgName = 'receipt.png', receiptImgSale = null;
+  async function emailReceipt(){
+    if(!shownSale) return;
+    receiptImgSale = shownSale;
+    try{
+      receiptImgBlob = await renderReceiptImage(shownSale);
+      if(!receiptImgBlob) throw new Error('no image');
+    }catch(e){ aureumToast('Could not draw the receipt picture on this device.', 'danger'); return; }
+    receiptImgName = 'receipt-' + String(shownSale.orderNo).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.png';
+    const prev = document.getElementById('receiptImgPreview'); if(prev.dataset.url) URL.revokeObjectURL(prev.dataset.url);
+    prev.dataset.url = URL.createObjectURL(receiptImgBlob); prev.src = prev.dataset.url;
+    const file = new File([receiptImgBlob], receiptImgName, { type: 'image/png' });
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    document.getElementById('receiptImgShare').style.display = canShare ? '' : 'none';
+    const c = shownSale.customer ? CUSTOMERS.find(x => x.name === shownSale.customer) : null;
+    document.getElementById('receiptImgNote').textContent = canShare
+      ? 'Tap Share / Email and choose your email app — the receipt picture is attached.' + (c && c.email ? ' Customer: ' + c.email : '')
+      : 'Save the image, then Open email and attach it (this browser can not attach files by itself).' + (c && c.email ? ' Customer: ' + c.email : '');
+    openModal('receiptImgOverlay');
+  }
+  document.getElementById('receiptImgDownload').addEventListener('click', () => {
+    if(!receiptImgBlob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(receiptImgBlob); a.download = receiptImgName; document.body.appendChild(a); a.click(); a.remove();
+  });
+  document.getElementById('receiptImgShare').addEventListener('click', async () => {
+    if(!receiptImgBlob || !receiptImgSale) return;
+    const file = new File([receiptImgBlob], receiptImgName, { type: 'image/png' }), s2 = receiptImgSale;
+    try{ await navigator.share({ files: [file], title: 'Your receipt from ' + POS_SETTINGS.businessName + ' (' + s2.orderNo + ')', text: 'Your receipt from ' + POS_SETTINGS.businessName }); }
+    catch(e){ if(e && e.name !== 'AbortError') aureumToast('Sharing was not possible — use Save image instead.', 'danger'); }
+  });
+  document.getElementById('receiptImgMail').addEventListener('click', () => {
+    if(!receiptImgSale) return;
+    const s2 = receiptImgSale, c = s2.customer ? CUSTOMERS.find(x => x.name === s2.customer) : null, to = (c && c.email) ? c.email : '';
+    location.href = `mailto:${encodeURIComponent(to).replace(/%40/g, '@')}?subject=${encodeURIComponent('Your receipt from ' + POS_SETTINGS.businessName + ' (' + s2.orderNo + ')')}&body=${encodeURIComponent('Hello,\n\nPlease find your receipt attached as a picture (' + receiptImgName + ').\n\nThank you — ' + POS_SETTINGS.businessName)}`;
+  });
+
   // "Print receipt automatically after sale": a paired USB printer if there is one, otherwise the browser's print
   function maybeAutoPrint(){
     if(!settingOn('stReceiptAutoPrint', false)) return;
@@ -2927,7 +3253,7 @@ async function aureumSignIn(email, password){
       <div class="r-row"><span>Tax${sale.taxInclusive ? ' (included in prices)' : ''}</span><span>${cur}${sale.tax.toFixed(2)}</span></div>
       <div class="r-row total"><span>${sale.refund ? 'Total refunded' : 'Total'}</span><span>${sale.refund ? '-' : ''}${cur}${sale.total.toFixed(2)}</span></div>
       <div class="r-dash"></div>
-      <div class="r-row"><span>${sale.refund ? 'Refunded to' : 'Paid via'}</span><span>${sale.payment}</span></div>
+      ${payRowsHtml(sale)}
       ${sale.tendered > 0 ? `<div class="r-row"><span>Tendered</span><span>${sale.changeCurrencySymbol||cur}${Number(sale.tendered).toFixed(2)}</span></div>` : ''}
       ${sale.change > 0 ? `<div class="r-row"><span>Change</span><span>${sale.changeCurrencySymbol||cur}${sale.change.toFixed(2)}</span></div>` : ''}
       ${sale.note ? `<div class="r-dash"></div><div class="r-row"><span>Note</span><span>${escHtml(sale.note)}</span></div>` : ''}
@@ -3022,7 +3348,7 @@ async function aureumSignIn(email, password){
     push(GS, 0x21, 0x11); // double size
     text(`TOTAL ${POS_SETTINGS.currency}${sale.total.toFixed(2)}\n`);
     push(GS, 0x21, 0x00); // normal size
-    text(`Paid via ${sale.payment}\n`);
+    paymentTextLines(sale).forEach(l => text(l + '\n'));
     if(sale.change) text(`Change: ${sale.changeCurrencySymbol||POS_SETTINGS.currency}${sale.change.toFixed(2)}\n`);
     push(ESC, 0x61, 0x01); // center
     text('\n' + receiptFooterText() + '\n\n\n');
@@ -3208,6 +3534,16 @@ async function aureumSignIn(email, password){
       const custom = document.getElementById('otherPayLabel').value.trim();
       paymentLabel = custom || 'Other';
     }
+    // Split payment: the lines were confirmed in the Split window; they must still add up to this ticket's total
+    const isSplit = payMethod === 'split';
+    let payments = null, splitCash = 0, splitTendered = 0;
+    if(isSplit){
+      if(!splitLines || Math.abs(splitLines.reduce((a, l) => a + l.amount, 0) - total) > 0.005){ splitLines = null; openSplitModal(); return; }
+      payments = splitLines.map(l => ({ method: l.method, label: l.label, amount: l.amount }));
+      splitCash = splitLines.filter(l => l.method === 'cash').reduce((a, l) => a + l.amount, 0);
+      splitTendered = splitLines.filter(l => l.method === 'cash').reduce((a, l) => a + (l.tendered != null ? l.tendered : l.amount), 0);
+      paymentLabel = 'Split';
+    }
 
     // Card and Mobile just record which payment method was used at the
     // till — no in-app card/mobile-money processing. Use your own card
@@ -3219,7 +3555,7 @@ async function aureumSignIn(email, password){
     // processing happens here (see note above).
 
     const dueInTenderCurrency = tenderDueAmount(total);
-    const change = payMethod === 'cash' ? Math.max(0, tenderedAmt-dueInTenderCurrency) : 0;
+    const change = isSplit ? Math.max(0, Math.round((splitTendered - splitCash) * 100) / 100) : (payMethod === 'cash' ? Math.max(0, tenderedAmt-dueInTenderCurrency) : 0);
     const changeCurrencySymbol = tenderCurrency === 'secondary' ? POS_SETTINGS.currencySymbol2 : POS_SETTINGS.currency;
     const now = new Date();
 
@@ -3243,7 +3579,8 @@ async function aureumSignIn(email, password){
       employee: activeEmployee ? activeEmployee.name : 'Cashier',
       shop: activeShop,
       taxInclusive: !!POS_SETTINGS.taxInclusive,
-      tendered: payMethod === 'cash' ? tenderedAmt : null,
+      tendered: isSplit ? (splitCash > 0 ? splitTendered : null) : (payMethod === 'cash' ? tenderedAmt : null),
+      payments,
       items: lineItems,
       itemCount, subtotal, discountAmount, tax, total, payment: paymentLabel, change, changeCurrencySymbol,
       customer: customer ? customer.name : null,
@@ -3274,7 +3611,7 @@ async function aureumSignIn(email, password){
       uid: receiptUid, shiftId: shiftRef,
       id: padReceiptNo(receiptNumber),
       dateTime: now.toISOString(),
-      total, payment: paymentLabel,
+      total, payment: paymentLabel, payments,
       customer: sale.customer || 'N/A',
       employee: sale.employee,
       shop: activeShop,
@@ -3290,12 +3627,15 @@ async function aureumSignIn(email, password){
     try{ renderUnsyncedBadge(); }catch(e){}
 
     cart = {};
+    applyDefaultTax();
     tenderedAmt = 0;
     tenderCurrency = 'primary';
     discount = { type: 'percent', value: 0 };
     customer = null;
     note = '';
     document.getElementById('otherPayLabel').value = '';
+    splitLines = null;
+    if(isSplit){ const cb = document.querySelector('#payMethods .pay-btn[data-pay="cash"]'); if(cb) cb.click(); }
     resetQuickChips();
     renderTicket();
     refreshOrderNo();
@@ -3305,7 +3645,7 @@ async function aureumSignIn(email, password){
     buildReceipt(sale);
     setReceiptChrome(false, sale);
     openModal('receiptOverlay');
-    maybeOpenDrawerAfterSale(sale, payMethod);
+    maybeOpenDrawerAfterSale(sale, isSplit ? (splitCash > 0 ? 'cash' : 'split') : payMethod);
     maybeAutoPrint();
     fiscaliseReceipt(RECEIPTS[RECEIPTS.length - 1], 'sale');       // optional; no-op unless this shop has fiscalisation on
   });
@@ -3419,6 +3759,11 @@ async function aureumSignIn(email, password){
     }catch(e){}
   }
   setInterval(() => { if(activeShop && !document.hidden) checkInDevice(); }, 4 * 60 * 1000);
+  /* the till starts every ticket on the tax rate saved in Back Office → Settings → Taxes (the cashier may still change it for one ticket) */
+  function applyDefaultTax(){
+    taxPercent = Math.max(0, Math.min(100, Number(POS_SETTINGS.taxPercent) || 0));
+    const el = document.getElementById('taxPercentInput'); if(el) el.value = taxPercent;
+  }
   function applyLoadedData(shared){
     if(!shared) return;
     const live = !!(supaReady && sb);   // a real cloud business: the server's copy is the truth — demo seed data never survives
@@ -3432,6 +3777,7 @@ async function aureumSignIn(email, password){
     OPEN_SHIFTS = has('openShifts') ? shared.openShifts : (live ? [] : OPEN_SHIFTS);
     if(has('posDevices')) POS_DEVICES = shared.posDevices;
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
+    applyDefaultTax();
     try{
       const meta = (currentUser && currentUser.user_metadata) || {}, c = window.AureumCountries && AureumCountries.byCode[meta.country];
       if(c && !POS_SETTINGS.countryApplied){
@@ -3456,8 +3802,7 @@ async function aureumSignIn(email, password){
     // apply, and start background saving. Nothing is written before a successful load.
     await AureumSync.start();
 
-    taxPercent = POS_SETTINGS.taxPercent || 0;
-    document.getElementById('taxPercentInput').value = taxPercent;
+    applyDefaultTax();
     applyEnabledPaymentMethods();
 
     window.addEventListener('beforeunload', persistAureum);
@@ -3716,10 +4061,12 @@ async function aureumSignIn(email, password){
     let refunds = 0, refundsCount = 0, cashRefunds = 0, tax = 0, discounts = 0, count = 0;
     const emp = {};
     rs.forEach(r => {
-      const key = String(r.payment || '').toLowerCase(), bucket = ['cash','card','mobile'].includes(key) ? key : 'other';
+      // a split payment counts each method separately (its cash part is what goes in / out of the drawer)
+      const parts = (Array.isArray(r.payments) && r.payments.length) ? r.payments : [{ label: r.payment, amount: r.total }];
+      const bucketOf = lab => { const k = String(lab || '').toLowerCase(); return ['cash','card','mobile'].includes(k) ? k : 'other'; };
       const e = emp[r.employee] = emp[r.employee] || { name: r.employee, sales: 0, count: 0, refunds: 0 };
-      if(r.refund){ refunds += r.total; refundsCount++; if(key === 'cash') cashRefunds += r.total; tax -= (r.tax || 0); discounts -= (r.discountAmount || 0); e.refunds += r.total; }
-      else { by[bucket] += r.total; count++; tax += (r.tax || 0); discounts += (r.discountAmount || 0); e.sales += r.total; e.count++; }
+      if(r.refund){ refunds += r.total; refundsCount++; parts.forEach(x => { if(bucketOf(x.label) === 'cash') cashRefunds += Number(x.amount) || 0; }); tax -= (r.tax || 0); discounts -= (r.discountAmount || 0); e.refunds += r.total; }
+      else { parts.forEach(x => { by[bucketOf(x.label)] += Number(x.amount) || 0; }); count++; tax += (r.tax || 0); discounts += (r.discountAmount || 0); e.sales += r.total; e.count++; }
     });
     const gross = by.cash + by.card + by.mobile + by.other;
     const openingFloat = Number(shift.openingFloat) || 0;
