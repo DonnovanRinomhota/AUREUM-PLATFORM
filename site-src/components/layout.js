@@ -24,6 +24,7 @@ export const dock = active => `<div class="dock" role="region" aria-label="Quick
   <div class="dock-bar">
     <a class="dock-brand" href="/" aria-label="AUREUM home">${logoMark()}</a>
     <button type="button" class="dock-explore" id="dock-btn" aria-expanded="false" aria-controls="dock-menu"><span>Explore</span>${icon('plus', 14, 'ic dock-plus')}</button>
+    <a class="dock-login" href="${APP.signIn}">Log in</a>
     <a class="dock-cta" href="${APP.signUp}"><span>Free trial</span>${icon('ne', 14, 'ic')}</a>
   </div>
 </div>`;

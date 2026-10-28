@@ -7,7 +7,7 @@
      • it never touches your data. Anything going to Supabase, Stripe, Paynow or any other site (and every
        non-GET request) is left completely alone — data is kept offline by the app itself, not by this file.
    Bump VERSION on each release so old copies are cleared. */
-const VERSION = 'aureum-v61';
+const VERSION = 'aureum-v62';
 const SHELL = [
   '/offline.html', '/backoffice.html', '/pos-checkout.html', '/labels.js', '/viewonly.js', '/fiscal/flag.js', '/fiscal/fiscal-core.js', '/fiscal/profiles.js', '/fiscal/countries/generic.js', '/fiscal/devices/local-connector.js',
   '/a11y.js', '/noautofill.js', '/native-bridge.js', '/safe-html.js', '/countries.js', '/guide.js', '/guide-pos.js', '/guide-bo.js', '/fiscal/countries/zw.js', '/fiscal/devices/zw-virtual-fdms.js',
@@ -68,7 +68,8 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if(request.method !== 'GET') return;                                  // sales, saves, sign-ins are never intercepted
   const url = new URL(request.url);
-  if(url.origin !== self.location.origin) return;                       // Supabase, Stripe, Paynow… untouched
+  if(url.origin !== self.location.origin) return;
+  if(request.headers.has('range') || /\.(mp4|webm)$/.test(url.pathname)) return;     // video is streamed by the browser itself                       // Supabase, Stripe, Paynow… untouched
   if(url.pathname === '/sw.js' || url.pathname === '/app-compat.json' || url.pathname.startsWith('/functions/')) return;
   if(request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/'){
     event.respondWith(networkFirst(request, url));

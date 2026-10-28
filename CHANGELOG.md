@@ -1,5 +1,10 @@
 # Changelog
 
+## Website: video hero (sw v62)
+- Home page: new headline "A Point Of Sale System You Can Rely On.", then a full-width video ("Your Business Simplified"). When the video ends it shrinks into the laptop screen and turns into the AUREUM devices (dashboard, POS, receipt). With reduced-motion settings or without JavaScript the devices are shown straight away.
+- The floating bar now shows Log in and Free trial (a Menu button remains on phones and tablets only). Website panels now run edge to edge on wide screens.
+- The offline-copy code leaves video files to the browser.
+
 ## Website redesign (public marketing site)
 - New look for the home, features, pricing, about, support, privacy and delete-account pages: light, tightly spaced Outfit type (self-hosted), small letter-spaced section labels, alternating dark and light panels, hairline rows, an accordion for features, underlined arrow links, a floating bottom bar and a large green call-to-action panel. The green AUREUM palette is kept, with gold touches: the gold "A" logo, gold section labels and rules, gold headline accents, and the original gold-framed "Built for every counter" section. A bar under the header gives Log in / Back Office / Open POS on every page, and on the home page the headline, text and buttons now sit inside the hero panel. The apps (Back Office, POS, admin) are unchanged.
 

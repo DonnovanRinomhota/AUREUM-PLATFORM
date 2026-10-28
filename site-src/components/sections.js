@@ -4,24 +4,25 @@ import { icon } from './icons.js';
 import { heroDevices, deviceByKey } from './devices.js';
 
 /* ---------- home page ---------- */
-export const hero = () => `<section class="panel dark hero" aria-labelledby="hero-title">
+export const hero = () => `<section class="panel dark hero-top" aria-labelledby="hero-title">
   <div class="wrap">
-    ${secHead('AUREUM POS & INVENTORY', 'Built for Zimbabwe')}
-    <div class="stage">
-      <div class="stage-bg" aria-hidden="true"></div>
-      <div class="stage-copy">
-        <h1 id="hero-title" class="display">${esc(HERO.headline[0])}<br><span class="dim">${esc(HERO.headline[1])} ${esc(HERO.headline[2])}</span></h1>
-        ${HERO.intro.map(p => `<p class="small">${esc(p)}</p>`).join('')}
-        <div class="hero-btns">
-          ${linkButton({ label: 'Start free trial', href: APP.signUp, kind: 'gold', size: 'lg', arrow: true })}
-          ${linkButton({ label: 'See the features', href: '/features/', kind: 'outline', size: 'lg', extra: 'btn-goldline' })}
-          ${linkButton({ label: 'Log in', href: APP.signIn, kind: 'outline', size: 'lg' })}
-        </div>
-      </div>
-      ${heroDevices()}
-      <p class="stage-tag">PEOPLE. COUNTERS. IN SYNC.</p>
+    <p class="h-label">AUREUM POS &amp; INVENTORY</p>
+    <h1 id="hero-title" class="display hero-title">A Point Of Sale<br><span class="dim">System You Can Rely On.</span></h1>
+    <div class="hero-btns hero-btns-c">
+      ${linkButton({ label: 'Start free trial', href: APP.signUp, kind: 'gold', size: 'lg', arrow: true })}
+      ${linkButton({ label: 'See the features', href: '/features/', kind: 'outline', size: 'lg', extra: 'btn-goldline' })}
     </div>
-    <div class="hero-foot"><a class="round-link" href="#why" aria-label="Explore AUREUM"><span>Explore</span><i>${icon('down', 18, 'ic')}</i></a></div>
+  </div>
+</section>
+<section class="hero-media" aria-label="AUREUM in action">
+  <div class="hm-stage" id="hm-stage">
+    <div class="hm-bg" aria-hidden="true"></div>
+    <div class="hm-devices">${heroDevices()}</div>
+    <div class="hm-video" id="hm-video">
+      <video id="hm-vid" muted playsinline preload="auto" poster="/site/assets/img/hero-poster.jpg" aria-label="A shop owner serving customers at her counter with AUREUM" width="1280" height="720"><source src="/site/assets/video/hero.mp4" type="video/mp4"></video>
+      <div class="hm-shade" aria-hidden="true"></div>
+      <p class="hm-text">Your Business<br>Simplified</p>
+    </div>
   </div>
 </section>`;
 
