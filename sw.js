@@ -7,7 +7,7 @@
      • it never touches your data. Anything going to Supabase, Stripe, Paynow or any other site (and every
        non-GET request) is left completely alone — data is kept offline by the app itself, not by this file.
    Bump VERSION on each release so old copies are cleared. */
-const VERSION = 'aureum-v60';
+const VERSION = 'aureum-v61';
 const SHELL = [
   '/offline.html', '/backoffice.html', '/pos-checkout.html', '/labels.js', '/viewonly.js', '/fiscal/flag.js', '/fiscal/fiscal-core.js', '/fiscal/profiles.js', '/fiscal/countries/generic.js', '/fiscal/devices/local-connector.js',
   '/a11y.js', '/noautofill.js', '/native-bridge.js', '/safe-html.js', '/countries.js', '/guide.js', '/guide-pos.js', '/guide-bo.js', '/fiscal/countries/zw.js', '/fiscal/devices/zw-virtual-fdms.js',
@@ -58,7 +58,8 @@ async function networkFirst(request, url){
 }
 async function staleWhileRevalidate(request, url){
   const cache = await caches.open(VERSION);
-  const saved = await cache.match(request, { ignoreSearch: true });
+  /* website files carry a version in the address (?v=…): match it exactly so a new design is never served from the old copy */
+  const saved = await cache.match(request, { ignoreSearch: !url.pathname.startsWith('/site/assets/') });
   const refresh = fetch(request).then(response => { if(response && response.ok) cache.put(request, response.clone()); return response; }).catch(() => null);
   return saved || (await refresh) || Response.error();
 }
