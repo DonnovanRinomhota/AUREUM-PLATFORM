@@ -7,7 +7,7 @@ export const deleteAccount = {
   title: 'Delete your account | AUREUM POS & Inventory Management',
   description: 'How to ask AUREUM to delete your account and business data, what is deleted and what is kept.',
   body: () => pageHero('DELETE YOUR ACCOUNT', 'Ask us to delete your AUREUM account', 'For the AUREUM Back Office and AUREUM POS apps') + `
-<section class="about-sec"><div class="wrap narrow prose rv">
+<section class="panel light about-sec"><div class="wrap"><div class="prose rv">
   <p>Only the <strong>business owner</strong> can ask for the account and its data to be deleted. Staff who only use the POS should ask the owner.</p>
 
   <h2>How to request deletion</h2>
@@ -37,5 +37,5 @@ export const deleteAccount = {
   <p>Deletion cannot be undone. Export any reports you need first (Back Office → Reports / Accounting). Cancel any active subscription from your account on the website so you are not charged again.</p>
 
   <p>See also: <a href="/privacy/">Privacy Policy</a>.</p>
-</div></section>`
+</div></div></section>`
 };

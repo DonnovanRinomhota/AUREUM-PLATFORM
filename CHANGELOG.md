@@ -1,5 +1,8 @@
 # Changelog
 
+## Website redesign (public marketing site)
+- New look for the home, features, pricing, about, support, privacy and delete-account pages: light, tightly spaced Outfit type (self-hosted), small letter-spaced section labels, alternating dark and light panels, hairline rows, an accordion for features, underlined arrow links, a floating bottom bar and a large green call-to-action panel. The green AUREUM palette is kept. The apps (Back Office, POS, admin) are unchanged.
+
 ## Accuracy, split payments, Hold, image receipts, QA fixes (sw v60)
 - **One sales calculation** for Dashboard, Sales by Product (and its CSV), Sales by Category and Accounting. Ticket discounts and sales tax are shared out per item in whole cents, cost is the cost recorded at the time of sale, refunds reverse revenue, tax, discount and cost, and products that were later deleted still count. Net sales = after discounts and refunds, excluding sales tax; profit = net sales - cost. The pages now reconcile to the cent. (QA F02, F03, F09)
 - Dashboard chart renamed "Net sales" (it plots net sales). Sales by Employee / Payment now show totals net of refunds; split payments are counted per method. Sales by Category shows which period/shop it uses. (F06, F09)

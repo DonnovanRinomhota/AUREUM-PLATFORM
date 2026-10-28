@@ -1,4 +1,4 @@
-/* Gold-line icons (24×24, stroke = currentColor). */
+/* Line icons (24×24, stroke = currentColor). */
 const P = {
   bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   cube: '<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12L3 7M12 12v10"/>',
@@ -19,6 +19,9 @@ const P = {
   lifebuoy: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/>',
   play: '<path d="M7 4.5v15l12-7.5z" fill="currentColor"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  ne: '<path d="M7 17L17 7M8 7h9v9"/>',
+  down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>'

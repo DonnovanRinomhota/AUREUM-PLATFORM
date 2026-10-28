@@ -2,14 +2,14 @@
 (() => {
   const d = document, root = d.documentElement;
 
-  /* mobile menu */
-  const btn = d.getElementById('menu-btn'), menu = d.getElementById('mobile-menu');
-  if (btn && menu) {
-    const set = open => { btn.setAttribute('aria-expanded', String(open)); btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); menu.hidden = !open; };
-    btn.addEventListener('click', () => set(menu.hidden));
-    d.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { set(false); btn.focus(); } });
-    menu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
-    matchMedia('(min-width: 901px)').addEventListener('change', e => { if (e.matches) set(false); });
+  /* the floating bar: Explore opens / closes the menu */
+  const dbtn = d.getElementById('dock-btn'), dmenu = d.getElementById('dock-menu');
+  if (dbtn && dmenu) {
+    const set = open => { dbtn.setAttribute('aria-expanded', String(open)); dmenu.hidden = !open; };
+    dbtn.addEventListener('click', () => set(dmenu.hidden));
+    d.addEventListener('keydown', e => { if (e.key === 'Escape' && !dmenu.hidden) { set(false); dbtn.focus(); } });
+    d.addEventListener('click', e => { if (!dmenu.hidden && !e.target.closest('.dock')) set(false); });
+    dmenu.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
   }
 
   /* demo dialog — plays a real video only when one has been configured */

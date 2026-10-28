@@ -11,7 +11,7 @@ export const privacy = {
   title: 'Privacy Policy | AUREUM POS & Inventory Management',
   description: 'How AUREUM collects, uses, stores and deletes information in the AUREUM Back Office and AUREUM POS apps and website.',
   body: () => pageHero('PRIVACY POLICY', 'Your data, in plain words', 'Last updated 15 October 2026') + `
-<section class="about-sec"><div class="wrap narrow prose rv">
+<section class="panel light about-sec"><div class="wrap"><div class="prose rv">
   <p>This policy covers the AUREUM website, the <strong>AUREUM Back Office</strong> app and the <strong>AUREUM POS</strong> app (together, “AUREUM”). AUREUM is a point of sale and inventory service for businesses. The business that signs up (“the owner”) decides what is recorded about its own customers and staff.</p>
 
   <h2>What we collect</h2>
@@ -55,5 +55,5 @@ export const privacy = {
 
   <h2>Contact</h2>
   <p>${contactLine()}</p>
-</div></section>`
+</div></div></section>`
 };

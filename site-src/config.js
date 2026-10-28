@@ -151,3 +151,14 @@ export const FAQ_SUPPORT = [
   { q: 'Does AUREUM work without internet?', a: 'Once opened with internet at least once, yes. The till keeps selling and sales sync automatically when the connection returns.' },
   { q: 'My printer is not printing.', a: 'USB printing needs Chrome or Edge on a computer. Bluetooth printers must be paired to the device first. You can always use the browser’s print option.' }
 ];
+
+/* Home page accordion — "What you get". Every line is something the application really does (see FEATURE_GROUPS / SHOWCASE). */
+export const WHAT = [
+  { title: 'POS Checkout', text: 'A fast, touch-friendly till for phone, tablet or laptop. Tap products or scan barcodes, add discounts, take cash, card, mobile or split payments, hold a ticket, and keep selling when the internet drops.', href: '/features/#checkout', cta: 'See the till' },
+  { title: 'Inventory & Purchasing', text: 'Products with codes, barcodes and pictures. Stock kept for each shop, purchase orders, goods received, adjustments and transfers between shops. Import your product list from Excel or CSV.', href: '/features/', cta: 'See inventory features' },
+  { title: 'Dashboard & Reports', text: 'Gross sales, net sales, cost of sales and gross profit for one shop or all of them. Low-stock alerts, sales by product, employee and payment type, an income statement, and exports to CSV, Excel or PDF.', href: '/features/#dashboard', cta: 'See reports' },
+  { title: 'Receipts & Refunds', text: 'Print or send a branded receipt with your business name and logo. Refund item by item, with tax and discount reversed in proportion and stock put back.', href: '/features/#receipts', cta: 'See receipts' },
+  { title: 'Shifts & Cash Control', text: 'Every cashier works in their own shift with an opening float. Count the drawer at close, see any difference, and print a shift report.', href: '/features/', cta: 'See shift control' },
+  { title: 'Shops, Staff & Customers', text: 'Run several shops from one account. Staff sign in with a PIN and roles you control. Keep customer records with New, Regular and VIP segments.', href: '/features/', cta: 'See management tools' }
+];
+export const DEVICES_LINE = ['Phone', 'Tablet', 'Laptop', 'Receipt printers', 'Barcode scanners', 'Cash drawers'];
