@@ -1,7 +1,7 @@
 import { HERO, BUILT_FOR, OFFER, STEPS, APP, PRICING, SHOWCASE, FEATURE_GROUPS, WHAT, DEVICES_LINE } from '../config.js';
 import { esc, linkButton, alink, secHead, ticks, gEyebrow } from './ui.js';
 import { icon } from './icons.js';
-import { heroDevices, deviceByKey } from './devices.js';
+import { deviceByKey } from './devices.js';
 
 /* ---------- home page ---------- */
 export const hero = () => `<section class="panel dark hero-top" aria-labelledby="hero-title">
@@ -16,10 +16,8 @@ export const hero = () => `<section class="panel dark hero-top" aria-labelledby=
 </section>
 <section class="hero-media" aria-label="AUREUM in action">
   <div class="hm-stage" id="hm-stage">
-    <div class="hm-bg" aria-hidden="true"></div>
-    <div class="hm-devices">${heroDevices()}</div>
     <div class="hm-video" id="hm-video">
-      <video id="hm-vid" muted playsinline preload="auto" poster="/site/assets/img/hero-poster.jpg" aria-label="A shop owner serving customers at her counter with AUREUM" width="1280" height="720"><source src="/site/assets/video/hero.mp4" type="video/mp4"></video>
+      <video id="hm-vid" muted loop playsinline autoplay preload="auto" poster="/site/assets/img/hero-poster.jpg" aria-label="A shop owner serving customers at her counter with AUREUM" width="1280" height="720"><source src="/site/assets/video/hero.mp4" type="video/mp4"></video>
       <div class="hm-shade" aria-hidden="true"></div>
       <p class="hm-text">Your Business<br>Simplified</p>
     </div>

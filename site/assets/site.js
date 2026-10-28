@@ -32,37 +32,11 @@
   }
 
 
-  /* hero: the video plays once; when it ends it shrinks into the laptop screen, which becomes the dashboard, and the tablet and phone slide in */
-  const stage = d.getElementById('hm-stage'), vid = d.getElementById('hm-vid'), vbox = d.getElementById('hm-video');
-  if (stage && vid && vbox) {
-    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let started = false;
-    const finish = () => { stage.classList.remove('morphing'); stage.classList.add('done'); vid.pause(); };
-    const morph = () => {
-      if (started) return; started = true;
-      if (still || !vbox.animate) { finish(); return; }
-      stage.classList.add('morphing');
-      const dev = stage.querySelector('.dev-laptop'), scr = stage.querySelector('.dev-laptop .lp-screen img'), tab = stage.querySelector('.dev-tablet'), ph = stage.querySelector('.dev-phone');
-      const sr = stage.getBoundingClientRect(), r = scr.getBoundingClientRect();
-      const t = Math.max(0, r.top - sr.top), l = Math.max(0, r.left - sr.left), rt = Math.max(0, sr.right - r.right), b = Math.max(0, sr.bottom - r.bottom);
-      const ease = 'cubic-bezier(.65,0,.2,1)', T = 1150;
-      const anims = [
-        vbox.animate([{ clipPath: 'inset(0px 0px 0px 0px round 0px)' }, { clipPath: `inset(${t}px ${rt}px ${b}px ${l}px round 6px)` }], { duration: T, easing: ease, fill: 'forwards' }),
-        vbox.animate([{ opacity: 1 }, { opacity: 1, offset: .86 }, { opacity: 0 }], { duration: T + 280, easing: 'linear', fill: 'forwards' }),
-        dev.animate([{ opacity: 0 }, { opacity: 0, offset: .8 }, { opacity: 1 }], { duration: T + 280, easing: 'linear', fill: 'both' }),
-        tab.animate([{ opacity: 0, transform: 'translateY(46px)' }, { opacity: 1, transform: 'none' }], { duration: 800, delay: T - 120, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' }),
-        ph.animate([{ opacity: 0, transform: 'translateY(60px)' }, { opacity: 1, transform: 'none' }], { duration: 800, delay: T + 90, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' })
-      ];
-      Promise.all(anims.map(a => a.finished)).then(() => { finish(); anims.forEach(a => a.cancel()); }).catch(finish);
-    };
-    if (still) { finish(); }
-    else {
-      vid.addEventListener('ended', morph);
-      vid.addEventListener('error', () => { started = true; finish(); });
-      const go = vid.play && vid.play();
-      if (go && go.catch) go.catch(() => setTimeout(morph, 2200));      /* autoplay blocked: show the first frame briefly, then morph anyway */
-      setTimeout(() => { if (!started && vid.paused && vid.currentTime === 0) morph(); }, 7000);
-    }
+  /* hero video: plays muted on a loop; people who prefer reduced motion get the still first frame */
+  const vid = d.getElementById('hm-vid');
+  if (vid) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { vid.removeAttribute('autoplay'); vid.pause(); }
+    else { const go = vid.play && vid.play(); if (go && go.catch) go.catch(() => {}); }
   }
 
   /* reveal on scroll (CSS only hides these when JS is running) */

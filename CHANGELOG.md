@@ -1,7 +1,7 @@
 # Changelog
 
 ## Website: video hero (sw v62)
-- Home page: new headline "A Point Of Sale System You Can Rely On.", then a full-width video ("Your Business Simplified"). When the video ends it shrinks into the laptop screen and turns into the AUREUM devices (dashboard, POS, receipt). With reduced-motion settings or without JavaScript the devices are shown straight away.
+- Home page: new headline "A Point Of Sale System You Can Rely On.", then a full-width looping video ("Your Business Simplified"). The device pictures and the morph were removed. With reduced-motion settings the video stays on its first frame.
 - The floating bar now shows Log in and Free trial (a Menu button remains on phones and tablets only). Website panels now run edge to edge on wide screens.
 - The offline-copy code leaves video files to the browser.
 
