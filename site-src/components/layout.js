@@ -8,10 +8,7 @@ export const header = active => `<header class="site-header">
   <div class="wrap header-in">
     ${brand()}
     <span class="h-rule" aria-hidden="true"></span>
-    <p class="h-note" aria-hidden="true">Built for<br>Zimbabwean businesses</p>
     <nav class="h-nav" aria-label="Main">${NAV.filter(n => n.id !== 'home').map(n => `<a href="${n.href}"${n.id === active ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`).join('')}</nav>
-    <a class="h-login" href="${APP.signIn}">Log in</a>
-    <a class="h-cta" href="${APP.signUp}"><span>Free trial</span>${icon('ne', 14, 'ic')}</a>
   </div>
 </header>`;
 

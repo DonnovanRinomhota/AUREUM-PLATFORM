@@ -7,7 +7,7 @@ import { deviceByKey } from './devices.js';
 export const hero = () => `<section class="panel dark hero-top" aria-labelledby="hero-title">
   <div class="wrap">
     <p class="h-label">AUREUM POS &amp; INVENTORY</p>
-    <h1 id="hero-title" class="display hero-title">A Point Of Sale<br><span class="dim">System You Can Rely On.</span></h1>
+    <h1 id="hero-title" class="display hero-title">A Point Of Sale<br><span class="dim">You Can Rely On.</span></h1>
     <div class="hero-btns hero-btns-c">
       ${linkButton({ label: 'Start free trial', href: APP.signUp, kind: 'gold', size: 'lg', arrow: true })}
       ${linkButton({ label: 'See the features', href: '/features/', kind: 'outline', size: 'lg', extra: 'btn-goldline' })}

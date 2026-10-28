@@ -2,6 +2,7 @@
 
 ## Website: video hero (sw v62)
 - Home page: new headline "A Point Of Sale System You Can Rely On.", then a full-width looping video ("Your Business Simplified"). The device pictures and the morph were removed. With reduced-motion settings the video stays on its first frame.
+- Header: gold serif "AUREUM" wordmark with "POS & INVENTORY MANAGEMENT" under it; the "Built for Zimbabwean businesses" note and the top Log in / Free trial links were removed (the floating bar has them). Headline is now "A Point Of Sale You Can Rely On."; "Your Business Simplified" is gold.
 - The floating bar now shows Log in and Free trial (a Menu button remains on phones and tablets only). Website panels now run edge to edge on wide screens.
 - The offline-copy code leaves video files to the browser.
 
