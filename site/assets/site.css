@@ -82,11 +82,11 @@ main > .panel + .panel{border-top:0}
 .skip-link:focus{top:10px}
 .header-in{display:flex;align-items:center;gap:26px;min-height:var(--hdr)}
 .brand{display:inline-flex;align-items:center;gap:14px;text-decoration:none;color:var(--text)}
-.logo-mark{--s:40px;flex:none;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 28%,#f6e3a0,#c9a227 56%,#8a712a);box-shadow:0 0 0 2.5px rgba(6,19,14,.95),0 0 0 4px var(--gold),0 6px 18px rgba(0,0,0,.45),inset 0 0 0 3px rgba(27,20,10,.2);color:#1b140a}
+.logo-mark{--s:44px;flex:none;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 36% 30%,#fbe9a6,#d8b24c 58%,#a98424);box-shadow:0 0 0 3px #04120c,0 0 0 4.5px #d9b55b,0 6px 18px rgba(0,0,0,.45),inset 0 0 0 4px rgba(120,90,20,.28),inset 0 0 8px rgba(255,240,180,.35);color:#1b140a}
 .logo-mark span{font:600 calc(var(--s)*.58)/1 var(--ff-serif);color:#1b140a;transform:translateY(-1px)}
-.brand-text{display:flex;flex-direction:column;gap:5px}
-.brand-name{font:500 clamp(1.5rem,2.2vw,2rem)/1 var(--ff-serif);letter-spacing:.2em;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold)}
-.brand-sub{font-size:.62rem;font-weight:300;letter-spacing:.2em;text-transform:uppercase;color:#cdc7b2;white-space:nowrap}
+.brand-text{display:flex;flex-direction:column;gap:9px}
+.brand-name{font:600 clamp(1.5rem,2.3vw,2.1rem)/1 'Montserrat',var(--ff);letter-spacing:.015em;background:linear-gradient(180deg,#f7e49a,#e0bf62 45%,#b78f2e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold)}
+.brand-sub{font:400 clamp(.52rem,.78vw,.72rem)/1 'Montserrat',var(--ff);letter-spacing:.2em;text-transform:uppercase;color:#e9e0c8;white-space:nowrap}
 .h-rule{flex:1;height:1px;background:var(--rule);min-width:20px}
 .h-note{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;line-height:1.5;color:var(--text-dim);text-align:left}
 .h-nav{display:flex;gap:22px}
@@ -325,7 +325,7 @@ details[open] > summary .pm{transform:rotate(45deg)}
   .biz-grid{grid-template-columns:1fr}.biz-card{aspect-ratio:1/.85}
   .access-in{justify-content:center;text-align:center}.access-links{justify-content:center}.access .btn{flex:1 1 calc(50% - 6px);padding-inline:14px}
   .hero-btns .btn{flex:1 1 100%}
-  .logo-mark{--s:34px}.brand{gap:10px}.brand-name{letter-spacing:.16em}.brand-sub{font-size:.46rem;letter-spacing:.12em}
+  .logo-mark{--s:34px}.brand{gap:10px}.brand-name{font-size:1.25rem}.brand-sub{font-size:.44rem;letter-spacing:.12em}
   .devices{aspect-ratio:auto;display:grid;grid-template-columns:1.55fr 1fr;align-items:end;gap:14px 12px;max-width:560px}
   .dev{position:static;width:auto}.dev-laptop{grid-column:1/-1}.dev-phone{justify-self:end;width:86%}
   .stage{min-height:0;padding-bottom:110px}
