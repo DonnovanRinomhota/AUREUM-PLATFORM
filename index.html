@@ -29,7 +29,8 @@
 <link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/outfit-latin-400-normal.woff2" crossorigin>
 <link rel="preload" as="image" href="/site/assets/img/screen-dashboard-1280.webp" fetchpriority="high">
 <link rel="stylesheet" href="/vendor/fonts/outfit.css">
-<link rel="stylesheet" href="/site/assets/site.css?v=ed1f5a6a">
+<link rel="stylesheet" href="/vendor/fonts/fonts-serif.css">
+<link rel="stylesheet" href="/site/assets/site.css?v=45102b58">
 <script>document.documentElement.classList.add('js')</script>
 <script>/* emailed sign-up / password-reset links may land here: pass them on to the Back Office with their tokens */if(/[#&](access_token|error_code|type=(recovery|signup|invite|magiclink|email_change))/.test(location.hash))location.replace('/backoffice.html'+location.hash)</script>
 <noscript><style>.dock{display:none}.rv{opacity:1!important;transform:none!important}</style></noscript>
@@ -41,7 +42,7 @@
 <header class="site-header">
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="wrap header-in">
-    <a class="brand " href="/" aria-label="AUREUM POS &amp; Inventory Management — home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M16 3 28 28h-5.2L16 13.2 9.2 28H4z" fill="currentColor"/><path d="M11.6 22.4h8.8" stroke="currentColor" stroke-width="2.4" fill="none"/></svg></span><span class="brand-name">aureum</span></a>
+    <a class="brand " href="/" aria-label="AUREUM POS &amp; Inventory Management — home"><span class="logo-mark" aria-hidden="true"><span>A</span></span><span class="brand-name">aureum</span></a>
     <span class="h-rule" aria-hidden="true"></span>
     <p class="h-note" aria-hidden="true">Built for<br>Zimbabwean businesses</p>
     <nav class="h-nav" aria-label="Main"><a href="/features/">Features</a><a href="/pricing/">Pricing</a><a href="/about/">About</a><a href="/support/">Support</a></nav>
@@ -49,28 +50,39 @@
     <a class="h-cta" href="/backoffice.html?mode=signup"><span>Free trial</span><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a>
   </div>
 </header>
+<section class="access" aria-label="Open the AUREUM application">
+  <div class="wrap access-in">
+    <p class="access-text">Already on AUREUM?</p>
+    <div class="access-links">
+      <a class="btn btn-ghost btn-md" href="/backoffice.html?mode=signin"><span>Log in</span></a>
+      <a class="btn btn-outline btn-md" href="/backoffice.html"><span>Back Office</span></a>
+      <a class="btn btn-outline btn-md" href="/pos-checkout.html"><span>Open POS</span></a>
+    </div>
+  </div>
+</section>
 <main id="main">
 <section class="panel dark hero" aria-labelledby="hero-title">
   <div class="wrap">
     <div class="sec-head"><span>AUREUM POS &amp; INVENTORY</span><span>Built for Zimbabwe</span></div>
-    <h1 id="hero-title" class="display">Elegant Point Of Sale<br><span class="dim">System and Inventory Management.</span></h1>
-    <div class="hero-row">
-      <div class="hero-copy">
-        <p class="small">A point of sale at the tip of your fingers: phone, tablet, laptop. Carry your business with you.</p><p class="small">Manage and track your inventory from anywhere. Simple and efficient tools to run your business.</p>
-        <div class="alinks"><a class="alink" href="/backoffice.html?mode=signup"><span>Start free trial</span><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a><a class="alink" href="/features/"><span>See the features</span><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a><a class="alink" href="/backoffice.html?mode=signin"><span>Log in</span><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a></div>
-      </div>
-      <a class="round-link" href="#why" aria-label="Explore AUREUM"><span>Explore</span><i><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M6 13l6 6 6-6"/></svg></i></a>
-    </div>
     <div class="stage">
       <div class="stage-bg" aria-hidden="true"></div>
+      <div class="stage-copy">
+        <h1 id="hero-title" class="display">Elegant Point Of Sale<br><span class="dim">System and Inventory Management.</span></h1>
+        <p class="small">A point of sale at the tip of your fingers: phone, tablet, laptop. Carry your business with you.</p><p class="small">Manage and track your inventory from anywhere. Simple and efficient tools to run your business.</p>
+        <div class="hero-btns">
+          <a class="btn btn-gold btn-lg" href="/backoffice.html?mode=signup"><span>Start free trial</span><svg class="ic btn-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a>
+          <a class="btn btn-outline btn-lg btn-goldline" href="/features/"><span>See the features</span></a>
+          <a class="btn btn-outline btn-lg" href="/backoffice.html?mode=signin"><span>Log in</span></a>
+        </div>
+      </div>
       <div class="devices" role="group" aria-label="AUREUM on a laptop, a tablet and a phone">
   <div class="dev dev-laptop"><div class="frame frame-laptop"><div class="lp-screen"><img src="/site/assets/img/screen-dashboard-1280.webp" srcset="/site/assets/img/screen-dashboard-1280.webp 1280w, /site/assets/img/screen-dashboard-2560.webp 2560w" sizes="(min-width:1101px) 690px, (min-width:761px) 640px, 92vw" width="2560" height="1600" alt="The AUREUM Back Office dashboard showing gross sales, net sales, cost of sales, gross profit, stock alerts and a sales summary chart." fetchpriority="high" decoding="async"></div><div class="lp-base" aria-hidden="true"></div></div></div>
   <div class="dev dev-tablet"><div class="frame frame-tablet frame-photo"><img src="/site/assets/img/screen-pos-tablet.webp" srcset="/site/assets/img/screen-pos-tablet.webp 1431w" sizes="(min-width:1101px) 600px, (min-width:761px) 520px, 70vw" width="1431" height="1099" alt="The AUREUM POS checkout on a tablet: a product catalogue with pictures, names and prices beside the current ticket and a Complete Sale button." fetchpriority="high" decoding="async"></div></div>
   <div class="dev dev-phone"><div class="frame frame-phone"><span class="ph-island" aria-hidden="true"></span><div class="ph-screen"><img src="/site/assets/img/screen-receipt-780.webp" srcset="/site/assets/img/screen-receipt-780.webp 780w, /site/assets/img/screen-receipt-1170.webp 1170w" sizes="(min-width:1101px) 160px, (min-width:761px) 140px, 34vw" width="1170" height="2532" alt="A completed sale on a phone: the AUREUM receipt with items, total, payment method and print and email options." fetchpriority="high" decoding="async"></div></div></div>
 </div>
       <p class="stage-tag">PEOPLE. COUNTERS. IN SYNC.</p>
-      <p class="stage-line">Every sale.<br>Every item. Every shop.</p>
     </div>
+    <div class="hero-foot"><a class="round-link" href="#why" aria-label="Explore AUREUM"><span>Explore</span><i><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M6 13l6 6 6-6"/></svg></i></a></div>
   </div>
 </section><section class="panel light" id="why" aria-labelledby="why-title">
   <div class="wrap">
@@ -119,13 +131,29 @@
     </div>
     <div class="runs-on"><span class="tiny">RUNS ON</span><ul><li>Phone</li><li>Tablet</li><li>Laptop</li><li>Receipt printers</li><li>Barcode scanners</li><li>Cash drawers</li></ul></div>
   </div>
-</section><section class="panel light" aria-labelledby="built-title">
+</section><section class="built" aria-labelledby="built-title">
   <div class="wrap">
-    <div class="sec-head"><span>03 / BUILT FOR EVERY COUNTER</span><span>A look at who uses it</span></div>
-    <h2 id="built-title" class="display">Built for<br><span class="dim">every counter.</span></h2>
-    <ul class="rows">
-      <li class="row rv"><div class="row-main"><h3>Bakery</h3><p class="tiny-p">Fresh bread, cakes &amp; more</p></div><img src="/site/assets/img/card-bakery-v2.webp" width="120" height="120" alt="" loading="lazy" decoding="async"></li><li class="row rv"><div class="row-main"><h3>Retail Shop</h3><p class="tiny-p">Everyday products, better sales</p></div><img src="/site/assets/img/card-retail-v2.webp" width="120" height="120" alt="" loading="lazy" decoding="async"></li><li class="row rv"><div class="row-main"><h3>Grocery Shop</h3><p class="tiny-p">Fresh food, daily essentials</p></div><img src="/site/assets/img/card-grocery-v2.webp" width="120" height="120" alt="" loading="lazy" decoding="async"></li><li class="row rv"><div class="row-main"><h3>Clothes &amp; Fashion</h3><p class="tiny-p">Trendy styles, happy customers</p></div><img src="/site/assets/img/card-fashion-v2.webp" width="120" height="120" alt="" loading="lazy" decoding="async"></li>
-    </ul>
+    <p class="g-eyebrow"><span class="rule"></span><span class="dia"></span><span class="eb-text">BUILT FOR EVERY COUNTER</span><span class="dia"></span><span class="rule"></span></p>
+    <h2 id="built-title" class="g-title">Empowering Business Owners <span class="gold">In Zimbabwe</span></h2>
+    <div class="biz-grid">
+      <article class="biz-card rv">
+        <img src="/site/assets/img/card-bakery-v2.webp" width="640" height="400" alt="A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars." loading="lazy" decoding="async">
+        <div class="biz-shade" aria-hidden="true"></div>
+        <div class="biz-body"><span class="ic-ring"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 11c0-3 3-5 7-5s7 2 7 5c0 1-.6 1.8-1.5 2.2V18a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-4.8C5.6 12.8 5 12 5 11z"/></svg></span><div><h3>Bakery</h3><p>Fresh bread, cakes &amp; more</p></div></div>
+      </article><article class="biz-card rv">
+        <img src="/site/assets/img/card-retail-v2.webp" width="640" height="400" alt="A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing." loading="lazy" decoding="async">
+        <div class="biz-shade" aria-hidden="true"></div>
+        <div class="biz-body"><span class="ic-ring"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 9l1.6-5h12.8L20 9"/><path d="M4 9c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3"/><path d="M5 12v8h14v-8"/></svg></span><div><h3>Retail Shop</h3><p>Everyday products, better sales</p></div></div>
+      </article><article class="biz-card rv">
+        <img src="/site/assets/img/card-grocery-v2.webp" width="640" height="400" alt="A bright grocery shop aisle with curved wooden displays of fresh fruit and vegetables under a timber ceiling." loading="lazy" decoding="async">
+        <div class="biz-shade" aria-hidden="true"></div>
+        <div class="biz-body"><span class="ic-ring"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10h18l-2 9H5z"/><path d="M8 10l3-6M16 10l-3-6"/></svg></span><div><h3>Grocery Shop</h3><p>Fresh food, daily essentials</p></div></div>
+      </article><article class="biz-card rv">
+        <img src="/site/assets/img/card-fashion-v2.webp" width="640" height="400" alt="A collage of dark green fashion and lifestyle pieces: knitwear, caps, sneakers, a watch and a classic car." loading="lazy" decoding="async">
+        <div class="biz-shade" aria-hidden="true"></div>
+        <div class="biz-body"><span class="ic-ring"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 8V6.5a2 2 0 1 0-2-2"/><path d="M12 8l9 6.2a1 1 0 0 1-.6 1.8H3.6A1 1 0 0 1 3 14.2z"/></svg></span><div><h3>Clothes &amp; Fashion</h3><p>Trendy styles, happy customers</p></div></div>
+      </article>
+    </div>
   </div>
 </section><section class="panel dark" aria-labelledby="steps-title">
   <div class="wrap">
@@ -162,7 +190,7 @@
   <div class="wrap">
     <div class="footer-cols">
       <div class="f-brand">
-        <a class="brand brand-footer" href="/" aria-label="AUREUM POS &amp; Inventory Management — home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M16 3 28 28h-5.2L16 13.2 9.2 28H4z" fill="currentColor"/><path d="M11.6 22.4h8.8" stroke="currentColor" stroke-width="2.4" fill="none"/></svg></span><span class="brand-name">aureum</span></a>
+        <a class="brand brand-footer" href="/" aria-label="AUREUM POS &amp; Inventory Management — home"><span class="logo-mark" aria-hidden="true"><span>A</span></span><span class="brand-name">aureum</span></a>
         <p class="f-desc">Point of sale and inventory management for Zimbabwean businesses. One account, every shop, every device.</p>
       </div>
       <nav class="f-col" aria-label="Explore"><h2>Explore</h2><ul><li><a href="/">Home</a></li><li><a href="/features/">Features</a></li><li><a href="/pricing/">Pricing</a></li><li><a href="/about/">About</a></li><li><a href="/support/">Support</a></li></ul></nav>
@@ -182,11 +210,11 @@
       <a href="/backoffice.html?mode=signin"><span>Log in</span><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a></nav>
   </div>
   <div class="dock-bar">
-    <a class="dock-brand" href="/" aria-label="AUREUM home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M16 3 28 28h-5.2L16 13.2 9.2 28H4z" fill="currentColor"/><path d="M11.6 22.4h8.8" stroke="currentColor" stroke-width="2.4" fill="none"/></svg></span></a>
+    <a class="dock-brand" href="/" aria-label="AUREUM home"><span class="logo-mark" aria-hidden="true"><span>A</span></span></a>
     <button type="button" class="dock-explore" id="dock-btn" aria-expanded="false" aria-controls="dock-menu"><span>Explore</span><svg class="ic dock-plus" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
     <a class="dock-cta" href="/backoffice.html?mode=signup"><span>Free trial</span><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 17L17 7M8 7h9v9"/></svg></a>
   </div>
 </div>
-<script src="/site/assets/site.js?v=ed1f5a6a" defer></script>
+<script src="/site/assets/site.js?v=45102b58" defer></script>
 </body>
 </html>

@@ -2,7 +2,7 @@ import { icon } from './icons.js';
 
 export const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export const logoMark = () => `<span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M16 3 28 28h-5.2L16 13.2 9.2 28H4z" fill="currentColor"/><path d="M11.6 22.4h8.8" stroke="currentColor" stroke-width="2.4" fill="none"/></svg></span>`;
+export const logoMark = () => `<span class="logo-mark" aria-hidden="true"><span>A</span></span>`;
 
 export const brand = (cls = '') =>
   `<a class="brand ${cls}" href="/" aria-label="AUREUM POS &amp; Inventory Management — home">${logoMark()}<span class="brand-name">aureum</span></a>`;
@@ -27,3 +27,6 @@ export const sectionTitle = (html, cls = '') => `<h2 class="section-title ${cls}
 export const ticks = items => `<ul class="ticks">${items.map(t => `<li><span>${esc(t)}</span></li>`).join('')}</ul>`;
 
 export const faq = items => `<div class="faq">${items.map(i => `<details class="faq-item"><summary><span>${esc(i.q)}</span>${icon('plus', 18, 'ic pm')}</summary><p>${esc(i.a)}</p></details>`).join('')}</div>`;
+
+/* Gold section label with rules and diamonds (used by the "Built for every counter" section). */
+export const gEyebrow = text => `<p class="g-eyebrow"><span class="rule"></span><span class="dia"></span><span class="eb-text">${esc(text)}</span><span class="dia"></span><span class="rule"></span></p>`;

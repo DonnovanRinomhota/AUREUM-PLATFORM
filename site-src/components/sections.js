@@ -1,5 +1,5 @@
 import { HERO, BUILT_FOR, OFFER, STEPS, APP, PRICING, SHOWCASE, FEATURE_GROUPS, WHAT, DEVICES_LINE } from '../config.js';
-import { esc, linkButton, alink, secHead, ticks } from './ui.js';
+import { esc, linkButton, alink, secHead, ticks, gEyebrow } from './ui.js';
 import { icon } from './icons.js';
 import { heroDevices, deviceByKey } from './devices.js';
 
@@ -7,20 +7,21 @@ import { heroDevices, deviceByKey } from './devices.js';
 export const hero = () => `<section class="panel dark hero" aria-labelledby="hero-title">
   <div class="wrap">
     ${secHead('AUREUM POS & INVENTORY', 'Built for Zimbabwe')}
-    <h1 id="hero-title" class="display">${esc(HERO.headline[0])}<br><span class="dim">${esc(HERO.headline[1])} ${esc(HERO.headline[2])}</span></h1>
-    <div class="hero-row">
-      <div class="hero-copy">
-        ${HERO.intro.map(p => `<p class="small">${esc(p)}</p>`).join('')}
-        <div class="alinks">${alink('Start free trial', APP.signUp)}${alink('See the features', '/features/')}${alink('Log in', APP.signIn)}</div>
-      </div>
-      <a class="round-link" href="#why" aria-label="Explore AUREUM"><span>Explore</span><i>${icon('down', 18, 'ic')}</i></a>
-    </div>
     <div class="stage">
       <div class="stage-bg" aria-hidden="true"></div>
+      <div class="stage-copy">
+        <h1 id="hero-title" class="display">${esc(HERO.headline[0])}<br><span class="dim">${esc(HERO.headline[1])} ${esc(HERO.headline[2])}</span></h1>
+        ${HERO.intro.map(p => `<p class="small">${esc(p)}</p>`).join('')}
+        <div class="hero-btns">
+          ${linkButton({ label: 'Start free trial', href: APP.signUp, kind: 'gold', size: 'lg', arrow: true })}
+          ${linkButton({ label: 'See the features', href: '/features/', kind: 'outline', size: 'lg', extra: 'btn-goldline' })}
+          ${linkButton({ label: 'Log in', href: APP.signIn, kind: 'outline', size: 'lg' })}
+        </div>
+      </div>
       ${heroDevices()}
       <p class="stage-tag">PEOPLE. COUNTERS. IN SYNC.</p>
-      <p class="stage-line">Every sale.<br>Every item. Every shop.</p>
     </div>
+    <div class="hero-foot"><a class="round-link" href="#why" aria-label="Explore AUREUM"><span>Explore</span><i>${icon('down', 18, 'ic')}</i></a></div>
   </div>
 </section>`;
 
@@ -60,13 +61,17 @@ export const whatYouGet = () => `<section class="panel dark" id="what" aria-labe
   </div>
 </section>`;
 
-export const builtFor = () => `<section class="panel light" aria-labelledby="built-title">
+export const builtFor = () => `<section class="built" aria-labelledby="built-title">
   <div class="wrap">
-    ${secHead('03 / BUILT FOR EVERY COUNTER', 'A look at who uses it')}
-    <h2 id="built-title" class="display">Built for<br><span class="dim">every counter.</span></h2>
-    <ul class="rows">
-      ${BUILT_FOR.cards.map(c => `<li class="row rv"><div class="row-main"><h3>${esc(c.title)}</h3><p class="tiny-p">${esc(c.text)}</p></div><img src="${c.img}" width="120" height="120" alt="" loading="lazy" decoding="async"></li>`).join('')}
-    </ul>
+    ${gEyebrow(BUILT_FOR.eyebrow)}
+    <h2 id="built-title" class="g-title">${esc(BUILT_FOR.heading[0])} <span class="gold">${esc(BUILT_FOR.heading[1])}</span></h2>
+    <div class="biz-grid">
+      ${BUILT_FOR.cards.map(c => `<article class="biz-card rv">
+        <img src="${c.img}" width="640" height="400" alt="${esc(c.alt)}" loading="lazy" decoding="async">
+        <div class="biz-shade" aria-hidden="true"></div>
+        <div class="biz-body"><span class="ic-ring">${icon(c.icon, 22)}</span><div><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p></div></div>
+      </article>`).join('')}
+    </div>
   </div>
 </section>`;
 

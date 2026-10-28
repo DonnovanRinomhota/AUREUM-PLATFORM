@@ -1,5 +1,6 @@
 import { SITE, NAV, APP, DEMO } from '../config.js';
 import { esc, brand, logoMark, linkButton } from './ui.js';
+import { productAccess } from './access.js';
 import { icon } from './icons.js';
 
 export const header = active => `<header class="site-header">
@@ -92,6 +93,7 @@ export function page({ path, title, description, active, body, jsonLd = [], prel
 <link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/outfit-latin-400-normal.woff2" crossorigin>
 ${preload.map(p => `<link rel="preload" as="image" href="${p}" fetchpriority="high">`).join('\n')}
 <link rel="stylesheet" href="/vendor/fonts/outfit.css">
+<link rel="stylesheet" href="/vendor/fonts/fonts-serif.css">
 <link rel="stylesheet" href="/site/assets/site.css?v=${assetV}">
 <script>document.documentElement.classList.add('js')</script>
 ${path === '/' ? `<script>/* emailed sign-up / password-reset links may land here: pass them on to the Back Office with their tokens */if(/[#&](access_token|error_code|type=(recovery|signup|invite|magiclink|email_change))/.test(location.hash))location.replace('${'/backoffice.html'}'+location.hash)</script>` : ''}
@@ -100,6 +102,7 @@ ${jsonLd.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</scri
 </head>
 <body>
 ${header(active)}
+${productAccess()}
 <main id="main">
 ${body}
 </main>
