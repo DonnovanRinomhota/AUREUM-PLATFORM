@@ -374,9 +374,16 @@
   .p-search input::placeholder{ color:var(--sage-dim); }
   .p-search .ic{ color:var(--sage); }
   .cat-select{
-    background: var(--panel); border:1px solid var(--line); border-radius:10px;
-    padding:10px 14px; color:var(--ivory-dim); font-family:'Inter'; font-size:13px; outline:none; cursor:pointer;
+    background-color: var(--panel); border:1px solid var(--gold-dim, #A88A3A); border-radius:10px;
+    padding:10px 36px 10px 14px; color:var(--gold-bright); font-family:'Inter'; font-size:13px; font-weight:500; outline:none; cursor:pointer;
+    -webkit-appearance:none; appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23E7C766' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 13px center;
+    transition:border-color .15s, box-shadow .15s;
   }
+  .cat-select:hover{ border-color: var(--gold-bright); }
+  .cat-select:focus{ border-color: var(--gold-bright); box-shadow:0 0 0 3px rgba(231,199,102,.18); }
+  .cat-select option{ background:#0B1F17; color:var(--ivory); }
 
   .product-grid{
     display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -2268,8 +2275,9 @@
               <div class="field-error" id="efEmailError">Enter a valid email address</div>
             </div>
             <div>
-              <div class="field-label">PIN / access code (Optional)</div>
+              <div class="field-label">PIN / sign-in code</div>
               <input type="text" id="efPin" class="modal-field" placeholder="4-digit login PIN" maxlength="4" inputmode="numeric">
+              <div style="font-size:11px;color:var(--sage);margin-top:4px;">Needed to sign in at the till (not needed for roles like Driver or Cleaner).</div>
               <div class="field-error" id="efPinError">PIN must be exactly 4 digits</div>
             </div>
           </div>
@@ -4328,7 +4336,9 @@ const AureumSync = (function(){
       if(!added) return;
       input.value = '';
       refreshAllShopUI();
-      onSelect(val);
+      /* Stay on the shop you were looking at: a brand-new shop has no products yet, and jumping into it made the product list look empty. */
+      closeAllPopovers();
+      aureumToast(`Shop “${val}” added. It has no products yet — open Products, pick the shop, and add them.`, 'ok');
     }
     go.addEventListener('click', addShop);
     input.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); addShop(); } });
@@ -4754,7 +4764,7 @@ const AureumSync = (function(){
   };
 
   function getProductCategories(){
-    return [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))];
+    return [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), undefined, { sensitivity:'base', numeric:true }));   // A to Z everywhere
   }
 
   // Image wins when present; otherwise fall back to a category-tinted icon.
@@ -4904,7 +4914,25 @@ const AureumSync = (function(){
     else items.sort((a,b)=>b.id-a.id);
 
     if(items.length === 0){
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No products match. Try a different search, category, or shop — or add a new product.</td></tr>`;
+      const shopEmpty = shopFilter !== 'All Shops' && PRODUCTS.length && !PRODUCTS.some(p => productInShop(p, shopFilter));
+      tbody.innerHTML = shopEmpty
+        ? `<tr><td colspan="8" style="text-align:center;padding:44px 20px;color:var(--sage);"><div style="margin-bottom:12px;">“${escHtml(shopFilter)}” has no products yet. Your products are still in your other shops.</div><div class="btn-gold" id="prodAddAllToShop" role="button" tabindex="0" style="display:inline-block;">Add all my products to ${escHtml(shopFilter)} (stock 0)</div></td></tr>`
+        : `<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--sage);">No products match. Try a different search, category, or shop — or add a new product.</td></tr>`;
+      const fillBtn = document.getElementById('prodAddAllToShop');
+      if(fillBtn){
+        const run = () => {
+          if(!confirm(`Add all ${PRODUCTS.length} products to “${shopFilter}” with stock 0? You can then enter its stock.`)) return;
+          PRODUCTS.forEach(p => {
+            if(!Array.isArray(p.shops)) p.shops = productLiveShops(p);
+            if(!p.shops.includes(shopFilter)) p.shops.push(shopFilter);
+            if(p.shopStock && typeof p.shopStock === 'object' && p.shopStock[shopFilter] == null) p.shopStock[shopFilter] = 0;
+          });
+          persistAureum(); renderProducts(); try{ renderAlerts(); }catch(e){}
+          aureumToast('Products added to ' + shopFilter + '.', 'ok');
+        };
+        fillBtn.addEventListener('click', run);
+        fillBtn.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); run(); } });
+      }
       document.getElementById('productPagination').innerHTML = '';
       return;
     }
@@ -8125,6 +8153,15 @@ const AureumSync = (function(){
       return;
     }
     const pin = document.getElementById('efPin').value.trim();
+    const usesTill = STANDARD_ROLES.includes(roleVal) && document.getElementById('efActiveToggle').classList.contains('on');
+    const pinNeeded = usesTill && (['Shop Manager','Administrator'].includes(roleVal) || settingOn('stPermPin', true));
+    if(pinNeeded && !pin){
+      document.getElementById('efPinError').textContent = 'A 4-digit PIN is needed so this employee can sign in at the till.';
+      document.getElementById('efPinError').classList.add('show');
+      document.getElementById('efPin').classList.add('invalid');
+      document.getElementById('efPin').focus();
+      return;
+    }
     if(pin){
       const pinTaken = EMPLOYEES.some(e=> e.pin === pin && e.id !== editingEmployeeId);
       if(!/^\d{4}$/.test(pin) || pinTaken){
@@ -9425,14 +9462,14 @@ const AureumSync = (function(){
           POS_DEVICES.forEach(d=>{ if(d.store === current) d.store = val.trim(); });
           PRODUCTS.forEach(p=>{ if(Array.isArray(p.shops)) p.shops = p.shops.map(s=>s===current ? val.trim() : s); });
           if(viewingShop === current) setViewingShop(val.trim());
-          refreshAllShopUI(); renderSettingsStores(); renderSettingsPos();
+          refreshAllShopUI(); renderSettingsStores(); renderSettingsPos(); persistAureum();
         } else {
           if(!confirm(`Remove store "${current}"? This can't be undone.`)) return;
           SHOPS.splice(idx,1);
           POS_DEVICES = POS_DEVICES.filter(d=>d.store !== current); persistAureum();
           PRODUCTS.forEach(p=>{ if(Array.isArray(p.shops)) p.shops = p.shops.filter(s=>s !== current); });   // products stop pointing at the removed shop
           if(viewingShop === current) setViewingShop('All Shops');
-          refreshAllShopUI(); renderSettingsStores(); renderSettingsPos();
+          refreshAllShopUI(); renderSettingsStores(); renderSettingsPos(); persistAureum();
           scheduleShopReconcile();                          // a paid plan drops to the new shop count from the next invoice
         }
       });
@@ -9445,6 +9482,7 @@ const AureumSync = (function(){
     if(!added) return;
     refreshAllShopUI();
     renderSettingsStores();
+    persistAureum();
   });
 
   /* ===== SETTINGS: POS DEVICES ===== */
@@ -12331,7 +12369,7 @@ E('todays-sales','The till','What is Today\'s Sales?',
 E('till-tax','The till','How is tax calculated at the till?',
   ['how is tax calculated','change tax at the till','tax percent on ticket','prices include tax how it works','tax inclusive'],
   'tax rate percent inclusive exclusive added on top vat total',
-  `The tax % is filled in from **Settings → Taxes** and can be changed on the ticket. If **Prices include tax** is on, the total stays the same and the tax is shown inside it; if off, tax is **added on top**. Only products with **Charge tax** switched on are taxed.`,
+  `The tax % on the till is the fixed rate set in **Settings → Taxes**; cashiers cannot change it at the till. If **Prices include tax** is on, the total stays the same and the tax is shown inside it; if off, tax is **added on top**. Only products with **Charge tax** switched on are taxed.`,
   ['taxes-settings','product-tax']),
 E('till-phone','The till','How does the till work on a phone or tablet?',
   ['can i use the till on a phone','mobile layout','tablet checkout','view ticket button','till on small screen','use pos on ipad'],

@@ -1,5 +1,11 @@
 # Changelog
 
+## Bug fixes: shops, employees, tax, categories (sw v65)
+- Back Office: adding or removing a shop no longer makes products seem to vanish. The new shop is empty by design, so it now shows a clear message with an "Add all products to this shop" button; shop changes in Settings are saved straight away.
+- POS: employees added in Back Office now appear in the shift sign-in list (previously hidden when no PIN was set) and the list refreshes when data syncs. Employees without a PIN are marked "(no PIN set)". Back Office now requires a PIN for till roles.
+- POS: tax is no longer editable at the till. It always uses the rate set in Back Office -> Settings -> Taxes (also when resuming a held ticket).
+- Categories are listed A to Z in the POS category bar, the Back Office filters and the product form. The category drop-down uses the gold/green app colours.
+
 ## Sign-up: sign in on the device that created the account (sw v64)
 - After **Create Business**, the "Check your email" page signs this device in automatically once the email is confirmed, even when the confirmation link is opened on another device. The other device shows "Email confirmed" and is not signed in. The password is kept in memory only while the page waits (up to 30 minutes).
 - SETUP-EMAIL-TEMPLATE.md now explains how to send the confirmation email as "AUREUM" (custom SMTP in Supabase) instead of "Supabase Auth".

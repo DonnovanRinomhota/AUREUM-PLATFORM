@@ -335,6 +335,7 @@
     border-radius:6px; padding:3px 5px; color:var(--ivory); font-family:'JetBrains Mono',monospace;
     font-size:12px; text-align:center; outline:none;
   }
+  .tax-percent-input[readonly]{ background:transparent; border-color:transparent; padding:3px 0; width:auto; min-width:24px; max-width:48px; cursor:default; color:var(--ivory-dim); pointer-events:none; }
   .tax-percent-input:focus{ border-color: var(--gold-dim); }
   .tax-percent-input::-webkit-inner-spin-button{ opacity: 0.5; }
 
@@ -902,7 +903,7 @@
       <div class="trow"><span>Subtotal</span><span class="v" id="subtotalVal">$0.00</span></div>
       <div class="trow"><span>Discount</span><span class="v" id="discountVal">$0.00</span></div>
       <div class="trow tax-row">
-        <span>Tax <input type="number" id="taxPercentInput" class="tax-percent-input" min="0" max="100" step="0.1" value="0">%</span>
+        <span>Tax <input type="text" id="taxPercentInput" class="tax-percent-input" value="0" readonly tabindex="-1" aria-label="Tax rate, set in Back Office" title="Set in Back Office → Settings → Taxes">%</span>
         <span class="v" id="taxVal">$0.00</span>
       </div>
       <div class="trow grand"><span class="k">Total</span><span class="v" id="totalVal">$0.00</span></div>
@@ -1941,7 +1942,7 @@ async function aureumSignIn(email, password){
   // add a product with a new category in the backoffice and a new pill appears automatically.
   // Nothing here is hardcoded to a fixed list of category names.
   function getCategories(){
-    const unique = [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))];
+    const unique = [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), undefined, { sensitivity:'base', numeric:true }));   // A to Z
     return ["All", ...unique];
   }
 
@@ -2459,10 +2460,7 @@ async function aureumSignIn(email, password){
     updateChange();
   });
 
-  document.getElementById('taxPercentInput').addEventListener('input', function(){
-    taxPercent = parseFloat(this.value) || 0;
-    renderTicket();
-  });
+  /* The tax rate is fixed: it is the rate saved in Back Office → Settings → Taxes, and the cashier cannot change it. */
 
   /* Real barcode-scanner support: hardware scanners — USB or Bluetooth —
      act as a keyboard typing digits very fast, then send Enter. That's
@@ -2591,7 +2589,7 @@ async function aureumSignIn(email, password){
     cart = {}; let dropped = 0;
     Object.keys(h.cart).forEach(k => { if(PRODUCTS.find(p => p.id == k)) cart[k] = h.cart[k]; else dropped++; });
     priceOverride = { ...(h.priceOverride || {}) }; discount = h.discount || { type: 'percent', value: 0 }; customer = h.customer || null; note = h.note || '';
-    taxPercent = Number(h.taxPercent) || 0; const ti = document.getElementById('taxPercentInput'); if(ti) ti.value = taxPercent;
+    applyDefaultTax();      // a resumed ticket uses today's Back Office rate, not whatever was on screen when it was held
     tenderedAmt = 0; splitLines = null;
     refreshQuickChips(); renderTicket(); renderHeldBadge(); closeModal('heldOverlay');
     aureumToast(dropped ? `Ticket resumed — ${dropped} item${dropped === 1 ? ' was' : 's were'} no longer in the catalogue.` : 'Ticket resumed — add items or take payment.', dropped ? 'danger' : 'ok');
@@ -3759,7 +3757,7 @@ async function aureumSignIn(email, password){
     }catch(e){}
   }
   setInterval(() => { if(activeShop && !document.hidden) checkInDevice(); }, 4 * 60 * 1000);
-  /* the till starts every ticket on the tax rate saved in Back Office → Settings → Taxes (the cashier may still change it for one ticket) */
+  /* the till starts every ticket on the tax rate saved in Back Office → Settings → Taxes (the cashier cannot change it) */
   function applyDefaultTax(){
     taxPercent = Math.max(0, Math.min(100, Number(POS_SETTINGS.taxPercent) || 0));
     const el = document.getElementById('taxPercentInput'); if(el) el.value = taxPercent;
@@ -3795,6 +3793,8 @@ async function aureumSignIn(email, password){
     // employee if no one has actually started a shift yet.
     if(!activeEmployee) activeEmployee = null;
     nextCustomerId = Math.max(0, ...CUSTOMERS.map(c=>c.id)) + 1;
+    /* staff, shops or products changed (loaded, or updated from Back Office): refresh the sign-in screen so new people appear without reloading */
+    try{ if(document.getElementById('shiftGate').classList.contains('show')){ populateShiftShopSelect(); updateGateShiftInfo(); } }catch(e){}
   }
 
   async function startApp(){
@@ -3908,7 +3908,9 @@ async function aureumSignIn(email, password){
       el.disabled = true;
     } else {
       el.disabled = false;
+      const prevShop = el.value;
       el.innerHTML = SHOPS.map(s=>`<option value="${s}">${s}</option>`).join('');
+      if(prevShop && SHOPS.includes(prevShop)) el.value = prevShop;
     }
     populateShiftEmployeeSelect();
   }
@@ -3919,13 +3921,17 @@ async function aureumSignIn(email, password){
     // An employee with no shop assigned can work any shop (e.g. an owner/manager
     // covering multiple locations); an employee assigned to a specific shop can
     // only clock in there — this is what keeps sales correctly attributed per shop.
-    const eligible = EMPLOYEES.filter(e => e.active !== false && e.pin && TILL_ROLES.includes(e.role) && (!e.shop || e.shop === shop));   // "Other" roles (Driver, Cleaner…) never get the till
+    const eligible = EMPLOYEES.filter(e => e.active !== false && TILL_ROLES.includes(e.role) && (!e.shop || e.shop === shop));   // "Other" roles (Driver, Cleaner…) never get the till
+    const prevSel = el.value;
     if(!eligible.length){
-      el.innerHTML = `<option value="">No employees set up for this shop yet — add one in Back Office → Staff</option>`;
+      const elsewhere = EMPLOYEES.filter(e => e.active !== false && TILL_ROLES.includes(e.role));
+      el.innerHTML = `<option value="">${elsewhere.length ? 'Nobody is assigned to this shop — pick another shop, or change their shop in Back Office → Staff' : 'No employees set up yet — add one in Back Office → Staff'}</option>`;
       el.disabled = true;
     } else {
       el.disabled = false;
-      el.innerHTML = eligible.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+      /* everyone who may use the till is listed; someone with no PIN yet is marked, so they are never silently missing */
+      el.innerHTML = eligible.map(e=>`<option value="${e.id}">${escHtml(e.name)}${(pinRequiredFor(e) && !e.pin) ? ' (no PIN set)' : ''}</option>`).join('');
+      if(prevSel && eligible.some(e => String(e.id) === prevSel)) el.value = prevSel;
     }
   }
   document.getElementById('shiftShopSelect').addEventListener('change', ()=>{ populateShiftEmployeeSelect(); updateGateShiftInfo(); });
@@ -4365,6 +4371,7 @@ async function aureumSignIn(email, password){
     if(!employeeId){ errEl.textContent = 'Select your name from the list.'; return; }
     const employee = EMPLOYEES.find(e => e.id === employeeId);
     const needPin = pinRequiredFor(employee);
+    if(employee && needPin && !employee.pin){ errEl.textContent = 'No PIN is set for this employee yet. Ask a manager to set one in Back Office → Staff.'; return; }
     if(needPin && !pin){ errEl.textContent = 'Enter your PIN.'; return; }
     if(!employee || (needPin && employee.pin !== pin)){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
     startShift(shop, employee, parseFloat(document.getElementById('shiftOpeningFloat').value));
