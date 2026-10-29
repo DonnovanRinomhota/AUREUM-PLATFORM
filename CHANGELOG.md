@@ -1,5 +1,10 @@
 # Changelog
 
+## Website trim-down, Category drop-down (sw v63)
+- Back Office: the Category box on the product form is now a drop-down listing every category on every device, with "No category" and "+ New category…" (which shows a name box). Saving is unchanged.
+- Website home: removed the "Why AUREUM", "What you get", "How it works" and pricing-band sections; the business types are now Bakery, Beauty, Retail and Fashion (names only) under "Empowering Business Owners World Wide", with an icon row (Easy Checkout, Track Sales, Manage Inventory, Sales Reports, Offline Access, Multi Device Use). The Beauty card uses a placeholder picture: replace site/assets/img/card-beauty-v2.webp with a real photo (same name).
+- Pricing page: removed the "Pricing questions" section. Footer: logo only (no subtitle or description). The About page and its menu link are removed for now (the page source is kept in site-src/pages/about.js).
+
 ## Website: video hero (sw v62)
 - Home page: new headline "A Point Of Sale System You Can Rely On.", then a full-width looping video ("Your Business Simplified"). The device pictures and the morph were removed. With reduced-motion settings the video stays on its first frame.
 - Header and footer logo now match the new logo artwork: gold coin with the serif "A", "AUREUM" in gold Montserrat capitals and "POS & INVENTORY MANAGEMENT" in cream spaced capitals (live text, not a picture). Earlier note: gold serif "AUREUM" wordmark with "POS & INVENTORY MANAGEMENT" under it; the "Built for Zimbabwean businesses" note and the top Log in / Free trial links were removed (the floating bar has them). Headline is now "A Point Of Sale You Can Rely On."; "Your Business Simplified" is gold.

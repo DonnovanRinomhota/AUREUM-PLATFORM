@@ -1519,9 +1519,9 @@
             </div>
             <div>
               <div class="field-label">Category</div>
-              <input type="text" id="pfCategory" class="modal-field" list="categoryOptions" placeholder="No category">
-              <datalist id="categoryOptions"></datalist>
-              <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">Type an existing category to pick it, or type a new name to create one.</div>
+              <select id="pfCategorySelect" class="modal-select" aria-label="Category"></select>
+              <input type="text" id="pfCategory" class="modal-field" placeholder="Name of the new category" style="display:none;margin-top:8px;" maxlength="60">
+              <div style="font-size:10.5px;color:var(--sage);margin-top:4px;">Pick a category from the list, or choose “+ New category…” to create one.</div>
             </div>
             <div></div>
             <div>
@@ -4759,9 +4759,27 @@ const AureumSync = (function(){
     if(salesCatDatalist) salesCatDatalist.innerHTML = ['All categories', ...cats].map(c=>`<option value="${c}">`).join('');
   }
 
-  function renderCategoryDatalist(){
-    document.getElementById('categoryOptions').innerHTML = getProductCategories().map(c => `<option value="${c}">`).join('');
+  /* The product form's Category is a real drop-down listing every category (works the same on every device).
+     The hidden-until-needed text box #pfCategory still carries the value, so saving is unchanged. */
+  function renderCategoryDatalist(){ syncCategoryUI(); }
+  function syncCategoryUI(){
+    const sel = document.getElementById('pfCategorySelect'), inp = document.getElementById('pfCategory');
+    if(!sel || !inp) return;
+    const cur = inp.value.trim();
+    const cats = getProductCategories().sort((a,b)=>a.localeCompare(b));
+    const known = !cur || cats.includes(cur);
+    const esc = v => String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    sel.innerHTML = '<option value="">No category</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__new__">+ New category…</option>';
+    if(known){ sel.value = cur; inp.style.display = 'none'; }
+    else { sel.value = '__new__'; inp.style.display = ''; }
   }
+  document.addEventListener('change', e => {
+    if(e.target && e.target.id === 'pfCategorySelect'){
+      const inp = document.getElementById('pfCategory');
+      if(e.target.value === '__new__'){ inp.value = ''; inp.style.display = ''; inp.focus(); }
+      else { inp.value = e.target.value; inp.style.display = 'none'; }
+    }
+  });
 
   /* The shops a product is really sold in: only shops that still exist, in shop order. */
   function productLiveShops(p){
@@ -5107,7 +5125,7 @@ const AureumSync = (function(){
       const p = PRODUCTS.find(x=>x.id===id);
       document.getElementById('pfName').value = p.name;
       { const sb = document.getElementById('pfSoldBy'); if((p.soldBy || 'each') === 'weight' && !sb.querySelector('option[value=weight]')) sb.insertAdjacentHTML('beforeend', '<option value="weight">Weight (existing product)</option>'); else if((p.soldBy || 'each') !== 'weight'){ const w = sb.querySelector('option[value=weight]'); if(w) w.remove(); } sb.value = p.soldBy || 'each'; }
-      document.getElementById('pfCategory').value = p.cat || '';
+      document.getElementById('pfCategory').value = p.cat || ''; syncCategoryUI();
       document.getElementById('pfCode').value = p.code || nextProductCode();
       document.getElementById('pfBarcode').value = p.barcode || '';
       document.getElementById('pfDescription').value = p.description || '';
@@ -5124,7 +5142,7 @@ const AureumSync = (function(){
     } else {
       document.getElementById('pfName').value = '';
       { const w = document.querySelector('#pfSoldBy option[value=weight]'); if(w) w.remove(); document.getElementById('pfSoldBy').value = 'each'; }
-      document.getElementById('pfCategory').value = '';
+      document.getElementById('pfCategory').value = ''; syncCategoryUI();
       document.getElementById('pfCode').value = nextProductCode();
       document.getElementById('pfBarcode').value = '';
       document.getElementById('pfDescription').value = '';

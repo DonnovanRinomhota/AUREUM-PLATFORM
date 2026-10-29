@@ -337,3 +337,12 @@ details[open] > summary .pm{transform:rotate(45deg)}
   .h-login{display:none}
   .sec-head span:last-child{display:none}
 }
+
+/* ---------- icon row under the business types ---------- */
+.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(14px,2vw,28px);margin-top:clamp(40px,5vw,72px);padding-top:clamp(30px,4vw,48px);border-top:1px solid var(--gold-soft)}
+.strip li{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;font-size:.95rem;font-weight:400;color:#f5eedb;letter-spacing:.01em}
+.ic-ring.big{width:74px;height:74px;background:radial-gradient(circle,#124232,#0a2a20);box-shadow:0 0 0 7px rgba(217,181,91,.07),0 0 30px rgba(217,181,91,.14)}
+.biz-body{gap:12px}
+.brand-footer{align-items:center}
+@media (max-width:1000px){.strip{grid-template-columns:repeat(3,1fr);row-gap:30px}}
+@media (max-width:640px){.strip{grid-template-columns:repeat(2,1fr)}.ic-ring.big{width:62px;height:62px}}

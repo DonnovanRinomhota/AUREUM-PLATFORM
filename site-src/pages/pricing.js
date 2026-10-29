@@ -24,6 +24,5 @@ export const pricing = {
     </table>
     <p class="small">Prices are in US dollars. The price is $${PRICING.perShop} multiplied by the number of shops you run.</p>
   </div>
-</div></div></section>
-<section class="panel dark faq-sec"><div class="wrap">${secHead('02 / QUESTIONS', 'Pricing and billing')}<h2 class="display md">Pricing<br><span class="dim">questions.</span></h2>${faq(FAQ_PRICING)}</div></section>` + ctaBand()
+</div></div></section>` + ctaBand()
 };

@@ -24,7 +24,6 @@ export const NAV = [
   { id: 'home', label: 'Home', href: '/' },
   { id: 'features', label: 'Features', href: '/features/' },
   { id: 'pricing', label: 'Pricing', href: '/pricing/' },
-  { id: 'about', label: 'About', href: '/about/' },
   { id: 'support', label: 'Support', href: '/support/' }
 ];
 
@@ -61,14 +60,24 @@ export const HERO = {
 
 export const BUILT_FOR = {
   eyebrow: 'BUILT FOR EVERY COUNTER',
-  heading: ['Empowering Business Owners', 'In Zimbabwe'],
+  heading: ['Empowering Business Owners', 'World Wide'],
   cards: [
-    { id: 'bakery', icon: 'bread', title: 'Bakery', text: 'Fresh bread, cakes & more', img: '/site/assets/img/card-bakery-v2.webp', alt: 'A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars.' },
-    { id: 'retail', icon: 'store', title: 'Retail Shop', text: 'Everyday products, better sales', img: '/site/assets/img/card-retail-v2.webp', alt: 'A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing.' },
-    { id: 'grocery', icon: 'basket', title: 'Grocery Shop', text: 'Fresh food, daily essentials', img: '/site/assets/img/card-grocery-v2.webp', alt: 'A bright grocery shop aisle with curved wooden displays of fresh fruit and vegetables under a timber ceiling.' },
-    { id: 'fashion', icon: 'hanger', title: 'Clothes & Fashion', text: 'Trendy styles, happy customers', img: '/site/assets/img/card-fashion-v2.webp', alt: 'A collage of dark green fashion and lifestyle pieces: knitwear, caps, sneakers, a watch and a classic car.' }
+    { id: 'bakery', icon: 'bread', title: 'Bakery', img: '/site/assets/img/card-bakery-v2.webp', alt: 'A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars.' },
+    { id: 'beauty', icon: 'sparkle', title: 'Beauty', img: '/site/assets/img/card-beauty-v2.webp', alt: 'A gold hand mirror on a deep green background.' },
+    { id: 'retail', icon: 'store', title: 'Retail', img: '/site/assets/img/card-retail-v2.webp', alt: 'A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing.' },
+    { id: 'fashion', icon: 'hanger', title: 'Fashion', img: '/site/assets/img/card-fashion-v2.webp', alt: 'A collage of dark green fashion and lifestyle pieces: knitwear, caps, sneakers, a watch and a classic car.' }
   ]
 };
+
+/* The icon row under the business types. */
+export const STRIP = [
+  { icon: 'cart', label: 'Easy Checkout' },
+  { icon: 'trend', label: 'Track Sales' },
+  { icon: 'cube', label: 'Manage Inventory' },
+  { icon: 'chart', label: 'Sales Reports' },
+  { icon: 'offline', label: 'Offline Access' },
+  { icon: 'devices', label: 'Multi Device Use' }
+];
 
 export const OFFER = {
   heading: 'What We Offer',

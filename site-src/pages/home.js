@@ -5,5 +5,5 @@ export const home = {
   path: '/', file: 'index.html', active: 'home', title: SITE.title, description: SITE.description,
   preload: ['/site/assets/img/hero-poster.jpg'],
   software: true,
-  body: () => hero() + why() + whatYouGet() + builtFor() + steps() + priceBand() + ctaBlock()
+  body: () => hero() + builtFor() + ctaBlock()
 };

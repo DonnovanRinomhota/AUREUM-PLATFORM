@@ -30,8 +30,7 @@ export const footer = () => `<footer class="site-footer">
   <div class="wrap">
     <div class="footer-cols">
       <div class="f-brand">
-        ${brand('brand-footer')}
-        <p class="f-desc">Point of sale and inventory management for Zimbabwean businesses. One account, every shop, every device.</p>
+        ${brand('brand-footer', false)}
       </div>
       <nav class="f-col" aria-label="Explore"><h2>Explore</h2><ul>${NAV.map(n => `<li><a href="${n.href}">${esc(n.label)}</a></li>`).join('')}</ul></nav>
       <nav class="f-col" aria-label="Product"><h2>Product</h2><ul>

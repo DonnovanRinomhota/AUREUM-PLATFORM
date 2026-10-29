@@ -1,4 +1,4 @@
-import { HERO, BUILT_FOR, OFFER, STEPS, APP, PRICING, SHOWCASE, FEATURE_GROUPS, WHAT, DEVICES_LINE } from '../config.js';
+import { HERO, BUILT_FOR, OFFER, STEPS, APP, PRICING, SHOWCASE, FEATURE_GROUPS, WHAT, DEVICES_LINE, STRIP } from '../config.js';
 import { esc, linkButton, alink, secHead, ticks, gEyebrow } from './ui.js';
 import { icon } from './icons.js';
 import { deviceByKey } from './devices.js';
@@ -66,11 +66,12 @@ export const builtFor = () => `<section class="built" aria-labelledby="built-tit
     <h2 id="built-title" class="g-title">${esc(BUILT_FOR.heading[0])} <span class="gold">${esc(BUILT_FOR.heading[1])}</span></h2>
     <div class="biz-grid">
       ${BUILT_FOR.cards.map(c => `<article class="biz-card rv">
-        <img src="${c.img}" width="640" height="400" alt="${esc(c.alt)}" loading="lazy" decoding="async">
+        <img src="${c.img}" width="640" height="692" alt="${esc(c.alt)}" loading="lazy" decoding="async">
         <div class="biz-shade" aria-hidden="true"></div>
-        <div class="biz-body"><span class="ic-ring">${icon(c.icon, 22)}</span><div><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p></div></div>
+        <div class="biz-body"><span class="ic-ring">${icon(c.icon, 22)}</span><h3>${esc(c.title)}</h3></div>
       </article>`).join('')}
     </div>
+    <ul class="strip">${STRIP.map(i => `<li class="rv"><span class="ic-ring big">${icon(i.icon, 30)}</span><span>${esc(i.label)}</span></li>`).join('')}</ul>
   </div>
 </section>`;
 
