@@ -1,5 +1,9 @@
 # Changelog
 
+## Sign-up: sign in on the device that created the account (sw v64)
+- After **Create Business**, the "Check your email" page signs this device in automatically once the email is confirmed, even when the confirmation link is opened on another device. The other device shows "Email confirmed" and is not signed in. The password is kept in memory only while the page waits (up to 30 minutes).
+- SETUP-EMAIL-TEMPLATE.md now explains how to send the confirmation email as "AUREUM" (custom SMTP in Supabase) instead of "Supabase Auth".
+
 ## Website trim-down, Category drop-down (sw v63)
 - Back Office: the Category box on the product form is now a drop-down listing every category on every device, with "No category" and "+ New category…" (which shows a name box). Saving is unchanged.
 - Website home: removed the "Why AUREUM", "What you get", "How it works" and pricing-band sections; the business types are now Bakery, Beauty, Retail and Fashion (names only) under "Empowering Business Owners World Wide", with an icon row (Easy Checkout, Track Sales, Manage Inventory, Sales Reports, Offline Access, Multi Device Use). The Beauty card uses a placeholder picture: replace site/assets/img/card-beauty-v2.webp with a real photo (same name).

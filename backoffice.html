@@ -1070,11 +1070,18 @@
     <div id="authVerify" class="auth-verify" style="display:none;" role="status" aria-live="polite">
       <div class="av-icon" aria-hidden="true">&#9993;</div>
       <div class="av-title">Check your email</div>
-      <p class="av-text">We sent a confirmation link to <b id="authVerifyEmail"></b>. Open it to activate your account &mdash; then come back and sign in.</p>
+      <p class="av-text">We sent a confirmation link to <b id="authVerifyEmail"></b>. Open it on any device to activate your account. Keep this page open &mdash; it signs you in here automatically once your email is confirmed.</p>
       <p class="av-hint">Nothing there? Look in Spam or Promotions, and allow a minute or two.</p>
       <div class="auth-btn" id="authResendBtn" role="button" tabindex="0">Resend email</div>
       <div class="av-msg" id="authResendMsg"></div>
       <div class="av-links"><span id="authVerifyDone">I've confirmed &mdash; sign in</span><span id="authVerifyChange">Use a different email</span></div>
+    </div>
+    <div id="authConfirmed" class="auth-verify" style="display:none;" role="status" aria-live="polite">
+      <div class="av-icon" aria-hidden="true">&#10003;</div>
+      <div class="av-title">Email confirmed</div>
+      <p class="av-text">Your AUREUM account is ready. Go back to the device you signed up on &mdash; it signs you in automatically.</p>
+      <p class="av-hint">Closed that page? You can sign in here with your email and password instead.</p>
+      <div class="auth-btn" id="authConfirmedSignIn" role="button" tabindex="0">Sign in on this device</div>
     </div>
     <div id="authForgotFields" style="display:none;">
       <div style="font-size:12px;color:var(--sage);margin-bottom:10px;">Enter the email on your account and we'll send you a link to reset your password.</div>
@@ -3202,7 +3209,18 @@
       removeItem: k => { try{ st().removeItem(k); }catch(e){} }
     };
   })();
-  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth:{ storage: AUREUM_AUTH_STORAGE, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }) : null;
+  /* Sign-up on one device, confirmation link opened on another: the link must NOT sign in the device that only opened it.
+     The device that created the account remembers (this browser only) that a sign-up is waiting for confirmation. */
+  const PENDING_SIGNUP_KEY = 'aureum_pending_signup';
+  const CONFIRMED_ELSEWHERE = (function(){
+    try{
+      if(!/[#&]type=signup\b/.test(window.location.hash)) return false;
+      const raw = localStorage.getItem(PENDING_SIGNUP_KEY);
+      const pend = raw ? JSON.parse(raw) : null;
+      return !(pend && pend.t && Date.now() - pend.t < 48*3600*1000);
+    }catch(e){ return true; }
+  })();
+  const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth:{ storage: AUREUM_AUTH_STORAGE, persistSession:true, autoRefreshToken:true, detectSessionInUrl: !CONFIRMED_ELSEWHERE } }) : null;
   function applyRememberChoice(email){
     const box = document.getElementById('authRemember');
     const remember = !box || box.checked;
@@ -11536,6 +11554,7 @@ const AureumSync = (function(){
   const justConfirmedEmail = /[#&?]type=signup\b/.test(window.location.hash);   // arrived from the confirmation email
   async function boot(){
     if(checkForPasswordRecovery()) return;
+    if(CONFIRMED_ELSEWHERE && supaReady){ showConfirmedElsewhere(); return; }
     if(!supaReady){
       document.getElementById('authGate').classList.add('show');
       document.getElementById('authGateMsg').textContent = 'Supabase isn\'t connected yet — open this file and fill in SUPABASE_CONFIG near the top of the <script>, then reload. See SETUP-INSTRUCTIONS.md.';
@@ -11607,6 +11626,51 @@ const AureumSync = (function(){
   document.getElementById('authForgotLink').addEventListener('click', ()=> setAuthMode('forgot'));
   document.getElementById('authBackToSignIn').addEventListener('click', ()=> setAuthMode('signin'));
   setAuthMode('signin');
+  /* ---- the device that created the account signs itself in once the email is confirmed (on any device) ---- */
+  let pendingSignup = null, confirmPoll = null, confirmPollStop = null;
+  function stopConfirmPolling(){
+    if(confirmPoll){ clearInterval(confirmPoll); confirmPoll = null; }
+    if(confirmPollStop){ clearTimeout(confirmPollStop); confirmPollStop = null; }
+    pendingSignup = null;                                        // the password is only ever held in memory, and only while this screen waits
+  }
+  async function tryPendingSignIn(){
+    const ps = pendingSignup; if(!ps || ps.busy) return false;
+    ps.busy = true;
+    try{
+      applyRememberChoice(ps.email);
+      await aureumSignIn(ps.email, ps.password);
+      stopConfirmPolling();
+      try{ localStorage.removeItem(PENDING_SIGNUP_KEY); }catch(e){}
+      boot();
+      return true;
+    }catch(e){
+      if(!/not confirmed|email_not_confirmed/i.test((e && (e.message || e.code)) || '')) stopConfirmPolling();   // some other problem: stop quietly, the person can sign in by hand
+    }finally{ if(pendingSignup) pendingSignup.busy = false; }
+    return false;
+  }
+  function startConfirmPolling(email, password){
+    stopConfirmPolling();
+    pendingSignup = { email, password, busy:false };
+    try{ localStorage.setItem(PENDING_SIGNUP_KEY, JSON.stringify({ email, t: Date.now() })); }catch(e){}
+    confirmPoll = setInterval(tryPendingSignIn, 8000);
+    confirmPollStop = setTimeout(stopConfirmPolling, 30*60*1000);
+  }
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && pendingSignup) tryPendingSignIn(); });
+  const AUTH_FIELD_IDS = ['authTabs','authSignupFields','authForgotFields','authForgotLinkRow','authRememberRow','authPassword','authEmail','authSubmitBtn','authError'];
+  function showConfirmedElsewhere(){
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}      // the link's tokens are not needed here
+    document.getElementById('authGate').classList.add('show');
+    AUTH_FIELD_IDS.forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+    document.getElementById('authConfirmed').style.display = 'block';
+    document.getElementById('authGateMsg').textContent = 'You\'re all set.';
+  }
+  function hideConfirmedElsewhere(){
+    document.getElementById('authConfirmed').style.display = 'none';
+    ['authEmail','authSubmitBtn','authError'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
+    document.getElementById('authGateMsg').textContent = 'Sign in to manage your business.';
+    setAuthMode('signin');
+    document.getElementById('authEmail').focus();
+  }
   /* ---- "Check your email" step after Create Business, and "Email not confirmed" at sign-in ---- */
   let verifyEmail = '', resendTimer = null;
   function showVerify(email, note){
@@ -11621,6 +11685,7 @@ const AureumSync = (function(){
   function hideVerify(mode){
     document.getElementById('authVerify').style.display = 'none';
     if(resendTimer){ clearInterval(resendTimer); resendTimer = null; }
+    stopConfirmPolling();
     ['authEmail','authSubmitBtn','authError'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
     document.getElementById('authGateMsg').textContent = mode === 'signin' ? 'Sign in to manage your business.' : 'Create your business account to start your 14-day free trial.';
     setAuthMode(mode);
@@ -11648,7 +11713,12 @@ const AureumSync = (function(){
   (function(){
     const act = (id, fn) => { const el = document.getElementById(id); el.addEventListener('click', fn); el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fn(); } }); };
     act('authResendBtn', resendConfirmation);
-    act('authVerifyDone', () => { hideVerify('signin'); document.getElementById('authEmail').value = verifyEmail; document.getElementById('authPassword').focus(); });
+    act('authVerifyDone', async () => {
+      if(pendingSignup && await tryPendingSignIn()) return;                       // confirmed already: signed straight in
+      if(pendingSignup){ const m = document.getElementById('authResendMsg'); m.className = 'av-msg'; m.textContent = 'Not confirmed yet — open the link in the email, then this page signs you in.'; return; }
+      hideVerify('signin'); document.getElementById('authEmail').value = verifyEmail; document.getElementById('authPassword').focus();
+    });
+    act('authConfirmedSignIn', hideConfirmedElsewhere);
     act('authVerifyChange', () => { hideVerify('signup'); document.getElementById('authEmail').focus(); });
   })();
   // The public website links here: ?mode=signup opens "Create Business" (the free trial), ?mode=signin the sign-in tab.
@@ -11704,6 +11774,7 @@ const AureumSync = (function(){
         if(!su || !su.session){        // the project asks people to confirm their email first: no session until they click the link
           btn.textContent = 'Create Business';
           showVerify(email);
+          startConfirmPolling(email, password);
           return;
         }
       } else {

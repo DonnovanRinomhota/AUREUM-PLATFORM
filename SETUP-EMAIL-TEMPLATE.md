@@ -56,3 +56,30 @@ being tested, some email providers may flag Supabase's default sending
 address as spam — worth checking your spam folder during testing, and
 consider setting up a custom SMTP sender (Settings → Auth → SMTP Settings)
 before real customers sign up, so emails reliably land in their inbox.
+
+
+---
+
+# Make the email come from "AUREUM" (not "Supabase Auth")
+
+Supabase's built-in sender always shows as **Supabase Auth** and cannot be renamed. To send as AUREUM you connect your own
+email sender (custom SMTP). This is a Supabase setting; nothing in the app code changes. Do it once:
+
+1. Pick an email service and create a free account. Simple choices:
+   - **Resend** (free about 3,000 emails/month) — best if you own a domain; you add 3 DNS records.
+   - **Brevo** (free 300 emails/day) — can start from one verified sender address.
+   - **Gmail / Google Workspace** with an *App password* — fine for low volume; the address shows as your Gmail but the **name** shows as AUREUM.
+2. In that service, find the **SMTP** details (host, port, username, password / API key). Keep the password private. Never paste it in chat or commit it to GitHub.
+3. Supabase → **Project Settings → Authentication → SMTP Settings** → switch on **Enable custom SMTP** and fill in:
+   - **Sender email**: e.g. `no-reply@yourdomain.com` (an address the service has verified)
+   - **Sender name**: `AUREUM`
+   - Host, Port, Username, Password from step 2 → **Save**.
+4. **Authentication → Emails → Confirm signup**: set **Subject** to `Confirm your AUREUM account` (and edit the message as in the section above).
+5. Create a test account with a new email address: the message should now arrive from **AUREUM**.
+
+# Signing in on the device that created the account
+
+Since this update, the device where someone presses **Create Business** keeps the "Check your email" page open and signs itself in as soon
+as the email is confirmed, even if the link is opened on a different phone or computer. The device that only opened the link shows
+"Email confirmed" and is not signed in (it can still sign in by hand). The password is held in memory only while that page waits (up to 30
+minutes) and is never saved. If that page was closed, the person simply signs in normally after confirming.
