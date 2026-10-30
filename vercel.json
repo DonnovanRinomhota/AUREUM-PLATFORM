@@ -1,4 +1,39 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "pos.aureumpos.com"
+        }
+      ],
+      "destination": "https://www.aureumpos.com/pos-checkout.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.aureumpos.com"
+        }
+      ],
+      "destination": "https://www.aureumpos.com/backoffice.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.aureumpos.com"
+        }
+      ],
+      "destination": "https://www.aureumpos.com/admin.html",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/admin",
@@ -26,8 +61,14 @@
     {
       "source": "/app-compat.json",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
       ]
     },
     {

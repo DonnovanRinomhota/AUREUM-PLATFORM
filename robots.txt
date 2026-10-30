@@ -5,4 +5,4 @@ Disallow: /admin.html
 Disallow: /backoffice.html
 Disallow: /pos-checkout.html
 
-Sitemap: https://aureum-platform.vercel.app/sitemap.xml
+Sitemap: https://www.aureumpos.com/sitemap.xml

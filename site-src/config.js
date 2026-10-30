@@ -4,7 +4,7 @@
 export const SITE = {
   name: 'AUREUM',
   tagline: 'POS & INVENTORY MANAGEMENT',
-  url: 'https://aureum-platform.vercel.app',          // used for canonical links, the sitemap and social previews
+  url: 'https://www.aureumpos.com',                   // used for canonical links, the sitemap and social previews
   title: 'AUREUM POS | Point of Sale & Inventory Management for Zimbabwe',
   description: 'Elegant point of sale and inventory management for Zimbabwean businesses. Manage sales, inventory, reports and your business from anywhere.',
   ogImage: '/site/assets/img/og-image.jpg'
@@ -35,7 +35,7 @@ export const PRICING = { perShop: 5, trialDays: 14, graceDays: 3, examples: [1, 
 export const DEMO = { videoUrl: '', title: 'AUREUM demo' };
 
 /* Support contact details. Leave blank until real ones exist — nothing is invented. Anything filled in appears on the Support page. */
-export const SUPPORT = { email: '', phone: '', whatsapp: '' };
+export const SUPPORT = { email: 'info@aureumpos.com', phone: '', whatsapp: '' };
 
 /* ---- Hero copy: EXACT wording, not to be paraphrased ---- */
 export const HERO = {

@@ -1,5 +1,10 @@
 # Changelog
 
+## Own domain: aureumpos.com (sw v66)
+- The website now uses https://www.aureumpos.com for canonical links, the sitemap and social previews. The vercel.app address keeps working (the Android apps still use it).
+- Support email info@aureumpos.com now appears on the Support, Privacy and Delete-account pages.
+- vercel.json: pos.aureumpos.com, app.aureumpos.com and admin.aureumpos.com open the POS, Back Office and control panel (they redirect to the one www address so sign-in and the offline queue stay in a single place). These work after the DNS records for each subdomain are added.
+
 ## Bug fixes: shops, employees, tax, categories (sw v65)
 - Back Office: adding or removing a shop no longer makes products seem to vanish. The new shop is empty by design, so it now shows a clear message with an "Add all products to this shop" button; shop changes in Settings are saved straight away.
 - POS: employees added in Back Office now appear in the shift sign-in list (previously hidden when no PIN was set) and the list refreshes when data syncs. Employees without a PIN are marked "(no PIN set)". Back Office now requires a PIN for till roles.
