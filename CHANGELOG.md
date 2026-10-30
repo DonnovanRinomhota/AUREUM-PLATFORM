@@ -1,5 +1,11 @@
 # Changelog
 
+## Website: six business types, tagline, clearer trial buttons, launch checklist (sw v67)
+- Business section now shows six cards: Bakery, Beauty, Retail, Grocery, Pharmacy, Electronics & Hardware, with the line "All your business operations right at the tip of your fingers." under them. The Beauty, Pharmacy and Electronics cards are gold line-art placeholders and Grocery reuses the supermarket photo: replace site/assets/img/card-beauty.webp, card-pharmacy.webp, card-electronics.webp and card-grocery-v3.webp with real photos (same names).
+- "Let's get started" is now clearly visible and "14-Day Free Trial" and "Start free trial" are clickable gold-ringed buttons.
+- New: Terms & Conditions page, custom 404 page, short cookie notice, Vercel Web Analytics (turn it on in the Vercel project: Analytics -> Enable), Terms link in the footer, privacy policy updated to mention anonymous visit counts.
+- Contrast fixes on the light sections; page title and description no longer say "Zimbabwe".
+
 ## Own domain: aureumpos.com (sw v66)
 - The website now uses https://www.aureumpos.com for canonical links, the sitemap and social previews. The vercel.app address keeps working (the Android apps still use it).
 - Support email info@aureumpos.com now appears on the Support, Privacy and Delete-account pages.

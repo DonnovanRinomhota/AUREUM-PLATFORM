@@ -37,7 +37,7 @@ export const footer = () => `<footer class="site-footer">
         <li><a href="${APP.pos}">POS Checkout</a></li><li><a href="${APP.backOffice}">Back Office</a></li><li><a href="${APP.signIn}">Log in</a></li><li><a href="${APP.signUp}">Start free trial</a></li>
       </ul></nav>
       <nav class="f-col" aria-label="Legal"><h2>Legal</h2><ul>
-        <li><a href="/privacy/">Privacy Policy</a></li><li><a href="/delete-account/">Delete your account</a></li>
+        <li><a href="/terms/">Terms &amp; Conditions</a></li><li><a href="/privacy/">Privacy Policy</a></li><li><a href="/delete-account/">Delete your account</a></li>
       </ul></nav>
     </div>
     <div class="f-bottom"><p>&copy; ${new Date().getFullYear()} AUREUM. All rights reserved.</p><p>Made for the counter you work at.</p></div>
@@ -56,7 +56,13 @@ export function demoDialog() {
 </dialog>`;
 }
 
-export function page({ path, title, description, active, body, jsonLd = [], preload = [], assetV = '' }) {
+/* A short notice, shown until it is dismissed. The website sets no advertising or tracking cookies. */
+export const cookieNotice = () => `<div class="cookie-note" id="cookie-note" role="region" aria-label="Cookies and privacy" hidden>
+  <p>This website uses only the storage it needs to work, plus anonymous visit counts with no cookies and no advertising. <a href="/privacy/">Privacy Policy</a></p>
+  <button type="button" class="gold-ring" id="cookie-ok">Got it</button>
+</div>`;
+
+export function page({ path, title, description, active, body, jsonLd = [], preload = [], assetV = '', noindex = false }) {
   const url = SITE.url + path;
   const og = SITE.url + SITE.ogImage;
   return `<!doctype html>
@@ -67,7 +73,7 @@ export function page({ path, title, description, active, body, jsonLd = [], prel
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${url}">
-<meta name="theme-color" content="#06130e">
+${noindex ? '<meta name="robots" content="noindex">\n' : ''}<meta name="theme-color" content="#06130e">
 <meta name="color-scheme" content="dark">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AUREUM POS &amp; Inventory">
@@ -106,7 +112,10 @@ ${body}
 </main>
 ${footer()}
 ${dock(active)}
+${cookieNotice()}
 <script src="/site/assets/site.js?v=${assetV}" defer></script>
+<script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)}</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
 `;

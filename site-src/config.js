@@ -5,8 +5,8 @@ export const SITE = {
   name: 'AUREUM',
   tagline: 'POS & INVENTORY MANAGEMENT',
   url: 'https://www.aureumpos.com',                   // used for canonical links, the sitemap and social previews
-  title: 'AUREUM POS | Point of Sale & Inventory Management for Zimbabwe',
-  description: 'Elegant point of sale and inventory management for Zimbabwean businesses. Manage sales, inventory, reports and your business from anywhere.',
+  title: 'AUREUM POS | Point of Sale & Inventory Management',
+  description: 'Elegant point of sale and inventory management for shops of every kind. Manage sales, inventory, reports and your business from anywhere, even offline.',
   ogImage: '/site/assets/img/og-image.jpg'
 };
 
@@ -61,11 +61,14 @@ export const HERO = {
 export const BUILT_FOR = {
   eyebrow: 'BUILT FOR EVERY COUNTER',
   heading: ['Empowering Business Owners', 'World Wide'],
+  tagline: 'All your business operations right at the tip of your fingers.',
   cards: [
-    { id: 'bakery', icon: 'bread', title: 'Bakery', img: '/site/assets/img/card-bakery-v2.webp', alt: 'A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars.' },
-    { id: 'beauty', icon: 'sparkle', title: 'Beauty', img: '/site/assets/img/card-beauty-v2.webp', alt: 'A gold hand mirror on a deep green background.' },
-    { id: 'retail', icon: 'store', title: 'Retail', img: '/site/assets/img/card-retail-v2.webp', alt: 'A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing.' },
-    { id: 'fashion', icon: 'hanger', title: 'Fashion', img: '/site/assets/img/card-fashion-v2.webp', alt: 'A collage of dark green fashion and lifestyle pieces: knitwear, caps, sneakers, a watch and a classic car.' }
+    { id: 'bakery', icon: 'bread', title: 'Bakery Stores', img: '/site/assets/img/card-bakery-v2.webp', alt: 'A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars.' },
+    { id: 'beauty', icon: 'sparkle', title: 'Beauty Stores', img: '/site/assets/img/card-beauty.webp', alt: 'Gold line drawing of a perfume bottle, a hand mirror and a lipstick on a deep green background.' },
+    { id: 'retail', icon: 'store', title: 'Retail Stores', img: '/site/assets/img/card-retail-v2.webp', alt: 'A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing.' },
+    { id: 'grocery', icon: 'basket', title: 'Grocery Stores', img: '/site/assets/img/card-grocery-v3.webp', alt: 'A bright grocery store with wooden shelving and displays of fresh fruit and vegetables.' },
+    { id: 'pharmacy', icon: 'pill', title: 'Pharmacy', img: '/site/assets/img/card-pharmacy.webp', alt: 'Gold line drawing of a pharmacy cross above two shelves of medicine bottles on a deep green background.' },
+    { id: 'electronics', icon: 'chip', title: 'Electronics & Hardware Stores', img: '/site/assets/img/card-electronics.webp', alt: 'Gold line drawing of a laptop, a cog and a spanner on a deep green background, for computer, hardware and car-parts shops.' }
   ]
 };
 

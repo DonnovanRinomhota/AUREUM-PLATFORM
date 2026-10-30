@@ -11,6 +11,8 @@ const P = {
   store: '<path d="M4 9l1.6-5h12.8L20 9"/><path d="M4 9c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3"/><path d="M5 12v8h14v-8"/>',
   basket: '<path d="M3 10h18l-2 9H5z"/><path d="M8 10l3-6M16 10l-3-6"/>',
   hanger: '<path d="M12 8V6.5a2 2 0 1 0-2-2"/><path d="M12 8l9 6.2a1 1 0 0 1-.6 1.8H3.6A1 1 0 0 1 3 14.2z"/>',
+  pill: '<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>',
+  chip: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
   sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>',
   trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
   offline: '<path d="M3 3l18 18"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 3.2-2.1M12 8.2a10 10 0 0 1 7 2.7M2 9a15 15 0 0 1 4.2-2.7M10 5.1A15 15 0 0 1 22 9"/><circle cx="12" cy="20" r="1" fill="currentColor"/>',

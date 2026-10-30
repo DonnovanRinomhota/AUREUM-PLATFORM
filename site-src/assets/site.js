@@ -49,4 +49,13 @@
   /* header shadow once scrolled */
   const h = d.querySelector('.site-header');
   if (h) { const on = () => h.classList.toggle('scrolled', scrollY > 8); addEventListener('scroll', on, { passive: true }); on(); }
+
+  /* cookie notice: shown once until dismissed (the site sets no tracking cookies) */
+  const note = d.getElementById('cookie-note'), ok = d.getElementById('cookie-ok');
+  if (note && ok) {
+    let seen = false;
+    try { seen = localStorage.getItem('aureum-note') === '1'; } catch (e) {}
+    if (!seen) note.hidden = false;
+    ok.addEventListener('click', () => { note.hidden = true; try { localStorage.setItem('aureum-note', '1'); } catch (e) {} });
+  }
 })();

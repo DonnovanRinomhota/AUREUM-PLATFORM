@@ -71,6 +71,7 @@ export const builtFor = () => `<section class="built" aria-labelledby="built-tit
         <div class="biz-body"><span class="ic-ring">${icon(c.icon, 22)}</span><h3>${esc(c.title)}</h3></div>
       </article>`).join('')}
     </div>
+    <p class="biz-tagline">${esc(BUILT_FOR.tagline)}</p>
     <ul class="strip">${STRIP.map(i => `<li class="rv"><span class="ic-ring big">${icon(i.icon, 30)}</span><span>${esc(i.label)}</span></li>`).join('')}</ul>
   </div>
 </section>`;
@@ -101,12 +102,12 @@ export const priceBand = () => `<section class="panel light" aria-labelledby="pr
 
 export const ctaBlock = () => `<section class="panel accent" aria-labelledby="cta-title">
   <div class="wrap">
-    ${secHead("LET'S GET STARTED", `${PRICING.trialDays}-DAY FREE TRIAL`)}
+    <div class="sec-head cta-head"><span class="cta-lets">LET'S GET STARTED</span><a class="gold-ring" href="${APP.signUp}">${PRICING.trialDays}-Day Free Trial${icon('ne', 14, 'ic')}</a></div>
     <div class="cta-big">
       <h2 id="cta-title" class="display xl">Let's put<br><span class="ink">your shop to work.</span></h2>
       <a class="big-arrow" href="${APP.signUp}" aria-label="Start your free trial">${icon('ne', 120, 'ic')}</a>
     </div>
-    <div class="cta-foot"><p class="small">Create your account and try every feature.<br>Every shop is included while you try AUREUM.</p>${alink('Start free trial', APP.signUp, 'ink')}</div>
+    <div class="cta-foot"><p class="small">Create your account and try every feature.<br>Every shop is included while you try AUREUM.</p><a class="gold-ring gold-ring-lg" href="${APP.signUp}"><span>Start free trial</span>${icon('ne', 16, 'ic')}</a></div>
   </div>
 </section>`;
 export const ctaBand = ctaBlock;

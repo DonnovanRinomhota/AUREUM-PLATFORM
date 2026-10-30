@@ -22,7 +22,7 @@ export const privacy = {
     <li><strong>Subscription status:</strong> whether a trial or subscription is active, its dates and the number of shops. Card payments are taken on Stripe’s own page. <strong>We never see or store your card number.</strong></li>
     <li><strong>Technical data</strong> needed to run the service, such as sign-in sessions and error information held by our hosting and database providers.</li>
   </ul>
-  <p>AUREUM does <strong>not</strong> show advertising, does not sell personal information, and does not include advertising or behavioural-analytics trackers.</p>
+  <p>AUREUM does <strong>not</strong> show advertising, does not sell personal information, and does not include advertising trackers. The public website uses Vercel Web Analytics for anonymous visit counts; it sets no cookies and builds no profile of you. The apps do not use it.</p>
 
   <h2>Why we use it</h2>
   <p>To provide the service you asked for (selling, stock control, reports, staff, receipts), to keep your business data safe and synchronised across your devices, to manage your trial or subscription, to answer support requests and to prevent misuse.</p>
