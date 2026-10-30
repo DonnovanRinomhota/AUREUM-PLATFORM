@@ -8,7 +8,7 @@
           "value": "pos.aureumpos.com"
         }
       ],
-      "destination": "https://www.aureumpos.com/pos-checkout.html",
+      "destination": "https://www.aureumpos.com/pos",
       "permanent": false
     },
     {
@@ -19,7 +19,7 @@
           "value": "app.aureumpos.com"
         }
       ],
-      "destination": "https://www.aureumpos.com/backoffice.html",
+      "destination": "https://www.aureumpos.com/app",
       "permanent": false
     },
     {
@@ -30,11 +30,19 @@
           "value": "admin.aureumpos.com"
         }
       ],
-      "destination": "https://www.aureumpos.com/admin.html",
+      "destination": "https://www.aureumpos.com/admin",
       "permanent": false
     }
   ],
   "rewrites": [
+    {
+      "source": "/app",
+      "destination": "/backoffice.html"
+    },
+    {
+      "source": "/pos",
+      "destination": "/pos-checkout.html"
+    },
     {
       "source": "/admin",
       "destination": "/admin.html"

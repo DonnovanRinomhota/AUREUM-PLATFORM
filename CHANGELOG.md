@@ -3,7 +3,7 @@
 ## Own domain: aureumpos.com (sw v66)
 - The website now uses https://www.aureumpos.com for canonical links, the sitemap and social previews. The vercel.app address keeps working (the Android apps still use it).
 - Support email info@aureumpos.com now appears on the Support, Privacy and Delete-account pages.
-- vercel.json: pos.aureumpos.com, app.aureumpos.com and admin.aureumpos.com open the POS, Back Office and control panel (they redirect to the one www address so sign-in and the offline queue stay in a single place). These work after the DNS records for each subdomain are added.
+- vercel.json: pos.aureumpos.com, app.aureumpos.com and admin.aureumpos.com open the POS, Back Office and control panel (they redirect to the one www address, as www.aureumpos.com/pos, /app and /admin, so sign-in and the offline queue stay in a single place). The short paths /app and /pos open the Back Office and POS; the old /backoffice.html and /pos-checkout.html addresses still work. These work after the DNS records for each subdomain are added.
 
 ## Bug fixes: shops, employees, tax, categories (sw v65)
 - Back Office: adding or removing a shop no longer makes products seem to vanish. The new shop is empty by design, so it now shows a clear message with an "Add all products to this shop" button; shop changes in Settings are saved straight away.

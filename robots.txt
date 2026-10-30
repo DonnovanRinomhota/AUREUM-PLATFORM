@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin.html
+Disallow: /app
+Disallow: /pos
 Disallow: /backoffice.html
 Disallow: /pos-checkout.html
 
