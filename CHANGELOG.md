@@ -1,5 +1,9 @@
 # Changelog
 
+## Website: real photos, one row of six, site name for Google (sw v70)
+- Business cards: Electronics & Hardware, Pharmacy and Beauty now use real photos. On computers all six cards sit in one row (1x6); tablets show 3 per row and phones 2 per row.
+- Google: the site name is set to "AUREUM" (structured data: name, alternate names and the home address), og:site_name is "AUREUM", and favicons in 48, 96, 144 and 192 px plus /favicon.ico were added so Google can show the logo and name above the result.
+
 ## Back Office: drop-downs back to the original colours (sw v69)
 - Filter and other drop-downs (dates, time, shop, category, chart type, rows per page) are back to the original text and box colours: no gold text, no gold highlight, native arrow. This also fixes the overlapping arrow on the chart "Line / Hours" boxes and the Rows-per-page number.
 

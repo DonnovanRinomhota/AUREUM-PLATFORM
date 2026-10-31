@@ -64,11 +64,11 @@ export const BUILT_FOR = {
   tagline: 'All your business operations right at the tip of your fingers.',
   cards: [
     { id: 'bakery', icon: 'bread', title: 'Bakery Stores', img: '/site/assets/img/card-bakery-v2.webp', alt: 'A bakery counter with glass display cases of fresh bread and pastries beneath shelves of loaves and jars.' },
-    { id: 'beauty', icon: 'sparkle', title: 'Beauty Stores', img: '/site/assets/img/card-beauty.webp', alt: 'Gold line drawing of a perfume bottle, a hand mirror and a lipstick on a deep green background.' },
+    { id: 'beauty', icon: 'sparkle', title: 'Beauty Stores', img: '/site/assets/img/card-beauty.webp', alt: 'A beauty store with illuminated shelves of make-up, skincare and fragrance displays.' },
     { id: 'retail', icon: 'store', title: 'Retail Stores', img: '/site/assets/img/card-retail-v2.webp', alt: 'A refined retail boutique with a green marble feature wall, wooden shelving and neatly displayed bags and clothing.' },
     { id: 'grocery', icon: 'basket', title: 'Grocery Stores', img: '/site/assets/img/card-grocery-v3.webp', alt: 'A bright grocery store with wooden shelving and displays of fresh fruit and vegetables.' },
-    { id: 'pharmacy', icon: 'pill', title: 'Pharmacy', img: '/site/assets/img/card-pharmacy.webp', alt: 'Gold line drawing of a pharmacy cross above two shelves of medicine bottles on a deep green background.' },
-    { id: 'electronics', icon: 'chip', title: 'Electronics & Hardware Stores', img: '/site/assets/img/card-electronics.webp', alt: 'Gold line drawing of a laptop, a cog and a spanner on a deep green background, for computer, hardware and car-parts shops.' }
+    { id: 'pharmacy', icon: 'pill', title: 'Pharmacy', img: '/site/assets/img/card-pharmacy.webp', alt: 'A calm pharmacy with a glowing green cross sign and lit shelves of medicines and vitamins.' },
+    { id: 'electronics', icon: 'chip', title: 'Electronics & Hardware Stores', img: '/site/assets/img/card-electronics.webp', alt: 'An electronics store with lit shelves of headphones, speakers, phone cases and accessories.' }
   ]
 };
 

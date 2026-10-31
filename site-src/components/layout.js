@@ -76,7 +76,7 @@ export function page({ path, title, description, active, body, jsonLd = [], prel
 ${noindex ? '<meta name="robots" content="noindex">\n' : ''}<meta name="theme-color" content="#06130e">
 <meta name="color-scheme" content="dark">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="AUREUM POS &amp; Inventory">
+<meta property="og:site_name" content="AUREUM">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${url}">
@@ -89,7 +89,11 @@ ${noindex ? '<meta name="robots" content="noindex">\n' : ''}<meta name="theme-co
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${og}">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/favicon-192.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="preload" as="font" type="font/woff2" href="/vendor/fonts/outfit-latin-300-normal.woff2" crossorigin>

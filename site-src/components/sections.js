@@ -65,7 +65,7 @@ export const builtFor = () => `<section class="built" aria-labelledby="built-tit
     ${gEyebrow(BUILT_FOR.eyebrow)}
     <h2 id="built-title" class="g-title">${esc(BUILT_FOR.heading[0])} <span class="gold">${esc(BUILT_FOR.heading[1])}</span></h2>
     <div class="biz-grid">
-      ${BUILT_FOR.cards.map(c => `<article class="biz-card rv">
+      ${BUILT_FOR.cards.map(c => `<article class="biz-card rv" data-id="${c.id}">
         <img src="${c.img}" width="640" height="692" alt="${esc(c.alt)}" loading="lazy" decoding="async">
         <div class="biz-shade" aria-hidden="true"></div>
         <div class="biz-body"><span class="ic-ring">${icon(c.icon, 22)}</span><h3>${esc(c.title)}</h3></div>
