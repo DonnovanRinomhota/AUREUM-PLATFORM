@@ -11,7 +11,7 @@
 --   * Visitors cannot read or write the tables directly (RLS stays on, no policy matches them).
 --   * They can only call the three functions below. Each ticket gets a private random key (web_token) that is
 --     shown to nobody but the visitor's own browser; without it nobody can read or answer that ticket.
---   * Rate limits: 3 tickets per email per hour, 60 website tickets per hour in total, 20 replies per ticket per hour.
+--   * Rate limits: 3 tickets per email per hour, 60 website tickets per hour in total, 60 messages per ticket per hour.
 --   * A hidden "honeypot" form field makes simple spam bots look successful without storing anything.
 --   * Internal notes and the assistant chat attached to the ticket are never returned to the visitor.
 -- =====================================================================
@@ -101,7 +101,7 @@ begin
   if char_length(body) > 6000 then raise exception 'The message is too long (6,000 characters at most).' using errcode = 'P0001'; end if;
   select * into t from public.support_tickets where id = p_id and source = 'website' and web_token is not null and web_token = p_token;
   if not found then raise exception 'Ticket not found.' using errcode = 'P0001'; end if;
-  if (select count(*) from public.support_ticket_messages where ticket_id = t.id and author_type = 'customer' and created_at > now() - interval '1 hour') >= 20 then
+  if (select count(*) from public.support_ticket_messages where ticket_id = t.id and author_type = 'customer' and created_at > now() - interval '1 hour') >= 60 then
     raise exception 'RATE_LIMIT: too many messages in the last hour. Please wait a little.' using errcode = 'P0001';
   end if;
   insert into public.support_ticket_messages (ticket_id, business_id, author_type, author_email, author_name, body)

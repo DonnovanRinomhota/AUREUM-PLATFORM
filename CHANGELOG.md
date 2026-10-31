@@ -1,5 +1,11 @@
 # Changelog
 
+## Website: real Live Chat with the team, FAQ tab (sw v76)
+- The ? button now opens on **Live chat**: a welcome form (name, email, message), then a conversation with the AUREUM team. It has no suggested questions. The visitor's page checks for the team's reply every 6 seconds. Each chat is stored as a ticket (subject "Live chat: …"), so the team answers it from the control panel (/admin → Support) and it also shows under My tickets.
+- The suggested questions and the bot answers moved to a tab called **FAQ** (with "Browse all topics"). Tabs: Live chat · FAQ · Ticket · My tickets.
+- Hero on the Support page has a "Start live chat" button. The team has no sound or pop-up alert for a new chat yet; they see it in the Support tab of the control panel.
+- Needs the same approval as tickets (admin-manage deploy, then support-website.sql). Until then the Live chat form offers email.
+
 ## Website: Live Chat button instead of a full-page bot (sw v75)
 - The AUREUM Bot section is removed from the Support page. Every website page now has a gold **?** button (bottom right) that opens a **Live Chat** panel: chat, Topics, Ticket, My tickets. On phones it fills the screen.
 - Support page order: the "Three ways in" cards now come before anything else under the hero. Hero "Send a ticket" opens the chat on the Ticket tab.

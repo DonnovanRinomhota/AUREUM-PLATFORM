@@ -514,3 +514,12 @@ details[open] > summary .pm{transform:rotate(45deg)}
   .sup-hero .sup-hero-in{grid-template-columns:1fr}
   .sup-photo{order:-1;max-width:640px}
 }
+
+.aw-welcome{font-size:1.2rem;font-weight:400;color:#fff;margin:4px 0 2px}
+.aw-bigsend{display:flex;justify-content:center;margin:6px 0 2px}
+.aw-send-lg{width:64px;height:64px;box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.aw-livelog{max-height:none;overflow:visible;margin:0}
+.aw-bub.team{background:rgba(255,255,255,.08)}
+.aw-bub.auto{border-style:dashed;background:rgba(255,255,255,.03)}
+.aw-wait{margin:0;text-align:center}
+.aw-compose .aw-err{margin-top:8px}

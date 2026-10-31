@@ -48,7 +48,7 @@
     return botP;
   }
 
-  var WELCOME = "Hi there! What would you like help with today?\n\nAsk me how AUREUM works: the till, products, stock, staff, reports, pricing and more. Answers are instant, from AUREUM's help library. For a person, send a ticket and the AUREUM team will reply.";
+  var WELCOME = "Common questions about AUREUM, answered instantly from AUREUM's help library. Pick one below or type your own. For a person, use the **Live chat** tab.";
   var ASKS = ['How do I import products from Excel or CSV?', 'How much does AUREUM cost?', 'How do I add a product?', 'Does AUREUM work without internet?', 'How do I refund a customer?'];
   var chat = Object.assign({ messages: [], lastId: null, lastType: null, misses: 0, busy: false, topic: null }, get('sessionStorage', 'aureum_web_chat', {}));
   chat.busy = false; chat.topic = null;
@@ -68,28 +68,29 @@
   }
   var plain = function (t) { return String(t || '').replace(/\*\*|`/g, '').replace(/\*/g, ''); };
   var chips = function (arr) { return arr.map(function (c) { return '<button type="button" class="aw-chip" data-ask="' + esc(c.id) + '">' + esc(c.title) + '</button>'; }).join(''); };
-  var transcript = function () { return chat.messages.slice(-30).map(function (m) { return (m.role === 'user' ? 'Visitor: ' : 'Live Chat: ') + plain(m.content); }).join('\n\n'); };
+  var transcript = function () { return chat.messages.slice(-30).map(function (m) { return (m.role === 'user' ? 'Visitor: ' : 'FAQ answer: ') + plain(m.content); }).join('\n\n'); };
 
   /* ---------- page shell ---------- */
   root.innerHTML =
     '<button type="button" class="aw-fab" id="awFab" aria-label="Open live chat" aria-expanded="false" aria-controls="awPanel"><span aria-hidden="true">?</span><i class="aw-dot aw-fab-dot" id="awFabDot" hidden></i></button>' +
     '<div class="aw-panel" id="awPanel" role="dialog" aria-label="AUREUM Live Chat" hidden>' +
-    '<div class="aw-head"><span class="aw-live" aria-hidden="true"></span><div class="aw-head-t"><b>AUREUM Live Chat</b><small>Instant answers · tickets reach the team</small></div>' +
+    '<div class="aw-head"><span class="aw-live" aria-hidden="true"></span><div class="aw-head-t"><b>AUREUM Live Chat</b><small>Reach the AUREUM team directly</small></div>' +
     '<button type="button" class="aw-x" id="awClose" aria-label="Close chat">✕</button></div>' +
     '<div class="aw-tabs" role="tablist" aria-label="Live chat sections">' +
-    '<button type="button" role="tab" class="aw-tab" id="awt-ask" data-pane="ask" aria-controls="awp-ask" aria-selected="true">Chat</button>' +
-    '<button type="button" role="tab" class="aw-tab" id="awt-topics" data-pane="topics" aria-controls="awp-topics" aria-selected="false" tabindex="-1">Topics</button>' +
+    '<button type="button" role="tab" class="aw-tab" id="awt-live" data-pane="live" aria-controls="awp-live" aria-selected="true">Live chat</button>' +
+    '<button type="button" role="tab" class="aw-tab" id="awt-ask" data-pane="ask" aria-controls="awp-ask" aria-selected="false" tabindex="-1">FAQ</button>' +
     '<button type="button" role="tab" class="aw-tab" id="awt-ticket" data-pane="ticket" aria-controls="awp-ticket" aria-selected="false" tabindex="-1">Ticket</button>' +
     '<button type="button" role="tab" class="aw-tab" id="awt-mine" data-pane="mine" aria-controls="awp-mine" aria-selected="false" tabindex="-1">My tickets <span class="aw-dot" id="awDot" hidden></span><span class="sr-only" id="awDotTxt" hidden>(new reply)</span></button>' +
     '</div>' +
-    '<div class="aw-pane aw-pane-chat" id="awp-ask" role="tabpanel" aria-labelledby="awt-ask">' +
-    '<div class="aw-scroll" id="awScroll"><div class="aw-log" id="awLog" role="log" aria-live="polite" aria-label="Live chat conversation"></div>' +
+    '<div class="aw-pane aw-pane-chat" id="awp-live" role="tabpanel" aria-labelledby="awt-live"></div>' +
+    '<div class="aw-pane aw-pane-chat" id="awp-ask" role="tabpanel" aria-labelledby="awt-ask" hidden>' +
+    '<div class="aw-scroll" id="awScroll"><div class="aw-log" id="awLog" role="log" aria-live="polite" aria-label="Frequently asked questions"></div>' +
     '<div class="aw-sug" id="awSug"></div></div>' +
     '<div class="aw-compose"><form class="aw-ask" id="awAskForm"><label class="sr-only" for="awInput">Ask how to do something in AUREUM</label>' +
-    '<textarea id="awInput" rows="1" maxlength="400" placeholder="Ask AUREUM anything…"></textarea>' +
+    '<textarea id="awInput" rows="1" maxlength="400" placeholder="Type your own question…"></textarea>' +
     '<button type="submit" class="aw-send" id="awSend" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>' +
-    '<div class="aw-foot"><button type="button" class="aw-link aw-newchat" id="awNew">+ New chat</button><span aria-hidden="true">·</span><button type="button" class="aw-link" id="awToTicket">Not solved? Contact support</button></div>' +
-    '<p class="aw-note">Automated help: answers come from AUREUM’s help library, not a person, and can’t see your account. Never type passwords, PINs or card numbers.</p></div>' +
+    '<div class="aw-foot"><button type="button" class="aw-link aw-newchat" id="awNew">Clear</button><button type="button" class="aw-link" id="awTopicsBtn">Browse all topics</button><button type="button" class="aw-link" id="awToTicket">Not solved? Chat with the team</button></div>' +
+    '<p class="aw-note">FAQ answers are automated, from AUREUM’s help library, and can’t see your account. Never type passwords, PINs or card numbers.</p></div>' +
     '</div>' +
     '<div class="aw-pane aw-scroll" id="awp-topics" role="tabpanel" aria-labelledby="awt-topics" hidden></div>' +
     '<div class="aw-pane aw-scroll" id="awp-ticket" role="tabpanel" aria-labelledby="awt-ticket" hidden></div>' +
@@ -101,19 +102,20 @@
   function openPanel(pane) {
     panel.hidden = false; fab.setAttribute('aria-expanded', 'true'); document.documentElement.classList.add('aw-open');
     showPane(pane || currentPane);
-    setTimeout(function () { var f = currentPane === 'ask' ? $('#awInput') : currentPane === 'ticket' ? $('#awName') : null; if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } } }, 60);
+    setTimeout(function () { var f = currentPane === 'ask' ? $('#awInput') : currentPane === 'ticket' ? $('#awName') : currentPane === 'live' ? ($('#awLiveMsg') || $('#awLName')) : null; if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } } }, 60);
   }
   function closePanel() { panel.hidden = true; fab.setAttribute('aria-expanded', 'false'); document.documentElement.classList.remove('aw-open'); stopPoll(); try { fab.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
   fab.addEventListener('click', function () { if (panel.hidden) openPanel(); else closePanel(); });
   $('#awClose').addEventListener('click', closePanel);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) closePanel(); });
 
-  var currentPane = 'ask', pollTimer = null;
+  var currentPane = 'live', pollTimer = null;
   function showPane(name) {
-    currentPane = name;
-    $$('.aw-tab').forEach(function (t) { var on = t.getAttribute('data-pane') === name; t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1; });
+    currentPane = name; var tabName = name === 'topics' ? 'ask' : name;
+    $$('.aw-tab').forEach(function (t) { var on = t.getAttribute('data-pane') === tabName; t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1; });
     $$('.aw-pane').forEach(function (p) { p.hidden = p.id !== 'awp-' + name; });
-    if (name !== 'mine') stopPoll();
+    if (name !== 'mine' && name !== 'live') stopPoll();
+    if (name === 'live') renderLive();
     if (name === 'ask') renderChat();
     if (name === 'topics') renderTopics();
     if (name === 'ticket') renderTicketForm();
@@ -137,7 +139,7 @@
         (m.choices && m.choices.length ? '<div class="aw-chips">' + chips(m.choices) + '</div>' : '') +
         (m.related && m.related.length ? '<div class="aw-rel">Related:</div><div class="aw-chips">' + chips(m.related) + '</div>' : '') +
         (showFb ? '<div class="aw-fb">Did this answer your question? <button type="button" class="aw-fbbtn" data-fb="yes">Yes, thanks</button><button type="button" class="aw-fbbtn" data-fb="no">Not really</button></div>' : '') +
-        (m.ticket ? '<div class="aw-cta"><button type="button" class="aw-btn" data-ticket-from="1">Send this to support</button></div>' : '') + '</div>';
+        (m.ticket ? '<div class="aw-cta"><button type="button" class="aw-btn" data-ticket-from="1">Ask the AUREUM team</button></div>' : '') + '</div>';
     }).join('') + (chat.busy ? '<div class="aw-typing" aria-label="Typing"><i></i><i></i><i></i></div>' : '');
     var sc = $('#awScroll'); if (sc) sc.scrollTop = msgs.length ? sc.scrollHeight : 0;
     if (!bot && !botP && msgs.length) loadBot().then(function () { if (currentPane === 'ask') renderChat(); }, function () { });
@@ -150,7 +152,7 @@
     var b = e.target.closest('button'); if (!b) return;
     if (b.hasAttribute('data-ask')) askEntry(b.getAttribute('data-ask'), b.textContent);
     else if (b.hasAttribute('data-fb')) feedback(b.getAttribute('data-fb'));
-    else if (b.hasAttribute('data-ticket-from')) openTicket(true);
+    else if (b.hasAttribute('data-ticket-from')) openLive(true);
   });
   $('#awSug').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -200,7 +202,8 @@
   $('#awAskForm').addEventListener('submit', function (e) { e.preventDefault(); sendChat($('#awInput').value); });
   $('#awInput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(e.target.value); } });
   $('#awNew').addEventListener('click', function () { chat.messages = []; chat.lastId = null; chat.lastType = null; chat.misses = 0; chat.topic = null; saveChat(); renderChat(); });
-  $('#awToTicket').addEventListener('click', function () { openTicket(true); });
+  $('#awToTicket').addEventListener('click', function () { openLive(true); });
+  $('#awTopicsBtn').addEventListener('click', function () { showPane('topics'); });
 
   /* ---------- help topics ---------- */
   function renderTopics() {
@@ -208,7 +211,7 @@
     pane.innerHTML = '<p class="aw-note aw-note-top">Pick a question and the chat will answer it.</p><p class="aw-loading">Loading help topics…</p>';
     loadBot().then(function () {
       if (currentPane !== 'topics') return;
-      pane.innerHTML = '<p class="aw-note aw-note-top">Pick a question and the chat will answer it.</p><div class="aw-topics">' + bot.topics().map(function (t) {
+      pane.innerHTML = '<button type="button" class="aw-link aw-back" data-back-faq="1">‹ Back to FAQ</button><p class="aw-note aw-note-top">Pick a question and it is answered in the FAQ.</p><div class="aw-topics">' + bot.topics().map(function (t) {
         return '<details class="aw-topic"><summary>' + esc(t.topic) + ' <span>' + t.entries.length + '</span></summary><ul>' + t.entries.map(function (e) { return '<li><button type="button" class="aw-link" data-ask="' + esc(e.id) + '">' + esc(e.title) + '</button></li>'; }).join('') + '</ul></details>';
       }).join('') + '</div>';
     }, function () { pane.innerHTML = '<p class="aw-note aw-note-top">The help topics could not load. Check your connection, or <button type="button" class="aw-link" data-go-ticket="1">send us a ticket</button>.</p>'; });
@@ -217,7 +220,99 @@
     var b = e.target.closest('button'); if (!b) return;
     if (b.hasAttribute('data-ask')) { showPane('ask'); askEntry(b.getAttribute('data-ask'), b.textContent); }
     if (b.hasAttribute('data-go-ticket')) openTicket(false);
+    if (b.hasAttribute('data-back-faq')) showPane('ask');
   });
+
+  /* ---------- live chat: a conversation with the AUREUM team (kept as a ticket, so it also shows under My tickets) ---------- */
+  var live = get('localStorage', 'aureum_web_live', null), liveDraft = '', liveShown = '';
+  var fmtTime = function (t) { try { return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+  var LIVE_HELLO = 'Hello and welcome to AUREUM! One of our team members will be with you shortly. While you wait, you can already post your question here.';
+  var SEND_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  function openLive(fromFaq) {
+    if (fromFaq && !live) { var us = chat.messages.filter(function (m) { return m.role === 'user' && m.content !== 'Not really' && m.content !== 'Yes, thanks'; }); if (us.length) liveDraft = us[us.length - 1].content; }
+    openPanel('live');
+  }
+  function renderLive() {
+    stopPoll(); liveShown = '';
+    var pane = $('#awp-live');
+    if (!live) renderLiveStart(pane); else renderLiveChat(pane);
+  }
+  function renderLiveStart(pane) {
+    var saved = get('localStorage', 'aureum_web_contact', {});
+    pane.innerHTML = '<div class="aw-scroll"><form class="aw-form" id="awLiveForm" novalidate><h3 class="aw-welcome">Welcome to AUREUM Live Chat</h3>' +
+      '<p class="aw-note aw-note-top">Write to the AUREUM team directly. We reply here, and may also email you.</p>' +
+      '<label class="aw-f"><span>Your name *</span><input id="awLName" autocomplete="name" maxlength="80" value="' + esc(saved.name || '') + '" required></label>' +
+      '<label class="aw-f"><span>Email *</span><input id="awLEmail" type="email" autocomplete="email" maxlength="120" value="' + esc(saved.email || '') + '" required></label>' +
+      '<label class="aw-f"><span>How can we help? *</span><textarea id="awLMsg" rows="4" maxlength="2000" required placeholder="Type your message here…">' + esc(liveDraft) + '</textarea></label>' +
+      '<div class="aw-hp" aria-hidden="true"><label>Leave this empty <input id="awLHp" tabindex="-1" autocomplete="off"></label></div>' +
+      '<div class="aw-err" id="awLErr" role="alert"></div>' +
+      '<div class="aw-bigsend"><button type="submit" class="aw-send aw-send-lg" id="awLGo" aria-label="Start chat">' + SEND_SVG + '</button></div>' +
+      '<p class="aw-note">Never type passwords, PINs or card numbers. We use your details only to answer you (<a href="/privacy/">Privacy Policy</a>).</p></form></div>';
+    $('#awLiveForm').addEventListener('submit', function (e) { e.preventDefault(); startLive(); });
+  }
+  function startLive() {
+    var v = function (id) { var el = $('#' + id); return el ? el.value.trim() : ''; };
+    var f = { name: v('awLName'), email: v('awLEmail'), message: v('awLMsg'), hp: v('awLHp') }, err = $('#awLErr');
+    if (f.name.length < 2) { err.textContent = 'Please enter your name.'; $('#awLName').focus(); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(f.email)) { err.textContent = 'Please enter a valid email address so we can reply.'; $('#awLEmail').focus(); return; }
+    if (f.message.length < 5) { err.textContent = 'Please type your message (at least a few words).'; $('#awLMsg').focus(); return; }
+    var saved = get('localStorage', 'aureum_web_contact', {}); set('localStorage', 'aureum_web_contact', Object.assign({}, saved, { name: f.name, email: f.email }));
+    var btn = $('#awLGo'); btn.disabled = true; err.textContent = '';
+    var subject = 'Live chat: ' + f.message.replace(/\s+/g, ' ').slice(0, 60);
+    rpc('support_web_create_ticket', { p_name: f.name, p_email: f.email, p_phone: null, p_business: null, p_subject: subject, p_category: 'question', p_body: f.message, p_transcript: null, p_website: f.hp || null })
+      .then(function (r) {
+        r = Array.isArray(r) ? r[0] : r; if (!r || !r.id || !r.token) throw new Error('bad reply');
+        var now = new Date().toISOString(); live = { id: r.id, token: r.token, name: f.name, email: f.email, subject: subject, at: now }; liveDraft = '';
+        set('localStorage', 'aureum_web_live', live);
+        var list = get('localStorage', 'aureum_web_tickets', []); list.unshift({ id: r.id, token: r.token, subject: subject, email: f.email, at: now, seenAt: now }); set('localStorage', 'aureum_web_tickets', list.slice(0, 20));
+        renderLive();
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        if (e && (e.unavailable || e.network || !e.status || e.status >= 500)) {
+          var fb = mailFallback({ name: f.name, email: f.email, phone: '', business: '', subject: subject, message: f.message });
+          err.innerHTML = (e && e.network ? 'We couldn’t reach the AUREUM server. Check your connection and try again, or write to us:' : 'Live chat is not available right now. Your message is ready to send another way:') + ' <a class="aw-link" href="' + esc(fb.mail) + '">email it to us</a>' + (fb.wa ? ' · <a class="aw-link" href="' + esc(fb.wa) + '" target="_blank" rel="noopener">WhatsApp it to us</a>' : '') + '.';
+        } else err.textContent = clean(e.message) || 'Sorry, the chat could not be started. Please try again.';
+      });
+  }
+  function renderLiveChat(pane) {
+    pane.innerHTML = '<div class="aw-scroll" id="awLiveScroll"><div class="aw-thread aw-livelog" id="awLiveMsgs" role="log" aria-live="polite" aria-label="Conversation with the AUREUM team"><p class="aw-loading">Loading your chat…</p></div></div>' +
+      '<div class="aw-compose"><form class="aw-ask" id="awLiveSend"><label class="sr-only" for="awLiveMsg">Type your message</label><textarea id="awLiveMsg" rows="1" maxlength="2000" placeholder="Type your message here…"></textarea>' +
+      '<button type="submit" class="aw-send" id="awLiveGo" aria-label="Send">' + SEND_SVG + '</button></form><div class="aw-err" id="awLiveErr" role="alert"></div>' +
+      '<div class="aw-foot"><button type="button" class="aw-link" id="awLiveNew">Start a new chat</button></div></div>';
+    $('#awLiveSend').addEventListener('submit', function (e) { e.preventDefault(); sendLive(); });
+    $('#awLiveMsg').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendLive(); } });
+    $('#awLiveNew').addEventListener('click', function () { live = null; set('localStorage', 'aureum_web_live', null); liveDraft = ''; renderLive(); });
+    fetchLive(true);
+    pollTimer = setInterval(function () { if (!document.hidden && !panel.hidden && currentPane === 'live') fetchLive(false); }, 6000);
+  }
+  function fetchLive(first) {
+    if (!live) return;
+    rpc('support_web_get_ticket', { p_id: live.id, p_token: live.token }).then(function (d) {
+      var t = d.ticket, msgs = d.messages || [], box = $('#awLiveMsgs'); if (!box) return;
+      var sig = msgs.length + ':' + t.status; if (sig === liveShown) return; liveShown = sig;
+      var team = msgs.some(function (m) { return m.author_type === 'admin'; });
+      var sc = $('#awLiveScroll'), stick = first || !sc || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80;
+      box.innerHTML = '<div class="aw-bub auto"><div class="aw-who">AUREUM · automatic message</div>' + esc(LIVE_HELLO) + '</div>' + msgs.map(function (m) {
+        var teamMsg = m.author_type === 'admin';
+        return '<div class="aw-bub ' + (teamMsg ? 'team' : 'you') + '"><div class="aw-who">' + (teamMsg ? 'AUREUM Team' : 'You') + ' · ' + esc(fmtTime(m.created_at)) + '</div>' + esc(m.body) + '</div>';
+      }).join('') +
+        (!team ? '<p class="aw-note aw-wait">Message received. We will reply here as soon as someone from the team is free, and may also email you at ' + esc(live.email) + '.</p>' : '') +
+        (t.status === 'resolved' || t.status === 'closed' ? '<p class="aw-note aw-wait">The team marked this chat as ' + (t.status === 'resolved' ? 'solved' : 'closed') + '. Write below to reopen it, or start a new chat.</p>' : '');
+      if (stick && sc) sc.scrollTop = sc.scrollHeight;
+      var list = get('localStorage', 'aureum_web_tickets', []), now = new Date().toISOString();
+      list.forEach(function (x) { if (x.id === live.id) x.seenAt = now; }); set('localStorage', 'aureum_web_tickets', list); setDot(false);
+    }).catch(function (e) {
+      if (e && e.status === 400 && /not found/i.test(e.message || '')) { live = null; set('localStorage', 'aureum_web_live', null); renderLive(); }
+      else if (first) { var box = $('#awLiveMsgs'); if (box) box.innerHTML = '<div class="aw-err">' + (e && e.network ? 'We couldn’t reach the server. Check your connection; this chat will update when you’re back online.' : 'We couldn’t load this chat.') + '</div>'; }
+    });
+  }
+  function sendLive() {
+    var ta = $('#awLiveMsg'), txt = ta.value.trim(), err = $('#awLiveErr'); if (!txt) return;
+    $('#awLiveGo').disabled = true; err.textContent = '';
+    rpc('support_web_add_message', { p_id: live.id, p_token: live.token, p_body: txt }).then(function () { ta.value = ''; $('#awLiveGo').disabled = false; liveShown = ''; fetchLive(true); ta.focus(); },
+      function (e) { $('#awLiveGo').disabled = false; err.textContent = e && e.network ? 'We couldn’t reach the server. Please try again.' : clean(e && e.message) || 'The message could not be sent.'; });
+  }
 
   /* ---------- tickets ---------- */
   var TOPIC_OPTS = [
@@ -368,10 +463,10 @@
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('[data-aw-open]'); if (!a) return;
     var what = a.getAttribute('data-aw-open'); e.preventDefault();
-    if (what === 'ticket') { draft.topic = draft.topic || 'import'; openTicket(false); } else openPanel(what === 'chat' ? 'ask' : what);
+    if (what === 'ticket') { draft.topic = draft.topic || 'import'; openTicket(false); } else openPanel(what === 'chat' ? 'live' : what);
   });
   renderChat();
-  if (location.hash === '#ticket') openTicket(false); else if (location.hash === '#chat') openPanel('ask');
+  if (location.hash === '#ticket') openTicket(false); else if (location.hash === '#chat') openPanel('live');
   if (get('localStorage', 'aureum_web_tickets', []).length) {
     var l0 = get('localStorage', 'aureum_web_tickets', []).slice(0, 5), any0 = false;
     l0.forEach(function (r) { rpc('support_web_get_ticket', { p_id: r.id, p_token: r.token }).then(function (d) { if (unseen(r, d && d.ticket)) { any0 = true; setDot(true); } }).catch(function () { }); });
