@@ -1,5 +1,10 @@
 # Changelog
 
+## Clean website links, import duplicates, rows-per-page (sw v68)
+- Website: "Open POS", "Back Office", "Log in", "Free trial" and the other links into the apps now use the short addresses (/pos, /app, /app?mode=signin, /app?mode=signup) and open in a new tab.
+- Back Office, Import products: products already in the system are now flagged ("N products are already in the system") with a choice: Yes, set the quantity to the number in the file; Yes, add the file's number to the current quantity; or No, leave them (not imported). Default is No. Quantity changes go into Product History. New products in the same file import as before.
+- Back Office, Product list: the "Rows per page" number was hidden behind the drop-down arrow; fixed.
+
 ## Website: six business types, tagline, clearer trial buttons, launch checklist (sw v67)
 - Business section now shows six cards: Bakery, Beauty, Retail, Grocery, Pharmacy, Electronics & Hardware, with the line "All your business operations right at the tip of your fingers." under them. The Beauty, Pharmacy and Electronics cards are gold line-art placeholders and Grocery reuses the supermarket photo: replace site/assets/img/card-beauty.webp, card-pharmacy.webp, card-electronics.webp and card-grocery-v3.webp with real photos (same names).
 - "Let's get started" is now clearly visible and "14-Day Free Trial" and "Start free trial" are clickable gold-ringed buttons.

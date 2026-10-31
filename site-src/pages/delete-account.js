@@ -1,6 +1,6 @@
 import { SUPPORT, APP } from '../config.js';
 import { pageHero } from '../components/sections.js';
-import { esc } from '../components/ui.js';
+import { esc, tgt } from '../components/ui.js';
 
 export const deleteAccount = {
   path: '/delete-account/', file: 'delete-account/index.html', active: '',
@@ -12,7 +12,7 @@ export const deleteAccount = {
 
   <h2>How to request deletion</h2>
   <ol>
-    <li>Sign in to the Back Office with the owner’s email and password (<a href="${esc(APP.signIn)}">sign in</a>).</li>
+    <li>Sign in to the Back Office with the owner’s email and password (<a href="${esc(APP.signIn)}"${tgt(APP.signIn)}>sign in</a>).</li>
     <li>Open <strong>Help &amp; support</strong> (bottom of the left menu) and send a ticket with the subject <strong>“Delete my account”</strong>.</li>
     ${SUPPORT.email ? `<li>Or email <a href="mailto:${esc(SUPPORT.email)}">${esc(SUPPORT.email)}</a> from the email address on the account, with the subject “Delete my account”.</li>` : ''}
     <li>We confirm it is you, then delete the account.</li>

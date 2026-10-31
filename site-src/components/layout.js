@@ -1,5 +1,5 @@
 import { SITE, NAV, APP, DEMO } from '../config.js';
-import { esc, brand, logoMark, linkButton } from './ui.js';
+import { esc, brand, logoMark, linkButton, tgt } from './ui.js';
 import { productAccess } from './access.js';
 import { icon } from './icons.js';
 
@@ -16,13 +16,13 @@ export const header = active => `<header class="site-header">
 export const dock = active => `<div class="dock" role="region" aria-label="Quick navigation">
   <div class="dock-menu" id="dock-menu" hidden>
     <nav aria-label="Explore">${NAV.map(n => `<a href="${n.href}"${n.id === active ? ' aria-current="page"' : ''}><span>${esc(n.label)}</span>${icon('ne', 13, 'ic')}</a>`).join('')}
-      <a href="${APP.signIn}"><span>Log in</span>${icon('ne', 13, 'ic')}</a></nav>
+      <a href="${APP.signIn}"${tgt(APP.signIn)}><span>Log in</span>${icon('ne', 13, 'ic')}</a></nav>
   </div>
   <div class="dock-bar">
     <a class="dock-brand" href="/" aria-label="AUREUM home">${logoMark()}</a>
     <button type="button" class="dock-explore" id="dock-btn" aria-expanded="false" aria-controls="dock-menu"><span>Explore</span>${icon('plus', 14, 'ic dock-plus')}</button>
-    <a class="dock-login" href="${APP.signIn}">Log in</a>
-    <a class="dock-cta" href="${APP.signUp}"><span>Free trial</span>${icon('ne', 14, 'ic')}</a>
+    <a class="dock-login" href="${APP.signIn}"${tgt(APP.signIn)}>Log in</a>
+    <a class="dock-cta" href="${APP.signUp}"${tgt(APP.signUp)}><span>Free trial</span>${icon('ne', 14, 'ic')}</a>
   </div>
 </div>`;
 
@@ -34,7 +34,7 @@ export const footer = () => `<footer class="site-footer">
       </div>
       <nav class="f-col" aria-label="Explore"><h2>Explore</h2><ul>${NAV.map(n => `<li><a href="${n.href}">${esc(n.label)}</a></li>`).join('')}</ul></nav>
       <nav class="f-col" aria-label="Product"><h2>Product</h2><ul>
-        <li><a href="${APP.pos}">POS Checkout</a></li><li><a href="${APP.backOffice}">Back Office</a></li><li><a href="${APP.signIn}">Log in</a></li><li><a href="${APP.signUp}">Start free trial</a></li>
+        <li><a href="${APP.pos}"${tgt(APP.pos)}>POS Checkout</a></li><li><a href="${APP.backOffice}"${tgt(APP.backOffice)}>Back Office</a></li><li><a href="${APP.signIn}"${tgt(APP.signIn)}>Log in</a></li><li><a href="${APP.signUp}"${tgt(APP.signUp)}>Start free trial</a></li>
       </ul></nav>
       <nav class="f-col" aria-label="Legal"><h2>Legal</h2><ul>
         <li><a href="/terms/">Terms &amp; Conditions</a></li><li><a href="/privacy/">Privacy Policy</a></li><li><a href="/delete-account/">Delete your account</a></li>
@@ -100,7 +100,7 @@ ${preload.map(p => `<link rel="preload" as="image" href="${p}" fetchpriority="hi
 <link rel="stylesheet" href="/vendor/fonts/montserrat.css">
 <link rel="stylesheet" href="/site/assets/site.css?v=${assetV}">
 <script>document.documentElement.classList.add('js')</script>
-${path === '/' ? `<script>/* emailed sign-up / password-reset links may land here: pass them on to the Back Office with their tokens */if(/[#&](access_token|error_code|type=(recovery|signup|invite|magiclink|email_change))/.test(location.hash))location.replace('${'/backoffice.html'}'+location.hash)</script>` : ''}
+${path === '/' ? `<script>/* emailed sign-up / password-reset links may land here: pass them on to the Back Office with their tokens */if(/[#&](access_token|error_code|type=(recovery|signup|invite|magiclink|email_change))/.test(location.hash))location.replace('${'/app'}'+location.hash)</script>` : ''}
 <noscript><style>.dock{display:none}.rv{opacity:1!important;transform:none!important}</style></noscript>
 ${jsonLd.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n')}
 </head>

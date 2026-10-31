@@ -14,10 +14,10 @@ export const SITE = {
    If the website is ever hosted somewhere else, set it to 'https://aureum-platform.vercel.app'. */
 export const APP_BASE = '';
 export const APP = {
-  backOffice: APP_BASE + '/backoffice.html',                    // the Back Office (it was previously served at "/")
-  signIn: APP_BASE + '/backoffice.html?mode=signin',            // opens the Back Office on its "Sign In" tab
-  signUp: APP_BASE + '/backoffice.html?mode=signup',            // opens it on "Create Business" — the free-trial account creation
-  pos: APP_BASE + '/pos-checkout.html'                          // the POS checkout
+  backOffice: APP_BASE + '/app',                    // the Back Office (it was previously served at "/")
+  signIn: APP_BASE + '/app?mode=signin',            // opens the Back Office on its "Sign In" tab
+  signUp: APP_BASE + '/app?mode=signup',            // opens it on "Create Business" — the free-trial account creation
+  pos: APP_BASE + '/pos'                          // the POS checkout
 };
 
 export const NAV = [

@@ -381,6 +381,7 @@
     background-repeat:no-repeat; background-position:right 13px center;
     transition:border-color .15s, box-shadow .15s;
   }
+  .pg-size-select.cat-select{ padding:6px 34px 6px 12px; min-width:76px; font-size:13px; }
   .cat-select:hover{ border-color: var(--gold-bright); }
   .cat-select:focus{ border-color: var(--gold-bright); box-shadow:0 0 0 3px rgba(231,199,102,.18); }
   .cat-select option{ background:#0B1F17; color:var(--ivory); }
@@ -623,6 +624,12 @@
   .store-only{ display:none; }
   .store-app .store-only{ display:block; }
   /* ----- product import dialog ----- */
+  .imp-exist{margin:12px 0;padding:12px 14px;border:1px solid var(--gold-bright);border-radius:12px;background:rgba(201,162,39,.08)}
+  .imp-exist-h{font-weight:700;color:var(--gold-bright);margin-bottom:4px}
+  .imp-exist-n{font-size:12px;color:var(--sage);margin-bottom:8px}
+  .imp-exist-q{margin:6px 0 8px;font-weight:600}
+  .imp-radio{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer;line-height:1.35}
+  .imp-radio input{margin-top:3px;accent-color:var(--gold-bright)}
   .imp-help p{ margin:0 0 10px; font-size:13px; line-height:1.55; color:var(--ivory-dim); }
   .imp-help b{ color:var(--ivory); }
   .imp-tpl{ margin-top:6px; font-size:12.5px; color:var(--sage); }
@@ -4865,7 +4872,7 @@ const AureumSync = (function(){
         <div class="pagination-info">Showing ${start}–${end} of ${totalItems}</div>
         <div class="pagination-size">
           Rows per page
-          <select class="pg-size-select cat-select" style="padding:4px 8px;">
+          <select class="pg-size-select cat-select" aria-label="Rows per page">
             ${[...new Set([10,20,30,50,state.pageSize])].sort((x,y)=>x-y).map(n=>`<option value="${n}" ${n===state.pageSize?'selected':''}>${n}</option>`).join('')}
           </select>
         </div>
@@ -8733,7 +8740,7 @@ const AureumSync = (function(){
     // a heading row has a name column, or at least two recognised columns — one stray matching word (a title like
     // "Stock take — Main store") isn't enough
     for(const i of nonEmpty.slice(0, 15)){ const m = impAutoMap(rows[i]); if(m.name > -1 || IMP_ORDER.filter(k => m[k] > -1).length >= 2){ headerRow = i; break; } }
-    imp = { fileName, sheetName, rows, width, firstRow: nonEmpty[0], headerRow, hasHeader: true, map:{}, stockShop: (viewingShop && viewingShop !== 'All Shops' && SHOPS.includes(viewingShop)) ? viewingShop : (SHOPS[0] || ''), result:null };
+    imp = { fileName, sheetName, rows, width, firstRow: nonEmpty[0], headerRow, hasHeader: true, adjust: 'no', map:{}, stockShop: (viewingShop && viewingShop !== 'All Shops' && SHOPS.includes(viewingShop)) ? viewingShop : (SHOPS[0] || ''), result:null };
     impRemap();
     return {};
   }
@@ -8743,8 +8750,8 @@ const AureumSync = (function(){
 
   // work out exactly what would happen — shown to the person BEFORE anything is saved
   function impPlan(){
-    const m = imp.map, plan = { ready:[], dups:[], noName:0, badPrice:0, badCost:0, badStock:0, codeClash:0 };
-    const existing = new Set(PRODUCTS.map(p => impNameKey(p.name))), seen = new Set(), usedCodes = new Set(PRODUCTS.map(p => String(p.code || '').trim().toLowerCase()).filter(Boolean));
+    const m = imp.map, plan = { ready:[], dups:[], existing:[], noName:0, badPrice:0, badCost:0, badStock:0, codeClash:0 };
+    const existing = new Set(PRODUCTS.map(p => impNameKey(p.name))), existingByKey = new Map(PRODUCTS.map(p => [impNameKey(p.name), p])), seenExisting = new Set(), seen = new Set(), usedCodes = new Set(PRODUCTS.map(p => String(p.code || '').trim().toLowerCase()).filter(Boolean));
     let maxCode = 100000; PRODUCTS.forEach(p => { const c = String(p.code || '').trim(); if(/^\d{6,}$/.test(c)) maxCode = Math.max(maxCode, parseInt(c, 10)); });
     const num = (r, idx, kind, int) => {
       if(idx < 0) return 0;
@@ -8758,6 +8765,13 @@ const AureumSync = (function(){
       const name = impClean(r[m.name]);
       if(!name){ plan.noName++; continue; }
       const key = impNameKey(name);
+      if(existing.has(key) && !seenExisting.has(key)){      // already in the system: remember its quantity from the file so the person can choose to adjust it
+        seenExisting.add(key);
+        const raw = m.stock > -1 ? impNumber(r[m.stock]) : { empty:true };
+        const hasQty = m.stock > -1 && !raw.empty && !raw.bad && raw.value >= 0;
+        plan.existing.push({ p: existingByKey.get(key), name, hasQty, qty: hasQty ? Math.round(raw.value) : 0 });
+        continue;
+      }
       if(existing.has(key) || seen.has(key)){ plan.dups.push(name); continue; }
       seen.add(key);
       let code = m.code > -1 ? impClean(r[m.code]) : '';
@@ -8816,10 +8830,22 @@ const AureumSync = (function(){
     const opts = sel => `<option value="-1">— none —</option>` + headers.map((h, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${escHtml(h)}</option>`).join('');
     const status = f => m[f.key] > -1 ? `<span class="imp-ok">✓ found</span>` : (f.required ? `<span class="imp-need">needed</span>` : `<span class="imp-opt">optional</span>`);
     const extras = ['code','barcode','description','shops'].filter(k => m[k] > -1).map(k => ({ code:'Product code', barcode:'Barcode', description:'Description', shops:'Shops' }[k]));
-    const hasStock = ready.some(r => r.stock > 0);
+    const adjustable = plan.existing.filter(e => e.hasQty && e.p && e.p.stockControl !== false), adjustCount = imp.adjust !== 'no' ? adjustable.length : 0;
+    const hasStock = ready.some(r => r.stock > 0) || adjustCount > 0;
     const multi = SHOPS.length > 1;
     const warn = [];
-    if(plan.dups.length) warn.push(`${plan.dups.length} already exist (same name) — skipped${plan.dups.length ? `: ${escHtml(plan.dups.slice(0, 3).join(', '))}${plan.dups.length > 3 ? '…' : ''}` : ''}`);
+    if(plan.dups.length) warn.push(`${plan.dups.length} repeated row${plan.dups.length === 1 ? '' : 's'} in the file (same name) — skipped${`: ${escHtml(plan.dups.slice(0, 3).join(', '))}${plan.dups.length > 3 ? '…' : ''}`}`);
+    const exNames = escHtml(plan.existing.slice(0, 3).map(e => e.name).join(', ')) + (plan.existing.length > 3 ? '…' : '');
+    const existPanel = plan.existing.length ? `<div class="imp-exist" id="impExist">
+        <div class="imp-exist-h">⚠ ${plan.existing.length} product${plan.existing.length === 1 ? ' is' : 's are'} already in the system</div>
+        <div class="imp-exist-n">${exNames}</div>
+        ${adjustable.length ? `<p class="imp-exist-q">Do you want to adjust ${adjustable.length === 1 ? 'its' : 'their'} quantit${adjustable.length === 1 ? 'y' : 'ies'} using the numbers in this file?</p>
+        <label class="imp-radio"><input type="radio" name="impAdj" value="set" ${imp.adjust === 'set' ? 'checked' : ''}> <span><b>Yes</b> — set the quantity to the number in the file</span></label>
+        <label class="imp-radio"><input type="radio" name="impAdj" value="add" ${imp.adjust === 'add' ? 'checked' : ''}> <span><b>Yes</b> — add the number in the file to the current quantity</span></label>
+        <label class="imp-radio"><input type="radio" name="impAdj" value="no" ${imp.adjust === 'no' ? 'checked' : ''}> <span><b>No</b> — leave these products as they are (they are not imported)</span></label>`
+        : `<p class="imp-exist-q">${m.stock < 0 ? 'No Stock column is matched, so they are' : 'The file has no usable quantity for them, so they are'} skipped and not imported again.</p>`}
+      </div>` : '';
+
     if(plan.noName) warn.push(`${plan.noName} row${plan.noName === 1 ? '' : 's'} with no product name — skipped`);
     if(plan.badPrice) warn.push(`${plan.badPrice} price${plan.badPrice === 1 ? '' : 's'} couldn't be read — set to 0`);
     if(plan.badCost) warn.push(`${plan.badCost} cost${plan.badCost === 1 ? '' : 's'} couldn't be read — set to 0`);
@@ -8833,20 +8859,31 @@ const AureumSync = (function(){
       <table class="imp-map">${IMP_FIELDS.map(f => `<tr><td class="l">${f.label}${f.required ? ' *' : ''}</td><td><select class="modal-field imp-sel" data-key="${f.key}" aria-label="Column for ${f.label}">${opts(m[f.key])}</select></td><td class="s">${status(f)}</td></tr>`).join('')}</table>
       ${extras.length ? `<div class="imp-extras">Also found and imported: ${extras.join(', ')}.</div>` : ''}
       ${hasStock && SHOPS.length ? `<div class="imp-stockshop"><label>Add the stock to <select class="modal-field" id="impStockShop" ${multi ? '' : 'disabled'}>${SHOPS.map(sh => `<option ${sh === imp.stockShop ? 'selected' : ''}>${escHtml(sh)}</option>`).join('')}</select></label></div>` : ''}
-      <div class="imp-sum ${ready.length ? 'good' : 'none'}">${m.name < 0 ? 'Choose which column holds the <b>Product Name</b> to continue.' : ready.length ? `✓ <b>${ready.length}</b> product${ready.length === 1 ? '' : 's'} ready to import — a product code will be created for each` : 'Nothing new to import from this file.'}</div>
+      ${existPanel}
+      <div class="imp-sum ${(ready.length || adjustCount) ? 'good' : 'none'}">${m.name < 0 ? 'Choose which column holds the <b>Product Name</b> to continue.' : (ready.length || adjustCount) ? `${ready.length ? `✓ <b>${ready.length}</b> new product${ready.length === 1 ? '' : 's'} ready to import — a product code will be created for each` : ''}${ready.length && adjustCount ? '<br>' : ''}${adjustCount ? `✓ <b>${adjustCount}</b> existing product${adjustCount === 1 ? '' : 's'} will have ${adjustCount === 1 ? 'its' : 'their'} quantity ${imp.adjust === 'add' ? 'increased' : 'updated'}` : ''}` : 'Nothing new to import from this file.'}</div>
       ${warn.length ? `<ul class="imp-warn">${warn.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}
       ${sample.length ? `<div class="imp-prev"><table class="detail-table"><thead><tr><th>Product Name</th><th>Category</th><th class="num">Price</th><th class="num">Cost</th><th class="num">Stock</th><th>Code</th></tr></thead><tbody>${sample.map(r => `<tr><td>${escHtml(r.name)}</td><td>${escHtml(r.category)}</td><td class="num">${r.price.toFixed(2)}</td><td class="num">${r.cost.toFixed(2)}</td><td class="num">${r.stock}</td><td class="mono">${escHtml(r.code)}</td></tr>`).join('')}</tbody></table>${ready.length > sample.length ? `<div class="imp-more">…and ${ready.length - sample.length} more</div>` : ''}</div>` : ''}`,
-      `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid ${ready.length ? '' : 'disabled'}" id="impGo" ${ready.length ? '' : 'aria-disabled="true"'}>${ready.length ? `Import ${ready.length} product${ready.length === 1 ? '' : 's'}` : 'Import'}</div>`);
+      `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid ${(ready.length || adjustCount) ? '' : 'disabled'}" id="impGo" ${(ready.length || adjustCount) ? '' : 'aria-disabled="true"'}>${(ready.length || adjustCount) ? `${ready.length ? `Import ${ready.length} product${ready.length === 1 ? '' : 's'}` : 'Update quantities'}${ready.length && adjustCount ? ` + update ${adjustCount}` : ''}` : 'Import'}</div>`);
     const modal = document.getElementById('detailModal');
     modal.querySelector('#impAnother').addEventListener('click', e => { e.preventDefault(); document.getElementById('productImportInput').click(); });
     modal.querySelector('#impHasHeader').addEventListener('change', e => { imp.hasHeader = e.target.checked; impRemap(); impRenderPreview(); });
     modal.querySelectorAll('.imp-sel').forEach(sel => sel.addEventListener('change', () => { imp.map[sel.dataset.key] = parseInt(sel.value, 10); impRenderPreview(); }));
     const ss = modal.querySelector('#impStockShop'); if(ss) ss.addEventListener('change', () => { imp.stockShop = ss.value; });
-    modal.querySelector('#impGo').addEventListener('click', () => { if(ready.length) impRun(); });
+    modal.querySelectorAll('input[name="impAdj"]').forEach(r => r.addEventListener('change', () => { imp.adjust = r.value; impRenderPreview(); }));
+    modal.querySelector('#impGo').addEventListener('click', () => { if(ready.length || adjustCount) impRun(); });
   }
   function impRun(){
     const plan = impPlan(), shopFor = imp.stockShop;     // codes are worked out again from the live product list, so they can't clash
-    let added = 0;
+    let added = 0, adjusted = 0;
+    if(imp.adjust !== 'no'){                              // the person chose to adjust the quantities of products that already exist
+      plan.existing.filter(e => e.hasQty && e.p && e.p.stockControl !== false).forEach(e => {
+        const target = SHOPS.includes(shopFor) ? shopFor : SHOPS[0]; if(!target) return;
+        const before = stockSnapshot(e.p);
+        if(imp.adjust === 'add') addStock(e.p, target, e.qty); else setStock(e.p, target, e.qty);
+        logProductStockChanges(e.p, before, imp.adjust === 'add' ? 'Import (added to stock)' : 'Import (quantity set)');
+        adjusted++;
+      });
+    }
     plan.ready.forEach(r => {
       const shops = r.shops.length ? r.shops : [...SHOPS];
       const prod = { id: nextProductId++, name: r.name, price: r.price, cost: r.cost, cat: r.category, stock: r.stock, image:null, code: r.code, barcode: r.barcode, soldBy:'each', description: r.description, shops, stockControl:true, taxable: POS_SETTINGS.taxDefaultOnNewProducts !== false };
@@ -8862,11 +8899,12 @@ const AureumSync = (function(){
     ensureProductCodes();
     persistAureum();
     renderCategoryFilter(); renderCategoryDatalist(); renderProducts(); renderSalesByProduct(); renderAlerts();
-    const skipped = plan.dups.length + plan.noName;
-    aureumToast(`${added} product${added === 1 ? '' : 's'} imported.`, 'ok');
-    impShow('Import finished', `<div class="imp-done"><div class="big">✓ ${added} product${added === 1 ? '' : 's'} added</div>
-      <p>A product code was created for each one${plan.ready.some(r => r.stock > 0) && SHOPS.length ? `, and the stock was added to <b>${escHtml(shopFor)}</b>` : ''}.</p>
-      ${skipped ? `<p class="muted">${skipped} row${skipped === 1 ? ' was' : 's were'} skipped (${plan.dups.length} already existed, ${plan.noName} had no name).</p>` : ''}</div>`,
+    const skippedExisting = plan.existing.length - adjusted, skipped = plan.dups.length + plan.noName + skippedExisting;
+    aureumToast(`${added} product${added === 1 ? '' : 's'} imported${adjusted ? `, ${adjusted} updated` : ''}.`, 'ok');
+    impShow('Import finished', `<div class="imp-done"><div class="big">✓ ${added} product${added === 1 ? '' : 's'} added${adjusted ? ` · ${adjusted} updated` : ''}</div>
+      ${adjusted ? `<p>${adjusted} existing product${adjusted === 1 ? ' had its' : 's had their'} quantity ${imp.adjust === 'add' ? 'increased' : 'set'} in <b>${escHtml(shopFor)}</b>. The change${adjusted === 1 ? ' is' : 's are'} in Product History.</p>` : ''}
+      ${added ? `<p>A product code was created for each one${plan.ready.some(r => r.stock > 0) && SHOPS.length ? `, and the stock was added to <b>${escHtml(shopFor)}</b>` : ''}.</p>` : ''}
+      ${skipped ? `<p class="muted">${skipped} row${skipped === 1 ? ' was' : 's were'} skipped (${plan.existing.length ? `${skippedExisting} already existed and ${skippedExisting === 1 ? 'was' : 'were'} left as they are, ` : ''}${plan.dups.length} repeated in the file, ${plan.noName} had no name).</p>` : ''}</div>`,
       `<div class="modal-btn solid" data-close="detailModal">Done</div>`);
     imp = null;
   }
