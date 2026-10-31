@@ -374,17 +374,9 @@
   .p-search input::placeholder{ color:var(--sage-dim); }
   .p-search .ic{ color:var(--sage); }
   .cat-select{
-    background-color: var(--panel); border:1px solid var(--gold-dim, #A88A3A); border-radius:10px;
-    padding:10px 36px 10px 14px; color:var(--gold-bright); font-family:'Inter'; font-size:13px; font-weight:500; outline:none; cursor:pointer;
-    -webkit-appearance:none; appearance:none;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23E7C766' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat:no-repeat; background-position:right 13px center;
-    transition:border-color .15s, box-shadow .15s;
+    background: var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; color:var(--ivory-dim); font-family:'Inter'; font-size:13px; outline:none; cursor:pointer;
   }
-  .pg-size-select.cat-select{ padding:6px 34px 6px 12px; min-width:76px; font-size:13px; }
-  .cat-select:hover{ border-color: var(--gold-bright); }
-  .cat-select:focus{ border-color: var(--gold-bright); box-shadow:0 0 0 3px rgba(231,199,102,.18); }
-  .cat-select option{ background:#0B1F17; color:var(--ivory); }
 
   .product-grid{
     display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -4872,7 +4864,7 @@ const AureumSync = (function(){
         <div class="pagination-info">Showing ${start}–${end} of ${totalItems}</div>
         <div class="pagination-size">
           Rows per page
-          <select class="pg-size-select cat-select" aria-label="Rows per page">
+          <select class="pg-size-select cat-select" aria-label="Rows per page" style="padding:4px 8px;">
             ${[...new Set([10,20,30,50,state.pageSize])].sort((x,y)=>x-y).map(n=>`<option value="${n}" ${n===state.pageSize?'selected':''}>${n}</option>`).join('')}
           </select>
         </div>

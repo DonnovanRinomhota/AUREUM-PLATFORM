@@ -1,5 +1,8 @@
 # Changelog
 
+## Back Office: drop-downs back to the original colours (sw v69)
+- Filter and other drop-downs (dates, time, shop, category, chart type, rows per page) are back to the original text and box colours: no gold text, no gold highlight, native arrow. This also fixes the overlapping arrow on the chart "Line / Hours" boxes and the Rows-per-page number.
+
 ## Clean website links, import duplicates, rows-per-page (sw v68)
 - Website: "Open POS", "Back Office", "Log in", "Free trial" and the other links into the apps now use the short addresses (/pos, /app, /app?mode=signin, /app?mode=signup) and open in a new tab.
 - Back Office, Import products: products already in the system are now flagged ("N products are already in the system") with a choice: Yes, set the quantity to the number in the file; Yes, add the file's number to the current quantity; or No, leave them (not imported). Default is No. Quantity changes go into Product History. New products in the same file import as before.
