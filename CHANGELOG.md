@@ -1,5 +1,9 @@
 # Changelog
 
+## Website: headline font, simpler trial link (sw v72)
+- "Empowering Business Owners World Wide" and "All your business operations right at the tip of your fingers." now use the same light font as "Let's put your shop to work." (colours unchanged).
+- Call-to-action band: the bottom "Start free trial" button is removed; "14-Day Free Trial" is now a plain underlined link with an arrow.
+
 ## Website: new photos shown immediately (sw v71)
 - The Beauty, Pharmacy and Electronics photos have new file names (card-beauty-v3.webp, card-pharmacy-v2.webp, card-electronics-v2.webp) so browsers that saved the old pictures load the new ones. When you replace a card photo later, give it a new name (for example -v4) and change it in site-src/config.js, then run node tools/build-site.mjs.
 

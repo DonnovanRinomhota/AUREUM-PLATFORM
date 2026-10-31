@@ -102,12 +102,12 @@ export const priceBand = () => `<section class="panel light" aria-labelledby="pr
 
 export const ctaBlock = () => `<section class="panel accent" aria-labelledby="cta-title">
   <div class="wrap">
-    <div class="sec-head cta-head"><span class="cta-lets">LET'S GET STARTED</span><a class="gold-ring" href="${APP.signUp}"${tgt(APP.signUp)}>${PRICING.trialDays}-Day Free Trial${icon('ne', 14, 'ic')}</a></div>
+    <div class="sec-head cta-head"><span class="cta-lets">LET'S GET STARTED</span>${alink(`${PRICING.trialDays}-Day Free Trial`, APP.signUp, 'ink')}</div>
     <div class="cta-big">
       <h2 id="cta-title" class="display xl">Let's put<br><span class="ink">your shop to work.</span></h2>
       <a class="big-arrow" href="${APP.signUp}"${tgt(APP.signUp)} aria-label="Start your free trial">${icon('ne', 120, 'ic')}</a>
     </div>
-    <div class="cta-foot"><p class="small">Create your account and try every feature.<br>Every shop is included while you try AUREUM.</p><a class="gold-ring gold-ring-lg" href="${APP.signUp}"${tgt(APP.signUp)}><span>Start free trial</span>${icon('ne', 16, 'ic')}</a></div>
+    <div class="cta-foot"><p class="small">Create your account and try every feature.<br>Every shop is included while you try AUREUM.</p></div>
   </div>
 </section>`;
 export const ctaBand = ctaBlock;
