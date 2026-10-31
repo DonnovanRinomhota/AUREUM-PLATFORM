@@ -22,7 +22,7 @@ const hero = () => `<section class="panel dark page-hero sup-hero"><div class="w
       <p>We are here to do the task for you. Send a ticket, write us an email or reach us on WhatsApp.</p>
     </div>
     <div class="sup-hero-btns">
-      <a class="btn btn-gold btn-lg" href="#help" data-aw-open="ticket"><span>Send a ticket</span></a>
+      <a class="btn btn-gold btn-lg" href="#ticket" data-aw-open="ticket"><span>Send a ticket</span></a>
       <a class="btn btn-outline btn-lg" href="mailto:${esc(SUPPORT.email)}"><span>Write us an email</span></a>
       ${SUPPORT.whatsapp ? `<a class="btn btn-outline btn-lg" href="${esc(waLink('Hello AUREUM, I need help with my products.'))}" target="_blank" rel="noopener"><span>WhatsApp us</span></a>` : ''}
     </div>
@@ -30,21 +30,12 @@ const hero = () => `<section class="panel dark page-hero sup-hero"><div class="w
   <figure class="sup-photo"><img src="/site/assets/img/support-team.webp" width="1024" height="683" alt="Smiling AUREUM support agent wearing a headset, with two colleagues working behind her" fetchpriority="high"></figure>
 </div></div></section>`;
 
-/* the chat + ticket centre; everything inside #aw is built by site/assets/help-widget.js */
-const helpCentre = () => `<section class="panel dark aw-sec" id="help" aria-labelledby="help-t"><div class="wrap">${secHead('01 / ASK OR SEND A TICKET', 'Help centre')}
-<h2 class="display sm aw-title" id="help-t">Ask AUREUM Bot,<br><span class="dim">or send us a ticket.</span></h2>
-<p class="small aw-lead">Get instant answers from AUREUM Bot. If it can’t help, send a ticket and the AUREUM team will reply.</p>
-<div class="aw" id="aw" data-api-url="${esc(SUPPORT.api.url)}" data-api-key="${esc(SUPPORT.api.anonKey)}" data-email="${esc(SUPPORT.email)}" data-wa="${esc(SUPPORT.whatsapp.replace(/\D/g, ''))}">
-  <p class="aw-fallback">The help chat needs JavaScript. You can still write to us at <a href="mailto:${esc(SUPPORT.email)}">${esc(SUPPORT.email)}</a>.</p>
-</div></div></section>`;
-
 export const support = {
-  scripts: ['help-widget.js'],
   path: '/support/', file: 'support/index.html', active: 'support',
   title: 'Support | AUREUM POS & Inventory Management',
   description: 'Chat with AUREUM Bot, send a support ticket, or write to the AUREUM team. We can also help you enter your products or move them from your old POS.',
-  body: () => hero() + helpCentre() + `
-<section class="panel light support-sec"><div class="wrap">${secHead('02 / MORE WAYS IN', 'Three ways in')}<div class="sup-grid">
+  body: () => hero() + `
+<section class="panel light support-sec"><div class="wrap">${secHead('01 / MORE WAYS IN', 'Three ways in')}<div class="sup-grid">
   <article class="fg-card rv"><h2>Help inside AUREUM</h2>
     <p>Sign in to the Back Office and open <strong>Help &amp; support</strong> at the bottom of the left menu.</p>
     <ul class="plain"><li><strong>AUREUM Bot</strong> answers how-to questions about every part of the app.</li><li>If the Bot can't help, send a <strong>support ticket</strong>. The AUREUM team replies inside the ticket, and a red dot tells you when there is a reply.</li></ul>
@@ -58,5 +49,5 @@ export const support = {
 </div>
 ${contact() ? `<div class="contact-box rv"><h2 class="side-title">Contact the AUREUM team</h2>${contact()}</div>` : ''}
 </div></section>
-<section class="panel dark faq-sec"><div class="wrap">${secHead('03 / QUICK ANSWERS', 'Common questions')}<h2 class="display md">Quick<br><span class="dim">answers.</span></h2>${faq(FAQ_SUPPORT)}</div></section>` + ctaBand()
+<section class="panel dark faq-sec"><div class="wrap">${secHead('02 / QUICK ANSWERS', 'Common questions')}<h2 class="display md">Quick<br><span class="dim">answers.</span></h2>${faq(FAQ_SUPPORT)}</div></section>` + ctaBand()
 };

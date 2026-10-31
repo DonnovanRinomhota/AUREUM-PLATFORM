@@ -49,7 +49,7 @@ Use the **exact words shown on screen** for menus and buttons. When the app chan
 
 
 ## Website help centre and tickets (Support page)
-The Support page (www.aureumpos.com/support) has the same AUREUM Bot plus a ticket form for people who are **not signed in** (new visitors, people who can't log in, people who want you to enter their products).
+Every page of the website has a gold ? button that opens a Live Chat panel (the same AUREUM help answers plus a ticket form) for people who are **not signed in** (new visitors, people who can't log in, people who want you to enter their products).
 
 To switch tickets on (both steps need your go-ahead; nothing is applied by the zip):
 1. **Deploy the updated function first:** `supabase functions deploy admin-manage` (it now copes with tickets that have no business).

@@ -1,5 +1,10 @@
 # Changelog
 
+## Website: Live Chat button instead of a full-page bot (sw v75)
+- The AUREUM Bot section is removed from the Support page. Every website page now has a gold **?** button (bottom right) that opens a **Live Chat** panel: chat, Topics, Ticket, My tickets. On phones it fills the screen.
+- Support page order: the "Three ways in" cards now come before anything else under the hero. Hero "Send a ticket" opens the chat on the Ticket tab.
+- The panel says plainly that answers are automated (from the help library), and that a ticket reaches a person.
+
 ## Website: Support page with AUREUM Bot chat and tickets (sw v74)
 - Support page: new "Here for you 24/7." section with the support-team photo, "Reach out to the AUREUM team." and the "Need help entering your products or transferring them from your old POS?" message, with buttons to send a ticket, email, and (once a number is set in `SUPPORT.whatsapp`) WhatsApp.
 - New **Help centre** on the Support page: Ask AUREUM Bot (same help library and engine as the Back Office, runs in the browser, not a live AI), Help topics, Send a ticket, My tickets (follow the team's replies, write back, red dot for a new reply). Files: `site-src/assets/help-widget.js`, generated `site/assets/help-bot.js`.

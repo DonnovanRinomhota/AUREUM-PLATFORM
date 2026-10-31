@@ -1,4 +1,4 @@
-import { SITE, NAV, APP, DEMO } from '../config.js';
+import { SITE, NAV, APP, DEMO, SUPPORT } from '../config.js';
 import { esc, brand, logoMark, linkButton, tgt } from './ui.js';
 import { productAccess } from './access.js';
 import { icon } from './icons.js';
@@ -57,6 +57,9 @@ export function demoDialog() {
 }
 
 /* A short notice, shown until it is dismissed. The website sets no advertising or tracking cookies. */
+/* floating ? button + live chat panel on every page; built in the browser by site/assets/help-widget.js */
+export const liveChat = () => `<div class="aw" id="aw" data-api-url="${esc(SUPPORT.api.url)}" data-api-key="${esc(SUPPORT.api.anonKey)}" data-email="${esc(SUPPORT.email)}" data-wa="${esc(SUPPORT.whatsapp.replace(/\D/g, ''))}"></div>`;
+
 export const cookieNotice = () => `<div class="cookie-note" id="cookie-note" role="region" aria-label="Cookies and privacy" hidden>
   <p>This website uses only the storage it needs to work, plus anonymous visit counts with no cookies and no advertising. <a href="/privacy/">Privacy Policy</a></p>
   <button type="button" class="gold-ring" id="cookie-ok">Got it</button>
@@ -117,8 +120,9 @@ ${body}
 ${footer()}
 ${dock(active)}
 ${cookieNotice()}
+${liveChat()}
 <script src="/site/assets/site.js?v=${assetV}" defer></script>
-${scripts.map(f => `<script src="/site/assets/${f}?v=${assetV}" defer></script>`).join('\n')}
+${['help-widget.js', ...scripts].filter((f, i, a) => a.indexOf(f) === i).map(f => `<script src="/site/assets/${f}?v=${assetV}" defer></script>`).join('\n')}
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)}</script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>

@@ -1,5 +1,5 @@
-/* AUREUM website help centre: AUREUM Bot (the same help library the Back Office uses) + support tickets that reach the AUREUM team.
-   - The Bot is NOT a live AI. It runs in the visitor's browser, answers from AUREUM's help library, and sends nothing anywhere.
+/* AUREUM website Live Chat: a floating ? button that opens a chat panel on every page. Answers come from the same help library the Back Office uses, plus support tickets that reach the AUREUM team.
+   - The chat is NOT a live AI and NOT a person typing. It runs in the visitor's browser, answers from AUREUM's help library, and sends nothing anywhere.
    - Tickets go to the AUREUM team through the public database functions in supabase/support-website.sql. Until that file has been run,
      the form says so and offers an email (and WhatsApp when a number is set) with the message already written.
    - A visitor can follow replies under "My tickets" on the same device: the ticket's private link key is kept in this browser only. */
@@ -48,7 +48,7 @@
     return botP;
   }
 
-  var WELCOME = "Hi, I'm **AUREUM Bot**. Ask me how AUREUM works: the till, products, stock, staff, reports, pricing and more. I am not a live AI and I can't see your account. If I can't answer, I'll help you send a ticket to the AUREUM team.";
+  var WELCOME = "Hi there! What would you like help with today?\n\nAsk me how AUREUM works: the till, products, stock, staff, reports, pricing and more. Answers are instant, from AUREUM's help library. For a person, send a ticket and the AUREUM team will reply.";
   var ASKS = ['How do I import products from Excel or CSV?', 'How much does AUREUM cost?', 'How do I add a product?', 'Does AUREUM work without internet?', 'How do I refund a customer?'];
   var chat = Object.assign({ messages: [], lastId: null, lastType: null, misses: 0, busy: false, topic: null }, get('sessionStorage', 'aureum_web_chat', {}));
   chat.busy = false; chat.topic = null;
@@ -68,30 +68,45 @@
   }
   var plain = function (t) { return String(t || '').replace(/\*\*|`/g, '').replace(/\*/g, ''); };
   var chips = function (arr) { return arr.map(function (c) { return '<button type="button" class="aw-chip" data-ask="' + esc(c.id) + '">' + esc(c.title) + '</button>'; }).join(''); };
-  var transcript = function () { return chat.messages.slice(-30).map(function (m) { return (m.role === 'user' ? 'Visitor: ' : 'AUREUM Bot: ') + plain(m.content); }).join('\n\n'); };
+  var transcript = function () { return chat.messages.slice(-30).map(function (m) { return (m.role === 'user' ? 'Visitor: ' : 'Live Chat: ') + plain(m.content); }).join('\n\n'); };
 
   /* ---------- page shell ---------- */
   root.innerHTML =
-    '<div class="aw-card">' +
-    '<div class="aw-tabs" role="tablist" aria-label="Help centre">' +
-    '<button type="button" role="tab" class="aw-tab" id="awt-ask" data-pane="ask" aria-controls="awp-ask" aria-selected="true">Ask AUREUM Bot</button>' +
-    '<button type="button" role="tab" class="aw-tab" id="awt-topics" data-pane="topics" aria-controls="awp-topics" aria-selected="false" tabindex="-1">Help topics</button>' +
-    '<button type="button" role="tab" class="aw-tab" id="awt-ticket" data-pane="ticket" aria-controls="awp-ticket" aria-selected="false" tabindex="-1">Send a ticket</button>' +
+    '<button type="button" class="aw-fab" id="awFab" aria-label="Open live chat" aria-expanded="false" aria-controls="awPanel"><span aria-hidden="true">?</span><i class="aw-dot aw-fab-dot" id="awFabDot" hidden></i></button>' +
+    '<div class="aw-panel" id="awPanel" role="dialog" aria-label="AUREUM Live Chat" hidden>' +
+    '<div class="aw-head"><span class="aw-live" aria-hidden="true"></span><div class="aw-head-t"><b>AUREUM Live Chat</b><small>Instant answers · tickets reach the team</small></div>' +
+    '<button type="button" class="aw-x" id="awClose" aria-label="Close chat">✕</button></div>' +
+    '<div class="aw-tabs" role="tablist" aria-label="Live chat sections">' +
+    '<button type="button" role="tab" class="aw-tab" id="awt-ask" data-pane="ask" aria-controls="awp-ask" aria-selected="true">Chat</button>' +
+    '<button type="button" role="tab" class="aw-tab" id="awt-topics" data-pane="topics" aria-controls="awp-topics" aria-selected="false" tabindex="-1">Topics</button>' +
+    '<button type="button" role="tab" class="aw-tab" id="awt-ticket" data-pane="ticket" aria-controls="awp-ticket" aria-selected="false" tabindex="-1">Ticket</button>' +
     '<button type="button" role="tab" class="aw-tab" id="awt-mine" data-pane="mine" aria-controls="awp-mine" aria-selected="false" tabindex="-1">My tickets <span class="aw-dot" id="awDot" hidden></span><span class="sr-only" id="awDotTxt" hidden>(new reply)</span></button>' +
     '</div>' +
-    '<div class="aw-pane" id="awp-ask" role="tabpanel" aria-labelledby="awt-ask">' +
-    '<div class="aw-log" id="awLog" role="log" aria-live="polite" aria-label="Chat with AUREUM Bot"></div>' +
-    '<div class="aw-sug" id="awSug"></div>' +
-    '<form class="aw-ask" id="awAskForm"><label class="sr-only" for="awInput">Ask how to do something in AUREUM</label>' +
-    '<textarea id="awInput" rows="2" maxlength="400" placeholder="Ask how to do something in AUREUM…"></textarea>' +
-    '<button type="submit" class="aw-btn" id="awSend">Send</button></form>' +
+    '<div class="aw-pane aw-pane-chat" id="awp-ask" role="tabpanel" aria-labelledby="awt-ask">' +
+    '<div class="aw-scroll" id="awScroll"><div class="aw-log" id="awLog" role="log" aria-live="polite" aria-label="Live chat conversation"></div>' +
+    '<div class="aw-sug" id="awSug"></div></div>' +
+    '<div class="aw-compose"><form class="aw-ask" id="awAskForm"><label class="sr-only" for="awInput">Ask how to do something in AUREUM</label>' +
+    '<textarea id="awInput" rows="1" maxlength="400" placeholder="Ask AUREUM anything…"></textarea>' +
+    '<button type="submit" class="aw-send" id="awSend" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>' +
     '<div class="aw-foot"><button type="button" class="aw-link aw-newchat" id="awNew">+ New chat</button><span aria-hidden="true">·</span><button type="button" class="aw-link" id="awToTicket">Not solved? Contact support</button></div>' +
-    '<p class="aw-note">AUREUM Bot runs in your browser and is not a live AI: it answers from AUREUM’s help library and can’t see your account or data. Never type passwords, PINs or card numbers.</p>' +
+    '<p class="aw-note">Automated help: answers come from AUREUM’s help library, not a person, and can’t see your account. Never type passwords, PINs or card numbers.</p></div>' +
     '</div>' +
-    '<div class="aw-pane" id="awp-topics" role="tabpanel" aria-labelledby="awt-topics" hidden></div>' +
-    '<div class="aw-pane" id="awp-ticket" role="tabpanel" aria-labelledby="awt-ticket" hidden></div>' +
-    '<div class="aw-pane" id="awp-mine" role="tabpanel" aria-labelledby="awt-mine" hidden></div>' +
+    '<div class="aw-pane aw-scroll" id="awp-topics" role="tabpanel" aria-labelledby="awt-topics" hidden></div>' +
+    '<div class="aw-pane aw-scroll" id="awp-ticket" role="tabpanel" aria-labelledby="awt-ticket" hidden></div>' +
+    '<div class="aw-pane aw-scroll" id="awp-mine" role="tabpanel" aria-labelledby="awt-mine" hidden></div>' +
     '</div>';
+
+  /* ---------- open / close ---------- */
+  var panel = $('#awPanel'), fab = $('#awFab');
+  function openPanel(pane) {
+    panel.hidden = false; fab.setAttribute('aria-expanded', 'true'); document.documentElement.classList.add('aw-open');
+    showPane(pane || currentPane);
+    setTimeout(function () { var f = currentPane === 'ask' ? $('#awInput') : currentPane === 'ticket' ? $('#awName') : null; if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } } }, 60);
+  }
+  function closePanel() { panel.hidden = true; fab.setAttribute('aria-expanded', 'false'); document.documentElement.classList.remove('aw-open'); stopPoll(); try { fab.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  fab.addEventListener('click', function () { if (panel.hidden) openPanel(); else closePanel(); });
+  $('#awClose').addEventListener('click', closePanel);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) closePanel(); });
 
   var currentPane = 'ask', pollTimer = null;
   function showPane(name) {
@@ -123,8 +138,8 @@
         (m.related && m.related.length ? '<div class="aw-rel">Related:</div><div class="aw-chips">' + chips(m.related) + '</div>' : '') +
         (showFb ? '<div class="aw-fb">Did this answer your question? <button type="button" class="aw-fbbtn" data-fb="yes">Yes, thanks</button><button type="button" class="aw-fbbtn" data-fb="no">Not really</button></div>' : '') +
         (m.ticket ? '<div class="aw-cta"><button type="button" class="aw-btn" data-ticket-from="1">Send this to support</button></div>' : '') + '</div>';
-    }).join('') + (chat.busy ? '<div class="aw-typing" aria-label="AUREUM Bot is typing"><i></i><i></i><i></i></div>' : '');
-    log.scrollTop = log.scrollHeight;
+    }).join('') + (chat.busy ? '<div class="aw-typing" aria-label="Typing"><i></i><i></i><i></i></div>' : '');
+    var sc = $('#awScroll'); if (sc) sc.scrollTop = msgs.length ? sc.scrollHeight : 0;
     if (!bot && !botP && msgs.length) loadBot().then(function () { if (currentPane === 'ask') renderChat(); }, function () { });
     var topics = bot ? bot.topics() : [];
     if (chat.topic && bot) { var t = topics.filter(function (x) { return x.topic === chat.topic; })[0]; sug.innerHTML = t ? chips(t.entries) : ''; }
@@ -144,8 +159,8 @@
   });
   /* two answers describe the in-app ticket screens; on the website they point to this page instead */
   var WEB_TEXT = {
-    'contact-support': function () { return 'Press **Send a ticket** at the top of this box (or **Not solved? Contact support** under this chat), enter your name and email, write your message and press **Send ticket**. The AUREUM team replies there, and you can follow it under **My tickets**. You can also write to ' + MAIL + (WA ? ' or message us on WhatsApp' : '') + '.'; },
-    'ticket-replies': function () { return 'Open **My tickets** at the top of this box. It lists the tickets you sent from this device and shows **New reply** when the AUREUM team has answered. Open a ticket to read the reply and write back.'; }
+    'contact-support': function () { return 'Open the **Ticket** tab at the top of this chat (or press **Not solved? Contact support** below), enter your name and email, write your message and press **Send ticket**. The AUREUM team replies there, and you can follow it under **My tickets**. You can also write to ' + MAIL + (WA ? ' or message us on WhatsApp' : '') + '.'; },
+    'ticket-replies': function () { return 'Open the **My tickets** tab at the top of this chat. It lists the tickets you sent from this device and shows **New reply** when the AUREUM team has answered. Open a ticket to read the reply and write back.'; }
   };
   function botSays(r) {
     if (r.id && WEB_TEXT[r.id]) r = Object.assign({}, r, { text: WEB_TEXT[r.id]() });
@@ -190,10 +205,10 @@
   /* ---------- help topics ---------- */
   function renderTopics() {
     var pane = $('#awp-topics');
-    pane.innerHTML = '<p class="aw-note aw-note-top">Pick a question and AUREUM Bot will answer it.</p><p class="aw-loading">Loading help topics…</p>';
+    pane.innerHTML = '<p class="aw-note aw-note-top">Pick a question and the chat will answer it.</p><p class="aw-loading">Loading help topics…</p>';
     loadBot().then(function () {
       if (currentPane !== 'topics') return;
-      pane.innerHTML = '<p class="aw-note aw-note-top">Pick a question and AUREUM Bot will answer it.</p><div class="aw-topics">' + bot.topics().map(function (t) {
+      pane.innerHTML = '<p class="aw-note aw-note-top">Pick a question and the chat will answer it.</p><div class="aw-topics">' + bot.topics().map(function (t) {
         return '<details class="aw-topic"><summary>' + esc(t.topic) + ' <span>' + t.entries.length + '</span></summary><ul>' + t.entries.map(function (e) { return '<li><button type="button" class="aw-link" data-ask="' + esc(e.id) + '">' + esc(e.title) + '</button></li>'; }).join('') + '</ul></details>';
       }).join('') + '</div>';
     }, function () { pane.innerHTML = '<p class="aw-note aw-note-top">The help topics could not load. Check your connection, or <button type="button" class="aw-link" data-go-ticket="1">send us a ticket</button>.</p>'; });
@@ -218,9 +233,7 @@
   function openTicket(fromChat) {
     var msgs = chat.messages.filter(function (m) { return m.role === 'user'; });
     if (fromChat && msgs.length) { draft.chat = true; if (!draft.message) draft.message = msgs[msgs.length - 1].content; }
-    showPane('ticket');
-    var root_ = $('#awp-ticket'); if (root_ && root_.scrollIntoView) { try { root_.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* old browser */ } }
-    setTimeout(function () { var f = $('#awTopic'); if (f) f.focus({ preventScroll: true }); }, 50);
+    openPanel('ticket');
   }
   function renderTicketForm(prefillTopic) {
     var saved = get('localStorage', 'aureum_web_contact', {});
@@ -236,7 +249,7 @@
       '<label class="aw-f"><span>Subject *</span><input id="awSubject" maxlength="140" value="' + esc(d.subject || (d.topic === 'import' ? IMPORT_SUBJECT : '')) + '" required></label>' +
       '<label class="aw-f"><span>Message *</span><textarea id="awMessage" rows="5" maxlength="6000" required placeholder="' + (d.topic === 'import' ? 'Tell us what you use now (an old POS, Excel, paper) and roughly how many products you have.' : 'Describe what you need or what went wrong.') + '">' + esc(d.message) + '</textarea></label>' +
       '<div class="aw-hp" aria-hidden="true"><label>Leave this empty <input id="awHp" tabindex="-1" autocomplete="off"></label></div>' +
-      (hasChat ? '<label class="aw-check"><input type="checkbox" id="awIncl"' + (d.chat ? ' checked' : '') + '> <span>Include my chat with AUREUM Bot so the team can see what I asked</span></label>' : '') +
+      (hasChat ? '<label class="aw-check"><input type="checkbox" id="awIncl"' + (d.chat ? ' checked' : '') + '> <span>Include my chat so the team can see what I asked</span></label>' : '') +
       '<p class="aw-note">Never type passwords, PINs or card numbers. We use your details only to answer your ticket (<a href="/privacy/">Privacy Policy</a>).</p>' +
       '<div class="aw-err" id="awFormErr" role="alert"></div>' +
       '<div class="aw-actions"><button type="submit" class="aw-btn" id="awSubmit">Send ticket</button>' +
@@ -288,7 +301,7 @@
   var STATUS = { open: 'Open', pending: 'Replied', resolved: 'Solved', closed: 'Closed' };
   var unseen = function (ref, t) { return !!(t && t.last_admin_reply_at && (!ref.seenAt || new Date(t.last_admin_reply_at) > new Date(ref.seenAt))); };
   function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
-  function setDot(on) { var d = $('#awDot'), t = $('#awDotTxt'); if (d) d.hidden = !on; if (t) t.hidden = !on; }
+  function setDot(on) { var d = $('#awDot'), t = $('#awDotTxt'), f = $('#awFabDot'); if (d) d.hidden = !on; if (t) t.hidden = !on; if (f) f.hidden = !on; }
   function renderMine() {
     stopPoll();
     var list = get('localStorage', 'aureum_web_tickets', []), pane = $('#awp-mine');
@@ -354,10 +367,11 @@
   /* ---------- entry points ---------- */
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('[data-aw-open]'); if (!a) return;
-    var what = a.getAttribute('data-aw-open'); if (what === 'ticket') { e.preventDefault(); draft.topic = draft.topic || 'import'; openTicket(false); var sec = document.getElementById('help'); if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth' }); }
+    var what = a.getAttribute('data-aw-open'); e.preventDefault();
+    if (what === 'ticket') { draft.topic = draft.topic || 'import'; openTicket(false); } else openPanel(what === 'chat' ? 'ask' : what);
   });
   renderChat();
-  if (location.hash === '#ticket') openTicket(false);
+  if (location.hash === '#ticket') openTicket(false); else if (location.hash === '#chat') openPanel('ask');
   if (get('localStorage', 'aureum_web_tickets', []).length) {
     var l0 = get('localStorage', 'aureum_web_tickets', []).slice(0, 5), any0 = false;
     l0.forEach(function (r) { rpc('support_web_get_ticket', { p_id: r.id, p_token: r.token }).then(function (d) { if (unseen(r, d && d.ticket)) { any0 = true; setDot(true); } }).catch(function () { }); });
