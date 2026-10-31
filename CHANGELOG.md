@@ -1,5 +1,8 @@
 # Changelog
 
+## Website: new photos shown immediately (sw v71)
+- The Beauty, Pharmacy and Electronics photos have new file names (card-beauty-v3.webp, card-pharmacy-v2.webp, card-electronics-v2.webp) so browsers that saved the old pictures load the new ones. When you replace a card photo later, give it a new name (for example -v4) and change it in site-src/config.js, then run node tools/build-site.mjs.
+
 ## Website: real photos, one row of six, site name for Google (sw v70)
 - Business cards: Electronics & Hardware, Pharmacy and Beauty now use real photos. On computers all six cards sit in one row (1x6); tablets show 3 per row and phones 2 per row.
 - Google: the site name is set to "AUREUM" (structured data: name, alternate names and the home address), og:site_name is "AUREUM", and favicons in 48, 96, 144 and 192 px plus /favicon.ico were added so Google can show the logo and name above the result.
