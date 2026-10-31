@@ -383,3 +383,7 @@ details[open] > summary .pm{transform:rotate(45deg)}
 
 /* trial link in the call-to-action band: a plain underlined link with an arrow */
 .cta-head .alink{font-size:.95rem;font-weight:400}
+
+/* business card names: same light font as the section heading */
+.biz-body h3{font-family:var(--ff);font-weight:300;letter-spacing:-.02em;line-height:1.15;text-shadow:0 1px 10px rgba(0,0,0,.55)}
+@media (min-width:1001px){.biz-body{padding:16px 14px}.biz-body h3{font-size:clamp(1.05rem,.5vw + .78rem,1.35rem)}}

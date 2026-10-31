@@ -1,5 +1,8 @@
 # Changelog
 
+## Website: business cards without icons (sw v73)
+- The small round icons on the six business cards are removed, and the card names now use the same light font as the heading "Empowering Business Owners World Wide".
+
 ## Website: headline font, simpler trial link (sw v72)
 - "Empowering Business Owners World Wide" and "All your business operations right at the tip of your fingers." now use the same light font as "Let's put your shop to work." (colours unchanged).
 - Call-to-action band: the bottom "Start free trial" button is removed; "14-Day Free Trial" is now a plain underlined link with an arrow.
