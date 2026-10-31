@@ -35,7 +35,12 @@ export const PRICING = { perShop: 5, trialDays: 14, graceDays: 3, examples: [1, 
 export const DEMO = { videoUrl: '', title: 'AUREUM demo' };
 
 /* Support contact details. Leave blank until real ones exist — nothing is invented. Anything filled in appears on the Support page. */
-export const SUPPORT = { email: 'info@aureumpos.com', phone: '', whatsapp: '' };
+/* whatsapp: international number, digits only or with +, e.g. '+263 77 123 4567'. While empty, the WhatsApp buttons stay hidden. */
+export const SUPPORT = {
+  email: 'info@aureumpos.com', phone: '', whatsapp: '',
+  /* website help chat + tickets talk to the same Supabase project as the app (the anon key is public by design; it can only call the support_web_* functions) */
+  api: { url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co', anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA' }
+};
 
 /* ---- Hero copy: EXACT wording, not to be paraphrased ---- */
 export const HERO = {

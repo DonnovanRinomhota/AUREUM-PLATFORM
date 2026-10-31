@@ -18,7 +18,7 @@ export const privacy = {
   <ul>
     <li><strong>Account details:</strong> the owner’s name, email address, country, business name and password. Passwords are handled by our sign-in provider and are never visible to us in plain text.</li>
     <li><strong>Business records you enter:</strong> shops, products, prices, costs, stock, suppliers, purchase orders, customers (for example name, phone, email), employees (name, role, PIN), shifts, sales, receipts, refunds, expenses and settings. Product and logo images you upload are stored too.</li>
-    <li><strong>Support messages</strong> you send to us through Help &amp; support.</li>
+    <li><strong>Support messages</strong> you send to us through Help &amp; support, or through the ticket form on the website’s Support page (your name, email address, optional phone and business name, and your message). Ticket details are used only to answer you.</li>
     <li><strong>Subscription status:</strong> whether a trial or subscription is active, its dates and the number of shops. Card payments are taken on Stripe’s own page. <strong>We never see or store your card number.</strong></li>
     <li><strong>Technical data</strong> needed to run the service, such as sign-in sessions and error information held by our hosting and database providers.</li>
   </ul>

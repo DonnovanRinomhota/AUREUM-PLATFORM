@@ -1,5 +1,12 @@
 # Changelog
 
+## Website: Support page with AUREUM Bot chat and tickets (sw v74)
+- Support page: new "Here for you 24/7." section with the support-team photo, "Reach out to the AUREUM team." and the "Need help entering your products or transferring them from your old POS?" message, with buttons to send a ticket, email, and (once a number is set in `SUPPORT.whatsapp`) WhatsApp.
+- New **Help centre** on the Support page: Ask AUREUM Bot (same help library and engine as the Back Office, runs in the browser, not a live AI), Help topics, Send a ticket, My tickets (follow the team's replies, write back, red dot for a new reply). Files: `site-src/assets/help-widget.js`, generated `site/assets/help-bot.js`.
+- New bot answer "Can the AUREUM team enter or move my products for me?" (also in the Back Office bot).
+- **Needs approval to switch on tickets:** `supabase/support-website.sql` (visitor tickets, no account needed) and the updated `admin-manage` function (tickets with no business). Until then the form offers email instead. Control panel (admin.html): website tickets show the visitor's name, email, phone and business, with an "Email them too" link.
+- Privacy Policy mentions the website ticket form.
+
 ## Website: business cards without icons (sw v73)
 - The small round icons on the six business cards are removed, and the card names now use the same light font as the heading "Empowering Business Owners World Wide".
 

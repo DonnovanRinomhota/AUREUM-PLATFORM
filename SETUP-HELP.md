@@ -46,3 +46,19 @@ Use the **exact words shown on screen** for menus and buttons. When the app chan
 | My tickets says "aren't available yet" | `support-schema.sql` not run |
 | Control panel Support tab says "not set up yet" | `support-schema.sql` not run, or `admin-manage` not redeployed |
 | The Bot gives a wrong or odd answer | send it to me, or add that wording to the right entry in `help-bot/kb.js` and rebuild |
+
+
+## Website help centre and tickets (Support page)
+The Support page (www.aureumpos.com/support) has the same AUREUM Bot plus a ticket form for people who are **not signed in** (new visitors, people who can't log in, people who want you to enter their products).
+
+To switch tickets on (both steps need your go-ahead; nothing is applied by the zip):
+1. **Deploy the updated function first:** `supabase functions deploy admin-manage` (it now copes with tickets that have no business).
+2. **Then run `supabase/support-website.sql`** once in the Supabase SQL Editor (after `support-schema.sql`).
+
+Until step 2 is done the ticket form says tickets can't be sent right now and offers a ready-written email (and WhatsApp when a number is set).
+
+How it behaves
+- Tickets appear in the control panel (**/admin → Support**) marked *From the website*, with the visitor's name, email, phone and business. Reply there. The visitor sees your reply under **My tickets** on the same browser. **A reply does not send an email**, so use the "Email … too" link in the ticket so they see it.
+- The visitor's ticket is protected by a private key kept in their browser; nobody else can read it. Limits: 3 tickets per email per hour, 60 website tickets per hour in total. A hidden spam trap field catches simple bots.
+- WhatsApp buttons stay hidden until you set `SUPPORT.whatsapp` in `site-src/config.js` (then run `node tools/build-site.mjs`).
+- The Bot on the website is built from `help-bot/kb.js` + `help-bot/engine.js` by `node tools/build-site.mjs` (it writes `site/assets/help-bot.js`); teach it new answers the same way as in the app, then run `node tools/build-bot.mjs` and `node tools/build-site.mjs`.

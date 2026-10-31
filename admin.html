@@ -867,7 +867,7 @@
       <tr class="tk-row ${t.priority === 'urgent' && t.status === 'open' ? 'hot' : ''}" data-id="${esc(t.id)}" tabindex="0">
         <td><span class="pri ${esc(t.priority)}">${esc(TK_PRIORITY[t.priority] || t.priority)}</span></td>
         <td>${esc(t.subject)}<div class="sub">${esc(t.created_by_email || '')}${t.assigned_to ? ' · assigned to ' + esc(t.assigned_to) : ''}</div></td>
-        <td>${esc(t.business_name)}<div class="sub">${esc(t.plan_status || '')}</div></td>
+        <td>${esc(t.business_name)}<div class="sub">${t.source === 'website' ? 'From the website' : esc(t.plan_status || '')}</div></td>
         <td>${esc(TK_CATEGORY[t.category] || t.category)}</td>
         <td><span class="badge ${t.status === 'open' ? 'b-trial' : t.status === 'pending' ? 'b-active' : 'b-cancelled'}">${esc(TK_STATUS[t.status] || t.status)}</span></td>
         <td class="muted" style="white-space:nowrap;">${esc(fmtDateTime(t.last_message_at))}</td>
@@ -889,7 +889,10 @@
   function renderTicket(){
     const { ticket: t, messages, business: b } = state.tk.current;
     $('tkTitle').textContent = t.subject;
-    $('tkSub').textContent = `${b ? b.name : '(deleted business)'}${b ? ' · ' + (b.is_exempt ? 'complimentary' : (STATUS_LABEL[b.subscription_status] || b.subscription_status)) : ''} · ${t.created_by_email || ''} · ${TK_CATEGORY[t.category] || t.category}${t.page_context ? ' · on “' + t.page_context + '”' : ''}`;
+    const web = t.source === 'website';
+    $('tkSub').textContent = web
+      ? `Website visitor · ${t.contact_name || ''} · ${t.contact_email || t.created_by_email || ''}${t.contact_phone ? ' · ' + t.contact_phone : ''}${t.contact_business ? ' · ' + t.contact_business : ''} · ${TK_CATEGORY[t.category] || t.category}`
+      : `${b ? b.name : '(deleted business)'}${b ? ' · ' + (b.is_exempt ? 'complimentary' : (STATUS_LABEL[b.subscription_status] || b.subscription_status)) : ''} · ${t.created_by_email || ''} · ${TK_CATEGORY[t.category] || t.category}${t.page_context ? ' · on “' + t.page_context + '”' : ''}`;
     const msgHtml = messages.map(m => {
       const kind = m.author_type === 'admin' ? (m.internal ? 'note' : 'admin') : m.author_type;
       const who = m.author_type === 'bot' ? 'Assistant chat' : m.author_type === 'customer' ? (m.author_email || 'Customer') : m.internal ? `Internal note · ${m.author_email || ''}` : 'AUREUM Support';
@@ -909,7 +912,7 @@
         <div class="btn ghost" id="tkSendResolve">Send &amp; resolve</div>
         <div class="btn ghost" id="tkNote" title="Only the AUREUM team can see a note">Add internal note</div>
       </div>
-      <div class="muted" style="font-size:11.5px;margin-top:10px;">A reply is shown to the customer as “AUREUM Support” and lights the new-reply dot in their Back Office. Internal notes are never shown to them.</div>`;
+      <div class="muted" style="font-size:11.5px;margin-top:10px;">${t.source === 'website' ? `This ticket came from the website: your reply appears under <b>My tickets</b> on the visitor's browser and does <b>not</b> send an email. <a href="mailto:${esc(t.contact_email || t.created_by_email || '')}?subject=${encodeURIComponent('Re: ' + t.subject)}" style="color:inherit;">Email ${esc(t.contact_email || '')} too</a> so they see it.` : 'A reply is shown to the customer as “AUREUM Support” and lights the new-reply dot in their Back Office.'} Internal notes are never shown to them.</div>`;
     const thread = $('tkThread'); thread.scrollTop = thread.scrollHeight;
     $('tkSetStatus').addEventListener('change', e => updateTicket({ status: e.target.value }));
     $('tkSetPriority').addEventListener('change', e => updateTicket({ priority: e.target.value }));

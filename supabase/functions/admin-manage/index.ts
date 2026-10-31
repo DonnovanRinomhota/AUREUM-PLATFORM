@@ -331,14 +331,14 @@ Deno.serve(async (req) => {
         const { data, error, count } = await q.order("last_message_at", { ascending: false }).range(offset, offset + limit - 1);
         if (error) throw new HttpError(500, "Could not load tickets: " + error.message);
         const rows = data ?? [];
-        const ids = Array.from(new Set(rows.map((r: any) => r.business_id)));
+        const ids = Array.from(new Set(rows.map((r: any) => r.business_id).filter(Boolean)));   // website tickets have no business
         const names: Record<string, any> = {};
         if (ids.length) {
           const { data: biz } = await supabase.from("businesses").select("id, name, subscription_status, is_exempt").in("id", ids);
           (biz ?? []).forEach((b: any) => { names[b.id] = b; });
         }
         return json({ total: count ?? rows.length, rows: rows.map((r: any) => ({
-          ...r, business_name: names[r.business_id]?.name ?? "(deleted business)",
+          ...r, business_name: r.business_id ? (names[r.business_id]?.name ?? "(deleted business)") : (r.contact_business || "Website visitor"),
           plan_status: names[r.business_id]?.is_exempt ? "complimentary" : names[r.business_id]?.subscription_status ?? null,
         })) });
       }
@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
         if (error) throw new HttpError(500, "Could not load the ticket: " + error.message);
         if (!ticket) throw new HttpError(404, "Ticket not found.");
         const { data: messages } = await supabase.from("support_ticket_messages").select("*").eq("ticket_id", id).order("created_at", { ascending: true });
-        const { data: biz } = await supabase.from("businesses").select(BUSINESS_COLS).eq("id", ticket.business_id).maybeSingle();
+        const { data: biz } = ticket.business_id ? await supabase.from("businesses").select(BUSINESS_COLS).eq("id", ticket.business_id).maybeSingle() : { data: null };   // website tickets have no business
         return json({ ticket, messages: messages ?? [], business: biz ?? null });
       }
 

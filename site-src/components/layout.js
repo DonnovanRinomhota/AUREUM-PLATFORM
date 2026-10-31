@@ -62,7 +62,7 @@ export const cookieNotice = () => `<div class="cookie-note" id="cookie-note" rol
   <button type="button" class="gold-ring" id="cookie-ok">Got it</button>
 </div>`;
 
-export function page({ path, title, description, active, body, jsonLd = [], preload = [], assetV = '', noindex = false }) {
+export function page({ path, title, description, active, body, jsonLd = [], preload = [], assetV = '', noindex = false, scripts = [] }) {
   const url = SITE.url + path;
   const og = SITE.url + SITE.ogImage;
   return `<!doctype html>
@@ -118,6 +118,7 @@ ${footer()}
 ${dock(active)}
 ${cookieNotice()}
 <script src="/site/assets/site.js?v=${assetV}" defer></script>
+${scripts.map(f => `<script src="/site/assets/${f}?v=${assetV}" defer></script>`).join('\n')}
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)}</script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>

@@ -45,7 +45,11 @@ Images are in `site/assets/img/`. Replace any picture by dropping a new file **w
 ## Not on the website yet
 - **Privacy policy and terms pages.** None exist, so none are linked. You will need them before a commercial launch or an app-store release.
 - **Analytics.** None, by design.
-- **A "contact us" form.** Support runs through in-app tickets; add contact details above if you want visitors to reach you another way.
+- **Contact form:** the Support page now has a help chat and ticket form (see SETUP-HELP.md → Website help centre and tickets).
+
+## Product pictures in the screenshots, and the business photos
+- **The product tiles in the POS screenshots currently show illustrations.** Real product photographs can only come from you: put the photos on the products in a demo business (the Back Office picture finder fetches real photos for you), or supply the files, then the tablet screenshot is re-captured and re-exported (`tools` captures are made from the real app). Keep the same file names.
+- **The four business photos** (`card-*.webp`) are 1280 px clean resamples of the 640 px photos from the mock-up. A 640 px photo cannot gain real detail; replace them with your original, full-size photographs (about 1280 × 800) for true HD.
 
 ## What was tested
 111 automatic checks in real Chrome, including: every link on every page resolves and no link is empty or "#"; Free Trial, Log in, Open POS and Back Office each go to the right real destination; the hero wording is word-for-word; four business cards and five "What We Offer" items; sign-up/sign-in deep links open the right tab in the real Back Office; no sideways scrolling at 11 screen widths (360–1920) on all pages; the mobile menu and the demo dialog (including with a real video configured); keyboard access, reduced-motion and no-JavaScript behaviour; titles, descriptions, canonical links, social tags and structured data; no outside requests; no unsupported claims; prices and features match the real application; and that emailed sign-up/reset links reach the Back Office.
