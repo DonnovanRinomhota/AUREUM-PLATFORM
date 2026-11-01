@@ -1,5 +1,11 @@
 # Changelog
 
+## v78
+- **Android back button** (both apps): each press now steps back one level — pop-up, ticket panel, menu, "Back to…" form, Back Office page → Dashboard, real page history — and on the first screen a second press within 2 seconds exits ("Press back again to exit").
+- **POS works offline from sign-in**: the till opens with no internet using the sign-in already on the device; with "Remember me" ticked a salted fingerprint (never the password) also lets the owner sign in again offline. The sales sync after a silent re-sign-in when the internet returns. The till and Back Office also open straight from the device copy instead of waiting ~7 s for the server.
+- **POS sign-up**: "Create your business account" link on the POS sign-in opens the Back Office sign-up (14-day trial).
+- Website feature screenshots: staff name and email blurred.
+
 ## Website: Live Chat + FAQ only, contact details, new screenshots, mobile menu (sw v77)
 - **Live Chat** is now just two tabs: **Live chat** and **FAQ**. The Ticket and My tickets tabs are gone from the website chat.
 - Live chat starts with Your name, then Email and Phone number (both optional), then the message. It is online messaging that needs only data or Wi-Fi. The team reads and answers from the control panel (/admin → Support); replies reach the visitor within about 4 seconds. The chat is cleared from the visitor's device when it is completed: the visitor presses **End chat**, or the team presses **Send & resolve**.

@@ -3701,7 +3701,12 @@ const AureumSync = (function(){
     const cache = readCache();
     if(cache){ cfg.applyData(pick(cacheToLocal(cache), knownKeys())); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
     setState('loading');
-    return new Promise(res => { startResolve = res; attemptLoad(); });
+    return new Promise(res => {
+      startResolve = res; attemptLoad();
+      /* No internet (or a very weak signal): don't make the till wait for the server's retries. Open from the copy saved on this device;
+         the load keeps retrying in the background and merges when it succeeds, and nothing is saved until it does. */
+      if(cache) setTimeout(() => { if(startResolve){ startResolve({ ok:false, offline:true }); startResolve = null; } }, navigator.onLine === false ? 0 : 3500);
+    });
   }
 
   /* ------------------------------------------------------------- recovery --- */

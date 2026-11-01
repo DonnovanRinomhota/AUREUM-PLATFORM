@@ -70,6 +70,68 @@
     P.Share.share({ title: 'Receipt', text: text, dialogTitle: 'Print or share receipt' }).catch(function(e){ if(!/cancel/i.test(err(e))) toast(err(e)); });
   };
 
+
+  /* ---------- Android BACK button ----------
+     The pages are single-screen apps (pop-ups, panels and "Back to…" views don't create browser history), so without this the
+     back button either did nothing or closed the whole app. Now each press steps back ONE level, in this order:
+       pop-up / dialog / guide → open drop-downs → POS ticket panel → Back Office menu → "Back to…" form views → Back Office
+       sub-page → Dashboard → real page history (e.g. the Back Office opened from the till) → "press back again to exit".
+     Pages can add their own steps with  AureumNative.onBack(function(){ …; return true to say it handled the press });  */
+  var backHooks = []; AN.onBack = function(fn){ if(typeof fn === 'function') backHooks.push(fn); };
+  var lastBackAt = 0;
+  function visible(el){ if(!el) return false; var r = el.getBoundingClientRect(); var cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }
+  function topmost(list){
+    var best = null, bz = -1;
+    list.forEach(function(el){ var z = parseInt(getComputedStyle(el).zIndex, 10); if(isNaN(z)) z = 0; if(z >= bz){ bz = z; best = el; } });
+    return best;
+  }
+  function stepBack(){
+    var i, d = document;
+    for(i = backHooks.length - 1; i >= 0; i--){ try{ if(backHooks[i]() === true) return true; }catch(e){} }
+    /* the guide ("Get started") screens */
+    var gc = d.getElementById('agCenterX'); if(gc && visible(gc)){ gc.click(); return true; }
+    var gw = d.getElementById('agWelcome'); if(gw){ var later = gw.querySelector('[data-w=later]'); if(later) later.click(); else gw.remove(); return true; }
+    var tip = d.querySelector('.ag-tip.show'); if(tip){ d.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true })); return true; }
+    var hint = d.querySelector('.ag-hint, .ag-nudge'); if(hint){ hint.remove(); return true; }
+    /* the website-style help panel / native dialogs */
+    var dlg = topmost([].slice.call(d.querySelectorAll('dialog[open]'))); if(dlg){ try{ dlg.close(); }catch(e){ dlg.removeAttribute('open'); } return true; }
+    var awp = d.getElementById('awPanel'); if(awp && awp.classList.contains('open')){ d.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true })); return true; }
+    /* pop-ups */
+    var mo = topmost([].slice.call(d.querySelectorAll('.modal-overlay.open')));
+    if(mo){
+      var x = mo.querySelector('.modal-close, [data-close]');
+      if(x) x.click(); else mo.classList.remove('open');
+      return true;
+    }
+    var po = d.querySelectorAll('.popover.open, .date-popover.open');
+    if(po.length){ [].forEach.call(po, function(p){ p.classList.remove('open'); }); return true; }
+    /* POS: the ticket panel on a phone */
+    if(d.body.classList.contains('ticket-open')){ d.body.classList.remove('ticket-open'); return true; }
+    /* Back Office */
+    var sb = d.getElementById('sidebar') || d.querySelector('.sidebar');
+    if(sb && sb.classList.contains('mobile-open')){ var bd = d.querySelector('.sidebar-backdrop'); if(bd) bd.click(); else sb.classList.remove('mobile-open'); return true; }
+    var cv = [].slice.call(d.querySelectorAll('.create-view.active')).filter(visible)[0];
+    if(cv){ var bl = cv.querySelector('.back-link'); if(bl){ bl.click(); return true; } }
+        var nav = d.querySelector('.nav-item.active');
+    if(nav && nav.getAttribute('data-page') && nav.getAttribute('data-page') !== 'dashboard'){
+      var home = d.querySelector('.nav-item[data-page="dashboard"]'); if(home){ home.click(); return true; }
+    }
+    return false;
+  }
+  function onBack(ev){
+    var handled = false;
+    try{ handled = stepBack(); }catch(e){ handled = false; }
+    if(handled) return;
+    if(ev && ev.canGoBack && window.history.length > 1){ window.history.back(); return; }
+    var now = Date.now();
+    if(now - lastBackAt < 2200){ try{ P.App.exitApp(); }catch(e){ try{ P.App.minimizeApp(); }catch(e2){} } return; }
+    lastBackAt = now;
+    toast('Press back again to exit', 'ok');
+  }
+  if(P.App && P.App.addListener){
+    try{ P.App.addListener('backButton', onBack); }catch(e){}
+  }
+
   /* ---------- camera barcode scanning (POS) ---------- */
   AN.canScan = function(){ return !!(P.BarcodeScanner && P.BarcodeScanner.scan); };
   AN.scan = function(){

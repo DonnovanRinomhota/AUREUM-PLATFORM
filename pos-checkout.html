@@ -769,6 +769,11 @@
     background: linear-gradient(135deg, var(--gold-bright), var(--gold));
     color:#1B140A; font-weight:700; padding:11px; border-radius:9px; cursor:pointer; font-size:13px;
   }
+  .auth-offline-note{ display:none; font-size:12px; line-height:1.45; color:var(--gold-bright); background:rgba(201,162,75,.10); border:1px solid rgba(201,162,75,.35); border-radius:9px; padding:8px 10px; margin:0 0 12px; text-align:left; }
+  .auth-offline-note.show{ display:block; }
+  .auth-alt{ margin-top:16px; padding-top:14px; border-top:1px solid var(--line); font-size:12.5px; color:var(--sage); line-height:1.5; }
+  .auth-alt a{ color:var(--gold-bright); font-weight:600; text-decoration:underline; cursor:pointer; }
+  .auth-alt .hint{ display:block; margin-top:6px; font-size:11.5px; opacity:.85; }
 </style>
 <meta name="description" content="AUREUM POS — point-of-sale checkout that keeps working offline.">
 <meta name="theme-color" content="#0A1B16">
@@ -788,6 +793,7 @@
     <div class="auth-seal">A</div>
     <div class="auth-title">AUREUM Point of Sale</div>
     <div class="auth-sub" id="authGateMsg">Sign in with your business account to open this terminal.</div>
+    <div class="auth-offline-note" id="authOfflineNote" role="status">You&rsquo;re offline. You can still sign in if you have signed in on this device before.</div>
     <form id="authForm" autocomplete="on" novalidate>
     <input class="auth-field" id="authEmail" name="email" type="email" placeholder="Email" autocomplete="username" autocapitalize="none" spellcheck="false">
     <input class="auth-field" id="authPassword" name="password" type="password" placeholder="Password" autocomplete="current-password">
@@ -799,6 +805,10 @@
     <div class="auth-btn" id="authSubmitBtn" role="button" tabindex="0">Sign In</div>
     <input type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
     </form>
+    <div class="auth-alt" id="authSignupRow">
+      New to AUREUM? <a id="authSignupLink" href="backoffice.html?mode=signup">Create your business account</a>
+      <span class="hint">Free 14-day trial. You create the account in the Back Office, then come back here and sign in with the same email and password.</span>
+    </div>
   </div>
 </div>
 <div class="auth-gate" id="shiftGate">
@@ -1291,6 +1301,7 @@
         sessionStorage.setItem('aureum_session_only', '1');
         localStorage.setItem('aureum_remember', '0');
         localStorage.removeItem('aureum_remember_email');
+        localStorage.removeItem('aureum_offline_auth_v1');
         Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));   // forget any older saved sign-in
       }
     }catch(e){}
@@ -1749,7 +1760,12 @@ const AureumSync = (function(){
     const cache = readCache();
     if(cache){ cfg.applyData(pick(cacheToLocal(cache), knownKeys())); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
     setState('loading');
-    return new Promise(res => { startResolve = res; attemptLoad(); });
+    return new Promise(res => {
+      startResolve = res; attemptLoad();
+      /* No internet (or a very weak signal): don't make the till wait for the server's retries. Open from the copy saved on this device;
+         the load keeps retrying in the background and merges when it succeeds, and nothing is saved until it does. */
+      if(cache) setTimeout(() => { if(startResolve){ startResolve({ ok:false, offline:true }); startResolve = null; } }, navigator.onLine === false ? 0 : 3500);
+    });
   }
 
   /* ------------------------------------------------------------- recovery --- */
@@ -1815,19 +1831,116 @@ const AureumSync = (function(){
 /* ===== AUTH ===== */
 async function aureumSignIn(email, password){
   if(!sb) throw new Error('Connect Supabase first (see SUPABASE_CONFIG at the top of this file).');
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  const { data, error } = await withTimeout(sb.auth.signInWithPassword({ email, password }), 12000);
   if(error) throw error;
   return data;
 }
-  async function aureumSignOut(){ if(sb) await sb.auth.signOut(); location.reload(); }
+
+/* ===== OFFLINE SIGN-IN =====
+   The till must open with no internet. Two things make that work, and neither weakens online security:
+   1) the sign-in the device already holds (Supabase keeps it on the device) is trusted when the server can't be reached;
+   2) with "Remember me" ticked, a salted PBKDF2 fingerprint of the email + password (never the password itself) is kept on this device,
+      so the owner can sign in again offline. It only ever unlocks the data already saved on this device; syncing needs the real sign-in,
+      which is done automatically (or by signing in again) the moment the internet is back. */
+const PROFILE_KEY = 'aureum_pos_profile_v1', OFFLINE_AUTH_KEY = 'aureum_offline_auth_v1', BIZ_KEY = 'aureum_pos_biz_v1';
+let offlineSession = false, offlineEmail = '', offlinePassword = '', pendingOfflineSave = null;
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('timed out'), { name:'AuthRetryableFetchError' })), ms))]);   // a weak signal must not freeze the till
+const lsGet = k => { try{ return JSON.parse(localStorage.getItem(k) || 'null'); }catch(e){ return null; } };
+const lsSet = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+function isNetworkError(err){
+  return navigator.onLine === false || !!(err && (err.name === 'AuthRetryableFetchError' || /failed to fetch|networkerror|network request failed|load failed|fetch failed|timed? ?out|offline/i.test(String(err.message || err))));
+}
+function storedAuthUser(){
+  try{
+    for(const st of [localStorage, sessionStorage]){
+      for(let i = 0; i < st.length; i++){
+        const k = st.key(i);
+        if(!/^sb-.*-auth-token$/.test(k)) continue;
+        const o = JSON.parse(st.getItem(k) || 'null');
+        const u = o && (o.user || (o.currentSession && o.currentSession.user));
+        if(u && u.id) return u;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+const b64enc = buf => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+async function pbkdf2(password, saltB64){
+  const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  return b64enc(await crypto.subtle.deriveBits({ name:'PBKDF2', salt, iterations:150000, hash:'SHA-256' }, key, 256));
+}
+async function saveOfflineLogin(email, password, userId){
+  try{
+    if(!(window.crypto && crypto.subtle)) return;
+    const salt = b64enc(crypto.getRandomValues(new Uint8Array(16)));
+    lsSet(OFFLINE_AUTH_KEY, { email:email.toLowerCase(), salt, hash: await pbkdf2(password, salt), userId, at:Date.now() });
+  }catch(e){}
+}
+/* returns 'ok' | 'wrong' | 'nodata' */
+async function offlineSignIn(email, password){
+  const rec = lsGet(OFFLINE_AUTH_KEY), prof = lsGet(PROFILE_KEY);
+  if(!rec || !prof || !(window.crypto && crypto.subtle)) return 'nodata';
+  if(rec.email !== email.toLowerCase() || prof.userId !== rec.userId) return 'nodata';
+  if((await pbkdf2(password, rec.salt)) !== rec.hash) return 'wrong';
+  offlineSession = true; offlineEmail = email; offlinePassword = password;
+  return 'ok';
+}
+/* back online after an offline start: get a real sign-in so the sales saved on this device can upload */
+async function restoreOnlineSession(){
+  if(!offlineSession || !sb || navigator.onLine === false) return;
+  try{
+    const r = await sb.auth.getSession();
+    if(r && r.data && r.data.session){ offlineSession = false; offlinePassword = ''; return; }
+  }catch(e){}
+  if(offlinePassword && offlineEmail){
+    try{
+      const r = await sb.auth.signInWithPassword({ email: offlineEmail, password: offlinePassword });
+      if(!r.error){ offlineSession = false; offlinePassword = ''; if(r.data && r.data.user) currentUser = r.data.user; return; }
+      if(!isNetworkError(r.error)){ offlinePassword = ''; aureumToast('Back online \u2014 please sign out of the account and sign in again so your sales can sync.', 'danger'); }
+    }catch(e){}
+  }
+}
+  async function aureumSignOut(){
+    try{ if(sb) await Promise.race([sb.auth.signOut(), new Promise(r => setTimeout(r, 4000))]); }catch(e){}
+    /* offline the server can't be told, so also forget the sign-in on this device */
+    try{ [localStorage, sessionStorage].forEach(st => Object.keys(st).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => st.removeItem(k))); }catch(e){}
+    location.reload();
+  }
   async function resolveProfile(){
-    const { data: { user } } = await sb.auth.getUser();
+    let user = null, netFail = false;
+    if(!offlineSession && navigator.onLine !== false){      // device says it has no connection: don't wait for the server at all
+      try{
+        const r = await withTimeout(sb.auth.getUser(), 4000);
+        user = r && r.data && r.data.user;
+        if(!user && r && r.error && isNetworkError(r.error)) netFail = true;
+      }catch(e){ netFail = isNetworkError(e); }
+    }
+    if(offlineSession || (!user && (netFail || navigator.onLine === false))){
+      /* can't reach the server: trust the sign-in already saved on this device */
+      const prof = lsGet(PROFILE_KEY), su = storedAuthUser();
+      if(prof && prof.business_id && (offlineSession || (su && su.id === prof.userId))){
+        offlineSession = true;
+        currentUser = su || { id: prof.userId, email: prof.email };
+        currentBusinessId = prof.business_id; currentRole = prof.role;
+        return { business_id: prof.business_id, role: prof.role, full_name: prof.full_name };
+      }
+      return null;
+    }
     if(!user) return null;
     currentUser = user;
-    const { data: profile } = await sb.from('profiles').select('business_id, role, full_name').eq('id', user.id).maybeSingle();
-    if(!profile) return null;
+    const { data: profile, error: perr } = await sb.from('profiles').select('business_id, role, full_name').eq('id', user.id).maybeSingle();
+    if(!profile){
+      if(perr && isNetworkError(perr)){
+        const prof = lsGet(PROFILE_KEY);
+        if(prof && prof.userId === user.id && prof.business_id){ offlineSession = true; currentBusinessId = prof.business_id; currentRole = prof.role; return { business_id: prof.business_id, role: prof.role, full_name: prof.full_name }; }
+      }
+      return null;
+    }
     currentBusinessId = profile.business_id;
     currentRole = profile.role;
+    lsSet(PROFILE_KEY, { userId: user.id, email: user.email || '', business_id: profile.business_id, role: profile.role, full_name: profile.full_name });
+    if(pendingOfflineSave){ const p = pendingOfflineSave; pendingOfflineSave = null; saveOfflineLogin(p.email, p.password, user.id); }
     return profile;
   }
 
@@ -3808,6 +3921,7 @@ async function aureumSignIn(email, password){
     window.addEventListener('beforeunload', persistAureum);
     renderSyncStatus();
     window.addEventListener('online', async ()=>{
+      await restoreOnlineSession();
       await AureumSync.retryNow(); renderSyncStatus();
       if(supaReady && sb && /^synced/.test(AureumSync.status().state)) aureumToast('Back online \u2014 sales are synced.', 'ok');
     });
@@ -3879,7 +3993,13 @@ async function aureumSignIn(email, password){
     document.getElementById('authGate').classList.remove('show');
     // Free trial over / subscription expired: the till still opens so everything can be looked at, but nothing can be sold or changed.
     try{
-      const { data: biz } = await sb.from('businesses').select('subscription_status, trial_ends_at, current_period_end, is_exempt').eq('id', currentBusinessId).maybeSingle();
+      let biz = null;
+      if(!offlineSession){
+        const r = await sb.from('businesses').select('subscription_status, trial_ends_at, current_period_end, is_exempt').eq('id', currentBusinessId).maybeSingle();
+        biz = r && r.data;
+        if(biz) lsSet(BIZ_KEY, { id: currentBusinessId, biz });
+      }
+      if(!biz){ const c = lsGet(BIZ_KEY); if(c && c.id === currentBusinessId) biz = c.biz; }   // offline: use what we knew last time
       const vs = window.AureumViewOnly ? AureumViewOnly.statusFrom(biz, 3) : { viewOnly:false };
       if(vs.viewOnly){
         AureumViewOnly.enable({ kind:vs.kind, text:vs.text,
@@ -4397,14 +4517,32 @@ async function aureumSignIn(email, password){
     const errEl = document.getElementById('authError');
     errEl.textContent = '';
     if(!email || !password){ errEl.textContent = 'Email and password are required.'; return; }
+    const remember = document.getElementById('authRemember').checked;
     try{
       applyRememberChoice(email);
+      if(navigator.onLine === false) throw Object.assign(new Error('offline'), { name:'AuthRetryableFetchError' });
       await aureumSignIn(email, password);
+      if(remember) pendingOfflineSave = { email, password };
       boot();
     }catch(err){
+      if(isNetworkError(err)){
+        let r = 'nodata';
+        try{ r = await offlineSignIn(email, password); }catch(e){}
+        if(r === 'ok'){ boot(); return; }
+        errEl.textContent = r === 'wrong' ? 'That email or password is not correct.' : 'No internet connection. The first sign-in on a device needs the internet; after that this till opens offline.';
+        return;
+      }
       errEl.textContent = err.message || 'Something went wrong.';
     }
   });
+  (function(){   // offline notice on the sign-in card + sign-up link
+    const note = document.getElementById('authOfflineNote');
+    const sync = () => note.classList.toggle('show', navigator.onLine === false);
+    window.addEventListener('online', sync); window.addEventListener('offline', sync); sync();
+    document.getElementById('authSignupLink').addEventListener('click', e=>{
+      if(navigator.onLine === false){ e.preventDefault(); document.getElementById('authError').textContent = 'Creating an account needs the internet. Connect and try again.'; }
+    });
+  })();
 
   boot();
 </script>
