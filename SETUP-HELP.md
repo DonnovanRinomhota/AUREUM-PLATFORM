@@ -48,17 +48,22 @@ Use the **exact words shown on screen** for menus and buttons. When the app chan
 | The Bot gives a wrong or odd answer | send it to me, or add that wording to the right entry in `help-bot/kb.js` and rebuild |
 
 
-## Website help centre and tickets (Support page)
-Every page of the website has a gold ? button that opens a Live Chat panel (the same AUREUM help answers plus a ticket form) for people who are **not signed in** (new visitors, people who can't log in, people who want you to enter their products).
+## Website Live Chat (every page of www.aureumpos.com)
+A gold **?** button on every page opens **AUREUM Live Chat** with two tabs:
+- **Live chat**: online messaging with your team (needs only data or Wi-Fi). The visitor gives a name (email and phone are optional) and a message. The chat is stored as a support ticket named "Live chat: …".
+- **FAQ**: the same help answers as the Back Office bot (automated, not a person).
+The Support page also has **Leave us your contact details** (a small form that creates a "Contact request" ticket).
 
-To switch tickets on (both steps need your go-ahead; nothing is applied by the zip):
+To switch the live chat and the contact form on (both steps need your go-ahead; nothing is applied by the zip):
 1. **Deploy the updated function first:** `supabase functions deploy admin-manage` (it now copes with tickets that have no business).
 2. **Then run `supabase/support-website.sql`** once in the Supabase SQL Editor (after `support-schema.sql`).
+Until step 2 is done the forms say they are not available and offer a ready-written email (and WhatsApp once a number is set).
 
-Until step 2 is done the ticket form says tickets can't be sent right now and offers a ready-written email (and WhatsApp when a number is set).
+Answering chats
+- Open **/admin → Support**. Live chats and contact requests are marked *From the website*. The page refreshes itself every 10 seconds and shows a message when something new arrives. Open one and reply; the visitor sees it within about 4 seconds.
+- **Send & resolve** ends the chat; it clears from the visitor's device. If the visitor presses **End chat** it is marked resolved. The conversation stays in your ticket history. A reply does **not** send an email.
+- There is no sound or phone alert yet. Keep the Support tab open while you are available.
 
-How it behaves
-- Tickets appear in the control panel (**/admin → Support**) marked *From the website*, with the visitor's name, email, phone and business. Reply there. The visitor sees your reply under **My tickets** on the same browser. **A reply does not send an email**, so use the "Email … too" link in the ticket so they see it.
-- The visitor's ticket is protected by a private key kept in their browser; nobody else can read it. Limits: 3 tickets per email per hour, 60 website tickets per hour in total. A hidden spam trap field catches simple bots.
-- WhatsApp buttons stay hidden until you set `SUPPORT.whatsapp` in `site-src/config.js` (then run `node tools/build-site.mjs`).
-- The Bot on the website is built from `help-bot/kb.js` + `help-bot/engine.js` by `node tools/build-site.mjs` (it writes `site/assets/help-bot.js`); teach it new answers the same way as in the app, then run `node tools/build-bot.mjs` and `node tools/build-site.mjs`.
+Protection: the visitor's chat is protected by a private key kept in their browser; nobody else can read it. Limits: 6 new chats per email (or name) per hour, 100 per hour overall, 60 messages per chat per hour. A hidden spam-trap field catches simple bots.
+WhatsApp buttons stay hidden until you set `SUPPORT.whatsapp` in `site-src/config.js` (then run `node tools/build-site.mjs`).
+The FAQ is built from `help-bot/kb.js` + `help-bot/engine.js` by `node tools/build-site.mjs`; teach it new answers as in the app, then run `node tools/build-bot.mjs` and `node tools/build-site.mjs`.

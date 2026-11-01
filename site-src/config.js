@@ -57,9 +57,9 @@ export const HERO = {
     { icon: 'shield', text: 'Secure & Reliable' }
   ],
   devices: {
-    laptop: { set: [['/site/assets/img/screen-dashboard-1280.webp', 1280], ['/site/assets/img/screen-dashboard-2560.webp', 2560]], w: 2560, h: 1600, alt: 'The AUREUM Back Office dashboard showing gross sales, net sales, cost of sales, gross profit, stock alerts and a sales summary chart.' },
-    tablet: { photo: true, set: [['/site/assets/img/screen-pos-tablet.webp', 1431]], w: 1431, h: 1099, alt: 'The AUREUM POS checkout on a tablet: a product catalogue with pictures, names and prices beside the current ticket and a Complete Sale button.' },
-    phone: { set: [['/site/assets/img/screen-receipt-780.webp', 780], ['/site/assets/img/screen-receipt-1170.webp', 1170]], w: 1170, h: 2532, alt: 'A completed sale on a phone: the AUREUM receipt with items, total, payment method and print and email options.' }
+    laptop: { set: [['/site/assets/img/screen-dashboard-v2-1280.webp', 1280], ['/site/assets/img/screen-dashboard-v2-2560.webp', 2560]], w: 2560, h: 1383, alt: 'The AUREUM Back Office dashboard showing gross sales, net sales, cost of sales, gross profit, stock alerts and a sales summary chart.' },
+    tablet: { set: [['/site/assets/img/screen-pos-v2-1100.webp', 1100], ['/site/assets/img/screen-pos-v2-2200.webp', 2200]], w: 2200, h: 1262, alt: 'The AUREUM POS checkout on a tablet: a product catalogue with pictures, names and prices beside the current ticket and a Complete Sale button.' },
+    phone: { set: [['/site/assets/img/screen-receipt-v2-706.webp', 706]], w: 706, h: 1392, alt: 'A completed sale: the AUREUM receipt with items, total, payment method and print and email options.' }
   }
 };
 

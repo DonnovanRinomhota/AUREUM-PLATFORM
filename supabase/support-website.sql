@@ -1,6 +1,6 @@
 -- =====================================================================
--- support-website.sql — lets visitors of the public website (www.aureumpos.com/support) send support tickets
--- to the AUREUM team and follow the replies, WITHOUT having an account.
+-- support-website.sql — lets visitors of the public website start a Live Chat with the AUREUM team (and leave contact
+-- details), WITHOUT having an account. Each chat is stored as a support ticket so the team answers it in the control panel.
 -- Run once in the Supabase SQL Editor, AFTER support-schema.sql. Safe to run again.
 --
 -- ORDER (important): 1) deploy the updated admin-manage function  2) run this file.
@@ -9,9 +9,9 @@
 --
 -- How it is protected
 --   * Visitors cannot read or write the tables directly (RLS stays on, no policy matches them).
---   * They can only call the three functions below. Each ticket gets a private random key (web_token) that is
+--   * They can only call the four functions below. Each ticket gets a private random key (web_token) that is
 --     shown to nobody but the visitor's own browser; without it nobody can read or answer that ticket.
---   * Rate limits: 3 tickets per email per hour, 60 website tickets per hour in total, 60 messages per ticket per hour.
+--   * Rate limits: 6 new chats per email (or per name, when no email is given) per hour, 100 per hour in total, 60 messages per ticket per hour.
 --   * A hidden "honeypot" form field makes simple spam bots look successful without storing anything.
 --   * Internal notes and the assistant chat attached to the ticket are never returned to the visitor.
 -- =====================================================================
@@ -51,24 +51,28 @@ begin
   -- honeypot: real visitors never fill this in. Pretend it worked, store nothing.
   if btrim(coalesce(p_website, '')) <> '' then return jsonb_build_object('id', gen_random_uuid(), 'token', gen_random_uuid()); end if;
   if char_length(nm) < 2 or char_length(nm) > 80 then raise exception 'Please enter your name.' using errcode = 'P0001'; end if;
-  if em !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]{2,}$' or char_length(em) > 120 then raise exception 'Please enter a valid email address so we can reply.' using errcode = 'P0001'; end if;
+  if em <> '' and (em !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]{2,}$' or char_length(em) > 120) then raise exception 'That email address does not look right.' using errcode = 'P0001'; end if;
   if char_length(subj) < 3 then raise exception 'Please give your ticket a short subject (at least 3 characters).' using errcode = 'P0001'; end if;
   if char_length(subj) > 140 then raise exception 'The subject is too long (140 characters at most).' using errcode = 'P0001'; end if;
   if char_length(body) < 5 then raise exception 'Please describe what you need (at least a few words).' using errcode = 'P0001'; end if;
   if char_length(body) > 6000 then raise exception 'The message is too long (6,000 characters at most).' using errcode = 'P0001'; end if;
-  if (select count(*) from public.support_tickets where source = 'website' and contact_email = em and created_at > now() - interval '1 hour') >= 3 then
-    raise exception 'RATE_LIMIT: you have sent several tickets in the last hour. Please wait a little, or reply inside an existing ticket under My tickets.' using errcode = 'P0001';
+  if em <> '' then
+    if (select count(*) from public.support_tickets where source = 'website' and contact_email = em and created_at > now() - interval '1 hour') >= 6 then
+      raise exception 'RATE_LIMIT: you have started several chats in the last hour. Please wait a little.' using errcode = 'P0001';
+    end if;
+  elsif (select count(*) from public.support_tickets where source = 'website' and contact_email is null and lower(contact_name) = lower(nm) and created_at > now() - interval '1 hour') >= 6 then
+    raise exception 'RATE_LIMIT: you have started several chats in the last hour. Please wait a little.' using errcode = 'P0001';
   end if;
-  if (select count(*) from public.support_tickets where source = 'website' and created_at > now() - interval '1 hour') >= 60 then
-    raise exception 'RATE_LIMIT: we are receiving a lot of tickets right now. Please try again in a little while, or email us.' using errcode = 'P0001';
+  if (select count(*) from public.support_tickets where source = 'website' and created_at > now() - interval '1 hour') >= 100 then
+    raise exception 'RATE_LIMIT: we are receiving a lot of messages right now. Please try again in a little while, or email us.' using errcode = 'P0001';
   end if;
   insert into public.support_tickets (business_id, created_by, created_by_email, subject, category, priority, page_context, source, contact_name, contact_email, contact_phone, contact_business, web_token)
-  values (null, null, em, subj,
+  values (null, null, nullif(em, ''), subj,
           case when p_category in ('billing','problem','question','feature','account') then p_category else 'question' end,
-          'normal', 'Website support', 'website', nm, em, nullif(left(btrim(coalesce(p_phone, '')), 40), ''), nullif(left(btrim(coalesce(p_business, '')), 100), ''), tok)
+          'normal', 'Website support', 'website', nm, nullif(em, ''), nullif(left(btrim(coalesce(p_phone, '')), 40), ''), nullif(left(btrim(coalesce(p_business, '')), 100), ''), tok)
   returning id into tid;
   insert into public.support_ticket_messages (ticket_id, business_id, author_type, author_email, author_name, body)
-  values (tid, null, 'customer', em, nm, body);
+  values (tid, null, 'customer', nullif(em, ''), nm, body);
   if p_transcript is not null and char_length(btrim(p_transcript)) > 0 then
     insert into public.support_ticket_messages (ticket_id, business_id, author_type, body)
     values (tid, null, 'bot', 'Chat with AUREUM Bot on the website before this ticket:' || E'\n\n' || left(p_transcript, 11000));
@@ -113,12 +117,29 @@ begin
 end;
 $$;
 
+-- ---------- the visitor ends the chat: it is marked solved (the visitor's device then forgets it) ----------
+create or replace function public.support_web_end_chat(p_id uuid, p_token uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare t public.support_tickets;
+begin
+  select * into t from public.support_tickets where id = p_id and source = 'website' and web_token is not null and web_token = p_token;
+  if not found then raise exception 'Ticket not found.' using errcode = 'P0001'; end if;
+  if t.status in ('open', 'pending') then
+    insert into public.support_ticket_messages (ticket_id, business_id, author_type, author_email, author_name, body)
+    values (t.id, null, 'customer', t.contact_email, t.contact_name, '— The visitor ended this chat. —');
+    update public.support_tickets set status = 'resolved', closed_at = now(), updated_at = now(), last_message_at = now() where id = t.id;
+  end if;
+end;
+$$;
+
 revoke all on function public.support_web_create_ticket(text, text, text, text, text, text, text, text, text) from public;
 revoke all on function public.support_web_get_ticket(uuid, uuid) from public;
 revoke all on function public.support_web_add_message(uuid, uuid, text) from public;
+revoke all on function public.support_web_end_chat(uuid, uuid) from public;
 grant execute on function public.support_web_create_ticket(text, text, text, text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.support_web_get_ticket(uuid, uuid) to anon, authenticated;
 grant execute on function public.support_web_add_message(uuid, uuid, text) to anon, authenticated;
+grant execute on function public.support_web_end_chat(uuid, uuid) to anon, authenticated;
 
 -- To undo: drop the three functions above (drop function public.support_web_create_ticket(text,text,text,text,text,text,text,text,text); ...).
 -- The new columns and the nullable business_id are harmless to leave in place.

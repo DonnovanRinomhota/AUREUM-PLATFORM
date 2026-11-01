@@ -1,5 +1,15 @@
 # Changelog
 
+## Website: Live Chat + FAQ only, contact details, new screenshots, mobile menu (sw v77)
+- **Live Chat** is now just two tabs: **Live chat** and **FAQ**. The Ticket and My tickets tabs are gone from the website chat.
+- Live chat starts with Your name, then Email and Phone number (both optional), then the message. It is online messaging that needs only data or Wi-Fi. The team reads and answers from the control panel (/admin → Support); replies reach the visitor within about 4 seconds. The chat is cleared from the visitor's device when it is completed: the visitor presses **End chat**, or the team presses **Send & resolve**.
+- The Support page hero now has: **Start Live Chat**, **Write us an email**, **Leave us your contact details** (a small form: name, email and/or phone, optional message).
+- Control panel (admin.html): refreshes itself every 10 seconds, shows a toast and a count in the page title for new messages, and the ticket view explains that Send & resolve ends the visitor's chat.
+- supabase/support-website.sql: email is now optional; new function `support_web_end_chat`. (Still needs approval: deploy admin-manage, then run this file.)
+- Website pictures replaced with your screenshots: Back Office dashboard (laptop), POS checkout (tablet, now in a CSS tablet frame), and the sale-complete receipt (phone).
+- Phones: Features / Pricing / Support are shown at the top of every page, and the footer's Explore and Product lists sit side by side.
+- POS till: the tax line now reads "Tax 14%" with normal spacing.
+
 ## Website: real Live Chat with the team, FAQ tab (sw v76)
 - The ? button now opens on **Live chat**: a welcome form (name, email, message), then a conversation with the AUREUM team. It has no suggested questions. The visitor's page checks for the team's reply every 6 seconds. Each chat is stored as a ticket (subject "Live chat: …"), so the team answers it from the control panel (/admin → Support) and it also shows under My tickets.
 - The suggested questions and the bot answers moved to a tab called **FAQ** (with "Browse all topics"). Tabs: Live chat · FAQ · Ticket · My tickets.

@@ -912,7 +912,7 @@
         <div class="btn ghost" id="tkSendResolve">Send &amp; resolve</div>
         <div class="btn ghost" id="tkNote" title="Only the AUREUM team can see a note">Add internal note</div>
       </div>
-      <div class="muted" style="font-size:11.5px;margin-top:10px;">${t.source === 'website' ? `This ticket came from the website: your reply appears under <b>My tickets</b> on the visitor's browser and does <b>not</b> send an email. <a href="mailto:${esc(t.contact_email || t.created_by_email || '')}?subject=${encodeURIComponent('Re: ' + t.subject)}" style="color:inherit;">Email ${esc(t.contact_email || '')} too</a> so they see it.` : 'A reply is shown to the customer as “AUREUM Support” and lights the new-reply dot in their Back Office.'} Internal notes are never shown to them.</div>`;
+      <div class="muted" style="font-size:11.5px;margin-top:10px;">${t.source === 'website' ? `This came from the website${/^Live chat/.test(t.subject) ? ' <b>Live chat</b>' : ''}. The visitor sees your reply in their open chat within a few seconds (this page refreshes by itself too). It does <b>not</b> send an email.${(t.contact_email || t.created_by_email) ? ` <a href="mailto:${esc(t.contact_email || t.created_by_email)}?subject=${encodeURIComponent('Re: ' + t.subject)}" style="color:inherit;">Email ${esc(t.contact_email || t.created_by_email)} too</a> if they have left.` : ' They left no email address.'} <b>Send &amp; resolve</b> ends the chat and clears it from their device.` : 'A reply is shown to the customer as “AUREUM Support” and lights the new-reply dot in their Back Office.'} Internal notes are never shown to them.</div>`;
     const thread = $('tkThread'); thread.scrollTop = thread.scrollHeight;
     $('tkSetStatus').addEventListener('change', e => updateTicket({ status: e.target.value }));
     $('tkSetPriority').addEventListener('change', e => updateTicket({ priority: e.target.value }));
@@ -921,6 +921,26 @@
     $('tkSendResolve').addEventListener('click', () => sendTicket('resolve'));
     $('tkNote').addEventListener('click', () => sendTicket('note'));
   }
+  /* the team's side of Live chat: check for new tickets and new visitor messages every 10 seconds while this page is open */
+  const tkWatch = { open:-1, last:{} };
+  async function watchTickets(){
+    if(document.hidden || !state.me) return;
+    try{
+      const { summary } = await api('tickets_summary'); const n = summary.open;
+      if(tkWatch.open >= 0 && n > tkWatch.open) toast('New support message or live chat waiting.', 'ok');
+      tkWatch.open = n; const b = $('ticketBadge'); b.textContent = n + (summary.urgentOpen ? '!' : ''); b.hidden = !n;
+      document.title = (n ? '(' + n + ') ' : '') + document.title.replace(/^\(\d+\)\s*/, '');
+      if(!$('tab-support').hidden && $('ticketOverlay').hidden){
+        const { rows, total } = await api('tickets_list', { status: $('tkStatus').value, priority: $('tkPriority').value, search: $('tkSearch').value.trim(), limit: Math.min(100, Math.max(25, state.tk.rows.length)), offset: 0 });
+        state.tk.rows = rows; state.tk.total = total; renderTickets();      // refreshed quietly, no "Loading…" flash
+      }
+      if(!$('ticketOverlay').hidden && state.tk.current && !($('tkReplyText') && $('tkReplyText').value)){
+        const cur = state.tk.current, fresh = await api('ticket_get', { ticketId: cur.ticket.id });
+        if(fresh.messages.length !== cur.messages.length || fresh.ticket.status !== cur.ticket.status){ state.tk.current = fresh; renderTicket(); }
+      }
+    }catch(err){ /* not signed in yet, or offline: try again next time */ }
+  }
+  setInterval(watchTickets, 10000);
   async function refreshTicket(){ const id = state.tk.current.ticket.id; state.tk.current = await api('ticket_get', { ticketId:id }); renderTicket(); loadTickets(true); loadTicketBadge(); }
   async function sendTicket(mode){
     const text = $('tkReplyText').value.trim();

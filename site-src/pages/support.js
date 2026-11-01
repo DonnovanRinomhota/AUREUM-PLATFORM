@@ -19,12 +19,12 @@ const hero = () => `<section class="panel dark page-hero sup-hero"><div class="w
     <p class="sup-reach">Reach out to the AUREUM team.</p>
     <div class="sup-help-box">
       <h2>Need help entering your products or transferring them from your old POS?</h2>
-      <p>We are here to do the task for you. Send a ticket, write us an email or reach us on WhatsApp.</p>
+      <p>We are here to do the task for you. Start a live chat, write us an email, or leave us your contact details and we will reach out.</p>
     </div>
     <div class="sup-hero-btns">
-      <a class="btn btn-gold btn-lg" href="#chat" data-aw-open="live"><span>Start live chat</span></a>
-      <a class="btn btn-outline btn-lg" href="#ticket" data-aw-open="ticket"><span>Send a ticket</span></a>
+      <a class="btn btn-gold btn-lg" href="#chat" data-aw-open="live"><span>Start Live Chat</span></a>
       <a class="btn btn-outline btn-lg" href="mailto:${esc(SUPPORT.email)}"><span>Write us an email</span></a>
+      <a class="btn btn-outline btn-lg" href="#contact" data-aw-open="contact"><span>Leave us your contact details</span></a>
       ${SUPPORT.whatsapp ? `<a class="btn btn-outline btn-lg" href="${esc(waLink('Hello AUREUM, I need help with my products.'))}" target="_blank" rel="noopener"><span>WhatsApp us</span></a>` : ''}
     </div>
   </div>

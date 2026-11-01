@@ -329,13 +329,13 @@
   .trow.grand .k{ font-family:'Inter',sans-serif; font-size:14px; color:var(--ivory); letter-spacing:0.02em; font-weight:600; font-style:normal; }
   .trow.grand .v{ font-family:'Inter',sans-serif; font-size:24px; color:var(--gold-bright); font-weight:700; font-style:normal; }
 
-  .tax-row span:first-child{ display:flex; align-items:center; gap:6px; }
+  .tax-row span:first-child{ display:inline; }   /* "Tax 14%" with ordinary spacing */
   .tax-percent-input{
     width:42px; background: var(--panel); border:1px solid var(--line-strong);
     border-radius:6px; padding:3px 5px; color:var(--ivory); font-family:'JetBrains Mono',monospace;
     font-size:12px; text-align:center; outline:none;
   }
-  .tax-percent-input[readonly]{ background:transparent; border-color:transparent; padding:3px 0; width:auto; min-width:24px; max-width:48px; cursor:default; color:var(--ivory-dim); pointer-events:none; }
+  .tax-percent-text{ font:inherit; color:inherit; }
   .tax-percent-input:focus{ border-color: var(--gold-dim); }
   .tax-percent-input::-webkit-inner-spin-button{ opacity: 0.5; }
 
@@ -903,7 +903,7 @@
       <div class="trow"><span>Subtotal</span><span class="v" id="subtotalVal">$0.00</span></div>
       <div class="trow"><span>Discount</span><span class="v" id="discountVal">$0.00</span></div>
       <div class="trow tax-row">
-        <span>Tax <input type="text" id="taxPercentInput" class="tax-percent-input" value="0" readonly tabindex="-1" aria-label="Tax rate, set in Back Office" title="Set in Back Office → Settings → Taxes">%</span>
+        <span title="Set in Back Office → Settings → Taxes">Tax <span id="taxPercentInput" class="tax-percent-text">0</span>%</span>
         <span class="v" id="taxVal">$0.00</span>
       </div>
       <div class="trow grand"><span class="k">Total</span><span class="v" id="totalVal">$0.00</span></div>
@@ -3760,7 +3760,7 @@ async function aureumSignIn(email, password){
   /* the till starts every ticket on the tax rate saved in Back Office → Settings → Taxes (the cashier cannot change it) */
   function applyDefaultTax(){
     taxPercent = Math.max(0, Math.min(100, Number(POS_SETTINGS.taxPercent) || 0));
-    const el = document.getElementById('taxPercentInput'); if(el) el.value = taxPercent;
+    const el = document.getElementById('taxPercentInput'); if(el) el.textContent = String(taxPercent);
   }
   function applyLoadedData(shared){
     if(!shared) return;
