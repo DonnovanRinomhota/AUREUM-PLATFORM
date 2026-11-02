@@ -1,5 +1,9 @@
 # Changelog
 
+## v79
+- **Revenue is the full amount**: Dashboard Net Sales, Accounting Revenue, Sales by Product, Sales by Category and the AUREUM Bot no longer deduct sales tax. Revenue = what customers paid (gross − discounts − refunds).
+- Accounting: removed the "Sales tax collected (owed to the tax authority)" line from the income statement and its export. Income tax % (for profit after tax) is unchanged.
+
 ## v78
 - **Android back button** (both apps): each press now steps back one level — pop-up, ticket panel, menu, "Back to…" form, Back Office page → Dashboard, real page history — and on the first screen a second press within 2 seconds exits ("Press back again to exit").
 - **POS works offline from sign-in**: the till opens with no internet using the sign-in already on the device; with "Remember me" ticked a salted fingerprint (never the password) also lets the owner sign in again offline. The sales sync after a silent re-sign-in when the internet returns. The till and Back Office also open straight from the device copy instead of waiting ~7 s for the server.

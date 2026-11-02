@@ -1634,7 +1634,7 @@
     <!-- SALES BY PRODUCT PAGE -->
     <div class="page" data-page="sales-by-product">
       <div class="main-top">
-        <div><div class="page-title">Sales by Products</div><div class="page-sub">See which products are driving revenue and profit. Net sales exclude sales tax; discounts and refunds are shared out per item, so the totals match the Dashboard.</div></div>
+        <div><div class="page-title">Sales by Products</div><div class="page-sub">See which products are driving revenue and profit. Net sales are the full amount customers paid; discounts and refunds are shared out per item, so the totals match the Dashboard.</div></div>
       </div>
 
       <div class="filters-bar">
@@ -1698,7 +1698,7 @@
         <div class="panel-head">
           <div>
             <div class="t">Sales by Category</div>
-            <div class="s" id="salesCatScope">Share of net sales (excluding sales tax) by product category</div>
+            <div class="s" id="salesCatScope">Share of net sales by product category</div>
           </div>
           <div style="display:flex; gap:8px;">
             <input type="text" class="cat-select" id="salesCatFilter" list="salesCatFilterOptions" placeholder="All categories" style="padding:6px 10px; max-width:160px;" autocomplete="off">
@@ -3924,7 +3924,7 @@ const AureumSync = (function(){
       if(viewingShop && viewingShop !== 'All Shops' && r.shop !== viewingShop) return false;
       return true;
     });
-    // same calculation as Sales by Product and Accounting: net sales exclude sales tax, discounts and refunds are allocated per item
+    // same calculation as Sales by Product and Accounting: net sales are the full amount paid (tax not deducted), discounts and refunds are allocated per item
     const st = salesTotals(receipts);
     const grossSales = st.gross, netSales = st.net, costOfSales = Math.max(0, st.cogs);
     const grossProfit = r2c(netSales - costOfSales);
@@ -8378,7 +8378,7 @@ const AureumSync = (function(){
       return true;
     });
     { const sc = document.getElementById('salesCatScope'), per = document.getElementById('salesCatPeriod');
-      if(sc) sc.textContent = 'Net sales excl. tax · ' + per.options[per.selectedIndex].text.toLowerCase() + ' · ' + (shop && shop !== 'All Shops' ? shop : 'all shops') + ' · uses its own period selector, not the product search or date range above'; }
+      if(sc) sc.textContent = 'Net sales · ' + per.options[per.selectedIndex].text.toLowerCase() + ' · ' + (shop && shop !== 'All Shops' ? shop : 'all shops') + ' · uses its own period selector, not the product search or date range above'; }
     const catTotals = {};
     inRangeReceipts.forEach(r=>{
       receiptLines(r).forEach(l=>{
@@ -8386,7 +8386,7 @@ const AureumSync = (function(){
         const cat = p ? (p.cat || 'Uncategorized') : 'Others';
         if(!catTotals[cat]) catTotals[cat] = { qty:0, net:0 };
         catTotals[cat].qty += l.qty;
-        catTotals[cat].net += l.net;          // ex-tax, after discounts and refunds — same basis as Sales by Product
+        catTotals[cat].net += l.net;          // full amount, after discounts and refunds — same basis as Sales by Product
       });
     });
     const cats = Object.keys(catTotals).filter(c => catFilter === 'All' || c === catFilter);
@@ -10160,7 +10160,7 @@ const AureumSync = (function(){
      A receipt's discount, tax and cost are allocated to its lines in whole cents (largest remainder), so
      sum(lines) == the receipt exactly. Refund receipts come back with negative signs. Per line:
        gross    qty x price before the ticket discount        discount  this line's share of the ticket discount
-       tax      this line's share of the tax on the receipt    net       revenue EXCLUDING sales tax
+       tax      this line's share of the tax on the receipt    net       revenue = the FULL amount the customer paid (tax is NOT deducted)
        cost     qty x the cost recorded at the time of sale    paid      what the customer paid for the line (net + tax)
      Dashboard, Sales by Product (+ CSV), Sales by Category and Accounting all use it, so they cannot disagree. */
   function allocCents(total, weights){
@@ -10192,7 +10192,7 @@ const AureumSync = (function(){
       const p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(x => x.id === it.productId) : null;
       const q = Number(it.qty) || 0;
       return { productId: it.productId, name: it.name, refund: !!r.refund, sign,
-        qty: sign * q, gross: sign * vals[i], discount: sign * dSh[i], tax: sign * tSh[i], net: sign * net[i],
+        qty: sign * q, gross: sign * r2c(vals[i] + (inc ? 0 : tSh[i])), discount: sign * dSh[i], tax: sign * tSh[i], net: sign * r2c(net[i] + tSh[i]),
         paid: sign * r2c(net[i] + tSh[i]), cost: sign * r2c(q * lineCost(it, p)) };
     });
   }
@@ -10235,7 +10235,7 @@ const AureumSync = (function(){
     if(!acctDateState) return;
     const rangeReceipts = receiptsInRange(acctDateState);
     const rcAcct = receiptCosts(rangeReceipts), stAcct = salesTotals(rangeReceipts);
-    const revenue = stAcct.net;                                // revenue excludes the sales tax collected — same figure as Dashboard "Net Sales"
+    const revenue = stAcct.net;                                // revenue is the full amount customers paid, tax not deducted — same figure as Dashboard "Net Sales"
     const cogs = rcAcct.cogs;
     const grossProfit = r2c(revenue - cogs);
     const rangeExpenses = expensesInRange(acctDateState);
@@ -10262,7 +10262,6 @@ const AureumSync = (function(){
       <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Operating expenses</div><div class="pct">-${curSym()}${totalOpex.toFixed(2)}</div></div>
       <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line-strong); font-weight:700;"><div class="name">Profit before tax</div><div class="pct" style="color:${netIncome>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${netIncome.toFixed(2)}</div></div>
       <div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line);"><div class="name">Income tax (${taxPct}%)</div><div class="pct">-${curSym()}${incomeTax.toFixed(2)}</div></div>
-      ${rcAcct.tax ? `<div class="dl-row" style="padding:10px 0; border-bottom:1px solid var(--line); color:var(--sage); font-size:12px;"><div class="name">Sales tax collected (owed to the tax authority — not counted in revenue)</div><div class="pct">${curSym()}${rcAcct.tax.toFixed(2)}</div></div>` : ''}
       <div class="dl-row" style="padding:14px 0 0; font-weight:800; font-size:14.5px;"><div class="name">Profit after tax</div><div class="pct" style="color:${profitAfterTax>=0?'var(--gold-bright)':'var(--danger)'};">${curSym()}${profitAfterTax.toFixed(2)}</div></div>
     `;
 
@@ -10272,7 +10271,6 @@ const AureumSync = (function(){
         per = fmtDisplay(iso(acctDateState.rangeStart)) + (iso(acctDateState.rangeStart) === iso(acctDateState.rangeEnd) ? '' : ' – ' + fmtDisplay(iso(acctDateState.rangeEnd))) + (lab ? ' (' + lab + ')' : '');
       const m = n => (Number(n) < 0 ? '-' : '') + curSym() + Math.abs(Number(n)).toFixed(2), neg = n => (Number(n) > 0 ? '-' : '') + curSym() + Math.abs(Number(n)).toFixed(2);
       const rows = [['Business', docBusiness() || 'AUREUM'], ['Shop', shopTxt], ['Period', per], ['Revenue', m(revenue)], ['Cost of revenue', neg(cogs)], ['Gross profit', m(grossProfit)], ['Operating expenses', neg(totalOpex)], ['Profit before tax', m(netIncome)], ['Income tax (' + taxPct + '%)', neg(incomeTax)], ['Profit after tax', m(profitAfterTax)]];
-      if(rcAcct.tax) rows.push(['Sales tax collected (owed to the tax authority — not counted in revenue)', m(rcAcct.tax)]);
       const byCat = {}; rangeExpenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
       Object.keys(byCat).sort().forEach(c => rows.push(['  Expense — ' + c, neg(byCat[c])]));
       document.getElementById('acctExportBody').innerHTML = rows.map(r => '<tr><td>' + escHtml(r[0]) + '</td><td>' + escHtml(r[1]) + '</td></tr>').join('');
@@ -13547,7 +13545,7 @@ E('profit-calc','Sales & reports','How is profit calculated?',
   `On **Accounting** (and when you ask AUREUM Bot):
 
 1. **Revenue** = sales minus refunds for the period and shop you are viewing.
-2. **Cost of revenue** = the exact cost saved on each item sold, less the cost of refunded items (sales tax collected is not counted as revenue).
+2. **Cost of revenue** = the exact cost saved on each item sold, less the cost of refunded items (revenue is the full amount customers paid).
 3. **Gross profit** = revenue − cost of revenue.
 4. **Profit before tax** = gross profit − the **expenses** you recorded.
 5. **Profit after tax** takes off your income-tax % — but only when there is a profit; a loss isn't taxed.
@@ -13799,7 +13797,7 @@ function create(getData){
         if(!r.refund){ a.saleGross += (Number(it.qty) || 0) * (Number(it.price) || 0); a.saleCost += (Number(it.qty) || 0) * (Number(it.cost) || 0); a.units += Number(it.qty) || 0; }
       }
     }
-    a.revenue = a.gross - a.refunds - a.taxNet;                              // sales tax collected is not revenue (same as the Accounting screen)
+    a.revenue = a.gross - a.refunds;                              // full amount paid, tax not deducted (same as the Accounting screen)
     a.ratio = a.saleGross > 0 ? a.saleCost / a.saleGross : 0.45;
     a.cogs = Math.max(0, a.costNet);                                          // exact cost of what was sold, less what was refunded
     a.grossProfit = a.revenue - a.cogs;
@@ -13884,7 +13882,7 @@ function create(getData){
     t += '- Expenses: ' + money(d, a.opex) + '\n- **Profit before tax: ' + money(d, a.net) + '**' + (pa ? arrow(a.net, pa.net) + ' vs ' + prev.label : '') + '\n';
     if(a.taxPct) t += '- After ' + a.taxPct + '% income tax: **' + money(d, a.after) + '**' + (a.net <= 0 ? ' (no tax on a loss)' : '') + '\n';
     if(a.net < 0) t += '\nExpenses are higher than gross profit for this period.' + (a.opex > 0 ? ' Biggest expense: ' + biggestExpense(d, a) + '.' : '');
-    spec.method = 'Revenue = sales − refunds − sales tax collected. Cost of goods = the exact cost saved on every item sold, less the cost of refunded items. Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
+    spec.method = 'Revenue = sales − refunds (the full amount customers paid). Cost of goods = the exact cost saved on every item sold, less the cost of refunded items. Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
     return out(t, spec, { nav: [{ label: 'Open Accounting', page: 'accounting' }], asks: ['Expenses ' + P.label, 'Compare with ' + (prev ? prev.label : 'last month'), 'Which products make the most profit?'] });
   }
   const biggestExpense = (d, a) => { const m = new Map(); a.expList.forEach(e => m.set(e.category || 'Other', (m.get(e.category || 'Other') || 0) + e.amount)); const b = [...m.entries()].sort((x, y) => y[1] - x[1])[0]; return b ? '**' + b[0] + '** (' + money(d, b[1]) + ')' : 'none'; };

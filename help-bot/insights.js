@@ -160,7 +160,7 @@ function create(getData){
         if(!r.refund){ a.saleGross += (Number(it.qty) || 0) * (Number(it.price) || 0); a.saleCost += (Number(it.qty) || 0) * (Number(it.cost) || 0); a.units += Number(it.qty) || 0; }
       }
     }
-    a.revenue = a.gross - a.refunds - a.taxNet;                              // sales tax collected is not revenue (same as the Accounting screen)
+    a.revenue = a.gross - a.refunds;                              // full amount paid, tax not deducted (same as the Accounting screen)
     a.ratio = a.saleGross > 0 ? a.saleCost / a.saleGross : 0.45;
     a.cogs = Math.max(0, a.costNet);                                          // exact cost of what was sold, less what was refunded
     a.grossProfit = a.revenue - a.cogs;
@@ -245,7 +245,7 @@ function create(getData){
     t += '- Expenses: ' + money(d, a.opex) + '\n- **Profit before tax: ' + money(d, a.net) + '**' + (pa ? arrow(a.net, pa.net) + ' vs ' + prev.label : '') + '\n';
     if(a.taxPct) t += '- After ' + a.taxPct + '% income tax: **' + money(d, a.after) + '**' + (a.net <= 0 ? ' (no tax on a loss)' : '') + '\n';
     if(a.net < 0) t += '\nExpenses are higher than gross profit for this period.' + (a.opex > 0 ? ' Biggest expense: ' + biggestExpense(d, a) + '.' : '');
-    spec.method = 'Revenue = sales − refunds − sales tax collected. Cost of goods = the exact cost saved on every item sold, less the cost of refunded items. Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
+    spec.method = 'Revenue = sales − refunds (the full amount customers paid). Cost of goods = the exact cost saved on every item sold, less the cost of refunded items. Gross profit = revenue − cost of goods. Profit before tax = gross profit − expenses recorded in Accounting. Income tax is only taken when there is a profit.';
     return out(t, spec, { nav: [{ label: 'Open Accounting', page: 'accounting' }], asks: ['Expenses ' + P.label, 'Compare with ' + (prev ? prev.label : 'last month'), 'Which products make the most profit?'] });
   }
   const biggestExpense = (d, a) => { const m = new Map(); a.expList.forEach(e => m.set(e.category || 'Other', (m.get(e.category || 'Other') || 0) + e.amount)); const b = [...m.entries()].sort((x, y) => y[1] - x[1])[0]; return b ? '**' + b[0] + '** (' + money(d, b[1]) + ')' : 'none'; };
