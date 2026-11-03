@@ -805,6 +805,9 @@
     <div class="auth-btn" id="authSubmitBtn" role="button" tabindex="0">Sign In</div>
     <input type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
     </form>
+    <div class="auth-alt" id="authSwitchRow" style="margin-top:12px;padding-top:0;border-top:0;">
+      Signing in for a different business? <a id="authDiffEmail" role="button" tabindex="0">Use a different email</a>
+    </div>
     <div class="auth-alt" id="authSignupRow">
       New to AUREUM? <a id="authSignupLink" href="backoffice.html?mode=signup">Create your business account</a>
       <span class="hint">Free 14-day trial. You create the account in the Back Office, then come back here and sign in with the same email and password.</span>
@@ -825,6 +828,9 @@
     <input class="auth-field" id="shiftPin" type="password" inputmode="numeric" placeholder="Employee PIN" maxlength="8">
     <div class="auth-error" id="shiftError"></div>
     <div class="auth-btn" id="shiftSubmitBtn">Start Shift</div>
+    <div class="auth-alt" id="shiftSwitchRow" style="margin-top:14px;padding-top:12px;">
+      Not this business? <a id="shiftSwitchLink" role="button" tabindex="0">Sign out and use a different email</a>
+    </div>
   </div>
 </div>
 <div class="app">
@@ -2012,7 +2018,7 @@ async function restoreOnlineSession(){
      Anything the Back Office has never set behaves exactly as the till always did, so nothing changes until someone
      moves a switch. Managers and administrators can always do everything; the permission switches are for cashiers. */
   const settingOn = (id, def) => { const t = POS_SETTINGS.toggles; return (t && Object.prototype.hasOwnProperty.call(t, id)) ? !!t[id] : def; };
-  const PERM = { discount:['stPermDiscount', true], refund:['stPermRefund', false], reports:['stPermReports', true], editPrice:['stPermEditPrice', false] };
+  const PERM = { discount:['stPermDiscount', true], refund:['stPermRefund', false], reports:['stPermReports', false], editPrice:['stPermEditPrice', false] };
   const cashierMay = key => !!activeEmployee && (canManage() || settingOn(PERM[key][0], PERM[key][1]));
   const canRefund = () => cashierMay('refund');
   let priceOverride = {};   // this ticket only: product id → the price set at the till (never changes the product itself)
@@ -4535,6 +4541,18 @@ async function restoreOnlineSession(){
       errEl.textContent = err.message || 'Something went wrong.';
     }
   });
+  (function(){   // switching to a different business email
+    const go = e => { if(e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault();
+      try{ localStorage.removeItem('aureum_remember_email'); }catch(err){}
+      const em = document.getElementById('authEmail'), pw = document.getElementById('authPassword');
+      em.value = ''; pw.value = ''; document.getElementById('authError').textContent = ''; em.focus(); };
+    const d = document.getElementById('authDiffEmail'); d.addEventListener('click', go); d.addEventListener('keydown', go);
+    const sw = e => { if(e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault();
+      let n = 0; try{ n = unsyncedReceipts().length; }catch(err){}
+      const warn = n ? '\n\n' + n + ' sale' + (n === 1 ? ' is' : 's are') + ' not uploaded yet. They stay safely on this device and upload when this business signs in again with internet.' : '';
+      if(confirm('Sign out of this business account?\n\nYou can then sign in with a different email.' + warn)) aureumSignOut(); };
+    const l = document.getElementById('shiftSwitchLink'); l.addEventListener('click', sw); l.addEventListener('keydown', sw);
+  })();
   (function(){   // offline notice on the sign-in card + sign-up link
     const note = document.getElementById('authOfflineNote');
     const sync = () => note.classList.toggle('show', navigator.onLine === false);

@@ -1,5 +1,11 @@
 # Changelog
 
+## v80
+- **POS switch account**: "Use a different email" on the sign-in card (clears the remembered email) and "Not this business? Sign out and use a different email" on the Start Shift screen (warns if sales are still waiting to upload; they stay on the device).
+- **Back Office avatar** shows the initials of the signed-in person's name (was always "AN").
+- **Lists open on page 1** (Products, Receipts, Sales by Product, Purchase Orders, Goods Received, Stock Adjustments, Transfers) instead of the page last used.
+- **Today's Sales at the till is OFF for cashiers by default** (Settings → Users & Permissions switch). Existing accounts are switched off once; owners can switch it back on. Managers/administrators always see it.
+
 ## v79
 - **Revenue is the full amount**: Dashboard Net Sales, Accounting Revenue, Sales by Product, Sales by Category and the AUREUM Bot no longer deduct sales tax. Revenue = what customers paid (gross − discounts − refunds).
 - Accounting: removed the "Sales tax collected (owed to the tax authority)" line from the income statement and its export. Income tax % (for profit after tax) is unchanged.

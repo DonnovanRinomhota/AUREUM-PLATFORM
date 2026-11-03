@@ -1228,7 +1228,7 @@
 
     <div class="sidebar-foot">
       <div class="sf-user">
-        <div class="sf-avatar">AN</div>
+        <div class="sf-avatar" id="sfAvatar">&middot;</div>
         <div class="sf-info">
           <div class="who" id="sfWho">Amara N.</div>
           <div class="role" id="sfRole">Shop Owner</div>
@@ -2973,8 +2973,8 @@
                 <div class="switch" id="stPermRefund" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Can view Today’s Sales at the till<span class="hint">Cashiers can open the Today’s Sales list and its day total.</span></div>
-                <div class="switch on" id="stPermReports" data-toggle></div>
+                <div class="lbl">Can view Today’s Sales at the till<span class="hint">Off by default. Switch on to let cashiers open the Today’s Sales list and its day total (needed for cashiers to refund). Managers and administrators always can.</span></div>
+                <div class="switch" id="stPermReports" data-toggle></div>
               </div>
               <div class="toggle-row">
                 <div class="lbl">Can change an item’s price at checkout<span class="hint">Cashiers can tap an item’s price on the ticket to change it for that sale only. Managers and administrators always can.</span></div>
@@ -3889,6 +3889,12 @@ const AureumSync = (function(){
       // (see the guard inside renderAllData below) — otherwise a sale made
       // at the POS in another tab could silently revert a toggle the owner
       // just clicked here before they'd had a chance to hit Save.
+      /* lists always open on page 1 (not the page last used) */
+      try{
+        const PG = { 'products':[productPageState, renderProducts], 'sales':[receiptsPageState, renderReceiptsTable], 'sales-by-product':[sbpPageState, renderSalesByProduct],
+          'purchases':[poPageState, renderPOTable], 'goods-received':[grnPageState, renderGRNTable], 'stock-adjustments':[saPageState, renderStockAdjTable], 'stock-transfers':[transferPageState, renderTransfers] }[target];
+        if(PG && PG[0].page !== 1){ PG[0].page = 1; PG[1](); }
+      }catch(e){}
       if(target === 'settings') applySettingsToForm();
       if(navTarget === 'billing'){
         activeSettingsTab = 'billing'; renderSettingsNav();
@@ -9378,7 +9384,7 @@ const AureumSync = (function(){
   function migrateSettingsV2(){
     if(POS_SETTINGS.settingsV2) return false;
     if(!POS_SETTINGS.toggles) POS_SETTINGS.toggles = {};
-    Object.assign(POS_SETTINGS.toggles, { stPermDiscount:true, stPermRefund:false, stPermReports:true, stPermEditPrice:false, stPermPin:true,
+    Object.assign(POS_SETTINGS.toggles, { stPermDiscount:true, stPermRefund:false, stPermReports:false, stPermEditPrice:false, stPermPin:true,
       stPayCredit:true, stReceiptAutoPrint:false, stNotifyLowStock:true, stNotifyDailySummary:false, stNotifyNewOrder:false, stNotifyRefund:true, stNotifyClockInOut:false });
     POS_SETTINGS.settingsV2 = true;
     return true;
@@ -9386,6 +9392,12 @@ const AureumSync = (function(){
   // Runs AFTER the account's data has loaded (never on the cached copy, where the server's older values would win the merge).
   function runSettingsMigration(){
     if(migrateSettingsV2()){ persistAureum(); try{ applySettingsToForm(); }catch(e){} }
+    if(!POS_SETTINGS.permReportsOffV1){   // one time: Today's Sales at the till is now OFF unless the owner switches it on
+      POS_SETTINGS.permReportsOffV1 = true;
+      if(!POS_SETTINGS.toggles) POS_SETTINGS.toggles = {};
+      POS_SETTINGS.toggles.stPermReports = false;
+      persistAureum(); try{ applySettingsToForm(); }catch(e){}
+    }
   }
   function restoreSettingsToggles(){
     document.querySelectorAll('.settings-content [data-toggle]').forEach(sw=>{
@@ -11663,6 +11675,11 @@ const AureumSync = (function(){
         allow:'#logoutBtn,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#stCancelSubBtn,#stDeleteAccountBtn,#delAcctModal,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
     }
     document.getElementById('sfWho').textContent = profile.full_name || currentUser.email;
+    { // avatar shows the initials of the signed-in person's name (or the start of their email)
+      const nm = String(profile.full_name || '').trim(), parts = nm.split(/\s+/).filter(Boolean);
+      const ini = parts.length ? ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : (parts[0][1] || ''))) : String(currentUser.email || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2);
+      const av = document.getElementById('sfAvatar'); if(av) av.textContent = (ini || '?').toUpperCase();
+    }
     document.getElementById('sfEmail').textContent = profile.full_name ? currentUser.email : '';
     document.getElementById('sfRole').textContent = profile.role;
     if(subCheck.warning){
