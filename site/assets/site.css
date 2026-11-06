@@ -83,6 +83,7 @@ main > .panel + .panel{border-top:0}
 .header-in{display:flex;align-items:center;gap:26px;min-height:var(--hdr)}
 .brand{display:inline-flex;align-items:center;gap:14px;text-decoration:none;color:var(--text)}
 .logo-mark{--s:44px;flex:none;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 36% 30%,#fbe9a6,#d8b24c 58%,#a98424);box-shadow:0 0 0 3px #04120c,0 0 0 4.5px #d9b55b,0 6px 18px rgba(0,0,0,.45),inset 0 0 0 4px rgba(120,90,20,.28),inset 0 0 8px rgba(255,240,180,.35);color:#1b140a}
+.logo-mark{overflow:hidden;background:#04211a}.logo-mark img{width:100%;height:100%;display:block;object-fit:cover}
 .logo-mark span{font:600 calc(var(--s)*.58)/1 var(--ff-serif);color:#1b140a;transform:translateY(-1px)}
 .brand-text{display:flex;flex-direction:column;gap:9px}
 .brand-name{font:600 clamp(1.5rem,2.3vw,2.1rem)/1 'Montserrat',var(--ff);letter-spacing:.015em;background:linear-gradient(180deg,#f7e49a,#e0bf62 45%,#b78f2e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold)}

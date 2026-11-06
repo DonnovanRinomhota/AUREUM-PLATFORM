@@ -1043,6 +1043,9 @@
     .detail-table th, .detail-table td{ padding-left:8px; padding-right:8px; }
     .detail-table .exp{ padding-left:8px; }
   }
+
+  .brand-seal,.auth-seal,.side-seal,.seal{ overflow:hidden; padding:0; background:#04211a !important; }
+  .seal-img{ width:100%; height:100%; display:block; object-fit:cover; }
 </style>
 <meta name="description" content="AUREUM Back Office — manage products, stock, staff, purchases and reports for your shops.">
 <meta name="theme-color" content="#0A1B16">
@@ -1060,7 +1063,7 @@
 <div id="helpFab" role="button" tabindex="0" title="Help &amp; FAQ — drag to move" aria-label="Help and FAQ (drag to move)">?</div>
 <div class="auth-gate" id="authGate">
   <div class="auth-card">
-    <div class="auth-seal">A</div>
+    <div class="auth-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div class="auth-title">AUREUM Back Office</div>
     <div class="auth-sub" id="authGateMsg">Sign in to manage your business.</div>
     <div class="auth-tabs" id="authTabs">
@@ -1120,7 +1123,7 @@
 <!-- Shown instead of the normal auth gate when arriving via a password-reset email link -->
 <div class="auth-gate" id="resetPasswordGate">
   <div class="auth-card">
-    <div class="auth-seal">A</div>
+    <div class="auth-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div class="auth-title">Set a new password</div>
     <div class="auth-sub">Choose a new password for your account.</div>
     <input class="auth-field" id="resetNewPassword" type="password" placeholder="New password">
@@ -1140,7 +1143,7 @@
   <!-- ===== SIDEBAR ===== -->
   <div class="sidebar" id="sidebar">
     <div class="side-brand">
-      <div class="side-seal">A</div>
+      <div class="side-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
       <div class="txt">
         <div class="name">AUREUM</div>
         <div class="sub">Back Office</div>

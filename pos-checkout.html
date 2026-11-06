@@ -307,6 +307,8 @@
   }
   .qty-btn:hover{ border-color: var(--gold-dim); color:var(--gold-bright); }
   .qty-val{ font-family:'JetBrains Mono',monospace; font-size:12.5px; min-width:18px; text-align:center; color:var(--sage); }
+  .qty-val.editable{ cursor:pointer; color:var(--ivory); border-bottom:1px dashed var(--gold); padding:0 4px; min-width:26px; }
+  .qty-input{ width:58px; font:inherit; font-size:14px; text-align:center; color:var(--ivory); background:var(--bg-2, #0f1a14); border:1px solid var(--gold); border-radius:6px; padding:2px 4px; -moz-appearance:textfield; }
   .li-unit{ font-size:11px; color:var(--sage-dim); margin-left:6px; }
   .li-remove{
     margin-left:auto; font-size:11px; color:var(--sage-dim); cursor:pointer; letter-spacing:0.03em;
@@ -774,6 +776,9 @@
   .auth-alt{ margin-top:16px; padding-top:14px; border-top:1px solid var(--line); font-size:12.5px; color:var(--sage); line-height:1.5; }
   .auth-alt a{ color:var(--gold-bright); font-weight:600; text-decoration:underline; cursor:pointer; }
   .auth-alt .hint{ display:block; margin-top:6px; font-size:11.5px; opacity:.85; }
+
+  .brand-seal,.auth-seal,.side-seal,.seal{ overflow:hidden; padding:0; background:#04211a !important; }
+  .seal-img{ width:100%; height:100%; display:block; object-fit:cover; }
 </style>
 <meta name="description" content="AUREUM POS — point-of-sale checkout that keeps working offline.">
 <meta name="theme-color" content="#0A1B16">
@@ -790,7 +795,7 @@
 <body>
 <div class="auth-gate" id="authGate">
   <div class="auth-card">
-    <div class="auth-seal">A</div>
+    <div class="auth-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div class="auth-title">AUREUM Point of Sale</div>
     <div class="auth-sub" id="authGateMsg">Sign in with your business account to open this terminal.</div>
     <div class="auth-offline-note" id="authOfflineNote" role="status">You&rsquo;re offline. You can still sign in if you have signed in on this device before.</div>
@@ -816,7 +821,7 @@
 </div>
 <div class="auth-gate" id="shiftGate">
   <div class="auth-card">
-    <div class="auth-seal">A</div>
+    <div class="auth-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div class="auth-title" id="shiftGateTitle">Start Shift</div>
     <div class="auth-sub" id="shiftGateMsg">Select this till's shop and your name, then enter your PIN. Every sale is recorded under this shop and employee only.</div>
     <select class="auth-field" id="shiftShopSelect"></select>
@@ -837,7 +842,7 @@
 
   <div class="topbar">
     <div class="brand">
-      <div class="brand-seal">A</div>
+      <div class="brand-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
       <div class="brand-text">
         <div class="name">AUREUM</div>
         <div class="sub">Point of Sale</div>
@@ -2007,6 +2012,15 @@ async function restoreOnlineSession(){
   let payMethod = "cash";
   let splitLines = null;   // confirmed split-payment lines for the ticket on screen: [{method,label,amount,tendered?}]
   let cart = {}; // id -> qty
+  /* Lines show in the order they were first added. (Object keys that look like numbers are always listed 1,2,3… by the browser,
+     which is why a newly added product used to jump into the middle of the ticket.) */
+  let cartOrder = [];
+  function cartIds(){
+    const keys = Object.keys(cart), have = new Set(keys.map(String));
+    cartOrder = cartOrder.filter(k => have.has(String(k)));
+    keys.forEach(k => { if(!cartOrder.includes(String(k))) cartOrder.push(String(k)); });
+    return cartOrder.slice();
+  }
   let taxPercent = 0; // tax % — pre-filled from Back Office settings, editable by the cashier
   let discount = { type: 'percent', value: 0 };
   let customer = null; // { name, phone }
@@ -2031,7 +2045,7 @@ async function restoreOnlineSession(){
     // Every money figure is rounded to whole cents HERE, once, so what's shown, what's charged and what's
     // stored are the same number. (Unrounded arithmetic used to store totals like 12.420000000000002.)
     const cents = n => Math.round((n + Number.EPSILON) * 100) / 100;
-    const ids = Object.keys(cart);
+    const ids = cartIds();
     const lineVal = id => unitPrice(PRODUCTS.find(p=>p.id==id)) * cart[id];
     const subtotal = cents(ids.reduce((sum,id)=> sum + lineVal(id), 0));
     // Only products with "Charge tax" on carry tax. Products saved before that switch existed are all taxed, as always.
@@ -2285,8 +2299,30 @@ async function restoreOnlineSession(){
 
   function addToCart(id){
     if(window.AureumViewOnly && AureumViewOnly.active()){ try{ aureumToast('View only — subscribe to make sales.', 'danger'); }catch(e){} return; }
+    const prod = PRODUCTS.find(x => x.id == id);
+    if(!prod || !(unitPrice(prod) > 0)){ aureumToast((prod ? prod.name : 'This product') + ' has no price. Set its price in Back Office before selling it.', 'danger'); return; }
+    if(!(id in cart)) cartOrder.push(String(id));
     cart[id] = (cart[id]||0) + 1;
     renderTicket();
+  }
+  /* tap the quantity to type it */
+  function editQty(el, id){
+    if(el.querySelector('input') || !cart[id]) return;
+    const cur = cart[id];
+    el.innerHTML = '<input class="qty-input" type="number" inputmode="numeric" min="1" max="99999" step="1" aria-label="Quantity">';
+    const inp = el.firstChild; inp.value = cur; inp.focus(); inp.select();
+    let done = false;
+    const finish = save => {
+      if(done) return; done = true;
+      if(save){
+        const v = parseInt(inp.value, 10);
+        if(isFinite(v) && v >= 1 && v <= 99999){ cart[id] = v; tenderedAmt = 0; }
+        else aureumToast('Type a quantity of 1 or more (use Remove to take the item off).', 'danger');
+      }
+      renderTicket();
+    };
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); finish(true); } else if(e.key === 'Escape'){ e.preventDefault(); finish(false); } });
+    inp.addEventListener('blur', () => finish(true));
   }
   function changeQty(id, delta){
     if(!cart[id]) return;
@@ -2299,7 +2335,7 @@ async function restoreOnlineSession(){
   function renderTicket(){
     try{ renderSplitSummary(); renderHeldBadge(); }catch(e){}
     Object.keys(priceOverride).forEach(k => { if(!(k in cart)) delete priceOverride[k]; });   // a changed price lives only while its item is on the ticket
-    const ids = Object.keys(cart);
+    const ids = cartIds();
     if(ids.length === 0){
       ticketItemsEl.innerHTML = `<div class="empty-state">
         <div class="mono-glyph">✦</div>
@@ -2315,7 +2351,7 @@ async function restoreOnlineSession(){
           <div class="li-total">${POS_SETTINGS.currency}${(up*qty).toFixed(2)}</div>
           <div class="li-controls">
             <div class="qty-btn" data-act="dec" data-id="${p.id}">–</div>
-            <div class="qty-val">${qty}</div>
+            <div class="qty-val editable" data-act="qty" data-id="${p.id}" role="button" tabindex="0" title="Tap to type the quantity">${qty}</div>
             <div class="qty-btn" data-act="inc" data-id="${p.id}">+</div>
             <span class="li-unit${editable ? ' editable' : ''}"${editable ? ` data-act="price" data-id="${p.id}" title="Tap to change this item's price for this sale" role="button" tabindex="0"` : ''}>× ${POS_SETTINGS.currency}${up.toFixed(2)}${changed ? ` <s>${POS_SETTINGS.currency}${shopPrice(p).toFixed(2)}</s>` : ''}</span>
             <span class="li-remove" data-act="rm" data-id="${p.id}">Remove</span>
@@ -2331,6 +2367,7 @@ async function restoreOnlineSession(){
           if(act==='dec') changeQty(id, -1);
           if(act==='rm') removeItem(id);
           if(act==='price') openPriceEdit(id);
+          if(act==='qty') editQty(el, id);
         });
       });
     }
@@ -2675,7 +2712,7 @@ async function restoreOnlineSession(){
     if(Object.keys(cart).length === 0) return false;
     const t = computeTotals(), now = new Date();
     const rec = { id: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: now.toISOString(), by: activeEmployee ? activeEmployee.name : '',
-      cart: { ...cart }, priceOverride: { ...priceOverride }, discount: { ...discount }, customer: customer ? { ...customer } : null, note, taxPercent,
+      cart: { ...cart }, order: cartIds(), priceOverride: { ...priceOverride }, discount: { ...discount }, customer: customer ? { ...customer } : null, note, taxPercent,
       itemCount: Object.values(cart).reduce((a, b) => a + b, 0), total: t.total };
     const list = loadHeld(); list.unshift(rec);
     if(!saveHeld(list)) return false;
@@ -2705,8 +2742,8 @@ async function restoreOnlineSession(){
     const list = loadHeld(), h = list.find(x => x.id === id); if(!h) return;
     if(Object.keys(cart).length && !holdCurrentTicket(true)) return;      // the ticket on screen is held first, so nothing is lost
     const after = loadHeld().filter(x => x.id !== id); saveHeld(after);
-    cart = {}; let dropped = 0;
-    Object.keys(h.cart).forEach(k => { if(PRODUCTS.find(p => p.id == k)) cart[k] = h.cart[k]; else dropped++; });
+    cart = {}; cartOrder = []; let dropped = 0;
+    (h.order && h.order.length ? h.order.filter(k => k in h.cart) : Object.keys(h.cart)).forEach(k => { if(PRODUCTS.find(p => p.id == k)){ cart[k] = h.cart[k]; cartOrder.push(String(k)); } else dropped++; });
     priceOverride = { ...(h.priceOverride || {}) }; discount = h.discount || { type: 'percent', value: 0 }; customer = h.customer || null; note = h.note || '';
     applyDefaultTax();      // a resumed ticket uses today's Back Office rate, not whatever was on screen when it was held
     tenderedAmt = 0; splitLines = null;
@@ -2786,7 +2823,7 @@ async function restoreOnlineSession(){
   document.getElementById('priceApplyBtn').addEventListener('click', () => {
     const p = PRODUCTS.find(x => x.id == priceEditId); if(!p || !cashierMay('editPrice')) { closeModal('priceOverlay'); return; }
     const f = document.getElementById('priceEditField'), v = parseFloat(f.value);
-    if(!isFinite(v) || v < 0 || v > 1000000){ document.getElementById('priceEditError').classList.add('show'); f.classList.add('invalid'); f.focus(); return; }
+    if(!isFinite(v) || v <= 0 || v > 1000000){ document.getElementById('priceEditError').classList.add('show'); f.classList.add('invalid'); f.focus(); return; }
     const price = Math.round((v + Number.EPSILON) * 100) / 100;
     if(price === shopPrice(p)) delete priceOverride[p.id]; else priceOverride[p.id] = price;
     tenderedAmt = 0; closeModal('priceOverlay'); renderTicket();
@@ -3628,6 +3665,8 @@ async function restoreOnlineSession(){
     if(!activeShop || !activeEmployee){ aureumToast('Start a shift (shop + PIN) before ringing up a sale.', 'danger'); openShiftGate(); return; }
 
     const { ids, subtotal, discountAmount, tax, total } = computeTotals();
+    const unpriced = ids.map(id => PRODUCTS.find(p => p.id == id)).filter(p => p && !(unitPrice(p) > 0));
+    if(unpriced.length){ aureumToast('Remove ' + unpriced.map(p => p.name).join(', ') + ': no price is set. Add the price in Back Office first.', 'danger'); return; }
     const itemCount = ids.reduce((sum,id)=> sum + cart[id], 0);
 
     // Cash needs a real tendered amount before the sale can complete —

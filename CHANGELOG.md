@@ -1,5 +1,11 @@
 # Changelog
 
+## v81
+- **New logo everywhere**: website header/dock/favicons, social-share image, POS / Back Office / control panel sign-in and headers, PWA icons, Android launcher icons, splash screens and Play Store icon + feature graphics (both apps). Android assets need a NEW build (use version code 3 or higher).
+- **POS ticket order**: products stay in the order they were added (they used to be sorted by product number, so a new one could land in the middle). Held tickets resume in the same order.
+- **POS no-price block**: a product without a price can't be added or sold, and a price can't be changed to 0 at the till.
+- **POS quantity**: tap the number between – and + to type the quantity.
+
 ## v80
 - **POS switch account**: "Use a different email" on the sign-in card (clears the remembered email) and "Not this business? Sign out and use a different email" on the Start Shift screen (warns if sales are still waiting to upload; they stay on the device).
 - **Back Office avatar** shows the initials of the signed-in person's name (was always "AN").

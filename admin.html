@@ -180,6 +180,9 @@
   .tk-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; }
   .tk-controls select.field{ width:auto; margin:0; padding:8px 10px; }
   textarea.field{ min-height:90px; resize:vertical; }
+
+  .brand-seal,.auth-seal,.side-seal,.seal{ overflow:hidden; padding:0; background:#04211a !important; }
+  .seal-img{ width:100%; height:100%; display:block; object-fit:cover; }
 </style>
 <meta name="theme-color" content="#0A1B16">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
@@ -192,7 +195,7 @@
 <!-- ===== SIGN IN ===== -->
 <div id="signinView" class="center-view" hidden>
   <div class="card">
-    <div class="seal">A</div>
+    <div class="seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <h1>Control Panel</h1>
     <p>Sign in with your AUREUM account. Only approved administrators can continue.</p>
     <input class="field" id="siEmail" type="email" placeholder="Email" autocomplete="username">
@@ -215,7 +218,7 @@
 <!-- ===== APP ===== -->
 <div id="appView" hidden>
   <div class="topbar">
-    <div class="seal">A</div>
+    <div class="seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div><div class="title">AUREUM</div><div class="sub">CONTROL PANEL</div></div>
     <div class="who">
       <div class="email"><b id="whoEmail">—</b><span class="pill" id="whoRole" hidden>Super admin</span></div>

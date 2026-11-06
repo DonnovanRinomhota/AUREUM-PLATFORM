@@ -2,7 +2,7 @@ import { icon } from './icons.js';
 
 export const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export const logoMark = () => `<span class="logo-mark" aria-hidden="true"><span>A</span></span>`;
+export const logoMark = () => `<span class="logo-mark" aria-hidden="true"><img src="/icons/logo-mark.png" alt="" width="96" height="96"></span>`;
 
 export const brand = (cls = '', sub = true) =>
   `<a class="brand ${cls}" href="/" aria-label="AUREUM POS &amp; Inventory Management — home">${logoMark()}<span class="brand-text"><span class="brand-name">AUREUM</span>${sub ? '<span class="brand-sub">POS &amp; INVENTORY MANAGEMENT</span>' : ''}</span></a>`;
