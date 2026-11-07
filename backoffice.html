@@ -1046,6 +1046,11 @@
 
   .brand-seal,.auth-seal,.side-seal,.seal{ overflow:hidden; padding:0; background:#04211a !important; }
   .seal-img{ width:100%; height:100%; display:block; object-fit:cover; }
+
+  /* shop-counter video behind the sign-in screens (same clip as the website); poster only when offline / data saver */
+  .gate-bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:-2; pointer-events:none; }
+  .gate-shade{ position:fixed; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg, rgba(4,20,15,.50), rgba(4,20,15,.74)); }
+  .auth-card{ background:rgba(10,28,21,.82) !important; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
 </style>
 <meta name="description" content="AUREUM Back Office — manage products, stock, staff, purchases and reports for your shops.">
 <meta name="theme-color" content="#0A1B16">
@@ -1062,6 +1067,7 @@
 <body>
 <div id="helpFab" role="button" tabindex="0" title="Help &amp; FAQ — drag to move" aria-label="Help and FAQ (drag to move)">?</div>
 <div class="auth-gate" id="authGate">
+  <video class="gate-bg" muted loop playsinline preload="none" poster="/site/assets/img/hero-poster.jpg" aria-hidden="true" tabindex="-1"></video><div class="gate-shade" aria-hidden="true"></div>
   <div class="auth-card">
     <div class="auth-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div class="auth-title">AUREUM Back Office</div>
@@ -1101,7 +1107,7 @@
     <div class="auth-error" id="authError"></div>
     <label id="authRememberRow" style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--sage);margin:2px 0 12px;cursor:pointer;user-select:none;">
       <input type="checkbox" id="authRemember" checked style="width:17px;height:17px;margin:0;accent-color:var(--gold-bright);flex-shrink:0;">
-      <span>Remember me <span style="opacity:.65;">&middot; stay signed in and remember my email on this device</span></span>
+      <span>Keep me signed in</span>
     </label>
     <div id="authPayBlock" style="display:none; margin-bottom:10px;">
       <div class="auth-btn" id="authPayStripeBtn">Subscribe with card — $5 per shop / month</div>
@@ -1122,6 +1128,7 @@
 
 <!-- Shown instead of the normal auth gate when arriving via a password-reset email link -->
 <div class="auth-gate" id="resetPasswordGate">
+  <video class="gate-bg" muted loop playsinline preload="none" poster="/site/assets/img/hero-poster.jpg" aria-hidden="true" tabindex="-1"></video><div class="gate-shade" aria-hidden="true"></div>
   <div class="auth-card">
     <div class="auth-seal"><img class="seal-img" src="/icons/logo-mark.png" alt="" width="64" height="64"></div>
     <div class="auth-title">Set a new password</div>
@@ -14533,5 +14540,16 @@ if(typeof module !== 'undefined' && module.exports) module.exports = api; else r
 <script src="/guide-bo.js"></script>
 <script src="/noautofill.js"></script>
 <script src="/a11y.js" defer></script>
+<script>
+(function(){
+  try{
+    var saver = navigator.connection && navigator.connection.saveData, calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(navigator.onLine === false || saver || calm) return;
+    var vs = [].slice.call(document.querySelectorAll('.gate-bg')); if(!vs.length) return;
+    var first = vs[0]; first.src = '/site/assets/video/hero.mp4'; first.play().catch(function(){});
+    vs.slice(1).forEach(function(v){ v.src = first.src; v.play().catch(function(){}); });
+  }catch(e){}
+})();
+</script>
 </body>
 </html>

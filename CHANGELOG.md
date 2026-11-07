@@ -1,5 +1,9 @@
 # Changelog
 
+## v83
+- Sign-in screens (POS, Back Office) now show the shop-counter video from the website behind the card (poster image only when offline / data saver / reduced motion) instead of the plain green screen.
+- POS sign-in made minimal: shorter text, "Keep me signed in", one "Create an account" link; removed the repeated "Use a different email" (a remembered email is replaced just by typing). Start Shift screen simplified and "Switch account" is one quiet link.
+
 ## v82
 - Website tells Google its name is **Aureum Point Of Sale** (WebSite + Organization data, og:site_name) and its logo; favicon links limited to 48/96/192 px sizes Google accepts. Google refreshes search results on its own schedule (days to weeks) — re-request indexing in Search Console to speed it up.
 
