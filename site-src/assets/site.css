@@ -245,6 +245,9 @@ details[open] > summary .pm{transform:rotate(45deg)}
 
 /* ---------- inner pages ---------- */
 .page-hero .lead{max-width:56ch;margin-top:28px;color:var(--text-dim);font-size:.9rem}
+.ph-split{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,4vw,64px);align-items:center;margin-top:clamp(20px,3vw,40px)}
+.ph-visual{border-radius:4px;overflow:hidden;border:1px solid var(--rule);background:#08150f}
+.ph-visual img{display:block;width:100%;height:auto}
 .sc-in{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,80px);align-items:center;margin-top:clamp(30px,4vw,56px)}
 .sc-in.flip .sc-text{order:2}
 .lead-p{margin:18px 0 22px;max-width:46ch;font-size:.82rem}
@@ -314,6 +317,7 @@ details[open] > summary .pm{transform:rotate(45deg)}
   .h-note,.h-nav{display:none}
   .cols4{grid-template-columns:repeat(2,1fr);gap:30px 16px}
   .cols3,.fg-grid,.fg-grid.fg-4,.sup-grid{grid-template-columns:1fr 1fr}
+  .ph-split{grid-template-columns:1fr}
   .what-grid,.sc-in,.price-grid,.price-split{grid-template-columns:1fr}
   .what-media{position:static}
   .sc-in.flip .sc-text{order:0}

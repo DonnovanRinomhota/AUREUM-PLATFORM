@@ -1,5 +1,11 @@
 # Changelog
 
+## v84
+- **One calendar for every date (fixes the 7 vs 8 November mismatch).** Times were *shown* in the business time zone (Settings → Time zone), but "Today", the date pickers, receipt/shift/report day filters, daily charts, "Today's Sales" on the till and the Bot's "today" used the *device's* calendar. Around midnight, or when the device and business zones differ, one sale could appear under two dates and "Today" could miss it. Every day decision now uses the business calendar (`AureumCountries.wall`), so the clock, the receipts and the date pickers always agree.
+- "Today", "This week", "This month"… re-anchor by themselves when the business day rolls over (a Back Office tab left open past midnight no longer keeps yesterday as "Today") and as soon as the time zone is known after sign-in.
+- Calendar dates picked in a form (e.g. 8 Nov) are shown as that day and never shifted by a time-zone conversion.
+- Website: the Features page opening now shows the AUREUM devices image beside the headline (stacks under it on phones).
+
 ## v83
 - Sign-in screens (POS, Back Office) now show the shop-counter video from the website behind the card (poster image only when offline / data saver / reduced motion) instead of the plain green screen.
 - POS sign-in made minimal: shorter text, "Keep me signed in", one "Create an account" link; removed the repeated "Use a different email" (a remembered email is replaced just by typing). Start Shift screen simplified and "Switch account" is one quiet link.

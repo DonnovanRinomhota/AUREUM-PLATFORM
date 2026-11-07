@@ -115,6 +115,13 @@ export const ctaBand = ctaBlock;
 /* ---------- inner pages ---------- */
 export const pageHero = (kicker, title, lead) => `<section class="panel dark page-hero"><div class="wrap">${secHead(kicker, 'AUREUM POS & INVENTORY')}<h1 class="display md">${title}</h1><p class="small lead">${lead}</p></div></section>`;
 
+/* Features page opening: the headline on the left, the AUREUM devices (tablet till, Back Office, phone, receipt printer) filling the space beside it. */
+export const featuresHero = () => `<section class="panel dark page-hero page-hero-split"><div class="wrap">${secHead('FEATURES', 'AUREUM POS & INVENTORY')}
+  <div class="ph-split">
+    <div class="ph-copy"><h1 class="display md">AUREUM Features</h1><p class="small lead">Everything on this page is in the AUREUM application today.</p></div>
+    <div class="ph-visual rv"><img src="/site/assets/img/features-devices-1600.webp" srcset="/site/assets/img/features-devices-800.webp 800w, /site/assets/img/features-devices-1600.webp 1600w" sizes="(max-width: 900px) 92vw, 52vw" width="1600" height="900" alt="AUREUM on a tablet till, a laptop showing the Back Office dashboard, a phone and a receipt printer on a shop counter." fetchpriority="high" decoding="async"></div>
+  </div></div></section>`;
+
 export const showcase = () => SHOWCASE.map((s, i) => `<section class="panel ${s.flip ? 'light' : 'dark'} showcase" id="${s.id}" aria-labelledby="${s.id}-t">
   <div class="wrap">
     ${secHead(`0${i + 1} / ${s.title.toUpperCase()}`, '')}

@@ -3758,7 +3758,7 @@ async function restoreOnlineSession(){
     if(customer){
       let rec = CUSTOMERS.find(c=> customer.phone && c.phone === customer.phone) || CUSTOMERS.find(c=>c.name===customer.name);
       if(!rec){
-        rec = { uid: AureumSync.uid(), id: nextCustomerId++, name:customer.name, phone:customer.phone||'', email:'', shop:'', notes:'', orders:0, spent:0, credit:0, joined:now.toISOString().slice(0,10) };
+        rec = { uid: AureumSync.uid(), id: nextCustomerId++, name:customer.name, phone:customer.phone||'', email:'', shop:'', notes:'', orders:0, spent:0, credit:0, joined:AureumCountries.wallIso(now) };
         CUSTOMERS.push(rec);
       }
       rec.orders += 1;
@@ -4111,7 +4111,8 @@ async function restoreOnlineSession(){
      Closing counts the cash, records expected vs counted, and keeps an unchangeable, printable report.
      (open → trade → close → report). A cashier closes their own shift; managers/admins can close anyone's. */
   const fmtDT = iso => { const d = new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ', ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}); };
-  const sameDay = (a, b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  /* "Same day" means the same day on the BUSINESS calendar — the one the clock and every receipt time are shown in — not the device's. */
+  const sameDay = (a, b) => { a = AureumCountries.wall(a); b = AureumCountries.wall(b); return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); };
   function fmtDuration(ms){ const m = Math.max(0, Math.floor(ms/60000)), d = Math.floor(m/1440), h = Math.floor((m%1440)/60), mm = m%60; return (d ? d+'d ' : '') + ((h || d) ? h+'h ' : '') + mm+'m'; }
   const money = n => POS_SETTINGS.currency + Number(n||0).toFixed(2);
   const r2 = n => Math.round(n * 100) / 100;
@@ -4483,7 +4484,7 @@ async function restoreOnlineSession(){
       grossSales: c.grossSales ?? (cash + card + mob + oth), netSales: c.netSales ?? (cash + card + mob + oth - (c.refunds || 0)),
       openingFloat: c.openingFloat || 0, cashRefunds: c.cashRefunds || 0, refundsCount: c.refundsCount ?? 0 };
   }
-  const localDay = iso => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+  const localDay = iso => { const d = AureumCountries.wall(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   function openClosedShifts(){
     if(!canManage()){ aureumToast('Only a Shop Manager or Administrator can view closed shifts.', 'danger'); return; }
     renderClosedShifts();

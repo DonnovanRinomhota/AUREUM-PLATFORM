@@ -58,6 +58,23 @@ const orig = { ls: Date.prototype.toLocaleString, ld: Date.prototype.toLocaleDat
 function wrap(fn, defaults){ return function(loc, opts){ if(TZ && !(opts && opts.timeZone)){ opts = Object.assign({}, opts || {}, { timeZone: TZ }); } return fn.call(this, loc, opts); }; }
 Date.prototype.toLocaleString = wrap(orig.ls); Date.prototype.toLocaleDateString = wrap(orig.ld); Date.prototype.toLocaleTimeString = wrap(orig.lt);
 function setTimezone(z){ try{ if(z){ new Intl.DateTimeFormat('en', { timeZone:z }); TZ = z; } else TZ = ''; }catch(e){ TZ = ''; } }
+/* ---- business calendar: "which day is this?" must give ONE answer everywhere. wall(x) returns a Date whose local fields
+   (getFullYear/getMonth/getDate/getHours/getDay) read the BUSINESS time zone's wall clock, so day filters, "Today", the date
+   pickers and daily totals agree with the times the app shows. Use it ONLY for calendar decisions; stored times stay exact UTC. ---- */
+let _wallFmt = null, _wallTz = '';
+function wall(v){
+  const d = v instanceof Date ? v : new Date(v == null ? Date.now() : v);
+  if(isNaN(d.getTime()) || !TZ) return new Date(d.getTime());
+  try{
+    if(!_wallFmt || _wallTz !== TZ){ _wallFmt = new Intl.DateTimeFormat('en-CA', { timeZone:TZ, hourCycle:'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' }); _wallTz = TZ; }
+    const o = {}; _wallFmt.formatToParts(d).forEach(p => { if(p.type !== 'literal') o[p.type] = +p.value; });
+    return new Date(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second, d.getMilliseconds());
+  }catch(e){ return new Date(d.getTime()); }
+}
+/* Formats a calendar date (a plain YYYY-MM-DD day, or a wall() Date) WITHOUT converting it between time zones. */
+function fmtCal(d, loc, opts){ return orig.ld.call(d, loc || 'en-US', opts); }
+function wallNow(){ return wall(new Date()); }
+function wallIso(v){ const d = wall(v == null ? Date.now() : v); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
 /* ---- country picker: a button showing the flag + name; opens a search box and a scrolling list ---- */
 /* if a flag picture can't load (offline), show the two-letter country code instead — done here because inline onerror attributes are blocked */
@@ -150,5 +167,5 @@ function enhanceSelect(sel, opts){
   return sel._cpApi;
 }
 
-root.AureumCountries = { list, byCode, isAfrica: c => AFRICA.has(c), flagHtml, flagEmoji, symbolFor, currencyName, allCurrencies, allTimezones, tzLabel, setTimezone, getTimezone: () => TZ, mountPicker, enhanceSelect };
+root.AureumCountries = { list, byCode, isAfrica: c => AFRICA.has(c), flagHtml, flagEmoji, symbolFor, currencyName, allCurrencies, allTimezones, tzLabel, setTimezone, getTimezone: () => TZ, wall, wallNow, wallIso, fmtCal, mountPicker, enhanceSelect };
 })(typeof window !== 'undefined' ? window : globalThis);

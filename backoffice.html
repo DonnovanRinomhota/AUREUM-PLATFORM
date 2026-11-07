@@ -3935,7 +3935,7 @@ const AureumSync = (function(){
   function salesAggregateForRange(rangeStart, rangeEnd){
     const s = stripTime(rangeStart).getTime(), e = stripTime(rangeEnd).getTime();
     const receipts = RECEIPTS.filter(r=>{
-      const t = stripTime(new Date(r.dateTime)).getTime();
+      const t = stripTime(wall(r.dateTime)).getTime();
       if(t<s || t>e) return false;
       if(viewingShop && viewingShop !== 'All Shops' && r.shop !== viewingShop) return false;
       return true;
@@ -4513,8 +4513,22 @@ const AureumSync = (function(){
      Starts collapsed showing just "Today"; the presets/calendar only
      appear once the chip is clicked (used on Dashboard, Sales by
      Product, and Receipts). */
-  const TODAY = new Date(); // the real current date/time — every date filter (Today, This week, This month, etc.) anchors off this
-  function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  /* One calendar for the whole app: the BUSINESS time zone's. wall(x) is a Date whose local fields read the business wall clock,
+     so "Today", the pickers, day filters and daily totals all agree with the dates the screen shows (stored times stay exact UTC). */
+  const wall = v => AureumCountries.wall(v), wallNow = () => AureumCountries.wallNow(), wallIso = v => AureumCountries.wallIso(v);
+  let TODAY = wallNow(); // the business's current date/time — every date filter (Today, This week, This month, etc.) anchors off this
+  let TODAY_KEY = wallIso();
+  const DATE_PICKERS = [];
+  /* Re-anchor "today": after the time zone is known and whenever the business day rolls over (a screen left open past midnight). */
+  function refreshToday(force){
+    const k = wallIso(), changed = k !== TODAY_KEY;
+    TODAY = wallNow();
+    if(changed || force){ TODAY_KEY = k; DATE_PICKERS.forEach(f => { try{ f(changed); }catch(e){} }); }
+  }
+  setInterval(refreshToday, 30000);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) refreshToday(); });
+  window.addEventListener('focus', () => refreshToday());
+  function todayStr(){ return wallIso(); }
   const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DATE_PRESETS = ["Today","Yesterday","This week","Last week","This month","Last month","Custom range"];
 
@@ -4595,7 +4609,7 @@ const AureumSync = (function(){
       for(let d=1; d<=daysInMonth; d++){
         const date = new Date(state.calYear, state.calMonth, d);
         const future = date > TODAY;
-        const isToday = date.getTime() === TODAY.getTime();
+        const isToday = date.getTime() === stripTime(TODAY).getTime();
         const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
         const t = date.getTime();
         const allTime = state.activePreset === "All time";
@@ -4640,6 +4654,15 @@ const AureumSync = (function(){
     document.getElementById(prefix+'Label').textContent = state.activePreset;
     renderPresets();
     renderCal();
+    // keep a relative range ("Today", "This week"…) pointing at the business's real today; a hand-picked range is left alone
+    DATE_PICKERS.push(function(dayChanged){
+      if(!document.getElementById(prefix+'Presets')) return;
+      if(state.activePreset === 'Custom range' || state.activePreset === 'All time'){ renderCal(); return; }
+      const a = fmtSlash(state.rangeStart) + fmtSlash(state.rangeEnd);
+      applyPreset(state.activePreset);
+      renderPresets(); renderCal();
+      if(fmtSlash(state.rangeStart) + fmtSlash(state.rangeEnd) !== a && onApply) onApply(state);
+    });
     return state;
   }
 
@@ -5771,8 +5794,8 @@ const AureumSync = (function(){
     const render = () => {
       const from = document.getElementById('phFrom').value, to = document.getElementById('phTo').value, q = document.getElementById('phSearch').value.trim().toLowerCase();
       let rows = PRODUCT_HISTORY.slice().sort((a, b) => String(b.at).localeCompare(String(a.at)));
-      if(from) rows = rows.filter(h => { const d = new Date(h.at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` >= from; });
-      if(to) rows = rows.filter(h => { const d = new Date(h.at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` <= to; });
+      if(from) rows = rows.filter(h => { const d = wall(h.at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` >= from; });
+      if(to) rows = rows.filter(h => { const d = wall(h.at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` <= to; });
       if(q) rows = rows.filter(h => String(h.name || '').toLowerCase().includes(q));
       const shown = rows.slice(0, 500), fmtQ = n => (Math.round(n * 1000) / 1000).toString();
       document.getElementById('phBody').innerHTML = shown.length ? shown.map(h => `<tr>
@@ -5997,11 +6020,11 @@ const AureumSync = (function(){
   }
   function receiptMatchesFilters(r, f){
     if(f.rangeStart && f.rangeEnd){
-      const t = stripTime(new Date(r.dateTime)).getTime();
+      const t = stripTime(wall(r.dateTime)).getTime();
       if(t < stripTime(f.rangeStart).getTime() || t > stripTime(f.rangeEnd).getTime()) return false;
     }
     if(f.timeBucket){
-      const hr = new Date(r.dateTime).getHours();
+      const hr = wall(r.dateTime).getHours();
       if(hr < f.timeBucket[0] || hr > f.timeBucket[1]) return false;
     }
     if(f.shop && f.shop !== 'All Shops' && r.shop !== f.shop) return false;
@@ -6508,7 +6531,7 @@ const AureumSync = (function(){
 
   function fmtDisplay(iso){
     const d = new Date(iso + 'T00:00:00');
-    return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+    return AureumCountries.fmtCal(d, 'en-US', {month:'short', day:'numeric', year:'numeric'});    // a calendar day: shown as that day, never shifted by a time zone
   }
 
   function renderPODetailBody(po){
@@ -7487,7 +7510,7 @@ const AureumSync = (function(){
     const svg = document.getElementById('rcpLineChart');
     if(!svg) return;
     const counts = new Array(24).fill(0);
-    filteredReceiptsForPage().forEach(r=>{ const h = new Date(r.dateTime).getHours(); counts[h]++; });
+    filteredReceiptsForPage().forEach(r=>{ const h = wall(r.dateTime).getHours(); counts[h]++; });
     const max = Math.max(...counts, 1);
     const w = 1000, h = 260, padL = 34, padB = 26, padT = 10, padR = 10;
     const plotW = w - padL - padR, plotH = h - padT - padB;
@@ -7539,7 +7562,7 @@ const AureumSync = (function(){
       if(customerF !== 'All customers' && r.customer !== customerF) return false;
       if(employeeF !== 'All employees' && r.employee !== employeeF) return false;
       if(typeF === 'Refunds only' && !r.refund) return false;
-      const dt = new Date(r.dateTime);
+      const dt = wall(r.dateTime);
       if(s !== null){ const t = stripTime(dt).getTime(); if(t<s || t>e) return false; }
       if(bucket){ const h = dt.getHours(); if(h < bucket[0] || h >= bucket[1]) return false; }
       return true;
@@ -7630,7 +7653,7 @@ const AureumSync = (function(){
   const custNorm = v => String(v == null ? '' : v).replace(/\s+/g,' ').trim().toLowerCase();
   let _custIdx = { n:-1, day:'', map:null };
   function customerIndex(){
-    const day = new Date().toDateString();
+    const day = wallIso();
     if(_custIdx.map && _custIdx.n === RECEIPTS.length && _custIdx.day === day) return _custIdx.map;
     const refunded = new Map();
     RECEIPTS.forEach(r => { if(r.refund && r.refundOfKey) refunded.set(r.refundOfKey, (refunded.get(r.refundOfKey) || 0) + (Number(r.total) || 0)); });
@@ -7843,7 +7866,7 @@ const AureumSync = (function(){
     return Math.round(m / 60 * 100) / 100;
   }
   const ecTime12 = t => { if(!/^\d\d:\d\d$/.test(t||'')) return ''; let h = +t.slice(0,2); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${t.slice(3)}${ap}`; };
-  const ecLongDate = ds => new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const ecLongDate = ds => AureumCountries.fmtCal(new Date(ds + 'T00:00:00'), 'en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
   const ecEmpName = id => { const e = EMPLOYEES.find(x => String(x.id) === String(id)); return e ? e.name : 'Unknown (removed)'; };
   const ecEmpRole = id => { const e = EMPLOYEES.find(x => String(x.id) === String(id)); return e ? e.role : ''; };
 
@@ -7877,7 +7900,7 @@ const AureumSync = (function(){
   document.getElementById('ecEmployeeFilter').addEventListener('change', renderEmployeeCalendar);
   ['ecAgFrom','ecAgTo'].forEach(id => document.getElementById(id).addEventListener('change', renderEmployeeCalendar));
   document.querySelectorAll('[data-agp]').forEach(b => b.addEventListener('click', ()=>{
-    const d0 = new Date(), iso = d => `${d.getFullYear()}-${ecPad(d.getMonth()+1)}-${ecPad(d.getDate())}`, add = n => { const d = new Date(); d.setDate(d.getDate()+n); return d; };
+    const d0 = wallNow(), iso = d => `${d.getFullYear()}-${ecPad(d.getMonth()+1)}-${ecPad(d.getDate())}`, add = n => { const d = wallNow(); d.setDate(d.getDate()+n); return d; };
     const p = b.dataset.agp, from = document.getElementById('ecAgFrom'), to = document.getElementById('ecAgTo');
     if(p === 'past7'){ from.value = iso(add(-7)); to.value = iso(d0); }
     else if(p === 'next7'){ from.value = iso(d0); to.value = iso(add(7)); }
@@ -7923,7 +7946,7 @@ const AureumSync = (function(){
 
   function renderEcDay(){
     const when = ecWhen(ecSelected);
-    document.getElementById('ecDayTitle').textContent = 'Schedule for ' + new Date(ecSelected + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    document.getElementById('ecDayTitle').textContent = 'Schedule for ' + AureumCountries.fmtCal(new Date(ecSelected + 'T00:00:00'), 'en-US', { month:'long', day:'numeric', year:'numeric' });
     document.getElementById('ecDaySub').textContent = ({ past:'Past day — hours worked', today:'Today', future:'Upcoming day — planned shifts' })[when] + (ecRows.length ? '' : ' · Add employees working on this day');
     const shops = SHOPS.length ? SHOPS : [];
     const staff = EMPLOYEES.filter(e => e.active !== false);
@@ -8388,7 +8411,7 @@ const AureumSync = (function(){
     // Real receipts only — no estimation/extrapolation. Every line item in
     // range is attributed to its product's category, exactly once.
     const inRangeReceipts = RECEIPTS.filter(r=>{
-      const t = stripTime(new Date(r.dateTime)).getTime();
+      const t = stripTime(wall(r.dateTime)).getTime();
       if(t < start || t > end) return false;
       if(shop && shop !== 'All Shops' && r.shop !== shop) return false;
       return true;
@@ -8463,7 +8486,7 @@ const AureumSync = (function(){
     const openBody = document.getElementById('repOpenShiftsBody');
     const shiftShop = reportShop(), openList = OPEN_SHIFTS.filter(sh => shiftShop === 'All Shops' || sh.shop === shiftShop);
     openBody.innerHTML = openList.length ? openList.map(sh => {
-      const opened = new Date(sh.openedAt), now = new Date();
+      const opened = wall(sh.openedAt), now = wallNow();
       const old = !(opened.getFullYear() === now.getFullYear() && opened.getMonth() === now.getMonth() && opened.getDate() === now.getDate());
       return `<tr><td class="mono">${sh.id}</td><td>${sh.shop}</td><td>${shiftOwner(sh)}</td><td>${fmtReceiptTime(sh.openedAt)}${old ? ' <span style="color:#E39A4B;font-size:11px;">· from an earlier day, not closed</span>' : ''}</td>
         <td>${runningFor(sh.openedAt)}</td><td class="mono" style="text-align:right;">${usd(sh.openingFloat)}</td><td class="gold" style="text-align:right;">${usd(shiftNet(sh))}</td></tr>`;
@@ -8574,7 +8597,7 @@ const AureumSync = (function(){
      "In stock now" is the product's total at that shop and tells you what may still need pulling off the shelf). */
   const repExpPage = { page:1, pageSize:10 };
   function expiredRows(shopFilter, view){
-    const today = stripTime(new Date()).getTime(), DAY = 86400000, out = [];
+    const today = stripTime(wallNow()).getTime(), DAY = 86400000, out = [];
     (GRN_RECORDS || []).forEach(g => (g.items || []).forEach(it => {
       if(!it.expiry) return;
       const d = stripTime(new Date(String(it.expiry).slice(0,10) + 'T00:00:00')).getTime();
@@ -9325,7 +9348,7 @@ const AureumSync = (function(){
     if(!bizName){ alert('Business name is required.'); document.getElementById('stBizName').focus(); return; }
     POS_SETTINGS.businessName = bizName;
     { const g = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; }; POS_SETTINGS.businessPhone = g('stBizPhone'); POS_SETTINGS.businessEmail = g('stBizEmail'); POS_SETTINGS.businessAddress = g('stBizAddress'); }
-    { const tz = document.getElementById('stTimezone'); if(tz && tz.value){ POS_SETTINGS.timezone = tz.value; AureumCountries.setTimezone(tz.value); } }
+    { const tz = document.getElementById('stTimezone'); if(tz && tz.value){ POS_SETTINGS.timezone = tz.value; AureumCountries.setTimezone(tz.value); refreshToday(true); } }
     if(settingsCountryPicker && settingsCountryPicker.value) POS_SETTINGS.country = settingsCountryPicker.value;
     const curCode = document.getElementById('stCurrency').value;
     const oldCode = POS_SETTINGS.currencyCode || 'USD';
@@ -9762,11 +9785,11 @@ const AureumSync = (function(){
   }
   function maybeShowDailySummary(){
     if(!settingOn('stNotifyDailySummary', false)) return;
-    const today = new Date(), dayKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const today = wallNow(), dayKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const store = 'aureum_daily_summary_' + (currentBusinessId || 'x');
     try{ if(localStorage.getItem(store) === dayKey(today)) return; }catch(e){}
     const y = new Date(today); y.setDate(y.getDate() - 1); const yk = dayKey(y);
-    const rs = RECEIPTS.filter(r => dayKey(new Date(r.dateTime)) === yk);
+    const rs = RECEIPTS.filter(r => dayKey(wall(r.dateTime)) === yk);
     try{ localStorage.setItem(store, dayKey(today)); }catch(e){}
     if(!rs.length) return;
     const sales = rs.filter(r => !r.refund), refunds = rs.filter(r => r.refund);
@@ -9775,7 +9798,7 @@ const AureumSync = (function(){
     const byProd = {}; sales.forEach(r => (r.items || []).forEach(i => { byProd[i.name] = (byProd[i.name] || 0) + i.qty; }));
     const top = Object.entries(byProd).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const m = n => POS_SETTINGS.currency + Number(n).toFixed(2);
-    openDetailModal(`Yesterday’s sales — ${y.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' })}`, `
+    openDetailModal(`Yesterday’s sales — ${AureumCountries.fmtCal(y, 'en-US', { weekday:'long', month:'short', day:'numeric' })}`, `
       <div class="create-form-grid" style="margin-bottom:14px;">
         <div class="detail-field"><div class="field-label">Sales</div><div class="v">${sales.length}</div></div>
         <div class="detail-field"><div class="field-label">Takings</div><div class="v">${m(gross)}</div></div>
@@ -10163,7 +10186,7 @@ const AureumSync = (function(){
     let items = RECEIPTS;
     if(state){
       const s = stripTime(state.rangeStart).getTime(), e = stripTime(state.rangeEnd).getTime();
-      items = items.filter(r=>{ const t = stripTime(new Date(r.dateTime)).getTime(); return t>=s && t<=e; });
+      items = items.filter(r=>{ const t = stripTime(wall(r.dateTime)).getTime(); return t>=s && t<=e; });
     }
     if(acctShop() !== 'All Shops'){
       items = items.filter(r=> r.shop === acctShop());
@@ -10430,7 +10453,7 @@ const AureumSync = (function(){
     if(!dashDateState) return RECEIPTS;
     const s = stripTime(dashDateState.rangeStart).getTime(), e = stripTime(dashDateState.rangeEnd).getTime();
     return RECEIPTS.filter(r=>{
-      const t = stripTime(new Date(r.dateTime)).getTime();
+      const t = stripTime(wall(r.dateTime)).getTime();
       if(t<s || t>e) return false;
       if(viewingShop && viewingShop !== 'All Shops' && r.shop !== viewingShop) return false;
       return true;
@@ -10898,18 +10921,18 @@ const AureumSync = (function(){
   const getBot = () => _bot || (_bot = AureumBotEngine.create(AUREUM_KB, { storeMode: AUREUM_STORE_MODE, insights: AureumInsights.create(botSnapshot) }));
   /* What the Bot may look at when you ask about your business: a read-only copy of the data already loaded on this screen. */
   function botSnapshot(){
-    const ts = v => { const t = new Date(v).getTime(); return isNaN(t) ? 0 : t; };
+    const ts = v => { const t = new Date(v).getTime(); return isNaN(t) ? 0 : t; }, tw = v => { const t = wall(v).getTime(); return isNaN(t) ? 0 : t; };   // tw: the business-calendar clock, so the Bot's "today" matches the screens
     const products = PRODUCTS.map(p => {
       const stocks = {}; if(p.stockControl !== false){ try{ ensureShopStock(p); productLiveShops(p).forEach(k => { stocks[k] = Number(p.shopStock[k]) || 0; }); }catch(e){} }
       return { id:p.id, name:p.name, cat:p.cat, price:Number(p.price) || 0, cost:Number(p.cost) || 0, stockControl:p.stockControl !== false, stocks, low:p.lowStockThreshold, safety:p.safetyStock };
     });
     let customers = []; try{ customers = CUSTOMERS.map(c => ({ name:c.name, segment:customerSegment(c).label })); }catch(e){}
     return {
-      now: Date.now(), currency: (POS_SETTINGS && POS_SETTINGS.currency) || '$', role: (supaReady && sb && currentBusinessId) ? currentRole : null,
+      now: wallNow().getTime(), currency: (POS_SETTINGS && POS_SETTINGS.currency) || '$', role: (supaReady && sb && currentBusinessId) ? currentRole : null,
       shop: viewingShop || 'All Shops', shops: SHOPS.slice(), taxPct: Number(POS_SETTINGS && POS_SETTINGS.incomeTaxPercent) || 0, products,
-      receipts: RECEIPTS.map(r => ({ id:r.id, t:ts(r.dateTime), total:Number(r.total) || 0, refund:!!r.refund, payment:r.payment, customer:r.customer, employee:r.employee, shop:r.shop, tax:Number(r.tax) || 0, items:r.items || [] })),
+      receipts: RECEIPTS.map(r => ({ id:r.id, t:tw(r.dateTime), total:Number(r.total) || 0, refund:!!r.refund, payment:r.payment, customer:r.customer, employee:r.employee, shop:r.shop, tax:Number(r.tax) || 0, items:r.items || [] })),
       expenses: EXPENSES.map(e => ({ t:ts(e.date + 'T00:00:00'), category:e.category, description:e.description, amount:Number(e.amount) || 0 })),
-      customers, openShifts: OPEN_SHIFTS.map(sh => ({ employee:shiftOwner(sh), shop:sh.shop, since:ts(sh.openedAt) }))
+      customers, openShifts: OPEN_SHIFTS.map(sh => ({ employee:shiftOwner(sh), shop:sh.shop, since:tw(sh.openedAt) }))
     };
   }
   // "Take me to …" buttons in the chat
@@ -10922,7 +10945,7 @@ const AureumSync = (function(){
   }
   function botHeadsUp(){
     try{
-      const a = computeStockAlerts(), neg = a.negativeStock.length, low = a.lowItems.length, old = OPEN_SHIFTS.filter(s => new Date(s.openedAt).toDateString() !== new Date().toDateString()).length, bits = [];
+      const a = computeStockAlerts(), neg = a.negativeStock.length, low = a.lowItems.length, old = OPEN_SHIFTS.filter(s => wall(s.openedAt).toDateString() !== wallNow().toDateString()).length, bits = [];
       if(neg) bits.push(neg + ' negative-stock ' + (neg === 1 ? 'line' : 'lines')); if(low) bits.push(low + ' ' + (low === 1 ? 'product' : 'products') + ' low on stock'); if(old) bits.push(old + ' ' + (old === 1 ? 'shift' : 'shifts') + ' still open from an earlier day');
       return bits.length ? 'Heads-up: ' + bits.join(', ') + '. Ask me **"How is the business doing?"** for the full picture.' : '';
     }catch(e){ return ''; }
@@ -11584,7 +11607,7 @@ const AureumSync = (function(){
         POS_SETTINGS.countryApplied = true; POS_SETTINGS.country = c.code;
         POS_SETTINGS.currencyCode = c.currency; POS_SETTINGS.currency = AureumCountries.symbolFor(c.currency); POS_SETTINGS.timezone = c.tz;
       }
-      if(window.AureumCountries) AureumCountries.setTimezone(POS_SETTINGS.timezone || '');
+      if(window.AureumCountries){ AureumCountries.setTimezone(POS_SETTINGS.timezone || ''); try{ refreshToday(true); }catch(e){} }
     }catch(e){}
     // One-time migration: "all shops" used to mean "every shop, including
     // ones added later" — that's what caused new shops to silently inherit
