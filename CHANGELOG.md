@@ -1,5 +1,8 @@
 # Changelog
 
+## v82
+- Website tells Google its name is **Aureum Point Of Sale** (WebSite + Organization data, og:site_name) and its logo; favicon links limited to 48/96/192 px sizes Google accepts. Google refreshes search results on its own schedule (days to weeks) — re-request indexing in Search Console to speed it up.
+
 ## v81
 - **New logo everywhere**: website header/dock/favicons, social-share image, POS / Back Office / control panel sign-in and headers, PWA icons, Android launcher icons, splash screens and Play Store icon + feature graphics (both apps). Android assets need a NEW build (use version code 3 or higher).
 - **POS ticket order**: products stay in the order they were added (they used to be sorted by product number, so a new one could land in the middle). Held tickets resume in the same order.
