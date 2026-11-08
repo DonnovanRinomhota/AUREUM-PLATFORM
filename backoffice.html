@@ -319,6 +319,12 @@
   }
   .status-badge.completed{ background: rgba(111,168,216,0.12); color:var(--blue); }
   .status-badge.pending{ background: rgba(201,162,39,0.14); color:var(--gold-bright); }
+  .status-badge.partial{ background: rgba(111,168,216,0.12); color:var(--gold-bright); box-shadow:inset 0 0 0 1px rgba(201,162,39,0.35); }
+  .status-badge.cancelled{ background: rgba(193,88,74,0.14); color:var(--danger); }
+  .po-recv-sub{ font-size:11px; color:var(--sage); margin-top:3px; line-height:1.4; }
+  .po-recv-sub b{ color:var(--gold-bright); font-weight:600; }
+  .po-recv-limit{ color:var(--danger); font-weight:600; }
+  .modal-btn.danger{ color:var(--danger); border-color:rgba(193,88,74,.45); }
   .status-badge.refunded{ background: rgba(193,88,74,0.14); color:var(--danger); }
 
   /* Placeholder page */
@@ -1911,7 +1917,12 @@
         <div class="main-top"><div><div class="page-title">Good Received Note</div></div></div>
 
         <div class="line-table-wrap" style="margin-bottom:16px;">
+          <div id="grnPoNote" class="po-recv-sub" style="display:none; margin:0 0 12px;"></div>
           <div class="create-form-grid">
+            <div>
+              <div class="field-label">Purchase order</div>
+              <select id="grnPO" class="modal-select"></select>
+            </div>
             <div>
               <div class="field-label">Supplier</div>
               <select id="grnSupplier" class="modal-select"><option>N/A</option></select>
@@ -3343,7 +3354,7 @@ const AureumSync = (function(){
   const byUid = (pfx) => r => r.uid ? 'u:' + r.uid : pfx + r.id;
   const COLLECTIONS = {
     products:         { key: p => 'p:' + p.id, fix: recomputeStock },
-    customers:        { key: byUid('c:'), fix: dedupeNumericIds },
+    customers:        { key: byUid('c:'), fix: (out, added) => dedupeNumericIds(out, added).map(c => (typeof c.credit === 'number' && c.credit < 0) ? { ...c, credit: 0 } : c) },   // store credit is a balance: two devices' adjustments ADD UP, and it never goes below 0
     employees:        { key: byUid('e:'), fix: dedupeNumericIds },
     receipts:         { key: r => r.uid ? 'u:' + r.uid : 'L:' + r.dateTime + '|' + r.id + '|' + r.total },
     expenses:         { key: byUid('x:'), fix: dedupeNumericIds },
@@ -3357,11 +3368,12 @@ const AureumSync = (function(){
     openShifts:       { key: byUid('OS:'), newFirst: true, fix: dedupeOpenShifts },
     posDevices:       { key: byUid('D:') },
     productHistory:   { key: byUid('PH:'), newFirst: true },
+    creditLog:        { key: byUid('CL:'), newFirst: true },
   };
   // Numbers that are COUNTERS (changed by deltas from several devices at once),
   // so concurrent changes add up instead of one overwriting the other.
   function isCounterChild(rec, key, parentIsCounter){
-    return parentIsCounter || (rec === 'products' && key === 'shopStock') || (rec === 'customers' && (key === 'orders' || key === 'spent'));
+    return parentIsCounter || (rec === 'products' && key === 'shopStock') || (rec === 'customers' && (key === 'orders' || key === 'spent' || key === 'credit'));
   }
 
   function mergeSet(base, remote, local){
@@ -6534,6 +6546,48 @@ const AureumSync = (function(){
     return AureumCountries.fmtCal(d, 'en-US', {month:'short', day:'numeric', year:'numeric'});    // a calendar day: shown as that day, never shifted by a time zone
   }
 
+  /* ===== PURCHASE ORDER <-> GOODS RECEIVED (linked receiving) =====
+     What has been received is ALWAYS counted from the GRNs linked to the order (GRN.po / GRN.poUid), never stored as a second number,
+     so two tills or tabs can't make the two disagree. Quantities are compared in base units (pack size x packs). */
+  const PO_EPS = 0.0005;
+  const grnBase = it => it.totalQty != null ? (Number(it.totalQty) || 0) : unitTotalQty(it);
+  const r3 = n => Math.round(n * 1000) / 1000;
+  function grnIsFor(g, po){ return !!po && ((g.poUid && po.uid) ? g.poUid === po.uid : (!!g.po && g.po === po.id)); }
+  function poGrns(po){ return GRN_RECORDS.filter(g => g.status !== 'Temporary Saved' && grnIsFor(g, po)); }
+  function poLines(po){
+    const recv = {};
+    poGrns(po).forEach(g => (g.items || []).forEach(it => { if(it.productId == null || it.productId === '') return; recv[it.productId] = (recv[it.productId] || 0) + grnBase(it); }));
+    const map = new Map();
+    (po.items || []).forEach(it => {
+      if(it.productId == null || it.productId === '') return;
+      let l = map.get(it.productId); if(!l){ l = { productId: it.productId, item: it, ordered: 0 }; map.set(it.productId, l); }
+      l.ordered += unitTotalQty(it);
+    });
+    return [...map.values()].map(l => { l.ordered = r3(l.ordered); l.received = r3(recv[l.productId] || 0); l.remaining = Math.max(0, r3(l.ordered - l.received)); l.over = l.received - l.ordered > PO_EPS; return l; });
+  }
+  function poState(po){
+    if(po.status === 'Cancelled') return 'Cancelled';
+    if(po.closedAt) return 'Completed';
+    const lines = poLines(po), got = poGrns(po).length > 0;
+    if(!lines.length) return po.status === 'Completed' ? 'Completed' : 'Pending';       // old orders without lines keep their saved status
+    if(lines.every(l => l.remaining <= PO_EPS)) return got || po.status === 'Completed' ? 'Completed' : 'Pending';
+    if(got) return 'Partially Received';
+    return po.status === 'Completed' ? 'Completed' : 'Pending';
+  }
+  const poIsOpen = po => { const s = poState(po); return s === 'Pending' || s === 'Partially Received'; };
+  const poBadge = st => `<span class="status-badge ${st === 'Completed' ? 'completed' : st === 'Cancelled' ? 'cancelled' : st === 'Partially Received' ? 'partial' : 'pending'}">${st}</span>`;
+  /* stock still on its way: what open orders have not yet delivered (an order for "All Shops" counts for every shop) */
+  function incomingQty(productId, shop, exceptPoId){
+    let n = 0;
+    PURCHASE_ORDERS.forEach(po => {
+      if(po.id === exceptPoId || !poIsOpen(po)) return;
+      if(shop && shop !== 'All Shops' && po.shop && po.shop !== 'All Shops' && po.shop !== shop) return;
+      poLines(po).forEach(l => { if(l.productId === productId) n += l.remaining; });
+    });
+    return r3(n);
+  }
+  function poSyncStatus(po){ const st = poState(po); if(po.status !== st) po.status = st; return st; }
+
   function renderPODetailBody(po){
     const itemsSubtotal = (po.items||[]).reduce((s,it)=> s + ((it.qty*it.unitCost)||0), 0);
     const costRows = (po.costs||[]).map(c=>`<tr><td colspan="6" style="color:var(--sage);">${escHtml(c.name)}</td><td style="text-align:right;">${curSym()}${(c.amount||0).toFixed(2)}</td></tr>`).join('');
@@ -6550,25 +6604,57 @@ const AureumSync = (function(){
         <div class="detail-field"><div class="field-label">Expected date</div><div class="v">${fmtDisplay(po.expected)}</div></div>
         <div class="detail-field"><div class="field-label">Payment method</div><div class="v">${po.payment||'—'}</div></div>
         <div class="detail-field"><div class="field-label">Delivery instruction</div><div class="v">${po.delivery||'—'}</div></div>
+        <div class="detail-field"><div class="field-label">Status</div><div class="v">${poBadge(poState(po))}</div></div>
       </div>
       <table class="detail-table">
         <thead><tr><th>Product</th><th style="text-align:right;">Quantity</th><th>Unit</th><th style="text-align:right;">Total qty</th><th style="text-align:right;">Unit cost</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
         <tbody>${rows}${costRows ? `<tr><td colspan="6" style="text-align:right;color:var(--sage);">Items subtotal</td><td style="text-align:right;">${curSym()}${itemsSubtotal.toFixed(2)}</td></tr>${costRows}` : ''}</tbody>
       </table>
       <div class="grand-total-row" style="margin-top:12px;"><span class="gt-label">Total</span><span class="gt-val">${curSym()}${po.total.toFixed(2)}</span></div>
+      ${poReceivingHtml(po)}
     `;
+  }
+  function poReceivingHtml(po){
+    const lines = poLines(po); if(!lines.length) return '';
+    const grns = poGrns(po), st = poState(po);
+    const rows = lines.map(l => { const p = PRODUCTS.find(x => x.id === l.productId);
+      return `<tr><td>${escHtml(itemLabel(l.item, p))}</td><td style="text-align:right;">${l.ordered}</td><td style="text-align:right;">${l.received}</td><td style="text-align:right;${l.remaining > PO_EPS ? 'color:var(--gold-bright);font-weight:600;' : ''}">${l.remaining}${l.over ? ' <span class="po-recv-limit">(over-received)</span>' : ''}</td></tr>`; }).join('');
+    const note = st === 'Cancelled' ? 'This order was cancelled — nothing more is expected.' : po.closedAt ? 'This order was closed with some items undelivered — nothing more is expected.' : lines.some(l => l.remaining > PO_EPS) ? 'Still on its way (counted as <b>incoming</b> stock) until it is received or the order is closed.' : 'Fully received.';
+    return `<div style="margin-top:18px;"><div class="field-label" style="margin-bottom:6px;">Receiving</div>
+      <table class="detail-table"><thead><tr><th>Product</th><th style="text-align:right;">Ordered</th><th style="text-align:right;">Received</th><th style="text-align:right;">Remaining</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="po-recv-sub" style="margin-top:8px;">${note}${grns.length ? ' Goods received notes: ' + grns.map(g => `<b>${escHtml(g.id)}</b>`).join(', ') + '.' : ''}</div></div>`;
   }
 
   function viewPO(id){
     const po = PURCHASE_ORDERS.find(x=>x.id===id);
     if(!po) return;
+    const st = poState(po), open = poIsOpen(po), got = poGrns(po).length > 0;
     openDetailModal(`Purchase Order ${po.id}`, renderPODetailBody(po), `
       <div class="modal-btn ghost" data-close="detailModal">Close</div>
       <div class="modal-btn ghost" id="detailLabelsBtn">Print labels</div>
-      <div class="modal-btn solid" id="detailEditPOBtn">Edit order</div>
+      ${open && got ? '<div class="modal-btn ghost danger" id="detailClosePOBtn">Close order</div>' : ''}
+      ${open && !got ? '<div class="modal-btn ghost danger" id="detailCancelPOBtn">Cancel order</div>' : ''}
+      ${!got && st !== 'Cancelled' ? '<div class="modal-btn ghost" id="detailEditPOBtn">Edit order</div>' : ''}
+      ${open ? '<div class="modal-btn solid" id="detailReceivePOBtn">Receive goods</div>' : ''}
     `);
     wireDocLabels(`Purchase Order ${po.id}`, (po.items || []).map(it => ({ productId: it.productId, qty: lblQtyFromDoc(it) })));
-    document.getElementById('detailEditPOBtn').addEventListener('click', ()=>{ closeModal('detailModal'); switchToPOCreate(id); });
+    const on = (bid, fn) => { const el = document.getElementById(bid); if(el) el.addEventListener('click', fn); };
+    on('detailEditPOBtn', ()=>{ closeModal('detailModal'); switchToPOCreate(id); });
+    on('detailReceivePOBtn', ()=>{ closeModal('detailModal'); receiveAgainstPO(po.id); });
+    on('detailCancelPOBtn', ()=>{
+      const cur = PURCHASE_ORDERS.find(x => x.id === id);
+      if(!cur || poGrns(cur).length){ alert('Goods have already been received against this order, so it can no longer be cancelled. Use Close order instead.'); return; }
+      if(!confirm(`Cancel ${cur.id}? Nothing has been received, so no stock changes. It stays in your history as Cancelled.`)) return;
+      cur.status = 'Cancelled'; cur.cancelledAt = new Date().toISOString(); cur.cancelledBy = whoCreated();
+      persistAureum(); closeModal('detailModal'); renderPOTable(); viewPO(id);
+    });
+    on('detailClosePOBtn', ()=>{
+      const cur = PURCHASE_ORDERS.find(x => x.id === id); if(!cur) return;
+      const left = poLines(cur).filter(l => l.remaining > PO_EPS).length;
+      if(!confirm(`Close ${cur.id}? ${left ? left + ' product(s) still have undelivered quantity; they will no longer be counted as incoming stock.' : ''} Stock already received stays. This can't be undone.`)) return;
+      cur.closedAt = new Date().toISOString(); cur.closedBy = whoCreated(); cur.status = 'Completed';
+      persistAureum(); closeModal('detailModal'); renderPOTable(); viewPO(id);
+    });
   }
 
   let poPageState = { page:1, pageSize:10 };
@@ -6590,7 +6676,7 @@ const AureumSync = (function(){
         <td>${po.supplier}</td>
         <td>${po.shop}</td>
         <td class="gold" style="text-align:right;">${po.total.toFixed(2)}</td>
-        <td><span class="status-badge ${po.status==='Completed'?'completed':'pending'}">${po.status}</span></td>
+        <td>${poBadge(poState(po))}</td>
         <td onclick="event.stopPropagation()">
           <div class="icon-btn-row" style="margin-left:0; justify-content:flex-end; gap:10px;">
             <span class="rcp-view" data-act="pdf" data-id="${po.id}" style="color:var(--gold-bright); cursor:pointer; font-weight:600; font-size:11.5px;">PDF</span>
@@ -6605,8 +6691,8 @@ const AureumSync = (function(){
         if(el.dataset.act === 'edit') switchToPOCreate(id);
         if(el.dataset.act === 'pdf'){ const po = PURCHASE_ORDERS.find(x=>x.id===id); if(po) poPdf(po); }
         // Purchase orders can't be deleted — they're part of the permanent
-        // purchasing history. Cancel a mistaken order by leaving it Pending
-        // and noting so, rather than removing the record.
+        // purchasing history. Cancel a mistaken order from its detail
+        // screen (Cancel order) — it stays in the history as Cancelled.
       });
     });
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> viewPO(tr.dataset.id)));
@@ -6622,7 +6708,7 @@ const AureumSync = (function(){
     if((po.costs||[]).length){ totals.push(['Items subtotal', curSym() + money2(sub)]); po.costs.forEach(c=> totals.push([c.name || 'Additional cost', curSym() + money2(c.amount)])); }
     totals.push(['Total', curSym() + money2(po.total), true]);
     openDocPdf({
-      docType:'Purchase Order', number: po.id, subtitle: `Status: ${po.status || '—'}`, createdBy: po.createdBy || '',
+      docType:'Purchase Order', number: po.id, subtitle: `Status: ${poState(po)}`, createdBy: po.createdBy || '',
       meta:[['Supplier', po.supplier], ['Shop', po.shop], ['PO date', po.date ? fmtDisplay(po.date) : ''], ['Expected date', po.expected ? fmtDisplay(po.expected) : ''], ['Payment method', po.payment], ['Delivery instruction', po.delivery], ['Created by', po.createdBy]],
       tableTitle:'Products',
       columns:[{h:'Product', wrap:true}, {h:'Quantity', align:'r'}, {h:'Unit'}, {h:'Total qty', align:'r'}, {h:'Unit cost', align:'r'}, {h:'Price', align:'r'}, {h:'Total cost', align:'r'}],
@@ -6632,6 +6718,11 @@ const AureumSync = (function(){
 
   function switchToPOList(){ document.getElementById('purchasesListView').classList.add('active'); document.getElementById('purchaseCreateView').classList.remove('active'); }
   function switchToPOCreate(id){
+    if(id){
+      const lock = PURCHASE_ORDERS.find(x=>x.id===id);
+      if(lock && poGrns(lock).length){ alert('Goods have already been received against ' + lock.id + ', so its lines can no longer be edited. Receive the rest, close the order, or raise a new purchase order.'); return; }
+      if(lock && lock.status === 'Cancelled'){ alert(lock.id + ' was cancelled and can no longer be edited.'); return; }
+    }
     editingPOId = id || null;
     if(id){
       const po = PURCHASE_ORDERS.find(x=>x.id===id);
@@ -6675,7 +6766,7 @@ const AureumSync = (function(){
       return `<tr>
         <td class="full" data-label="Product"><div class="pn">${p ? escHtml(p.name) : '—'}</div></td>
         <td class="mono" data-label="In stock">${p ? getStock(p, document.getElementById('poShop').value) : '—'}</td>
-        <td class="mono" data-label="Incoming">0</td>
+        <td class="mono" data-label="Incoming">${incomingQty(row.productId, document.getElementById('poShop').value, editingPOId)}</td>
         <td data-label="Quantity"><input type="number" inputmode="decimal" min="0" step="1" value="${row.qty}" data-idx="${i}" class="po-qty"></td>
         <td data-label="Unit">${unitCellHtml(i, row, p)}</td>
         <td data-label="Unit cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="po-cost"></td>
@@ -6814,6 +6905,7 @@ const AureumSync = (function(){
     return `
       <div class="create-form-grid" style="margin-bottom:18px;">
         <div class="detail-field"><div class="field-label">Supplier</div><div class="v">${g.supplier}</div></div>
+        <div class="detail-field"><div class="field-label">Purchase order</div><div class="v">${g.po ? escHtml(g.po) : 'None (direct)'}</div></div>
         <div class="detail-field"><div class="field-label">Shop</div><div class="v">${g.shop}</div></div>
         <div class="detail-field"><div class="field-label">GRN date</div><div class="v">${fmtDisplay(g.date)}</div></div>
         <div class="detail-field"><div class="field-label">Payment method</div><div class="v">${g.payment||'—'}</div></div>
@@ -6915,7 +7007,54 @@ const AureumSync = (function(){
   }
 
   function switchToGRNList(){ document.getElementById('grnListView').classList.add('active'); document.getElementById('grnCreateView').classList.remove('active'); }
-  function switchToGRNCreate(){
+  /* Linked receiving: a GRN can be raised against an open purchase order (pick it in "Purchase order", or press Receive goods on the order). */
+  let grnLinkedPo = null;
+  function fillGRNPOSelect(selected){
+    const el = document.getElementById('grnPO'); if(!el) return;
+    const open = PURCHASE_ORDERS.filter(po => poIsOpen(po) && poLines(po).length);
+    el.innerHTML = '<option value="">None — direct receiving</option>' + open.map(po => {
+      const left = r3(poLines(po).reduce((t, l) => t + l.remaining, 0));
+      return `<option value="${escHtml(po.id)}">${escHtml(po.id)} · ${escHtml(po.supplier || 'N/A')} · ${left} still due</option>`;
+    }).join('');
+    el.value = [...el.options].some(o => o.value === selected) ? selected : '';
+  }
+  function grnPoNote(html, bad){
+    const n = document.getElementById('grnPoNote'); if(!n) return;
+    n.style.display = html ? '' : 'none'; n.innerHTML = html || ''; n.style.color = bad ? 'var(--danger)' : '';
+  }
+  function grnLimit(row){
+    if(!grnLinkedPo) return null;
+    const po = PURCHASE_ORDERS.find(x => x.id === grnLinkedPo); if(!po) return null;
+    const l = poLines(po).find(x => x.productId === row.productId);
+    const p = PRODUCTS.find(x => x.id === row.productId), size = (p && p.soldBy === 'weight') ? 1 : unitSizeOf(row);
+    const remain = l ? l.remaining : 0;
+    return { remain, ordered: l ? l.ordered : 0, received: l ? l.received : 0, max: Math.max(0, Math.floor(remain / size * 1000 + 1e-6) / 1000) };
+  }
+  function applyGRNPO(id){
+    const sup = document.getElementById('grnSupplier'), shopEl = document.getElementById('grnShop');
+    const po = id ? PURCHASE_ORDERS.find(x => x.id === id) : null;
+    if(id && (!po || !poIsOpen(po))){ alert(`${id} is ${po ? poState(po) : 'not available'} and can't be received against.`); fillGRNPOSelect(''); id = null; }
+    grnLinkedPo = po && poIsOpen(po) ? po.id : null;
+    sup.disabled = !!grnLinkedPo;
+    if(!grnLinkedPo){ grnLineItems = []; grnPoNote(''); renderGRNLines(); updateGRNTotal(); return; }
+    if(po.supplier && ![...sup.options].some(o => o.value === po.supplier)){ const o = document.createElement('option'); o.value = o.textContent = po.supplier; sup.insertBefore(o, sup.options[1] || null); }
+    sup.value = po.supplier || 'N/A';
+    if(po.shop && po.shop !== 'All Shops' && [...shopEl.options].some(o => o.value === po.shop)) shopEl.value = po.shop;
+    const pay = document.getElementById('grnPayment'); if(po.payment && [...pay.options].some(o => o.value === po.payment)) pay.value = po.payment;
+    grnLineItems = poLines(po).filter(l => l.remaining > PO_EPS).map(l => {
+      const it = l.item, p = PRODUCTS.find(x => x.id === l.productId), size = (p && p.soldBy === 'weight') ? 1 : unitSizeOf(it);
+      return { productId: l.productId, unitSize: size, unitCost: it.unitCost || 0, expiry: '', qty: r3(l.remaining / size) };
+    });
+    grnPoNote(`Receiving against <b>${escHtml(po.id)}</b>. Each line starts at what is still due — lower it for a partial delivery. You can't receive more than is still due.`);
+    renderGRNLines(); updateGRNTotal();
+  }
+  function receiveAgainstPO(id){
+    const nav = document.querySelector('.nav-item[data-page="goods-received"]'); if(nav) nav.click();
+    switchToGRNCreate(id);
+  }
+  function switchToGRNCreate(poId){
+    if(typeof poId !== 'string') poId = null;      // (also called from a click, which passes the event)
+    grnLinkedPo = null; { const sp = document.getElementById('grnSupplier'); if(sp) sp.disabled = false; } grnPoNote('');
     grnLineItems = [];
     grnCostItems = [];
     document.getElementById('grnDate').value = todayStr();
@@ -6926,22 +7065,27 @@ const AureumSync = (function(){
     renderGRNLines();
     renderGRNCosts();
     updateGRNTotal();
+    fillGRNPOSelect(poId);
+    if(poId) applyGRNPO(poId);
     document.getElementById('grnListView').classList.remove('active');
     document.getElementById('grnCreateView').classList.add('active');
   }
+  document.getElementById('grnPO').addEventListener('change', function(){ applyGRNPO(this.value); });
 
   function grnShopValue(){ return document.getElementById('grnShop').value; }
   function renderGRNLines(){
     const tbody = document.getElementById('grnLineBody');
     const shop = grnShopValue();
+    grnLineItems.forEach(r => { const lim = grnLimit(r); if(lim && (r.qty || 0) > lim.max + PO_EPS) r.qty = lim.max; });
     tbody.innerHTML = grnLineItems.map((row,i)=>{
       const p = PRODUCTS.find(x=>x.id===row.productId);
       if(!p) return '';
       const total = (row.qty * row.unitCost) || 0;
+      const lim = grnLimit(row);
       return `<tr>
-        <td class="full" data-label="Product"><div class="pn">${escHtml(p.name)}</div></td>
+        <td class="full" data-label="Product"><div class="pn">${escHtml(p.name)}</div>${lim ? `<div class="po-recv-sub">Ordered <b>${lim.ordered}</b> · received <b>${lim.received}</b> · still due <b>${lim.remain}</b></div>` : ''}</td>
         <td data-label="In stock" class="mono">${getStock(p, shop)}</td>
-        <td data-label="Received quantity"><input type="number" inputmode="decimal" min="0" step="${p.soldBy==='weight'?'0.01':'1'}" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Received quantity"></td>
+        <td data-label="Received quantity"><input type="number" inputmode="decimal" min="0" ${lim ? `max="${lim.max}"` : ''} step="${p.soldBy==='weight'?'0.01':'1'}" value="${row.qty}" data-idx="${i}" class="grn-qty" aria-label="Received quantity"></td>
         <td class="full" data-label="Expiry date"><input type="date" class="grn-expiry" data-idx="${i}" value="${row.expiry||''}" aria-label="Expiry date"></td>
         <td data-label="Unit">${unitCellHtml(i, row, p)}</td>
         <td data-label="Cost"><input type="number" inputmode="decimal" min="0" step="0.01" value="${row.unitCost}" data-idx="${i}" class="grn-cost" aria-label="Cost per unit"></td>
@@ -6956,6 +7100,12 @@ const AureumSync = (function(){
     tbody.querySelectorAll('.grn-qty').forEach(inp=> inp.addEventListener('input', function(){
       const idx = this.dataset.idx;
       grnLineItems[idx].qty = parseFloat(this.value)||0;
+      const lim = grnLimit(grnLineItems[idx]);
+      if(lim && grnLineItems[idx].qty > lim.max + PO_EPS){
+        grnLineItems[idx].qty = lim.max; this.value = lim.max;
+        const pn = PRODUCTS.find(x => x.id === grnLineItems[idx].productId);
+        grnPoNote(`Only <b>${lim.remain}</b> of ${escHtml(pn ? pn.name : 'this product')} is still due on ${escHtml(grnLinkedPo)} — quantity set to ${lim.max}. To receive more, raise a new purchase order or a direct GRN.`, true);
+      }
       refreshUnitTotal('grnLineBody', idx, grnLineItems[idx]);
       updateGRNLineTotal(idx);
     }));
@@ -6980,13 +7130,22 @@ const AureumSync = (function(){
     updateGRNTotal();
   }
   function grnPickableProducts(){
-    return PRODUCTS;
+    if(!grnLinkedPo) return PRODUCTS;
+    const po = PURCHASE_ORDERS.find(x => x.id === grnLinkedPo); if(!po) return PRODUCTS;
+    const ids = new Set(poLines(po).filter(l => l.remaining > PO_EPS).map(l => l.productId));
+    return PRODUCTS.filter(p => ids.has(p.id));          // against an order, only what was ordered (and is still due) can be received
   }
   function populateGRNProductDatalist(){ const a = document.getElementById('grnProductSearch'); if(a && a._ppApi) a._ppApi.refresh(); }
   function addGRNProduct(match){
     let idx = grnLineItems.findIndex(r=>r.productId===match.id);
     if(idx === -1){
-      grnLineItems.push({ productId: match.id, qty: 1, unitCost: costAt(match, document.getElementById('grnShop').value), expiry: '' });
+      const row = { productId: match.id, qty: 1, unitCost: costAt(match, document.getElementById('grnShop').value), expiry: '' };
+      if(grnLinkedPo){
+        const po = PURCHASE_ORDERS.find(x => x.id === grnLinkedPo), l = po && poLines(po).find(x => x.productId === match.id);
+        if(!l || l.remaining <= PO_EPS) return false;
+        row.unitSize = match.soldBy === 'weight' ? 1 : unitSizeOf(l.item); row.unitCost = l.item.unitCost || row.unitCost; row.qty = r3(l.remaining / row.unitSize);
+      }
+      grnLineItems.push(row);
       idx = grnLineItems.length - 1;
     }
     renderGRNLines();
@@ -7005,7 +7164,7 @@ const AureumSync = (function(){
   });
   document.getElementById('grnShop').addEventListener('change', renderGRNLines);
 
-  document.getElementById('addGrnBtn').addEventListener('click', switchToGRNCreate);
+  document.getElementById('addGrnBtn').addEventListener('click', ()=> switchToGRNCreate());
   document.getElementById('grnBackLink').addEventListener('click', switchToGRNList);
   document.getElementById('grnCancelBtn').addEventListener('click', switchToGRNList);
   let grnCostItems = [];
@@ -7055,6 +7214,17 @@ const AureumSync = (function(){
     if(validLines.length < withProduct.length){ alert(`${withProduct.length - validLines.length} line item(s) with a quantity of 0 were skipped.`); }
     const validCosts = grnCostItems.filter(c=> c.name && c.name.trim() && (c.amount||0) > 0);
     const total = validLines.reduce((s,r)=>s+((r.qty*r.unitCost)||0),0) + validCosts.reduce((s,c)=>s+c.amount,0);
+    // against a purchase order: re-check every line against what is due RIGHT NOW (another till or tab may have received some meanwhile)
+    let linkedPo = null;
+    if(grnLinkedPo){
+      linkedPo = PURCHASE_ORDERS.find(x => x.id === grnLinkedPo);
+      if(!linkedPo || !poIsOpen(linkedPo)){ alert(`${grnLinkedPo} is ${linkedPo ? poState(linkedPo) : 'no longer available'}, so goods can't be received against it. Choose "None" for a direct GRN or pick another order.`); fillGRNPOSelect(''); applyGRNPO(''); return; }
+      const dueNow = poLines(linkedPo);
+      const over = validLines.map(r => { const l = dueNow.find(x => x.productId === r.productId), p = PRODUCTS.find(x => x.id === r.productId);
+        const got = unitTotalQty({ qty: r.qty, unitSize: (p && p.soldBy === 'weight') ? 1 : unitSizeOf(r) });
+        return (!l || got > l.remaining + PO_EPS) ? `${p ? p.name : 'A product'}: receiving ${got}, ${l ? l.remaining : 0} still due` : null; }).filter(Boolean);
+      if(over.length){ alert(`Can't receive more than was ordered on ${linkedPo.id}:\n\n${over.join('\n')}\n\nLower the quantity, or use a new purchase order / direct GRN for extra stock.`); renderGRNLines(); return; }
+    }
     // receiving stock through a GRN increases what's on hand — ONLY at the shop this GRN is for
     const grnShopVal = document.getElementById('grnShop').value;
     validLines.forEach(row=>{
@@ -7073,7 +7243,7 @@ const AureumSync = (function(){
       createdBy: whoCreated(),
       id: "GRN-" + AureumSync.nextDocNumber(GRN_RECORDS, 'GRN-', 11223),
       date: document.getElementById('grnDate').value || todayStr(),
-      type: "Direct GRN", po: "",
+      type: linkedPo ? "Against PO" : "Direct GRN", po: linkedPo ? linkedPo.id : "", poUid: linkedPo ? (linkedPo.uid || '') : '',
       created: document.getElementById('grnDate').value || todayStr(),
       supplier: document.getElementById('grnSupplier').value,
       shop: document.getElementById('grnShop').value,
@@ -7084,12 +7254,14 @@ const AureumSync = (function(){
       costs: validCosts.map(c=>({...c})),
       total, status: "Completed"
     });
+    if(linkedPo) poSyncStatus(linkedPo);
     persistAureum();
     renderGRNTable();
     renderProducts();
+    if(linkedPo) renderPOTable();
     const savedGrn = GRN_RECORDS[0];
     confirmSaved(`Goods Received Note ${savedGrn.id}`, renderGRNDetailBody(savedGrn), switchToGRNList,
-      `Stock at ${savedGrn.shop} has been increased.`,
+      `Stock at ${savedGrn.shop} has been increased.` + (linkedPo ? ` ${linkedPo.id} is now ${poState(linkedPo)}.` : ''),
       `<div class="modal-btn ghost" id="grnSavedPdfBtn">Download PDF</div>`);
     const pdfBtn = document.getElementById('grnSavedPdfBtn'); if(pdfBtn) pdfBtn.addEventListener('click', ()=> grnPdf(savedGrn));
   });
@@ -7737,14 +7909,26 @@ const AureumSync = (function(){
     tbody.querySelectorAll('tr[data-id]').forEach(tr=> tr.addEventListener('click', ()=> openCustomerForm(parseInt(tr.dataset.id))));
   }
 
+  /* Store credit. The customer is looked up AGAIN when Save is pressed (by uid): a background sync replaces the customer list with fresh
+     objects, and editing the copy that was open on screen would silently do nothing. The new balance is always worked out from the
+     latest balance, saved straight away, and logged in CREDIT_LOG so every change can be traced. */
+  function findCustomerLive(ref){ return CUSTOMERS.find(x => ref.uid ? x.uid === ref.uid : x.id === ref.id); }
+  function creditLogHtml(c){
+    const rows = CREDIT_LOG.filter(e => (c.uid && e.customerUid === c.uid)).slice(0, 5);
+    if(!rows.length) return '';
+    return `<div class="field-label" style="margin-top:16px;">Recent adjustments</div><div class="po-recv-sub">` + rows.map(e =>
+      `${new Date(e.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} · ${e.amount > 0 ? '+' : '−'}${curSym()}${Math.abs(e.amount).toFixed(2)} → <b>${curSym()}${e.after.toFixed(2)}</b>${e.by ? ' · ' + escHtml(e.by) : ''}`).join('<br>') + `</div>`;
+  }
   function openCreditAdjustModal(id){
-    const c = CUSTOMERS.find(x=>x.id===id);
-    if(!c) return;
-    openDetailModal(`Adjust store credit — ${c.name}`, `
-      <div style="margin-bottom:14px; color:var(--sage); font-size:13px;">Current balance: <span class="gold" style="font-weight:700;">${curSym()}${(c.credit||0).toFixed(2)}</span></div>
+    const c0 = CUSTOMERS.find(x=>x.id===id);
+    if(!c0) return;
+    const ref = { uid: c0.uid, id: c0.id };
+    openDetailModal(`Adjust store credit — ${c0.name}`, `
+      <div style="margin-bottom:14px; color:var(--sage); font-size:13px;">Current balance: <span class="gold" id="creditAdjustBal" style="font-weight:700;">${curSym()}${(c0.credit||0).toFixed(2)}</span></div>
       <div class="field-label">Amount</div>
       <input type="number" step="0.01" class="modal-field" id="creditAdjustAmount" placeholder="e.g. 10.00 to add, -5.00 to redeem">
-      <div class="field-error" id="creditAdjustError">Enter a non-zero amount that wouldn't take the balance below $0</div>
+      <div class="field-error" id="creditAdjustError">Enter a non-zero amount that wouldn't take the balance below ${curSym()}0</div>
+      ${creditLogHtml(c0)}
     `, `
       <div class="modal-btn ghost" data-close="detailModal">Cancel</div>
       <div class="modal-btn solid" id="creditAdjustSaveBtn">Save</div>
@@ -7752,14 +7936,24 @@ const AureumSync = (function(){
     document.getElementById('creditAdjustSaveBtn').addEventListener('click', ()=>{
       const amtEl = document.getElementById('creditAdjustAmount');
       const errEl = document.getElementById('creditAdjustError');
-      const val = parseFloat(amtEl.value);
-      const invalid = isNaN(val) || val === 0 || (c.credit||0) + val < 0;
+      const c = findCustomerLive(ref);                       // the customer as they are NOW, not as they were when this window opened
+      if(!c){ alert('This customer no longer exists.'); closeModal('detailModal'); renderCustomers(); return; }
+      const val = parseFloat(amtEl.value), before = +((c.credit||0).toFixed(2));
+      const invalid = isNaN(val) || val === 0 || before + val < -0.00001;
+      errEl.textContent = `Enter a non-zero amount that wouldn't take the balance below ${curSym()}0`;
       errEl.classList.toggle('show', invalid);
       amtEl.classList.toggle('invalid', invalid);
-      if(invalid){ amtEl.focus(); return; }
-      c.credit = +(((c.credit||0) + val).toFixed(2));
+      if(invalid){
+        document.getElementById('creditAdjustBal').textContent = curSym() + before.toFixed(2);      // show the real, current balance
+        if(!isNaN(val) && val < 0 && before + val < 0) errEl.textContent = `The balance is ${curSym()}${before.toFixed(2)} — you can't take off more than that.`;
+        amtEl.focus(); return;
+      }
+      c.credit = +((before + val).toFixed(2));
+      CREDIT_LOG.unshift({ uid: AureumSync.uid(), at: new Date().toISOString(), customerUid: c.uid || '', customer: c.name, amount: +val.toFixed(2), before, after: c.credit, by: whoCreated() });
+      persistAureum();
       closeModal('detailModal');
       renderCustomers();
+      aureumToast(`${c.name}: store credit is now ${curSym()}${c.credit.toFixed(2)}`, 'ok');
     });
   }
 
@@ -9567,6 +9761,7 @@ const AureumSync = (function(){
 
   /* ===== SETTINGS: POS DEVICES ===== */
   let POS_DEVICES = [];
+  let CREDIT_LOG = [];   // append-only record of every store-credit adjustment (who, when, amount, balance before/after) — the evidence trail for balances
   let PRODUCT_HISTORY = [];   // append-only log of stock typed directly on a product — there is deliberately no way to delete or edit an entry
   let nextPosId = 1;
   let editingPosId = null;
@@ -10539,7 +10734,7 @@ const AureumSync = (function(){
      resolves), then keeps saving/subscribing so both apps stay
      live-in-sync across any device signed into the same business. */
   function aureumSnapshotData(){
-    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, posDevices:POS_DEVICES, productHistory:PRODUCT_HISTORY, settings:POS_SETTINGS };
+    return { shops:SHOPS, products:PRODUCTS, customers:CUSTOMERS, employees:EMPLOYEES, receipts:RECEIPTS, expenses:EXPENSES, purchaseOrders:PURCHASE_ORDERS, grnRecords:GRN_RECORDS, stockAdjustments:STOCK_ADJUSTMENTS, transfers:TRANSFERS, employeeHours:EMPLOYEE_HOURS, suppliers:SUPPLIERS, shiftClosures:SHIFT_CLOSURES, openShifts:OPEN_SHIFTS, posDevices:POS_DEVICES, productHistory:PRODUCT_HISTORY, creditLog:CREDIT_LOG, settings:POS_SETTINGS };
   }
   function persistAureum(){ AureumSync.touch(); }
   function renderSyncStatus(){
@@ -11593,6 +11788,7 @@ const AureumSync = (function(){
     POS_DEVICES = has('posDevices') ? shared.posDevices : (live ? [] : POS_DEVICES);
     POS_DEVICES.forEach(d => { if(!d.uid) d.uid = AureumSync.uid(); });
     PRODUCT_HISTORY = has('productHistory') ? shared.productHistory : (live ? [] : PRODUCT_HISTORY);
+    CREDIT_LOG = has('creditLog') ? shared.creditLog : (live ? [] : CREDIT_LOG);
     PRODUCT_HISTORY.forEach(h => { if(!h.uid) h.uid = AureumSync.uid(); });
     if(shared.settings) Object.assign(POS_SETTINGS, shared.settings);
     // the business name typed when the account was created is the starting business name
@@ -13125,7 +13321,7 @@ E('po-create','Stock','How do I create a purchase order?',
 E('grn-receive','Stock','How do I receive stock (Goods Received)?',
   ['how do i receive stock','how do i record a delivery','goods received note','add stock when goods arrive','grn','receive goods from supplier'],
   'grn goods received delivery arrive stock in expiry quantity invoice supplier direct purchase order',
-  `Open **Goods Received** and create a note — either **directly** or against a **purchase order**. For each line enter the **Quantity**, optional **Expiry date**, and **Unit cost**; add any additional costs. Saving **adds the quantities to that shop's stock immediately**. Saved notes open on screen and download as PDF.`,
+  `Open **Goods Received** and create a note — either **directly**, or against a **purchase order**: pick it under **Purchase order** on the form, or open the order in **Purchase Orders** and press **Receive goods**. Against an order each line starts at what is **still due**; lower it for a **partial delivery** — you can't receive more than was ordered. The order shows **Partially Received** until everything has arrived (then **Completed**), and what is still due counts as **incoming** stock. For each line you can set the **Quantity**, optional **Expiry date**, and **Unit cost**; add any additional costs. Saving **adds the quantities to that shop's stock immediately**. Saved notes open on screen and download as PDF. An order nothing has arrived on can be **cancelled** from its detail screen; one part-delivered can be **closed** (no more expected).`,
   ['grn-edit','po-create'], { pages:['goods-received'] }),
 E('grn-edit','Stock','Can I edit or delete a Goods Received note?',
   ['can i edit a grn','delete a goods received note','i made a mistake on a grn','wrong quantity on goods received','undo goods received','correct a received note'],
