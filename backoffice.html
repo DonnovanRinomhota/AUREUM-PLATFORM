@@ -2643,7 +2643,7 @@
             <div class="settings-panel-head">
               <div class="t">Billing &amp; Subscription</div>
               <div class="s web-only">$5 per shop, per month, paid by card (Stripe). Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. We never see or store your card number or CVV — payment is entered directly on Stripe's own page.</div>
-              <div class="s store-only">Your AUREUM subscription is managed from your account on the web. This screen shows its current status.</div>
+              <div class="s store-only">$5 per shop, per month, paid with Google Play. Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. You pay and manage it through Google Play — we never see your payment details.</div>
             </div>
             <div class="form-section">
               <div class="create-form-grid" style="margin-bottom:0;">
@@ -2657,6 +2657,8 @@
               <div id="stRenewNote" style="display:none; margin-top:14px; font-size:13px; line-height:1.6; color:var(--ivory-dim);"></div>
               <div id="stBillingBanner" style="display:none; margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(201,162,39,0.12); border:1px solid var(--gold-bright); font-size:12.5px; color:var(--ivory-dim);"></div>
               <div class="settings-save-row" style="margin-top:16px;">
+                <div class="btn-gold" id="stPlayBtn" style="display:none;">Subscribe with Google Play</div>
+                <div class="btn-outline" id="stPlayManageBtn" style="display:none;">Manage in Google Play</div>
                 <div class="btn-gold" id="stPayStripeBtn">Subscribe with card</div>
               <div class="btn-gold" id="stSyncShopsBtn" style="display:none;">Update subscription</div>
                 
@@ -3867,10 +3869,10 @@ const AureumSync = (function(){
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at){
       const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - now) / DAY);
-      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial.` + (AUREUM_STORE_MODE ? ' Manage your subscription from your account on the web.' : ' Subscribe in Settings → Billing.') };
+      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial.` + ' Subscribe in Settings → Billing.' };
     }
     if(biz.subscription_status === 'past_due'){
-      return { ok:true, warning: AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed — please update or retry payment in Settings → Billing.' };
+      return { ok:true, warning: biz.billing_processor === 'google_play' ? 'Your last payment didn\'t go through. Please check your payment method in Google Play (Payments & subscriptions).' : AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed — please update or retry payment in Settings → Billing.' };
     }
     if(biz.subscription_status === 'active' && biz.current_period_end){
       const end = new Date(biz.current_period_end);
@@ -3881,6 +3883,7 @@ const AureumSync = (function(){
       const daysLeft = Math.ceil((end - now) / DAY);
       if(daysLeft <= 3){
         const who = biz.billing_processor === 'paynow' ? "Paynow is no longer accepted — subscribe with a card" : 'renew';
+        if(biz.billing_processor === 'google_play') return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — check your subscription in Google Play (Payments & subscriptions).` : 'Your subscription period has ended — renew it in Settings → Billing to avoid being locked out.' };
         if(AUREUM_STORE_MODE) return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period. Manage your subscription from your account on the web.` : 'Your subscription period has ended. Manage your subscription from your account on the web to avoid being locked out.' };
         return { ok:true, warning: daysLeft > 0 ? `${daysLeft} day(s) left this period — ${who} in Settings → Billing.` : 'Your subscription period has ended — renew in Settings → Billing to avoid being locked out.' };
       }
@@ -4352,7 +4355,7 @@ const AureumSync = (function(){
 
   function renderShopPopover(popoverEl, onSelect, currentVal){
     if(!popoverEl) return;
-    const opts = ["All Shops", ...SHOPS];
+    const opts = shopChoices();
     popoverEl.innerHTML = opts.map(s => `<div class="shop-opt ${s===currentVal?'active':''}" data-shop="${s}">${s}${s===currentVal?' &#10003;':''}</div>`).join('')
       + `<div class="shop-popover-divider"></div>`
       + `<div class="add-shop-row"><input type="text" placeholder="Add a new shop…"><div class="go" title="Add shop">+</div></div>`;
@@ -4407,7 +4410,13 @@ const AureumSync = (function(){
     else if(currentPage === 'stock-transfers'){ if(typeof renderTransfers==='function') renderTransfers(); }
   }
 
+  /* With a single shop there is nothing to combine, so "All Shops" is not offered: the shop is simply named. (With 2+ shops "All Shops" comes first.) */
+  const shopChoices = () => SHOPS.length === 1 ? SHOPS.slice() : ["All Shops", ...SHOPS];
   function refreshAllShopUI(){
+    const wasViewing = viewingShop;
+    if(SHOPS.length === 1) viewingShop = SHOPS[0];
+    else if(viewingShop !== 'All Shops' && !SHOPS.includes(viewingShop)) viewingShop = 'All Shops';
+    if(viewingShop !== wasViewing) setTimeout(() => { try{ rerenderAllSections(); }catch(e){} }, 0);
     renderShopPopover(document.getElementById('sidebarShopPopover'), setViewingShop, viewingShop);
     renderShopPopover(document.getElementById('dashShopPopover'), setViewingShop, viewingShop);
     document.getElementById('sidebarShopVal').textContent = viewingShop;
@@ -4416,9 +4425,9 @@ const AureumSync = (function(){
     // shop *filter* selects (include an "All Shops" option)
     SECTION_SHOP_FILTERS.forEach(id=>{
       const el = document.getElementById(id); if(!el) return;
-      const prev = el.value || "All Shops";
-      el.innerHTML = ["All Shops", ...SHOPS].map(s=>`<option value="${s}">${s}</option>`).join('');
-      el.value = ["All Shops", ...SHOPS].includes(prev) ? prev : "All Shops";
+      const prev = el.value || "All Shops", choices = shopChoices();
+      el.innerHTML = choices.map(s=>`<option value="${s}">${s}</option>`).join('');
+      el.value = choices.includes(prev) ? prev : choices[0];
     });
     // shop *assignment* selects — a PO/GRN/Stock Adjustment always belongs to exactly
     // ONE real shop (never "All Shops"), otherwise its stock/cost effects leak into
@@ -10859,18 +10868,18 @@ const AureumSync = (function(){
     const status = business.subscription_status || 'trial';
     badge.textContent = status.charAt(0).toUpperCase() + status.slice(1).replace('_',' ');
     badge.className = 'status-badge ' + (status==='active' ? 'completed' : status==='trial' ? 'pending' : 'refunded');
-    procEl.textContent = business.billing_processor ? (business.billing_processor==='stripe'?'Stripe (card)':'Paynow (no longer accepted)') : '—';
+    procEl.textContent = business.billing_processor ? (business.billing_processor==='stripe'?'Stripe (card)':business.billing_processor==='google_play'?'Google Play':'Paynow (no longer accepted)') : '—';
     const payStripe = document.getElementById('stPayStripeBtn'), syncBtn = document.getElementById('stSyncShopsBtn');
-    const have = SHOPS.length, covered = shopsCovered(business), live = cardSubLive(business), nShops = Math.max(1, have);
+    const have = SHOPS.length, live = cardSubLive(business), playLive = playSubLive(business), covered = playLive ? (business.shops_paid || 0) : shopsCovered(business), nShops = Math.max(1, have);
     // $5 per shop: what the plan is, how many shops it covers, and what that costs
-    document.getElementById('stPlanLabel').textContent = live ? `${money0(covered * PRICE_PER_SHOP)} / month · ${covered} shop${covered === 1 ? '' : 's'}` : '$5 per shop / month';
-    document.getElementById('stShopsVal').textContent = live ? `${have} in your account · ${covered} covered` : `${have} in your account`;
-    document.getElementById('stMonthlyLabel').textContent = live ? 'Monthly total' : 'Monthly total once subscribed';
-    document.getElementById('stMonthlyVal').textContent = live ? `${money0(covered * PRICE_PER_SHOP)}  (${covered} × $5)` : `${money0(nShops * PRICE_PER_SHOP)}  (${nShops} × $5)`;
+    document.getElementById('stPlanLabel').textContent = (live || playLive) ? `${money0(covered * PRICE_PER_SHOP)} / month · ${covered} shop${covered === 1 ? '' : 's'}` : '$5 per shop / month';
+    document.getElementById('stShopsVal').textContent = (live || playLive) ? `${have} in your account · ${covered} covered` : `${have} in your account`;
+    document.getElementById('stMonthlyLabel').textContent = (live || playLive) ? 'Monthly total' : 'Monthly total once subscribed';
+    document.getElementById('stMonthlyVal').textContent = (live || playLive) ? `${money0(covered * PRICE_PER_SHOP)}  (${covered} × $5)` : `${money0(nShops * PRICE_PER_SHOP)}  (${nShops} × $5)`;
     payStripe.textContent = `Subscribe with card — ${money0(nShops * PRICE_PER_SHOP)}/month (${nShops} shop${nShops === 1 ? '' : 's'} × $5)`;
     const nowD = new Date(), pEnd = business.current_period_end ? new Date(business.current_period_end) : null;
-    const paidActive = !business.is_exempt && business.billing_processor !== 'paynow' && business.subscription_status === 'active' && (live || (pEnd && pEnd > nowD));   // paid up: no "Subscribe" any more, manage it instead
-    payStripe.style.display = (live || paidActive) ? 'none' : '';
+    const paidActive = !business.is_exempt && business.billing_processor !== 'paynow' && business.subscription_status === 'active' && (live || playLive || (pEnd && pEnd > nowD));   // paid up: no "Subscribe" any more, manage it instead
+    payStripe.style.display = (live || paidActive || business.billing_processor === 'google_play') ? 'none' : '';
     syncBtn.style.display = (live && business.subscription_status === 'active' && have > covered) ? '' : 'none';
     syncBtn.textContent = `Update subscription to cover all ${have} shops — ${money0(have * PRICE_PER_SHOP)}/month`;
 
@@ -10894,15 +10903,18 @@ const AureumSync = (function(){
       if(daysLeft <= 5){
         bannerEl.style.display = 'block';
         bannerEl.textContent = AUREUM_STORE_MODE
-          ? (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'}. Manage your subscription from your account on the web.` : 'Your trial has ended. Manage your subscription from your account on the web.')
+          ? (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below with Google Play to keep using AUREUM.` : 'Your trial has ended — subscribe below with Google Play to keep using AUREUM.')
           : (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below to keep using AUREUM.` : `Your trial has ended — subscribe below to keep using AUREUM.`);
       }
     } else if(status === 'past_due'){
       bannerEl.style.display = 'block';
-      bannerEl.textContent = AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed. Please pay below to avoid interruption.';
+      bannerEl.textContent = business.billing_processor === 'google_play' ? 'Your last payment didn\'t go through. Please check your payment method in Google Play (Payments & subscriptions) — Google will retry.' : AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed. Please pay below to avoid interruption.';
     } else if(status === 'active' && periodEnd){
       const daysLeft = Math.ceil((periodEnd - new Date()) / 86400000);
-      if(business.billing_processor === 'paynow' && !AUREUM_STORE_MODE){
+      if(business.billing_processor === 'google_play'){
+        if(have > covered){ bannerEl.style.display = 'block'; bannerEl.textContent = `You have ${have} shops but your Google Play subscription covers ${covered}. Everything keeps working — add the missing shop${have - covered === 1 ? '' : 's'} below (${money0((have - covered) * PRICE_PER_SHOP)}/month more).`; }
+        else if(daysLeft <= 3){ bannerEl.style.display = 'block'; bannerEl.textContent = daysLeft > 0 ? `Your subscription period ends in ${daysLeft} day${daysLeft===1?'':'s'}. Google Play renews it automatically unless it was cancelled.` : 'Your subscription period has ended — renew it below to keep using AUREUM.'; }
+      } else if(business.billing_processor === 'paynow' && !AUREUM_STORE_MODE){
         bannerEl.style.display = 'block';
         bannerEl.textContent = `Paynow is no longer accepted for subscriptions. Your access continues until ${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} — subscribe with a card before then to keep using AUREUM.`;
         payStripe.style.display = '';
@@ -10912,10 +10924,29 @@ const AureumSync = (function(){
       }
     }
 
+    // ----- Google Play (inside the Android app): subscribe / add shops / manage -----
+    const playBtn = document.getElementById('stPlayBtn'), playManage = document.getElementById('stPlayManageBtn');
+    const inApp = AUREUM_STORE_MODE && !business.is_exempt && status !== 'suspended';
+    const canPlay = !!(window.AureumNative && AureumNative.play && AureumNative.play.available);
+    const needsPlay = inApp && !live && !(playLive && have <= covered);            // nothing paid yet, or shops added since
+    playBtn.style.display = needsPlay ? '' : 'none';
+    playBtn.classList.toggle('disabled', !canPlay);
+    if(needsPlay){
+      const more = playLive ? have - covered : nShops;
+      playBtn.textContent = playLive ? `Add ${more} more shop${more === 1 ? '' : 's'} — ${money0(more * PRICE_PER_SHOP)}/month more`
+                                      : `Subscribe with Google Play — ${money0(nShops * PRICE_PER_SHOP)}/month (${nShops} shop${nShops === 1 ? '' : 's'} × $5)`;
+    }
+    playManage.style.display = (inApp && business.billing_processor === 'google_play') ? '' : 'none';
+    if(inApp && !canPlay && needsPlay){ bannerEl.style.display = 'block'; bannerEl.textContent = 'This version of the app can\'t take payments yet. Please update AUREUM Back Office from Google Play, then come back here to subscribe.'; }
+    if(!AUREUM_STORE_MODE && business.billing_processor === 'google_play' && playLive){ bannerEl.style.display = 'block'; bannerEl.textContent = 'Your subscription is billed through Google Play. Manage or cancel it in the Google Play app (Payments & subscriptions), or from the AUREUM Back Office Android app.'; }
+    if(canPlay && inApp) syncPlayQuietly(business);
     const cancelBtn = document.getElementById('stCancelSubBtn'), renewEl = document.getElementById('stRenewNote');
-    manageBtn.style.display = (business.stripe_customer_id || paidActive) ? '' : 'none';
-    cancelBtn.style.display = (paidActive || live) ? '' : 'none';
-    if(paidActive || live){
+    manageBtn.style.display = (!playLive && (business.stripe_customer_id || paidActive)) ? '' : 'none';
+    cancelBtn.style.display = ((paidActive && !playLive) || live) ? '' : 'none';
+    if(playLive){
+      renewEl.style.setProperty('display','block','important');
+      renewEl.innerHTML = `<b>Billed by Google Play.</b> Each shop is a $5 monthly Google Play subscription that renews automatically${periodEnd ? `; the current period ends <b>${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</b>` : ''}. Use <b>Manage in Google Play</b> to change payment method, cancel or see receipts.`;
+    } else if(paidActive || live){
       const amt = money0(Math.max(1, covered || have) * PRICE_PER_SHOP);
       renewEl.style.display = 'block';
       renewEl.innerHTML = `<b>Recurring monthly billing.</b> Your card is charged ${amt} automatically every month${periodEnd ? `; the next payment is on <b>${periodEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</b>` : ''}. A receipt is emailed to you after every payment. You can change your card or cancel any time; if you cancel you keep access until the end of the period you have paid for.`;
@@ -10924,7 +10955,7 @@ const AureumSync = (function(){
 
     const { data: payments } = await sb.from('subscription_payments')
       .select('*').eq('business_id', currentBusinessId).order('created_at', { ascending:false }).limit(50);
-    if(!business.billing_processor && payments && payments[0]) procEl.textContent = payments[0].processor === 'stripe' ? 'Stripe (card)' : payments[0].processor === 'manual' ? 'Complimentary (admin)' : '—';
+    if(!business.billing_processor && payments && payments[0]) procEl.textContent = payments[0].processor === 'stripe' ? 'Stripe (card)' : payments[0].processor === 'google_play' ? 'Google Play' : payments[0].processor === 'manual' ? 'Complimentary (admin)' : '—';
     const tbody = document.getElementById('stInvoiceTableBody');
     if(!payments || payments.length === 0){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--sage);">No payments yet.</td></tr>`;
@@ -10932,7 +10963,7 @@ const AureumSync = (function(){
       tbody.innerHTML = payments.map(p=>`
         <tr>
           <td>${new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
-          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : p.processor === 'manual' ? 'Complimentary (admin)' : 'Paynow (no longer accepted)'}</td>
+          <td>${p.processor === 'stripe' ? 'Card (Stripe)' : p.processor === 'google_play' ? 'Google Play' : p.processor === 'manual' ? 'Complimentary (admin)' : 'Paynow (no longer accepted)'}</td>
           <td>${p.period_start ? new Date(p.period_start).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + new Date(p.period_end).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}</td>
           <td style="text-align:right;" class="mono">$${Number(p.amount).toFixed(2)}</td>
           <td><span class="status-badge ${p.status==='paid'?'completed':p.status==='pending'?'pending':'refunded'}">${p.status}</span></td>
@@ -10944,7 +10975,84 @@ const AureumSync = (function(){
   const PRICE_PER_SHOP = 5;
   const money0 = n => '$' + (Math.round(n * 100) / 100).toFixed(Number.isInteger(Math.round(n * 100) / 100) ? 0 : 2);
   const cardSubLive = b => !!b && b.billing_processor === 'stripe' && !!b.stripe_subscription_id && !b.is_exempt && ['active', 'past_due'].includes(b.subscription_status);
+  const playSubLive = b => !!b && b.billing_processor === 'google_play' && !b.is_exempt && ['active', 'past_due'].includes(b.subscription_status);
   const shopsCovered = b => cardSubLive(b) ? (b.shops_paid ?? 1) : null;      // an older subscription (shops_paid empty) covered 1 shop
+  /* ===== Google Play Billing (inside the Android app) =====
+     One shop = one Google Play subscription ($5/month). The app buys through Google Play's own sheet; the server (billing-play)
+     then verifies each purchase with Google before anything about the business changes. */
+  const playApi = () => (window.AureumNative && AureumNative.play && AureumNative.play.available) ? AureumNative.play : null;
+  async function playAccountToken(){          // identifies THIS business on each purchase (a hash — never the raw id)
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(currentBusinessId)));
+    return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function callPlayFn(body){
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/billing-play`, {
+      method: 'POST', headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${session.access_token}` }, body: JSON.stringify(body)
+    });
+    const j = await resp.json().catch(() => ({ error: 'Unexpected reply from billing.' }));
+    if(!resp.ok || j.error){ const e = new Error(j.error || 'Billing request failed.'); e.status = resp.status; e.code = j.code; throw e; }
+    return j;
+  }
+  // tell the server what Google Play says this account owns; it verifies and updates the business
+  async function playSync(){
+    const pl = playApi(); if(!pl) throw new Error('This version of the app can\'t take payments yet — please update it from Google Play.');
+    const token = await playAccountToken();
+    return callPlayFn({ action: 'sync', purchases: await pl.purchases(token) });
+  }
+  let _playQuiet = 0;
+  async function syncPlayQuietly(business){      // keeps renewals/cancellations current while the owner uses the app (at most every 5 min)
+    if(Date.now() - _playQuiet < 300000) return;
+    if(business.billing_processor !== 'google_play') return;
+    _playQuiet = Date.now();
+    try{ const r = await playSync(); if(r && r.applied && (r.shops_paid !== (business.shops_paid || 0) || r.status !== business.subscription_status)) renderBilling(); }catch(e){ /* quiet — tried again next time */ }
+  }
+  const isUserCancel = e => /cancel|USER_CANCELED|user_cancelled|dismiss/i.test(String((e && (e.message || e.errorMessage || e.code)) || ''));
+  /* make the account cover `target` shops: buy each missing shop subscription through Google Play, one sheet each. Resolves true when covered. */
+  async function playCoverShops(target){
+    const pl = playApi();
+    if(!pl){ aureumToast('This version of the app can\'t take payments yet — please update AUREUM Back Office from Google Play.', 'danger'); return false; }
+    if(target > pl.maxShops){ aureumToast(`Google Play billing covers up to ${pl.maxShops} shops. For more, please contact support.`, 'danger'); return false; }
+    try{
+      if(!(await pl.supported())){ aureumToast('Google Play billing isn\'t available on this device — check that Google Play is installed and you are signed in to it.', 'danger'); return false; }
+      const token = await playAccountToken();
+      let state = await playSync();
+      const owned = new Set((state.subscriptions || []).filter(x => x.entitled).map(x => x.slot));
+      if(state.conflict === 'stripe'){ aureumToast('This business already pays by card on the web. Cancel one of the two so you are not charged twice.', 'danger'); return false; }
+      for(let slot = 1; slot <= target; slot++){
+        if(owned.has(slot)) continue;
+        await pl.buy(slot, token);              // Google Play's own purchase sheet (the user confirms the $5/month there)
+        state = await playSync();               // the server verifies this purchase with Google before the business changes
+        owned.clear(); (state.subscriptions || []).filter(x => x.entitled).forEach(x => owned.add(x.slot));
+        if(!owned.has(slot)){ aureumToast('Google Play is still processing that payment. It will appear here as soon as Google confirms it.', 'ok'); return false; }
+      }
+      return true;
+    }catch(err){
+      if(isUserCancel(err)) return false;
+      aureumToast((err && err.message && !/fetch|network/i.test(err.message)) ? err.message : "Couldn't reach Google Play or billing — check your connection and try again.", 'danger');
+      return false;
+    }
+  }
+  async function playSubscribeClick(){
+    const errEl = document.getElementById('stBillingError'); errEl.textContent = '';
+    const biz = await fetchBusinessBilling(); const have = Math.max(1, SHOPS.length);
+    const covered = playSubLive(biz) ? (biz.shops_paid || 0) : 0, more = have - covered;
+    if(more <= 0){ renderBilling(); return; }
+    const go = await new Promise(resolve => {
+      openDetailModal(covered ? 'Add shops to your plan' : 'Subscribe with Google Play',
+        `<div style="font-size:13.5px;line-height:1.6;color:var(--ivory-dim);">Each shop is <b>$5 a month</b>. ${covered ? `Your plan covers ${covered} shop${covered === 1 ? '' : 's'}; you have ${have}.` : `You have ${have} shop${have === 1 ? '' : 's'}.`} This adds <b>${more}</b> subscription${more === 1 ? '' : 's'} — <b>${money0(have * PRICE_PER_SHOP)}</b> a month in total.</div>
+         <div style="margin-top:10px;font-size:12px;color:var(--sage);line-height:1.55;">Google Play will ask you to confirm ${more === 1 ? 'the payment' : 'each payment (one per shop)'} and charges your Google Play payment method. It renews every month until you cancel in Google Play. Prices may show in your local currency.</div>`,
+        `<div class="modal-btn ghost" id="playSubNo">Not now</div><div class="modal-btn solid" id="playSubGo">Continue to Google Play</div>`);
+      document.getElementById('playSubNo').addEventListener('click', () => { closeModal('detailModal'); resolve(false); });
+      document.getElementById('playSubGo').addEventListener('click', () => { closeModal('detailModal'); resolve(true); });
+    });
+    if(!go) return;
+    const ok = await playCoverShops(have);
+    if(ok) aureumToast(`Subscribed — your plan covers ${have} shop${have === 1 ? '' : 's'}. Thank you!`, 'ok');
+    renderBilling();
+  }
+  document.getElementById('stPlayBtn').addEventListener('click', () => { if(!document.getElementById('stPlayBtn').classList.contains('disabled')) playSubscribeClick(); else aureumToast('Please update AUREUM Back Office from Google Play to subscribe.', 'danger'); });
+  document.getElementById('stPlayManageBtn').addEventListener('click', async () => { try{ await AureumNative.play.manage(); }catch(e){ aureumToast('Open the Google Play app → profile picture → Payments & subscriptions → Subscriptions.', 'danger'); } });
   async function callShopsFn(action){
     const { data: { session } } = await sb.auth.getSession();
     const resp = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/billing-stripe-shops`, {
@@ -10996,11 +11104,22 @@ const AureumSync = (function(){
         if(biz && biz.subscription_status === 'trial' && !biz.is_exempt) aureumToast('Shop added. During your free trial every shop is included — afterwards each shop is $5/month.', 'ok');
         return true;
       }
+      if(biz.billing_processor === 'google_play' && playSubLive(biz)){
+        if(!AUREUM_STORE_MODE){ aureumToast('Your subscription is billed through Google Play. Add the shop in the AUREUM Back Office Android app, where each extra shop ($5/month) is paid with Google Play.', 'danger'); return false; }
+        if(biz.subscription_status === 'past_due'){ aureumToast("Your last payment didn't go through. Fix your payment method in Google Play before adding a shop.", 'danger'); return false; }
+        if((biz.shops_paid || 0) > SHOPS.length){ SHOPS.push(name); aureumToast(`Shop added — it uses one of the ${biz.shops_paid} shops your subscription already covers.`, 'ok'); return true; }
+        if(!confirm(`Add “${name}”?\n\nEach shop is $5 a month. Your plan goes from ${money0(SHOPS.length * PRICE_PER_SHOP)} to ${money0((SHOPS.length + 1) * PRICE_PER_SHOP)} a month, paid through Google Play. If the payment doesn't go through, the shop is not added.`)) return false;
+        if(!(await playCoverShops(SHOPS.length + 1))) return false;
+        SHOPS.push(name);
+        aureumToast(`Shop added. Your plan now covers ${SHOPS.length} shops — ${money0(SHOPS.length * PRICE_PER_SHOP)}/month.`, 'ok');
+        renderBilling();
+        return true;
+      }
       if(biz.billing_processor === 'paynow' || !cardSubLive(biz)){
         aureumToast('Paynow subscriptions are no longer accepted. Subscribe with a card in Settings → Billing, then add your shop.', 'danger'); return false;
       }
       if(biz.subscription_status === 'past_due'){ aureumToast("Your last payment didn't go through. Fix your payment in Settings → Billing before adding a shop.", 'danger'); return false; }
-      if(AUREUM_STORE_MODE){ aureumToast('Adding a shop changes your subscription. Manage your subscription from your account on the web, then add the shop.', 'danger'); return false; }
+      if(AUREUM_STORE_MODE && !(window.AureumNative && AureumNative.play && AureumNative.play.available)){ aureumToast('Adding a shop changes your subscription. Please update AUREUM Back Office from Google Play, then add the shop.', 'danger'); return false; }
       let st; try{ st = await callShopsFn('status'); }catch(err){ aureumToast("Couldn't reach billing to check your plan — check your connection and try again.", 'danger'); return false; }
       if(st.shopsPaid > SHOPS.length){ SHOPS.push(name); aureumToast(`Shop added — it uses one of the ${st.shopsPaid} shops your subscription already covers.`, 'ok'); return true; }
       const next = (st.shopsPaid || SHOPS.length) + 1;
@@ -11899,9 +12018,10 @@ const AureumSync = (function(){
     if(subCheck.viewOnly && window.AureumViewOnly){
       // Trial over / subscription expired: let them in to LOOK at everything, but change nothing.
       AureumViewOnly.enable({ kind:subCheck.kind, text:subCheck.text,
-        storeMode: AUREUM_STORE_MODE,
-        onSubscribe: AUREUM_STORE_MODE ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
-        allow:'#logoutBtn,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#stCancelSubBtn,#stDeleteAccountBtn,#delAcctModal,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
+        storeMode: AUREUM_STORE_MODE && !(window.AureumNative && AureumNative.play && AureumNative.play.available),
+        storeTail: 'Please update the app from Google Play to subscribe', storeText: 'Update the app from Google Play to subscribe.',
+        onSubscribe: (AUREUM_STORE_MODE && !(window.AureumNative && AureumNative.play && AureumNative.play.available)) ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
+        allow:'#logoutBtn,#stPlayBtn,#stPlayManageBtn,#detailModal,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#stCancelSubBtn,#stDeleteAccountBtn,#delAcctModal,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
     }
     document.getElementById('sfWho').textContent = profile.full_name || currentUser.email;
     { // avatar shows the initials of the signed-in person's name (or the start of their email)

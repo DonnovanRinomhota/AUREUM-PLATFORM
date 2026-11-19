@@ -184,3 +184,36 @@
   };
   window.addEventListener('beforeunload', function(){ try{ if(BLE && P.BluetoothLe) P.BluetoothLe.disconnect({ deviceId: BLE.deviceId }); }catch(e){} });
 })();
+
+/* ---------- Google Play Billing (Back Office app only — the plugin is not in the POS app) ----------
+   ONE shop = ONE Google Play subscription: aureum_shop_1 … aureum_shop_10, base plan "monthly", $5 / month each.
+   Everything here only talks to Google Play; the Back Office page then asks the server (billing-play) to verify what the
+   purchases mean. AN.play.available is false when this build doesn't contain the billing plugin (older app) or on the POS. */
+(function(){
+  var C = window.Capacitor, AN = window.AureumNative;
+  if(!AN || !AN.isNative) return;
+  var NP = null;
+  try{
+    NP = (C.Plugins && C.Plugins.NativePurchases) || null;
+    if(!NP && typeof C.registerPlugin === 'function' && (typeof C.isPluginAvailable !== 'function' || C.isPluginAvailable('NativePurchases'))) NP = C.registerPlugin('NativePurchases');
+  }catch(e){ NP = null; }
+  var PRODUCT_RE = /^aureum_shop_(\d{1,2})$/;
+  AN.play = {
+    available: !!NP,
+    maxShops: 10,
+    supported: function(){ return NP.isBillingSupported().then(function(r){ return !!(r && r.isBillingSupported); }); },
+    /* the subscriptions this Google account owns for THIS business (account = hash of the business id) */
+    purchases: function(accountToken){
+      return NP.getPurchases({ productType: 'subs', appAccountToken: accountToken, onlyCurrentEntitlements: true }).then(function(r){
+        return ((r && r.purchases) || []).filter(function(p){ return PRODUCT_RE.test(p.productIdentifier || '') && (p.purchaseToken || p.transactionId); })
+          .map(function(p){ return { productId: p.productIdentifier, purchaseToken: p.purchaseToken || p.transactionId }; });
+      });
+    },
+    /* opens Google Play's own purchase sheet for shop number `slot` */
+    buy: function(slot, accountToken){
+      return NP.purchaseProduct({ productIdentifier: 'aureum_shop_' + slot, planIdentifier: 'monthly', productType: 'subs', appAccountToken: accountToken, autoAcknowledgePurchases: true })
+        .then(function(t){ return { productId: 'aureum_shop_' + slot, purchaseToken: (t && (t.purchaseToken || t.transactionId)) || '' }; });
+    },
+    manage: function(){ return NP.manageSubscriptions(); }
+  };
+})();

@@ -4053,6 +4053,7 @@ async function restoreOnlineSession(){
         AureumViewOnly.enable({ kind:vs.kind, text:vs.text,
           onSubscribe: (window.AureumNative && AureumNative.isNative) ? null : function(){ try{ const w = window.open('backoffice.html?go=billing', '_blank'); if(!w) window.location.href = 'backoffice.html?go=billing'; }catch(e){} },
           storeMode: !!(window.AureumNative && AureumNative.isNative),
+          storeTail: 'Subscribe in the AUREUM Back Office app (Settings → Billing)', storeText: 'Subscribe in the AUREUM Back Office app.',
           deny:'.card,.qty-btn,.li-remove,.charge-btn,.pay-btn,.quick-chip,.ticket-icon-btn,.tender-chip,[data-act],#cartBar .cb-go',
           allow:'#backOfficeBtn,#signOutBtn,#recentSalesBtn,#guideBtn,#helpBtn,#syncStatus,#shiftGate,.sales-tab,.sync-now,#clerkSwitch,#shopSwitchBtn,#shiftBtn,#cartBar,#catalogSort,#categories,.cat,.pill' });
       }

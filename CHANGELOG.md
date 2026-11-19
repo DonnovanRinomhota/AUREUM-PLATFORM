@@ -1,5 +1,10 @@
 # Changelog
 
+## v86
+- **Subscribe inside the Android app (Google Play Billing).** The Back Office app now has **Subscribe with Google Play** in Settings → Billing (and on the view-only bar after a trial ends or a subscription lapses) instead of "manage your subscription on the web". One shop = one $5/month Google Play subscription; adding a shop buys one more; **Manage in Google Play** opens Google's subscriptions page. Each purchase is checked with Google by the new `billing-play` function before anything changes, and the app re-syncs renewals/cancellations while it is in use. The POS app points to Back Office for subscribing. *Needs setup before it works — see SETUP-GOOGLE-PLAY-BILLING.md; the app must be rebuilt (new .aab) because it adds a native billing plugin.*
+- Subscription screens and the web now recognise Google Play businesses (labels, history, add-shop rules) and never offer them a second, card subscription.
+- **One shop = its name in the filter.** With a single shop the shop filter, sidebar shop and report/receipt shop pickers show that shop's name, not "All Shops". "All Shops" returns as soon as there is a second shop.
+
 ## v85
 - **Purchase orders can now be received (linked receiving).** Open an order and press **Receive goods**, or pick it under the new **Purchase order** field on Create GRN: supplier, shop and lines are filled in, each line starts at what is still due, and a partial delivery is just a lower quantity. Over-receiving is blocked (typing more is capped, and Save re-checks against what is due right now). Only products on the order can be received against it.
 - Order status is worked out from the linked GRNs: **Pending → Partially Received → Completed**. Anything still due counts as **incoming** (shown in the PO form's *Incoming* column, which used to always show 0, and in the order's new *Receiving* table). **Cancel order** (nothing received yet) and **Close order** (part-delivered, no more expected) are on the order's screen; a cancelled/closed order can't be received against, and an order with receipts can't have its lines edited. GRNs show their order and type "Against PO".
