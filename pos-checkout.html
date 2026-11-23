@@ -1906,7 +1906,7 @@ const AureumSync = (function(){
     app: 'pos',
     getSnapshot: () => aureumSnapshotData(),
     applyData: (d) => applyLoadedData(d),
-    onApplied: () => { try{ renderCategories(); renderCatalog(); if(!ticketBeingEdited()) renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} try{ checkSessionStillMine(); }catch(e){} },
+    onApplied: () => { try{ renderCategories(); renderCatalog(); if(ticketBeingEdited()) _ticketStale = true; else renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} try{ checkSessionStillMine(); }catch(e){} },
     onStatus: (state) => {
       try{ renderSyncStatus(); }catch(e){}
       if(state === 'synced-compat' && !window.__aureumCompatWarned){
@@ -2100,6 +2100,30 @@ async function restoreOnlineSession(){
   /* Lines show in the order they were first added. (Object keys that look like numbers are always listed 1,2,3… by the browser,
      which is why a newly added product used to jump into the middle of the ticket.) */
   let cartOrder = [];
+  let _ticketStale = false;     // a background sync arrived while a pop-up was open: redraw the ticket when it closes
+  /* The ticket on screen is also kept as a draft on this device, so nothing that goes wrong around it (a redraw, a sign-out
+     elsewhere, a reload, a flaky connection) can wipe a sale in progress. It is cleared the moment the ticket is empty
+     or the sale completes, and restored when the till is opened again within 12 hours. */
+  const draftKey = () => 'aureum_ticket_draft:' + (typeof currentBusinessId !== 'undefined' && currentBusinessId ? currentBusinessId : 'local');
+  function saveDraft(){
+    try{
+      if(!Object.keys(cart).length && !customer){ localStorage.removeItem(draftKey()); return; }
+      localStorage.setItem(draftKey(), JSON.stringify({ at: Date.now(), cart, order: cartOrder.slice(), priceOverride, discount, customer, note, shop: activeShop }));
+    }catch(e){}
+  }
+  function restoreDraft(){
+    try{
+      if(Object.keys(cart).length || customer) return false;
+      const d = JSON.parse(localStorage.getItem(draftKey()) || 'null');
+      if(!d || Date.now() - d.at > 12*3600*1000 || (d.shop && activeShop && d.shop !== activeShop)) return false;
+      let any = false;
+      Object.keys(d.cart || {}).forEach(k => { const p = PRODUCTS.find(x => x.id == k); if(p){ cart[k] = d.cart[k]; cartProducts[k] = p; cartOrder.push(String(k)); any = true; } });
+      if(!any && !d.customer) return false;
+      priceOverride = d.priceOverride || {}; discount = d.discount || discount; customer = d.customer || null; note = d.note || '';
+      refreshQuickChips();
+      return true;
+    }catch(e){ return false; }
+  }
   function cartIds(){
     const keys = Object.keys(cart), have = new Set(keys.map(String));
     cartOrder = cartOrder.filter(k => have.has(String(k)));
@@ -2345,14 +2369,22 @@ async function restoreOnlineSession(){
   /* A product is only added by a real tap that STARTED on that card. A "click" that lands there because a sign-in / shift / PIN button
      on top of it just closed (the phone's delayed click) used to drop a product into the cart before anyone chose one. */
   let _cardDown = null, _uiGuardUntil = 0;
-  catalogEl.addEventListener('pointerdown', e => { const c = e.target.closest('.card'); _cardDown = c ? { id:c.dataset.id, t:Date.now() } : null; });
+  catalogEl.addEventListener('pointerdown', e => { const c = e.target.closest('.card'); _cardDown = (c && !c.classList.contains('ghost')) ? { id:c.dataset.id, t:Date.now() } : null; });
+  catalogEl.addEventListener('pointercancel', () => { _cardDown = null; });
   catalogEl.addEventListener('click', e => {
-    const c = e.target.closest('.card'); if(!c || c.classList.contains('ghost')) return;
+    let c = e.target.closest('.card');
+    // A background sync can redraw the cards between the press and the release; the click then lands on the grid itself and
+    // the tap used to be lost. Find the card under the finger instead.
+    if(!c && _cardDown && Date.now() - _cardDown.t < 1500){ try{ const u = document.elementFromPoint(e.clientX, e.clientY); c = u && u.closest('.card'); }catch(err){} }
+    if(!c || c.classList.contains('ghost')) return;
     if(!activeShop || !activeEmployee || Date.now() < _uiGuardUntil) return;
     if(!_cardDown || _cardDown.id !== c.dataset.id || Date.now() - _cardDown.t > 5000) return;
     _cardDown = null;
     addToCart(parseInt(c.dataset.id));
   });
+  // never swap the cards while a finger is on one (a redraw is retried a moment later)
+  const _renderCatalogNow = renderCatalog;
+  renderCatalog = function(){ if(_cardDown && Date.now() - _cardDown.t < 1200){ clearTimeout(renderCatalog._t); renderCatalog._t = setTimeout(renderCatalog, 400); return; } return _renderCatalogNow(); };
 
   /* Swipe the product list left / right to move between pages (touch screens). Only a deliberate,
      mostly-horizontal flick counts, so normal up/down scrolling and tapping a product still work. */
@@ -2469,6 +2501,7 @@ async function restoreOnlineSession(){
 
     const { subtotal, discountAmount, tax, total } = computeTotals();
     currentTotal = total;
+    saveDraft();
 
     document.getElementById('subtotalVal').textContent = `${POS_SETTINGS.currency}${subtotal.toFixed(2)}`;
     document.getElementById('discountVal').textContent = discountAmount > 0 ? `-${POS_SETTINGS.currency}${discountAmount.toFixed(2)}` : `${POS_SETTINGS.currency}0.00`;
@@ -2993,8 +3026,10 @@ async function restoreOnlineSession(){
   /* ===== MODALS ===== */
   function openModal(id){ document.getElementById(id).classList.add('open'); }
   function closeModal(id){
-    _uiGuardUntil = Date.now() + 500;
+    _cardDown = null;      // a delayed 'ghost' click from the button that closed this pop-up is refused: it needs a press that began on a card (no timed lock-out, so a fast tap on the next item always counts)
     document.getElementById(id).classList.remove('open');
+    try{ if(_ticketStale && !ticketBeingEdited()){ _ticketStale = false; renderTicket(); } }catch(e){}
+    try{ saveDraft(); }catch(e){}
     // a shift was just closed: once its report is dismissed (button, ✕ or tapping outside), return to the sign-in screen
     if(id === 'receiptOverlay' && pendingGateAfterReport){
       pendingGateAfterReport = false;
@@ -4345,6 +4380,7 @@ async function restoreOnlineSession(){
     renderClerkUI();
     renderCategories();
     renderCatalog();
+    if(restoreDraft()) aureumToast('Your open ticket was restored.', 'ok');
     renderTicket();
     renderShiftBtn();
     try{ if(window.AureumGuidePos) AureumGuidePos.signedIn(); }catch(e){}

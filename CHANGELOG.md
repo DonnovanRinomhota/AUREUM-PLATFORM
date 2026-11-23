@@ -1,5 +1,12 @@
 # Changelog
 
+## v91 — a sale in progress can't be lost; fast taps always count
+- **The open ticket is kept as a draft on the till** (items, customer, discount, note) and restored after a reload, a sign-in, or any background redraw. It is cleared when the sale completes, is voided or held.
+- **Tapping a product right after "New Sale" (or after closing any pop-up) always works** — a 0.5-second lock-out used to swallow the tap.
+- **A tap is no longer lost when a background sync redraws the product cards between the press and the release**; the redraw waits until the finger is up.
+- A sync that arrives while a pop-up (customer, discount…) is open now redraws the ticket as soon as the pop-up closes.
+- `supabase/sync-timeouts.sql` (not run): longer save time limit for "statement timeout" errors.
+
 ## v90 — instant sign-out hand-over
 - Signing out of the till now frees the account at once on every device (no 3-minute wait). The sign-out is saved immediately, and a sign-in checks the server's latest copy before refusing. The 3-minute wait only remains when a device is switched off or loses internet without signing out.
 
