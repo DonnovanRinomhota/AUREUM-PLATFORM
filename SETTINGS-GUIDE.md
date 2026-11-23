@@ -21,7 +21,7 @@ Tills pick up changes within seconds. Managers and administrators can always do 
 
 ## Payment Methods
 Cash, Card, Mobile money and **Other** (vouchers, bank transfer, store credit…) decide which buttons appear at checkout. At least one must stay on.
-Card/Mobile only *record* how the customer paid. **Split payments** is not available yet.
+Card/Mobile only *record* how the customer paid. **Allow split payments** shows the Split button at checkout (on by default): one sale can be paid part cash, part card, part mobile or other.
 
 ## Notifications (shown while the Back Office is open)
 Low stock alerts (dashboard) · New sale · Refund · Shift opened/closed pop-ups · Daily sales summary (yesterday's sales, once a day).

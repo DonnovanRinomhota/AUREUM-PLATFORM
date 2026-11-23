@@ -2935,8 +2935,8 @@
                 <div class="switch on" id="stPayCredit" data-toggle></div>
               </div>
               <div class="toggle-row">
-                <div class="lbl">Allow split payments (multiple methods per sale)<span class="soon">Coming soon</span><span class="hint">Not available yet — each sale is paid with one method.</span></div>
-                <div class="switch" id="stPaySplit" aria-disabled="true" style="opacity:.4;cursor:not-allowed;pointer-events:none;"></div>
+                <div class="lbl">Allow split payments (multiple methods per sale)<span class="hint">Shows the “Split” button at checkout, so one sale can be paid part cash, part card, part mobile or other.</span></div>
+                <div class="switch on" id="stPaySplit" data-toggle></div>
               </div>
             </div>
             <div class="settings-save-row">
@@ -13807,7 +13807,7 @@ E('receipts-settings','Settings','How do I customise receipts (logo, header, foo
 E('payment-methods-settings','Settings','How do I choose which payment buttons show?',
   ['how do i hide card payments','turn off a payment method','which payment methods can cashiers use','disable mobile money','remove other payment button'],
   'payment methods cash card mobile other buttons hide show enable disable',
-  `**Settings → Payment Methods**: switch **Cash**, **Card**, **Mobile money** and **Other** on or off, then **Save changes**. At least one must stay on. *Allow split payments* is marked **Coming soon**.`,
+  `**Settings → Payment Methods**: switch **Cash**, **Card**, **Mobile money** and **Other** on or off, then **Save changes**. At least one must stay on. **Allow split payments** controls the **Split** button at checkout (on by default).`,
   ['payment-methods-till','split-payments'], { pages:['settings-payments'] }),
 E('notifications-settings','Settings','What notifications are available?',
   ['what notifications are there','get alerts for new sales','refund alerts','shift alerts','notification settings','popup when a sale happens'],
@@ -13957,11 +13957,11 @@ E('cashier-missing-button','Troubleshooting','A cashier can\'t see a button (dis
   ['permissions-settings','roles']),
 
 /* ============ NOT AVAILABLE ============ */
-E('split-payments','Not available','Can a customer pay with two methods (split payment)?',
+E('split-payments','The till','Can a customer pay with two methods (split payment)?',
   ['can a customer split payment','pay half cash half card','split payments','two payment methods in one sale','pay part in cash part by card'],
   'split payment two methods half cash card combine multiple',
-  `Not yet — **split payments are marked "Coming soon"**. Each sale is paid with **one** method. A workaround is to ring two separate sales.`,
-  ['payment-methods-till','not-available']),
+  `Yes. On the ticket tap **Split** (next to Cash, Card and Mobile), then add each payment: pick the method (**Cash, Card, Mobile or Other**) and type the amount. The amounts must add up to the total — the screen shows **Still owed** until they do. **Cash** can be more than owed and the **change** is shown (only cash can give change). Tap **Use this split**, then **Charge**. The receipt, shift totals, drawer and reports record each method separately, and a refund is shared back across the methods in proportion.\n\nNo Split button? In **Back Office → Settings → Payment Methods** switch **Allow split payments** on and **Save changes**, then reload the till.`,
+  ['payment-methods-till','payment-methods-settings']),
 E('email-notifications','Not available','Does AUREUM send emails or text messages?',
   ['does aureum send emails','email me daily reports','sms alerts','whatsapp notifications','push notifications on my phone','get a text when a sale happens'],
   'email sms text whatsapp push notification send alert phone report scheduled',
@@ -13970,8 +13970,8 @@ E('email-notifications','Not available','Does AUREUM send emails or text message
 E('not-available','Not available','What can\'t AUREUM do?',
   ['what cant aureum do','limitations','features not available','does aureum have an online shop','can aureum do loyalty redemption','missing features'],
   'cannot limits unavailable not supported missing online shop ecommerce delivery integration redeem multiple tax rates',
-  `Things AUREUM does **not** do (yet):\n\n- Split payments (coming soon) and card/mobile payment **processing** — Card/Mobile only record the method.\n- Redeeming loyalty points or automatic store-credit payments.\n- Sending emails, SMS or phone push notifications.\n- Different tax rates per product (one business rate; each product is taxed or not).\n- Editing or deleting completed receipts, Goods Received notes or transfers.\n- Separate Back Office logins for staff.\n\nWant one? Send a **Feature request** ticket.`,
-  ['feature-request','split-payments']),
+  `Things AUREUM does **not** do (yet):\n\n- Card/mobile payment **processing** — Card/Mobile only record the method.\n- Redeeming loyalty points or automatic store-credit payments.\n- Sending emails, SMS or phone push notifications.\n- Different tax rates per product (one business rate; each product is taxed or not).\n- Editing or deleting completed receipts, Goods Received notes or transfers.\n- Separate Back Office logins for staff.\n\nWant one? Send a **Feature request** ticket.`,
+  ['feature-request']),
 E('multiple-tax','Not available','Can different products have different tax rates?',
   ['can i have different tax rates','two tax rates','zero rated and standard rated','different vat for different products','multiple taxes'],
   'multiple different tax rates vat per product',

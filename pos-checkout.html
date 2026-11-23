@@ -2576,10 +2576,13 @@ async function restoreOnlineSession(){
 
   function applyEnabledPaymentMethods(){
     const enabled = POS_SETTINGS.enabledPaymentMethods;
-    if(!Array.isArray(enabled)) return; // never configured in Back Office yet — leave all visible
+    const splitAllowed = !(POS_SETTINGS.toggles && POS_SETTINGS.toggles.stPaySplit === false);   // Settings → Payment Methods → "Allow split payments" (on unless switched off)
     document.querySelectorAll('#payMethods .pay-btn[data-pay]').forEach(btn=>{
       const method = btn.dataset.pay;
-      const isEnabled = enabled.includes(method === 'other' ? 'credit' : method);   // the "Other" button follows the Back Office's "Other (vouchers, store credit…)" switch
+      // "Split" follows its own switch. (It used to be judged against the list of single methods, which never contains
+      // "split" — so saving Payment Methods in Back Office made the Split button disappear from the till.)
+      // The "Other" button follows the Back Office's "Other (vouchers, store credit…)" switch.
+      const isEnabled = method === 'split' ? splitAllowed : (!Array.isArray(enabled) || enabled.includes(method === 'other' ? 'credit' : method));
       btn.style.display = isEnabled ? '' : 'none';
       if(!isEnabled && btn.classList.contains('active')){
         // The currently-selected method just got disabled — fall back to Cash if it's on, else the first visible method.
