@@ -20,6 +20,10 @@
     if(o && o.length < 40) return o;
     return hum(el.id || el.name || el.type || 'field');
   }
+  /* a clear keyboard focus ring on every click-style control (Tab / Shift+Tab); mouse users see no change */
+  (function(){ try{ var st = document.createElement('style'); st.id = 'a11y-focus';
+    st.textContent = '[role=button]:focus-visible,[role=link]:focus-visible,[role=switch]:focus-visible,.btn-gold:focus-visible,.btn-outline:focus-visible,.pc-btn:focus-visible,.add-line-btn:focus-visible,.modal-btn:focus-visible,.auth-btn:focus-visible{outline:2px solid #E7C766;outline-offset:2px;box-shadow:0 0 0 4px rgba(231,199,102,.25)}';
+    (document.head || document.documentElement).appendChild(st); }catch(e){} })();
   function run(){
     runControls();
     var main = document.querySelector('.main'); if(main){ if(!main.getAttribute('role')) main.setAttribute('role', 'main'); if(!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '0'); }
@@ -36,7 +40,7 @@
     document.querySelectorAll('button, [role=button]').forEach(function(b){ if(!b.textContent.trim() && !b.getAttribute('aria-label') && !b.getAttribute('title') && !b.querySelector('img[alt]')) b.setAttribute('aria-label', hum(b.id || b.className.split(' ')[0] || 'button')); });
   }
   /* custom switches and click-only controls: give them a role, a name, their on/off state and Space/Enter keyboard use */
-  var CLICKY = '.nav-item, .pay-btn, .modal-btn, .pg-btn, .quick-chip, .ticket-icon-btn, .seg-btn, .tender-chip, .btn-ghost-sm, .modal-close';
+  var CLICKY = '.nav-item, .pay-btn, .modal-btn, .pg-btn, .quick-chip, .ticket-icon-btn, .seg-btn, .tender-chip, .btn-ghost-sm, .modal-close, .btn-gold, .btn-outline, .pc-btn, .add-line-btn, .icon-btn-sm, .icon-btn-row, .auth-btn';
   function switchName(sw){
     if(sw.getAttribute('aria-label') || sw.getAttribute('aria-labelledby')) return;
     var row = sw.closest('.toggle-row, .st-row, .setting, .row, label') || sw.parentElement, n = '';

@@ -1403,6 +1403,24 @@ const AureumSync = (function(){
     return out.filter(r => { if(!addedSet.has(r) || !r.shiftId) return true; if(seen.has(r.shiftId)) return false; seen.add(r.shiftId); return true; });
   }
 
+  // Two tills can still end up with the same receipt NUMBER (e.g. both offline). Receipts are told apart by their uid, never
+  // by number, so nothing is lost — but a number must belong to one sale. Keep the number that reached the server first and
+  // give the one THIS device just added the next free number (the original is kept in `renumberedFrom`).
+  const digitsOf = id => parseInt(String(id == null ? '' : id).replace(/\D/g, ''), 10);
+  function dedupeReceiptNumbers(out, added){
+    const addedSet = new Set(added), taken = new Set(); let max = 511;
+    out.forEach(r => { const n = digitsOf(r.id); if(!isNaN(n) && n < 100000000){ if(n > max) max = n; if(!addedSet.has(r)) taken.add(n); } });
+    return out.map(r => {
+      if(!addedSet.has(r)) return r;
+      const n = digitsOf(r.id);
+      if(isNaN(n)) return r;
+      if(!taken.has(n)){ taken.add(n); return r; }
+      max += 1; taken.add(max);
+      const prefix = (String(r.id).match(/^\D*/) || [''])[0];
+      return { ...r, id: prefix + String(max).padStart(4, '0'), renumberedFrom: r.renumberedFrom || r.id };
+    });
+  }
+
   // Which top-level lists hold records with an identity, and how they behave.
   //  key       → what identifies a record (uid when it has one)
   //  newFirst  → this list is added to at the FRONT (unshift)
@@ -1411,7 +1429,7 @@ const AureumSync = (function(){
     products:         { key: p => 'p:' + p.id, fix: recomputeStock },
     customers:        { key: byUid('c:'), fix: dedupeNumericIds },
     employees:        { key: byUid('e:'), fix: dedupeNumericIds },
-    receipts:         { key: r => r.uid ? 'u:' + r.uid : 'L:' + r.dateTime + '|' + r.id + '|' + r.total },
+    receipts:         { key: r => r.uid ? 'u:' + r.uid : 'L:' + r.dateTime + '|' + r.id + '|' + r.total, fix: dedupeReceiptNumbers },
     expenses:         { key: byUid('x:'), fix: dedupeNumericIds },
     employeeHours:    { key: byUid('h:'), fix: dedupeNumericIds },
     purchaseOrders:   { key: byUid('PO:'), newFirst: true, fix: dedupeStringIds('PO-', 1042) },
@@ -1475,7 +1493,11 @@ const AureumSync = (function(){
     // (two tills each selling one item both move stock by -1 → total -2).
     if(ctx.counter && typeof local === 'number' && typeof remote === 'number' && typeof base === 'number')
       return COUNTER_MODE === 'remote' ? remote : remote + (local - base);
-    if(same(local, remote)) return local;
+    // Two sides that ended up IDENTICAL are only "already agreed" when nothing in there is a counter. Stock and customer totals are
+    // counters: two tills that each sold 18 units both moved stock by -18, so their copies look equal while every sale is different —
+    // taking one side here dropped the other side's sales from stock. Counters are therefore always combined, never short-cut.
+    const holdsCounters = ctx.counter || ctx.rec === 'products' || ctx.rec === 'customers';
+    if(!holdsCounters && same(local, remote)) return local;
     // both sides changed it, differently
     if(Array.isArray(local) && Array.isArray(remote)){
       const spec = ctx.top ? COLLECTIONS[path] : null;
@@ -1603,14 +1625,20 @@ const AureumSync = (function(){
 
   async function saveOnce(){
     for(let i = 0; i < 6; i++){
-      const sentLocal = cfg.getSnapshot();
       const r = await loadRemote(false);
       if(!r.ok){ fail(r.error); return false; }
+      // A frozen COPY of what this device has right now. The live lists keep changing while we wait on the network
+      // (a sale, a stock change), and without a copy "what was already part of this save" and "what changed since"
+      // look identical — so a sale rung up during the save was dropped when the server's answer was applied.
+      const sentLocal = clone(cfg.getSnapshot());
       let ancestor = base;
       if(lastAttempt){
         // Did our previous save actually land even though we never got the reply?
         const landed = r.data._saves && r.data._saves[getDeviceId()] === lastAttempt.id;
-        if(landed) ancestor = lastAttempt.sent;         // it's already part of the server's copy — don't apply it twice
+        // It's already part of the server's copy — don't apply it twice. The reference point is what THIS device had when it sent
+        // that save (not the merged copy it sent: that also holds other tills' sales this device has never seen, and measuring
+        // against it made those sales look like ones this device had deleted).
+        if(landed){ base = lastAttempt.sent; ancestor = base; }
         lastAttempt = null;
       }
       const merged = mergeDocs(ancestor, r.data, sentLocal);
@@ -1623,7 +1651,7 @@ const AureumSync = (function(){
       }
       const attemptId = uid();
       merged._saves = Object.assign({}, isObj(merged._saves) ? merged._saves : {}, { [getDeviceId()]: attemptId });
-      lastAttempt = { id: attemptId, sent: clone(merged) };   // remembered BEFORE sending, in case the reply is lost
+      lastAttempt = { id: attemptId, sent: sentLocal };   // what this device had when it sent — remembered BEFORE sending, in case the reply is lost
       writeCache(sentLocal);
       const res = await rpcSave(merged, r.version);
       if(res.error){ fail(res.error); return false; }         // outcome unknown → lastAttempt stays set
@@ -1634,7 +1662,7 @@ const AureumSync = (function(){
         const cur = cfg.getSnapshot();
         const toApply = mergeDocs(sentLocal, merged, cur);
         if(!same(pick(toApply, Object.keys(cur)), cur)){ applyMerged(toApply); try{ cfg.onApplied && cfg.onApplied(); }catch(e){} }
-        setState(compat ? 'synced-compat' : 'synced');
+        setState(nowDirtyLocal() ? 'saving' : (compat ? 'synced-compat' : 'synced'));   // never "Synced" while a newer sale is still waiting to be saved
         writeCache(cfg.getSnapshot());
         return true;
       }
@@ -1689,10 +1717,13 @@ const AureumSync = (function(){
     if(!loaded || saving || pulling || !cfg.isCloud()) return;
     pulling = true;
     try{
+      const v0 = version;
       const head = await loadRemote(true);
       if(!head.ok || (version !== null && head.version === version)) return;
       const r = await loadRemote(false);
-      if(r.ok) await receive(r);
+      // A save may have started (or even finished) while we were reading. What we read is then OLDER than this device's own
+      // state, and merging it in would roll back what the save just wrote — so drop it; the save merges what's on the server itself.
+      if(r.ok && !saving && version === v0) await receive(r);
     } finally { pulling = false; }
   }
 
@@ -1726,6 +1757,7 @@ const AureumSync = (function(){
     setState(compat ? 'synced-compat' : 'synced');
     if(!started){ started = true; startBackground(); }
     touch();
+    refillReceiptNumbers();
   }
 
   function startBackground(){
@@ -1738,6 +1770,52 @@ const AureumSync = (function(){
         .subscribe();
     }catch(e){}
     window.addEventListener('online', () => retryNow());
+  }
+
+  /* ---- receipt numbers issued by the SERVER ----
+     The database hands out numbers from one counter per business (reserve_receipt_numbers), so two tills can never be given the
+     same one. Each till keeps a few reserved numbers on the device so a sale never waits for the network. If the database hasn't
+     been updated (receipt-numbers.sql) or the till is offline with none left, the app falls back to "next after the highest
+     number I can see", and the merge above repairs any clash. */
+  let noReserve = false, reserving = false;
+  const poolKey = () => 'aureum_rcpt_pool:' + cfg.getBusinessId();
+  function readPool(){ try{ const p = JSON.parse(localStorage.getItem(poolKey()) || '[]'); return Array.isArray(p) ? p.filter(n => Number.isInteger(n)) : []; }catch(e){ return []; } }
+  function writePool(p){ try{ localStorage.setItem(poolKey(), JSON.stringify(p)); }catch(e){} }
+  async function refillReceiptNumbers(){
+    if(noReserve || reserving || !loaded || !cfg || !cfg.isCloud() || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+    if(readPool().length >= 4) return;
+    reserving = true;
+    try{
+      const { data, error } = await cfg.getClient().rpc('reserve_receipt_numbers', { p_count: 8 });
+      if(error){ if(/could not find the function|PGRST202|does not exist/i.test((error.message || '') + (error.code || ''))) noReserve = true; return; }
+      const nums = ((data && data.numbers) || []).filter(n => Number.isInteger(n));
+      if(nums.length) writePool(readPool().concat(nums));
+    }catch(e){} finally { reserving = false; }
+  }
+  // isTaken(n): true if number n already appears on a receipt this device can see (such a number is skipped, never reused)
+  function takeReceiptNumber(isTaken){
+    if(!cfg || !cfg.isCloud()) return null;
+    let p = readPool(), n = null;
+    while(p.length){ const c = p.shift(); if(!(isTaken && isTaken(c))){ n = c; break; } }
+    writePool(p);
+    if(p.length < 4) refillReceiptNumbers();
+    return n;
+  }
+  function peekReceiptNumber(isTaken){ if(!cfg || !cfg.isCloud()) return null; return readPool().find(c => !(isTaken && isTaken(c))) || null; }
+
+  /* Resolves true once everything on this device has reached the server (nothing waiting, last save confirmed), false if that
+     hasn't happened within `ms`. Lets a screen say "saved" only when it really is. */
+  function whenSaved(ms){
+    return new Promise(res => {
+      const t0 = Date.now();
+      (function check(){
+        if(!cfg || !cfg.isCloud()) return res(true);
+        if(loaded && !saving && !nowDirtyLocal() && /^synced/.test(state)) return res(true);
+        if(Date.now() - t0 > (ms || 8000)) return res(false);
+        if(loaded && !saving) requestSave();
+        setTimeout(check, 150);
+      })();
+    });
   }
 
   let startResolve = null;
@@ -1819,7 +1897,7 @@ const AureumSync = (function(){
     return rec => { try{ return !!spec && have.has(spec.key(rec)); }catch(e){ return false; } };
   }
 
-  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker,
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker, takeReceiptNumber, peekReceiptNumber, whenSaved,
            findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
 })();
 /* ==== END AUREUM SYNC CORE ==== */
@@ -1828,7 +1906,7 @@ const AureumSync = (function(){
     app: 'pos',
     getSnapshot: () => aureumSnapshotData(),
     applyData: (d) => applyLoadedData(d),
-    onApplied: () => { try{ renderCategories(); renderCatalog(); renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} },
+    onApplied: () => { try{ renderCategories(); renderCatalog(); if(!ticketBeingEdited()) renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} },
     onStatus: (state) => {
       try{ renderSyncStatus(); }catch(e){}
       if(state === 'synced-compat' && !window.__aureumCompatWarned){
@@ -2015,6 +2093,10 @@ async function restoreOnlineSession(){
   let payMethod = "cash";
   let splitLines = null;   // confirmed split-payment lines for the ticket on screen: [{method,label,amount,tendered?}]
   let cart = {}; // id -> qty
+  /* The product behind each ticket line. Background syncing swaps in a fresh product list; a line must never vanish or throw
+     because its product object was replaced, so the ticket keeps the product it was rung up with as a fallback. */
+  const cartProducts = {};
+  const cartProduct = id => PRODUCTS.find(p => p.id == id) || cartProducts[id];
   /* Lines show in the order they were first added. (Object keys that look like numbers are always listed 1,2,3… by the browser,
      which is why a newly added product used to jump into the middle of the ticket.) */
   let cartOrder = [];
@@ -2049,10 +2131,10 @@ async function restoreOnlineSession(){
     // stored are the same number. (Unrounded arithmetic used to store totals like 12.420000000000002.)
     const cents = n => Math.round((n + Number.EPSILON) * 100) / 100;
     const ids = cartIds();
-    const lineVal = id => unitPrice(PRODUCTS.find(p=>p.id==id)) * cart[id];
+    const lineVal = id => unitPrice(cartProduct(id)) * cart[id];
     const subtotal = cents(ids.reduce((sum,id)=> sum + lineVal(id), 0));
     // Only products with "Charge tax" on carry tax. Products saved before that switch existed are all taxed, as always.
-    const taxableSub = cents(ids.reduce((sum,id)=> sum + (PRODUCTS.find(p=>p.id==id).taxable === false ? 0 : lineVal(id)), 0));
+    const taxableSub = cents(ids.reduce((sum,id)=> sum + (cartProduct(id).taxable === false ? 0 : lineVal(id)), 0));
     let discountAmount = 0;
     if(discount.value > 0){
       discountAmount = discount.type === 'percent' ? subtotal * (discount.value/100) : discount.value;
@@ -2221,7 +2303,7 @@ async function restoreOnlineSession(){
         <div class="pname">${p.name}</div>
         <div class="pmeta">
           <span class="pprice">${POS_SETTINGS.currency}${shopPrice(p).toFixed(2)}</span>
-          <span class="pstock ${getStock(p, activeShop) < 0 ? 'neg' : ''}">In Stock : ${getStock(p, activeShop)}</span>
+          ${p.stockControl === false ? '<span class="pstock">Stock not tracked</span>' : `<span class="pstock ${getStock(p, activeShop) < 0 ? 'neg' : ''}">In Stock : ${getStock(p, activeShop)}</span>`}
         </div>
       </div>
     `).join('') + ghosts || `<div style="grid-column:1/-1;color:var(--sage-dim);font-size:13px;padding:20px;">No products match your search.</div>`;
@@ -2305,6 +2387,7 @@ async function restoreOnlineSession(){
     const prod = PRODUCTS.find(x => x.id == id);
     if(!prod || !(unitPrice(prod) > 0)){ aureumToast((prod ? prod.name : 'This product') + ' has no price. Set its price in Back Office before selling it.', 'danger'); return; }
     if(!(id in cart)) cartOrder.push(String(id));
+    cartProducts[id] = prod;
     cart[id] = (cart[id]||0) + 1;
     renderTicket();
   }
@@ -2335,6 +2418,15 @@ async function restoreOnlineSession(){
   }
   function removeItem(id){ delete cart[id]; renderTicket(); }
 
+  // True while the cashier is typing in the ticket or has a pop-up open (quantity, price, discount, customer, split…).
+  // A background sync must not rebuild the ticket underneath them; whatever they are doing re-draws it when they finish.
+  function ticketBeingEdited(){
+    try{
+      const a = document.activeElement;
+      if(a && a !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest('#ticketItems, .ticket-wrap, #tenderPanel')) return true;
+      return !!document.querySelector('.modal-overlay.open');
+    }catch(e){ return false; }
+  }
   function renderTicket(){
     try{ renderSplitSummary(); renderHeldBadge(); }catch(e){}
     Object.keys(priceOverride).forEach(k => { if(!(k in cart)) delete priceOverride[k]; });   // a changed price lives only while its item is on the ticket
@@ -2346,7 +2438,7 @@ async function restoreOnlineSession(){
       </div>`;
     } else {
       ticketItemsEl.innerHTML = ids.map(id=>{
-        const p = PRODUCTS.find(p=>p.id==id);
+        const p = cartProduct(id);
         const qty = cart[id], up = unitPrice(p), changed = up !== shopPrice(p), editable = cashierMay('editPrice');
         return `
         <div class="line-item">
@@ -3142,7 +3234,7 @@ async function restoreOnlineSession(){
     const refundUid = newReceiptUid();
     RECEIPTS.push({
       uid: refundUid, shiftId: sh.id,
-      id: 'R' + padReceiptNo(nextReceiptNumber()),
+      id: 'R' + padReceiptNo(issueReceiptNumber()),
       dateTime: new Date().toISOString(),
       total: calc.total, payment: sale.payment, payments: refundPayments(sale, calc.total),
       customer: sale.customer || 'N/A', employee: activeEmployee.name, shop: sale.shop,
@@ -3193,9 +3285,17 @@ async function restoreOnlineSession(){
     });
     return max + 1;
   }
+  // The number for a sale or refund: from the server's counter when available (unique across every till), else the next after
+  // the highest number this till can see. Numbers already on a receipt here are never handed out again.
+  function receiptNumbersInUse(){ const s = new Set(); RECEIPTS.forEach(r => { const n = parseInt(String(r.id ?? '').replace(/\D/g,''), 10); if(!isNaN(n)) s.add(n); }); return s; }
+  function issueReceiptNumber(){
+    const used = receiptNumbersInUse(), n = AureumSync.takeReceiptNumber(x => used.has(x));
+    return n != null ? n : nextReceiptNumber();
+  }
   function refreshOrderNo(){
     const el = document.getElementById('orderNo');
-    if(el) el.textContent = 'No. ' + padReceiptNo(nextReceiptNumber());
+    const used = receiptNumbersInUse(), n = AureumSync.peekReceiptNumber(x => used.has(x));
+    if(el) el.textContent = 'No. ' + padReceiptNo(n != null ? n : nextReceiptNumber());
   }
   function receiptQty(r){ return (r.items || []).reduce((s,i)=> s + (i.qty || 0), 0); }
   // Turns a stored receipt into the shape buildReceipt()/the printers expect,
@@ -3719,7 +3819,7 @@ async function restoreOnlineSession(){
     const now = new Date();
 
     const lineItems = ids.map(id=>{
-      const p = PRODUCTS.find(p=>p.id==id);
+      const p = cartProduct(id);
       const up = unitPrice(p);
       return { productId: p.id, name:p.name, qty:cart[id], price:up, cost:costAt(p), taxable: p.taxable !== false, ...(up !== shopPrice(p) ? { listPrice: shopPrice(p) } : {}) };
     });
@@ -3727,7 +3827,7 @@ async function restoreOnlineSession(){
     // Receipt number: next in sequence, computed from the synced receipts at the
     // moment of sale (never trust the number shown on screen — another till may
     // have sold since). `uid` is the true unique key, immune to any clash.
-    const receiptNumber = nextReceiptNumber();
+    const receiptNumber = issueReceiptNumber();
     const receiptUid = newReceiptUid();
     const shiftRef = ensureOpenShift().id;
     const sale = {

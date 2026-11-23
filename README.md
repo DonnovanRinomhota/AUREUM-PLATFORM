@@ -21,6 +21,7 @@ vercel.json            → redirects, /admin route, headers
 
 ## SQL to run in Supabase (SQL Editor), once each, in this order
 `schema.sql` → `billing-schema.sql` → `admin-schema.sql` → `data-safety.sql` → `shop-billing.sql` → `support-schema.sql`
+Then, when you are ready: `receipt-numbers.sql` (unique receipt numbers across tills) and `google-play-billing.sql` (in-app subscriptions).
 
 ## Guides
 - `SETUP-INSTRUCTIONS.md` — first-time setup
@@ -30,6 +31,8 @@ vercel.json            → redirects, /admin route, headers
 - `SETTINGS-GUIDE.md` — what every Settings switch does
 - `SHIFTS-GUIDE.md` — how shifts, closing and refunds work
 - `IMPORT-AND-IMAGES.md` — importing products from Excel/CSV, and product pictures
+- `SETUP-GOOGLE-PLAY-BILLING.md` — subscribing inside the Android app
+- `tests/sync-multitill.test.js` — multi-till stress test of the saving/merging code (`node tests/sync-multitill.test.js`)
 - `CHANGELOG.md` — what changed in each phase
 
 ## Security note
