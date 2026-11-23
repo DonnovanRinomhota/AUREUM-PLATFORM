@@ -1897,7 +1897,7 @@ const AureumSync = (function(){
     return rec => { try{ return !!spec && have.has(spec.key(rec)); }catch(e){ return false; } };
   }
 
-  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker, takeReceiptNumber, peekReceiptNumber, whenSaved,
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker, takeReceiptNumber, peekReceiptNumber, whenSaved, pullNow: () => pull(),
            findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
 })();
 /* ==== END AUREUM SYNC CORE ==== */
@@ -4033,11 +4033,11 @@ async function restoreOnlineSession(){
   const SESSION_STALE_MS = 3 * 60 * 1000;
   const oneDeviceOn = () => settingOn('stPermOneDevice', true);
   const liveEmployee = e => (e && EMPLOYEES.find(x => x.id === e.id)) || e;           // the lists are replaced by every sync — always look the person up afresh
-  function readLock(emp){ try{ const a = JSON.parse((emp && emp.sessionLock) || 'null'); return Array.isArray(a) ? { key:a[0], name:a[1], at:a[2] } : null; }catch(e){ return null; } }
-  const lockFresh = l => !!l && (Date.now() - new Date(l.at).getTime()) < SESSION_STALE_MS;
+  function readLock(emp){ try{ const a = JSON.parse((emp && emp.sessionLock) || 'null'); return Array.isArray(a) ? { key:a[0], name:a[1], at:a[2], released:!!a[3] } : null; }catch(e){ return null; } }
+  const lockFresh = l => !!l && !l.released && (Date.now() - new Date(l.at).getTime()) < SESSION_STALE_MS;
   function lockedElsewhere(emp){ const l = readLock(emp); return (oneDeviceOn() && l && l.key !== DEVICE_KEY && lockFresh(l)) ? l : null; }
   function claimSession(emp){ emp = liveEmployee(emp); if(!emp) return; emp.sessionLock = JSON.stringify([DEVICE_KEY, describeThisDevice().name, new Date().toISOString()]); persistAureum(); }
-  function releaseSession(emp){ emp = liveEmployee(emp); const l = readLock(emp); if(emp && l && l.key === DEVICE_KEY){ emp.sessionLock = null; persistAureum(); } }
+  function releaseSession(emp){ emp = liveEmployee(emp); const l = readLock(emp); if(emp && l && l.key === DEVICE_KEY){ emp.sessionLock = JSON.stringify([DEVICE_KEY, l.name, new Date().toISOString(), 1]); persistAureum(); try{ AureumSync.whenSaved(6000); }catch(e){} } }   // a 'released' marker (not null) so the sign-out is an ordinary change that every device picks up at once
   // Another device now holds this account: leave the till here (never mid-sale: nothing is charged by a device that lost the account).
   function sessionLost(l){
     const who = activeEmployee ? activeEmployee.name : 'This account';
@@ -4668,7 +4668,7 @@ async function restoreOnlineSession(){
   document.getElementById('shiftEmployeeSelect').addEventListener('change', updateGateShiftInfo);
   document.getElementById('csClear').addEventListener('click', () => { closedShiftsState.from = closedShiftsState.to = closedShiftsState.cashier = ''; document.getElementById('csFrom').value = document.getElementById('csTo').value = ''; closedShiftsState.page = 1; renderClosedShifts(); });
 
-  document.getElementById('shiftSubmitBtn').addEventListener('click', ()=>{
+  document.getElementById('shiftSubmitBtn').addEventListener('click', async ()=>{
     const shop = document.getElementById('shiftShopSelect').value;
     const employeeId = parseInt(document.getElementById('shiftEmployeeSelect').value);
     const pin = document.getElementById('shiftPin').value.trim();
@@ -4676,16 +4676,21 @@ async function restoreOnlineSession(){
     errEl.textContent = '';
     if(!shop){ errEl.textContent = 'Add a shop in Back Office first — there\'s nothing to select yet.'; return; }
     if(!employeeId){ errEl.textContent = 'Select your name from the list.'; return; }
-    const employee = EMPLOYEES.find(e => e.id === employeeId);
+    let employee = EMPLOYEES.find(e => e.id === employeeId);
     const needPin = pinRequiredFor(employee);
     if(employee && needPin && !employee.pin){ errEl.textContent = 'No PIN is set for this employee yet. Ask a manager to set one in Back Office → Staff.'; return; }
     if(needPin && !pin){ errEl.textContent = 'Enter your PIN.'; return; }
     if(!employee || (needPin && employee.pin !== pin)){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
-    const heldBy = lockedElsewhere(employee);
+    let heldBy = lockedElsewhere(employee);
+    if(heldBy && oneDeviceOn()){            // look at the server's latest copy before refusing — a sign-out elsewhere counts at once
+      try{ await AureumSync.pullNow(); }catch(e){}
+      heldBy = lockedElsewhere(liveEmployee(employee));
+      employee = liveEmployee(employee);
+    }
     if(heldBy){
       const mins = Math.max(1, Math.ceil((SESSION_STALE_MS - (Date.now() - new Date(heldBy.at).getTime())) / 60000));
       if(!BACK_OFFICE_ROLES.includes(employee.role)){
-        errEl.textContent = `${employee.name} is signed in on another device (${heldBy.name}). Sign out there first — or, if that device is off, try again in about ${mins} minute${mins === 1 ? '' : 's'}.`;
+        errEl.textContent = `${employee.name} is signed in on another device (${heldBy.name}). Sign out there first — or, if that device is off, wait about ${mins} minute${mins === 1 ? '' : 's'}.`;
         return;
       }
       if(!confirm(`${employee.name} is signed in on another device (${heldBy.name}).\n\nSign in here and sign that device out?`)) return;

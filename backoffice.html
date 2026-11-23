@@ -3856,7 +3856,7 @@ const AureumSync = (function(){
     return rec => { try{ return !!spec && have.has(spec.key(rec)); }catch(e){ return false; } };
   }
 
-  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker, takeReceiptNumber, peekReceiptNumber, whenSaved,
+  return { configure, start, touch, retryNow, uid, nextDocNumber, mergeDocs, merge3, stable, same, syncChecker, takeReceiptNumber, peekReceiptNumber, whenSaved, pullNow: () => pull(),
            findRecoverable, status: () => ({ state, loaded, compat }), _internals:{ COLLECTIONS } };
 })();
 /* ==== END AUREUM SYNC CORE ==== */
