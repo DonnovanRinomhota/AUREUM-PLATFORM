@@ -82,7 +82,7 @@
     var bar = document.createElement('div'); bar.id = 'vo-strip'; bar.setAttribute('role', 'status');
     bar.innerHTML = '<span><b></b> &middot; <span class="vo-tail"></span></span>';
     bar.querySelector('b').textContent = opts.text || (state.kind === 'trial' ? TRIAL_TEXT : EXPIRED_TEXT);
-    bar.querySelector('.vo-tail').textContent = opts.storeMode ? (opts.storeTail || 'Open AUREUM Back Office to subscribe') : TAIL;
+    bar.querySelector('.vo-tail').textContent = opts.storeMode ? (opts.storeTail || 'Your subscription is managed from your account on the web') : TAIL;
     if(typeof opts.onSubscribe === 'function'){
       var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'vo-btn'; btn.textContent = 'Subscribe';
       btn.addEventListener('click', function(ev){ ev.stopPropagation(); opts.onSubscribe(); });

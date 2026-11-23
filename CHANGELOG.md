@@ -1,5 +1,9 @@
 # Changelog
 
+## v89
+- **One device at a time per staff account.** A cashier (or any staff account) can be signed in at the till on one device at a time, so the same login never sells on two devices together. A second device is refused ("signed in on another device") while the first is active; if the first is switched off, the account frees up after 3 minutes. If an account is taken over, the first device is signed out and can't charge a sale. Managers can take their own account over at once. The till refreshes a "last seen" marker every minute; it needs the internet to notice the other device (two tills both offline can't see each other). Turn it off under **Settings → Users & Permissions → One device per staff account**.
+- **Subscriptions are web-only again.** The in-app Google Play subscribe button added in v86 is switched off (`PLAY_BILLING_ENABLED = false`), the store app shows subscription status only with "manage your subscription from your account on the web", and the Google Play billing plugin and permission were removed from the Android project. The server pieces (`billing-play`, `google-play-billing.sql`) stay in the repo, unused and not deployed; see SETUP-GOOGLE-PLAY-BILLING.md if you ever want it back.
+
 ## v88
 - **Split payments: the Split button now stays on the till.** Split has been in the till since v60, but saving *Settings → Payment Methods* wrote a list of allowed methods that never contained "split", so the till hid the button — and Back Office still showed the switch as "Coming soon" and disabled, and the Bot said it didn't exist. *Allow split payments* is now a working switch (on by default); the till's Split button follows it, independent of the Cash/Card/Mobile/Other switches. The Bot and Settings guide describe how to use Split.
 

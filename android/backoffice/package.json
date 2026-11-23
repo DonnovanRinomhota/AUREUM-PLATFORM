@@ -2,18 +2,13 @@
   "name": "aureum-backoffice-android",
   "private": true,
   "version": "1.0.0",
-  "scripts": {
-    "sync": "cap sync android"
-  },
+  "scripts": { "sync": "cap sync android" },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
     "@capacitor/app": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/filesystem": "^8.0.0",
-    "@capacitor/share": "^8.0.0",
-    "@capgo/native-purchases": "8.9.16"
+    "@capacitor/share": "^8.0.0"
   },
-  "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
-  }
+  "devDependencies": { "@capacitor/cli": "^8.0.0" }
 }

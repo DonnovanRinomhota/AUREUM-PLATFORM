@@ -1,3 +1,5 @@
+> **PAUSED (v89).** In-app Google Play subscribing is switched off; subscriptions are web-only. Nothing below is needed. To bring it back: set `PLAY_BILLING_ENABLED = true` in backoffice.html, re-add the `@capgo/native-purchases` plugin and the `com.android.vending.BILLING` permission to the Back Office Android project, and follow the steps below.
+
 # Google Play Billing — setup (Back Office Android app)
 
 Nothing here is live until you do these steps. None of it can be tested end-to-end without Google Play, so the final check is a **license-tester purchase on a real device** (step 7).

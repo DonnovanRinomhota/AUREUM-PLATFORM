@@ -1906,7 +1906,7 @@ const AureumSync = (function(){
     app: 'pos',
     getSnapshot: () => aureumSnapshotData(),
     applyData: (d) => applyLoadedData(d),
-    onApplied: () => { try{ renderCategories(); renderCatalog(); if(!ticketBeingEdited()) renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} },
+    onApplied: () => { try{ renderCategories(); renderCatalog(); if(!ticketBeingEdited()) renderTicket(); renderClerkUI(); applyEnabledPaymentMethods(); refreshOrderNo(); }catch(e){} try{ checkSessionStillMine(); }catch(e){} },
     onStatus: (state) => {
       try{ renderSyncStatus(); }catch(e){}
       if(state === 'synced-compat' && !window.__aureumCompatWarned){
@@ -3768,6 +3768,7 @@ async function restoreOnlineSession(){
   document.getElementById('chargeBtn').addEventListener('click', async function(){
     if(window.AureumViewOnly && AureumViewOnly.active()) return;
     if(this.classList.contains('disabled')) return;
+    if(!checkSessionStillMine()) return;            // this account is now in use on another device
     if(!activeShop || !activeEmployee){ aureumToast('Start a shift (shop + PIN) before ringing up a sale.', 'danger'); openShiftGate(); return; }
 
     const { ids, subtotal, discountAmount, tax, total } = computeTotals();
@@ -4021,6 +4022,38 @@ async function restoreOnlineSession(){
     }catch(e){}
   }
   setInterval(() => { if(activeShop && !document.hidden) checkInDevice(); }, 4 * 60 * 1000);
+
+  /* ===== ONE DEVICE AT A TIME PER STAFF ACCOUNT =====
+     A staff account (cashier, manager…) can be signed in at the till on one device at a time, so the same login is never ringing
+     up sales on two devices together. Signing in writes a small marker on the employee (which device, last seen); the till refreshes it every
+     minute while it is in use. A second device is refused while the first is active; if the first one is switched off or loses its
+     connection the marker goes stale after 3 minutes and the account can be used elsewhere. Managers can take an account over at once.
+     It works through the same sync as everything else, so it needs the internet: two tills that are both offline cannot see each other.
+     Back Office → Settings → Users & Permissions → "One device per staff account" turns it off. */
+  const SESSION_STALE_MS = 3 * 60 * 1000;
+  const oneDeviceOn = () => settingOn('stPermOneDevice', true);
+  const liveEmployee = e => (e && EMPLOYEES.find(x => x.id === e.id)) || e;           // the lists are replaced by every sync — always look the person up afresh
+  function readLock(emp){ try{ const a = JSON.parse((emp && emp.sessionLock) || 'null'); return Array.isArray(a) ? { key:a[0], name:a[1], at:a[2] } : null; }catch(e){ return null; } }
+  const lockFresh = l => !!l && (Date.now() - new Date(l.at).getTime()) < SESSION_STALE_MS;
+  function lockedElsewhere(emp){ const l = readLock(emp); return (oneDeviceOn() && l && l.key !== DEVICE_KEY && lockFresh(l)) ? l : null; }
+  function claimSession(emp){ emp = liveEmployee(emp); if(!emp) return; emp.sessionLock = JSON.stringify([DEVICE_KEY, describeThisDevice().name, new Date().toISOString()]); persistAureum(); }
+  function releaseSession(emp){ emp = liveEmployee(emp); const l = readLock(emp); if(emp && l && l.key === DEVICE_KEY){ emp.sessionLock = null; persistAureum(); } }
+  // Another device now holds this account: leave the till here (never mid-sale: nothing is charged by a device that lost the account).
+  function sessionLost(l){
+    const who = activeEmployee ? activeEmployee.name : 'This account';
+    try{ aureumToast(`${who} was signed in on another device (${l.name}) — you've been signed out here.`, 'danger'); }catch(e){}
+    signOutOfTill();
+  }
+  function checkSessionStillMine(){
+    if(!activeEmployee) return true;
+    const l = lockedElsewhere(liveEmployee(activeEmployee));
+    if(l){ sessionLost(l); return false; }
+    return true;
+  }
+  setInterval(() => {
+    if(!activeEmployee || !oneDeviceOn() || document.hidden) return;
+    if(checkSessionStillMine()) claimSession(activeEmployee);      // still mine (or free / stale): refresh the "last seen" time
+  }, 60 * 1000);
   /* the till starts every ticket on the tax rate saved in Back Office → Settings → Taxes (the cashier cannot change it) */
   function applyDefaultTax(){
     taxPercent = Math.max(0, Math.min(100, Number(POS_SETTINGS.taxPercent) || 0));
@@ -4156,7 +4189,6 @@ async function restoreOnlineSession(){
         AureumViewOnly.enable({ kind:vs.kind, text:vs.text,
           onSubscribe: (window.AureumNative && AureumNative.isNative) ? null : function(){ try{ const w = window.open('backoffice.html?go=billing', '_blank'); if(!w) window.location.href = 'backoffice.html?go=billing'; }catch(e){} },
           storeMode: !!(window.AureumNative && AureumNative.isNative),
-          storeTail: 'Subscribe in the AUREUM Back Office app (Settings → Billing)', storeText: 'Subscribe in the AUREUM Back Office app.',
           deny:'.card,.qty-btn,.li-remove,.charge-btn,.pay-btn,.quick-chip,.ticket-icon-btn,.tender-chip,[data-act],#cartBar .cb-go',
           allow:'#backOfficeBtn,#signOutBtn,#recentSalesBtn,#guideBtn,#helpBtn,#syncStatus,#shiftGate,.sales-tab,.sync-now,#clerkSwitch,#shopSwitchBtn,#shiftBtn,#cartBar,#catalogSort,#categories,.cat,.pill' });
       }
@@ -4299,6 +4331,7 @@ async function restoreOnlineSession(){
     _uiGuardUntil = Date.now() + 900; _cardDown = null;
     activeShop = shopName;
     activeEmployee = employee;
+    if(oneDeviceOn()) claimSession(employee);
     checkInDevice();
     let sh = findOpenShift(shopName, employee);
     if(!sh){
@@ -4318,6 +4351,7 @@ async function restoreOnlineSession(){
   }
   // Signing out does NOT end the shift — the next person who signs in at this shop carries on with it.
   function signOutOfTill(){
+    if(activeEmployee) releaseSession(activeEmployee);
     activeShop = null;
     activeEmployee = null;
     closeModal('shiftOverlay');
@@ -4647,6 +4681,15 @@ async function restoreOnlineSession(){
     if(employee && needPin && !employee.pin){ errEl.textContent = 'No PIN is set for this employee yet. Ask a manager to set one in Back Office → Staff.'; return; }
     if(needPin && !pin){ errEl.textContent = 'Enter your PIN.'; return; }
     if(!employee || (needPin && employee.pin !== pin)){ errEl.textContent = 'Incorrect PIN for that employee.'; return; }
+    const heldBy = lockedElsewhere(employee);
+    if(heldBy){
+      const mins = Math.max(1, Math.ceil((SESSION_STALE_MS - (Date.now() - new Date(heldBy.at).getTime())) / 60000));
+      if(!BACK_OFFICE_ROLES.includes(employee.role)){
+        errEl.textContent = `${employee.name} is signed in on another device (${heldBy.name}). Sign out there first — or, if that device is off, try again in about ${mins} minute${mins === 1 ? '' : 's'}.`;
+        return;
+      }
+      if(!confirm(`${employee.name} is signed in on another device (${heldBy.name}).\n\nSign in here and sign that device out?`)) return;
+    }
     startShift(shop, employee, parseFloat(document.getElementById('shiftOpeningFloat').value));
   });
   document.getElementById('shiftPin').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('shiftSubmitBtn').click(); });

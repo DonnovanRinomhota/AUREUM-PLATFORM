@@ -2643,7 +2643,7 @@
             <div class="settings-panel-head">
               <div class="t">Billing &amp; Subscription</div>
               <div class="s web-only">$5 per shop, per month, paid by card (Stripe). Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. We never see or store your card number or CVV — payment is entered directly on Stripe's own page.</div>
-              <div class="s store-only">$5 per shop, per month, paid with Google Play. Every shop is included during your free trial; on a paid plan each extra shop adds $5 a month. You pay and manage it through Google Play — we never see your payment details.</div>
+              <div class="s store-only">Your AUREUM subscription is managed from your account on the web. This screen shows its current status.</div>
             </div>
             <div class="form-section">
               <div class="create-form-grid" style="margin-bottom:0;">
@@ -3007,6 +3007,10 @@
                 <div class="lbl">Requires PIN to sign in at the till<span class="hint">Cashiers only — managers and administrators always use a PIN.</span></div>
                 <div class="switch on" id="stPermPin" data-toggle></div>
               </div>
+              <div class="toggle-row">
+                <div class="lbl">One device per staff account<span class="hint">A staff account can be signed in at the till on one device at a time, so the same login is never selling on two devices together. If a device is switched off, its account frees up after 3 minutes. Managers can take their own account over at once. Needs an internet connection to notice the other device.</span></div>
+                <div class="switch on" id="stPermOneDevice" data-toggle></div>
+              </div>
             </div>
             <div class="settings-save-row">
               <div class="btn-gold" id="stSaveUsers">Save changes</div>
@@ -3221,6 +3225,10 @@
   })();
   if(AUREUM_STORE_MODE) document.documentElement.classList.add('store-app');
   const MANAGE_ON_WEB = ' Please manage your subscription from your account on the web, then reopen the app.';
+  /* Subscribing INSIDE the Android app with Google Play Billing (built in v86) is switched OFF: subscriptions are taken on the web only,
+     and the store app just shows the subscription's status. Set this to true (and finish SETUP-GOOGLE-PLAY-BILLING.md) to bring it back. */
+  const PLAY_BILLING_ENABLED = false;
+  const playAvail = () => PLAY_BILLING_ENABLED && !!(window.AureumNative && AureumNative.play && AureumNative.play.available);
   const SUPABASE_CONFIG = {
     url: 'https://pizwuzwkzfwgfjeolmqp.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpend1endremZ3Z2ZqZW9sbXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDAxMjMsImV4cCI6MjEwNDQ3NjEyM30.JrOQSC59eZV03ndsFtyjCgJi4JN-fWNCJFkiLZcj7RA'
@@ -3947,7 +3955,7 @@ const AureumSync = (function(){
     }
     if(biz.subscription_status === 'trial' && biz.trial_ends_at){
       const daysLeft = Math.ceil((new Date(biz.trial_ends_at) - now) / DAY);
-      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial.` + ' Subscribe in Settings → Billing.' };
+      if(daysLeft <= 3) return { ok:true, warning: `${daysLeft} day(s) left in your free trial.` + (AUREUM_STORE_MODE ? ' Manage your subscription from your account on the web.' : ' Subscribe in Settings → Billing.') };
     }
     if(biz.subscription_status === 'past_due'){
       return { ok:true, warning: biz.billing_processor === 'google_play' ? 'Your last payment didn\'t go through. Please check your payment method in Google Play (Payments & subscriptions).' : AUREUM_STORE_MODE ? 'Your last payment didn\'t go through. Please check your subscription from your account on the web.' : 'Your last payment failed — please update or retry payment in Settings → Billing.' };
@@ -11001,7 +11009,9 @@ const AureumSync = (function(){
       if(daysLeft <= 5){
         bannerEl.style.display = 'block';
         bannerEl.textContent = AUREUM_STORE_MODE
-          ? (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below with Google Play to keep using AUREUM.` : 'Your trial has ended — subscribe below with Google Play to keep using AUREUM.')
+          ? (PLAY_BILLING_ENABLED
+              ? (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below with Google Play to keep using AUREUM.` : 'Your trial has ended — subscribe below with Google Play to keep using AUREUM.')
+              : (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'}. Manage your subscription from your account on the web.` : 'Your trial has ended. Manage your subscription from your account on the web.'))
           : (daysLeft > 0 ? `Your trial ends in ${daysLeft} day${daysLeft===1?'':'s'} — subscribe below to keep using AUREUM.` : `Your trial has ended — subscribe below to keep using AUREUM.`);
       }
     } else if(status === 'past_due'){
@@ -11024,8 +11034,8 @@ const AureumSync = (function(){
 
     // ----- Google Play (inside the Android app): subscribe / add shops / manage -----
     const playBtn = document.getElementById('stPlayBtn'), playManage = document.getElementById('stPlayManageBtn');
-    const inApp = AUREUM_STORE_MODE && !business.is_exempt && status !== 'suspended';
-    const canPlay = !!(window.AureumNative && AureumNative.play && AureumNative.play.available);
+    const inApp = PLAY_BILLING_ENABLED && AUREUM_STORE_MODE && !business.is_exempt && status !== 'suspended';
+    const canPlay = playAvail();
     const needsPlay = inApp && !live && !(playLive && have <= covered);            // nothing paid yet, or shops added since
     playBtn.style.display = needsPlay ? '' : 'none';
     playBtn.classList.toggle('disabled', !canPlay);
@@ -11078,7 +11088,7 @@ const AureumSync = (function(){
   /* ===== Google Play Billing (inside the Android app) =====
      One shop = one Google Play subscription ($5/month). The app buys through Google Play's own sheet; the server (billing-play)
      then verifies each purchase with Google before anything about the business changes. */
-  const playApi = () => (window.AureumNative && AureumNative.play && AureumNative.play.available) ? AureumNative.play : null;
+  const playApi = () => playAvail() ? AureumNative.play : null;
   async function playAccountToken(){          // identifies THIS business on each purchase (a hash — never the raw id)
     const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(currentBusinessId)));
     return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -11217,7 +11227,7 @@ const AureumSync = (function(){
         aureumToast('Paynow subscriptions are no longer accepted. Subscribe with a card in Settings → Billing, then add your shop.', 'danger'); return false;
       }
       if(biz.subscription_status === 'past_due'){ aureumToast("Your last payment didn't go through. Fix your payment in Settings → Billing before adding a shop.", 'danger'); return false; }
-      if(AUREUM_STORE_MODE && !(window.AureumNative && AureumNative.play && AureumNative.play.available)){ aureumToast('Adding a shop changes your subscription. Please update AUREUM Back Office from Google Play, then add the shop.', 'danger'); return false; }
+      if(AUREUM_STORE_MODE && !playAvail()){ aureumToast(PLAY_BILLING_ENABLED ? 'Adding a shop changes your subscription. Please update AUREUM Back Office from Google Play, then add the shop.' : 'Adding a shop changes your subscription. Manage your subscription from your account on the web, then add the shop.', 'danger'); return false; }
       let st; try{ st = await callShopsFn('status'); }catch(err){ aureumToast("Couldn't reach billing to check your plan — check your connection and try again.", 'danger'); return false; }
       if(st.shopsPaid > SHOPS.length){ SHOPS.push(name); aureumToast(`Shop added — it uses one of the ${st.shopsPaid} shops your subscription already covers.`, 'ok'); return true; }
       const next = (st.shopsPaid || SHOPS.length) + 1;
@@ -12116,9 +12126,9 @@ const AureumSync = (function(){
     if(subCheck.viewOnly && window.AureumViewOnly){
       // Trial over / subscription expired: let them in to LOOK at everything, but change nothing.
       AureumViewOnly.enable({ kind:subCheck.kind, text:subCheck.text,
-        storeMode: AUREUM_STORE_MODE && !(window.AureumNative && AureumNative.play && AureumNative.play.available),
-        storeTail: 'Please update the app from Google Play to subscribe', storeText: 'Update the app from Google Play to subscribe.',
-        onSubscribe: (AUREUM_STORE_MODE && !(window.AureumNative && AureumNative.play && AureumNative.play.available)) ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
+        storeMode: AUREUM_STORE_MODE && !playAvail(),
+        storeTail: PLAY_BILLING_ENABLED ? 'Please update the app from Google Play to subscribe' : 'Your subscription is managed from your account on the web', storeText: PLAY_BILLING_ENABLED ? 'Update the app from Google Play to subscribe.' : '',
+        onSubscribe: (AUREUM_STORE_MODE && !playAvail()) ? null : function(){ try{ document.querySelector('.nav-item[data-page="billing"]').click(); }catch(e){} },
         allow:'#logoutBtn,#stPlayBtn,#stPlayManageBtn,#detailModal,#stPayStripeBtn,#stSyncShopsBtn,#stManageStripeBtn,#stCancelSubBtn,#stDeleteAccountBtn,#delAcctModal,#helpBtn,#chatSend,#tkNewBtn,#tkRefreshBtn,#shopPickerBtn,.shop-picker,#sfSignOut,.sf-btn' });
     }
     document.getElementById('sfWho').textContent = profile.full_name || currentUser.email;
@@ -13804,6 +13814,11 @@ E('receipts-settings','Settings','How do I customise receipts (logo, header, foo
   'receipt logo header footer message cashier name customise design thank you business name shop name',
   `**Settings → Receipts**: type a **header** (under the business name) and **footer** message, upload your **logo** and keep **Show business logo on receipts** on. You can also control **Show cashier name on receipts**, **Print receipt automatically after sale** and **Show an "Email receipt" button on receipts**. The name at the top of the receipt is your business name from **Settings → Business Profile**. Press **Save changes**.`,
   ['receipt-auto-print','receipt-email','receipt-no-logo','business-profile'], { pages:['settings-receipts'] }),
+E('one-device-per-account','The till','Can the same cashier sign in on two devices at once?',
+  ['can two devices use the same cashier','cashier signed in on another device','same account two tills','signed in on another device','share a cashier login','why was i signed out of the till'],
+  'cashier account two devices same login another device signed out one device at a time lock',
+  `No — by default a staff account can be signed in at the till on **one device at a time**. If someone tries to sign in as the same person on a second device they see **"signed in on another device"**; they sign out on the first device, or wait about **3 minutes** if that device was switched off. If the account is taken over elsewhere, the first device is **signed out** (and can't charge a sale). **Managers** can take their own account over straight away. It needs an internet connection to notice the other device. Switch it off in **Back Office → Settings → Users & Permissions → One device per staff account**.`,
+  ['permissions-settings','roles']),
 E('payment-methods-settings','Settings','How do I choose which payment buttons show?',
   ['how do i hide card payments','turn off a payment method','which payment methods can cashiers use','disable mobile money','remove other payment button'],
   'payment methods cash card mobile other buttons hide show enable disable',
