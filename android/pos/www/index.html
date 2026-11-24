@@ -24,8 +24,17 @@ function go(){ var st=document.getElementById('st'); st.textContent='Connecting\
   var c=new AbortController(); var t=setTimeout(function(){c.abort()},6000);
   fetch('https://aureum-platform.vercel.app/app-compat.json?t='+Date.now(),{cache:'no-store',signal:c.signal})
    .then(function(r){clearTimeout(t); if(r.ok){ location.replace(URL_); } else throw 0;})
-   .catch(function(){ clearTimeout(t); st.textContent='Still offline. Try again in a moment.'; });
+   .catch(function(){ clearTimeout(t); st.textContent='No internet. Opening the copy saved on this device\u2026'; openSaved(true); });
+}
+/* Offline start: the app keeps a saved copy of itself. Try to open it (once every 15 s, so a device that has no saved copy yet
+   cannot loop), then sign in with the account already used on this device. Sales sync by themselves when the internet is back. */
+function openSaved(auto){
+  var last=0; try{ last=+sessionStorage.getItem('aur_try')||0; }catch(e){}
+  if(auto && Date.now()-last<15000){ document.getElementById('st').textContent='Not saved on this device yet. Connect to the internet once, then it works offline.'; return; }
+  try{ sessionStorage.setItem('aur_try', String(Date.now())); }catch(e){}
+  location.replace(URL_);
 }
 document.getElementById('retry').addEventListener('click',go);
 window.addEventListener('online',go);
+window.addEventListener('load',function(){ if(navigator.onLine===false) openSaved(true); });
 </script></body></html>

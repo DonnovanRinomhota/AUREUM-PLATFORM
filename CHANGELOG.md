@@ -1,5 +1,10 @@
 # Changelog
 
+## v92 — one date range for Sales by Category, values on the sales bars, offline start in the Play apps
+- **Sales by Category** no longer has its own period picker: it follows the date range, time of day and shop filters at the top of Sales by Product. Its category box stays.
+- **Dashboard bar chart:** the Net sales value is written on top of each bar (e.g. $1.3K, $87.25). On busy ranges the biggest bars are labelled first and any label that would touch another is left out, so it stays tidy; the full figure is still in the tooltip.
+- **Play apps offline start (needs a new .aab):** the web view now opens its saved copy when there is no internet, and the "can't reach AUREUM" screen opens the saved copy by itself instead of just waiting. Adds the ACCESS_NETWORK_STATE permission. The device must have been opened online once so the saved copy exists.
+
 ## v91 — a sale in progress can't be lost; fast taps always count
 - **The open ticket is kept as a draft on the till** (items, customer, discount, note) and restored after a reload, a sign-in, or any background redraw. It is cleared when the sale completes, is voided or held.
 - **Tapping a product right after "New Sale" (or after closing any pop-up) always works** — a 0.5-second lock-out used to swallow the tap.

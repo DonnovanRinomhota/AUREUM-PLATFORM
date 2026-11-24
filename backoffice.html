@@ -183,7 +183,7 @@
   .legend-item{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--sage); }
   .legend-dot{ width:8px; height:8px; border-radius:50%; }
 
-  .bars-chart-wrap{ display:flex; gap:10px; margin-top:14px; }
+  .bars-chart-wrap{ display:flex; gap:10px; margin-top:28px; }   /* headroom for the value on top of the tallest bar */
   .bars-yaxis{ display:flex; flex-direction:column; justify-content:space-between; height:180px; min-width:46px; text-align:right; font-size:10px; color:var(--sage-dim); font-family:'JetBrains Mono',monospace; flex-shrink:0; }
   .bars-plot{ flex:1; position:relative; min-width:0; }
   .bars-grid{ position:absolute; top:0; left:0; right:0; height:180px; display:flex; flex-direction:column; justify-content:space-between; pointer-events:none; }
@@ -193,7 +193,8 @@
   .bar{ width:40%; border-radius:4px 4px 0 0; transition: opacity .15s ease; }
   .bar:hover{ opacity:0.8; }
   .bar.net{ background: linear-gradient(180deg, var(--blue), #4A7FA8); }
-  .bar.gross{ background: linear-gradient(180deg, var(--emerald-light), var(--emerald)); }
+  .bar.gross{ background: linear-gradient(180deg, var(--emerald-light), var(--emerald)); position:relative; }
+  .bar-val{ position:absolute; left:50%; bottom:calc(100% + 4px); transform:translateX(-50%); font-size:10.5px; line-height:1; font-weight:600; color:var(--text, #e9e4d4); font-family:'JetBrains Mono',monospace; white-space:nowrap; pointer-events:none; letter-spacing:-.2px; }
   .bars-axis{ display:flex; gap:4px; margin-top:8px; padding:0 4px; }
   .bars-axis span{ flex:1; min-width:0; text-align:center; font-size:10px; color:var(--sage-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
@@ -1719,12 +1720,6 @@
           <div style="display:flex; gap:8px;">
             <input type="text" class="cat-select" id="salesCatFilter" list="salesCatFilterOptions" placeholder="All categories" style="padding:6px 10px; max-width:160px;" autocomplete="off">
             <datalist id="salesCatFilterOptions"></datalist>
-            <select class="cat-select" id="salesCatPeriod" style="padding:6px 10px; max-width:130px;">
-              <option value="today">Today</option>
-              <option value="week">This week</option>
-              <option value="month" selected>This month</option>
-              <option value="all">All time</option>
-            </select>
           </div>
         </div>
         <div class="donut-wrap" id="salesCatWrap">
@@ -4147,9 +4142,20 @@ const AureumSync = (function(){
     const levelsTopDown = sc.levels.slice().reverse();
     document.getElementById('barsYAxis').innerHTML = levelsTopDown.map(v => `<span>${fmtAxisMoney(v, sc.step)}</span>`).join('');
     document.getElementById('barsGrid').innerHTML = levelsTopDown.map(()=> `<span></span>`).join('');
-    document.getElementById('barsWrap').innerHTML = (sc.empty ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sage-dim);font-size:13px;pointer-events:none;">No sales in this period</div>` : '') + chartData.map(d => `
+    // Value on top of each Net-sales bar. Labels are placed left to right and a label is skipped when it would touch the
+    // previous one, so a long range stays tidy (the full figure is always in the bar's tooltip). Zero bars get none.
+    const barLabel = v => v >= 1000 ? curSym() + (v/1000).toFixed(v >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'K' : curSym() + (Number.isInteger(v) ? v : (v >= 100 ? Math.round(v).toLocaleString('en-US') : v.toFixed(2).replace(/0$/, '')));
+    const plotW = (document.getElementById('barsWrap').clientWidth || 600) - 8, slotW = plotW / Math.max(1, chartData.length);
+    const showLabel = chartData.map(() => false), placed = [];
+    chartData.map((d, i) => i).sort((a, b) => chartData[b].gross - chartData[a].gross).forEach(i => {       // biggest bars get their label first
+      const d = chartData[i]; if(!(d.gross > 0)) return;
+      const w = barLabel(d.gross).length * 6.4 + 6, centre = slotW * (i + 0.5), l = centre - w / 2, r = centre + w / 2;
+      if(placed.some(p => l < p[1] + 4 && r > p[0] - 4)) return;
+      placed.push([l, r]); showLabel[i] = true;
+    });
+    document.getElementById('barsWrap').innerHTML = (sc.empty ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sage-dim);font-size:13px;pointer-events:none;">No sales in this period</div>` : '') + chartData.map((d, i) => `
       <div class="bar-group">
-        <div class="bar gross" style="height:${Math.max(0,(d.gross/maxVal*100)).toFixed(1)}%" title="Net sales: ${fmtMoney(d.gross)}"></div>
+        <div class="bar gross" style="height:${Math.max(0,(d.gross/maxVal*100)).toFixed(1)}%" title="Net sales: ${fmtMoney(d.gross)}">${showLabel[i] ? `<span class="bar-val">${barLabel(d.gross)}</span>` : ''}</div>
         <div class="bar net" style="height:${Math.max(0,(d.profit/maxVal*100)).toFixed(1)}%" title="Gross profit: ${fmtMoney(d.profit)}"></div>
       </div>
     `).join('');
@@ -6312,7 +6318,7 @@ const AureumSync = (function(){
   document.getElementById('sbpSearch').addEventListener('input', renderSalesByProduct);
   document.getElementById('sbpShopFilter').addEventListener('change', ()=>{ renderSalesByProduct(); renderSalesCategoryChart(); });
   document.getElementById('sbpCatFilter').addEventListener('change', renderSalesByProduct);
-  document.getElementById('sbpTimeFilter').addEventListener('change', renderSalesByProduct);
+  document.getElementById('sbpTimeFilter').addEventListener('change', ()=>{ renderSalesByProduct(); renderSalesCategoryChart(); });
   document.getElementById('sbpChartType').addEventListener('change', renderSalesByProduct);
   document.getElementById('sbpTopN').addEventListener('change', function(){
     const customInput = document.getElementById('sbpTopNCustom');
@@ -6343,7 +6349,7 @@ const AureumSync = (function(){
   document.getElementById('sbpRefreshBtn').addEventListener('click', renderSalesByProduct);
   document.getElementById('sbpSearchIconBtn').addEventListener('click', ()=> document.getElementById('sbpSearch').focus({preventScroll:true}));
   let sbpDateState = null;
-  sbpDateState = mountDateFilterField('sbpDateSlot', 'sbpDate', renderSalesByProduct, true);
+  sbpDateState = mountDateFilterField('sbpDateSlot', 'sbpDate', ()=>{ renderSalesByProduct(); renderSalesCategoryChart(); }, true);
 
   /* ===== PURCHASE ORDERS ===== */
   let PURCHASE_ORDERS = [
@@ -8713,20 +8719,12 @@ const AureumSync = (function(){
     const palette = ['var(--gold-bright)','var(--emerald-light)','var(--blue)','var(--purple)','var(--sage-dim)','#e07a5f','#5aa9a3','#c9a227'];
     const catFilterRaw = document.getElementById('salesCatFilter').value.trim();
     const catFilter = (catFilterRaw === '' || catFilterRaw.toLowerCase() === 'all categories') ? 'All' : catFilterRaw;
-    const period = document.getElementById('salesCatPeriod').value;
-    const { start, end } = salesCatPeriodRange(period);
-    const shopFilterEl = document.getElementById('sbpShopFilter');
-    const shop = shopFilterEl ? shopFilterEl.value : 'All Shops';
+    const filt = sbpCurrentFilters();            // the same date range, time of day and shop as the rest of this page
+    const shop = filt.shop;
     // Real receipts only — no estimation/extrapolation. Every line item in
     // range is attributed to its product's category, exactly once.
-    const inRangeReceipts = RECEIPTS.filter(r=>{
-      const t = stripTime(wall(r.dateTime)).getTime();
-      if(t < start || t > end) return false;
-      if(shop && shop !== 'All Shops' && r.shop !== shop) return false;
-      return true;
-    });
-    { const sc = document.getElementById('salesCatScope'), per = document.getElementById('salesCatPeriod');
-      if(sc) sc.textContent = 'Net sales · ' + per.options[per.selectedIndex].text.toLowerCase() + ' · ' + (shop && shop !== 'All Shops' ? shop : 'all shops') + ' · uses its own period selector, not the product search or date range above'; }
+    const inRangeReceipts = RECEIPTS.filter(r => receiptMatchesFilters(r, filt));
+    { const sc = document.getElementById('salesCatScope'); if(sc) sc.textContent = 'Net sales · ' + (shop && shop !== 'All Shops' ? shop : 'all shops') + ' · follows the date range, time of day and shop filters above'; }
     const catTotals = {};
     inRangeReceipts.forEach(r=>{
       receiptLines(r).forEach(l=>{
@@ -12079,7 +12077,6 @@ const AureumSync = (function(){
     renderReportTabs();
     showReportPanel();
     document.getElementById('salesCatFilter').addEventListener('input', renderSalesCategoryChart);
-    document.getElementById('salesCatPeriod').addEventListener('change', renderSalesCategoryChart);
   }
 
   /* ===== AUTH GATE =====
