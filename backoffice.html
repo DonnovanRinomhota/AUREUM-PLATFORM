@@ -1291,11 +1291,11 @@
                 <div class="date-range-fields">
                   <div>
                     <div class="field-label">Start date</div>
-                    <input type="text" class="modal-field" id="dashDateStart" readonly>
+                    <input type="text" class="modal-field" id="dashDateStart" placeholder="YYYY/MM/DD" inputmode="numeric" autocomplete="off" aria-label="Start date (YYYY/MM/DD)">
                   </div>
                   <div>
                     <div class="field-label">End date</div>
-                    <input type="text" class="modal-field" id="dashDateEnd" readonly>
+                    <input type="text" class="modal-field" id="dashDateEnd" placeholder="YYYY/MM/DD" inputmode="numeric" autocomplete="off" aria-label="End date (YYYY/MM/DD)">
                   </div>
                 </div>
                 <div class="date-popover-actions">
@@ -4675,8 +4675,8 @@ const AureumSync = (function(){
           </div>
           <div class="cal-grid" id="${prefix}Grid"></div>
           <div class="date-range-fields">
-            <div><div class="field-label">Start date</div><input type="text" class="modal-field" id="${prefix}Start" readonly></div>
-            <div><div class="field-label">End date</div><input type="text" class="modal-field" id="${prefix}End" readonly></div>
+            <div><div class="field-label">Start date</div><input type="text" class="modal-field" id="${prefix}Start" placeholder="YYYY/MM/DD" inputmode="numeric" autocomplete="off" aria-label="Start date (YYYY/MM/DD)"></div>
+            <div><div class="field-label">End date</div><input type="text" class="modal-field" id="${prefix}End" placeholder="YYYY/MM/DD" inputmode="numeric" autocomplete="off" aria-label="End date (YYYY/MM/DD)"></div>
           </div>
           <div class="date-popover-actions">
             <div class="modal-btn ghost" id="${prefix}Cancel" style="flex:0 0 90px;">Cancel</div>
@@ -4766,10 +4766,54 @@ const AureumSync = (function(){
       });
     }
 
+    /* ---- typing dates by hand: YYYY/MM/DD (also YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, YYYYMMDD) ---- */
+    const startEl = document.getElementById(prefix+'Start'), endEl = document.getElementById(prefix+'End');
+    let errEl = document.getElementById(prefix+'DateErr');
+    if(!errEl){ errEl = document.createElement('div'); errEl.id = prefix+'DateErr'; errEl.setAttribute('role', 'alert'); errEl.style.cssText = 'display:none;color:var(--danger);font-size:11.5px;margin-top:6px;'; endEl.closest('.date-range-fields').insertAdjacentElement('afterend', errEl); }
+    const showErr = (msg, el) => { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; [startEl, endEl].forEach(x => x.classList.remove('invalid')); if(msg && el) el.classList.add('invalid'); };
+    function parseTyped(txt){
+      const t = String(txt || '').trim(); let y, m, d, a;
+      if((a = t.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/))){ y = +a[1]; m = +a[2]; d = +a[3]; }
+      else if((a = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))){ d = +a[1]; m = +a[2]; y = +a[3]; }
+      else if((a = t.match(/^(\d{4})(\d{2})(\d{2})$/))){ y = +a[1]; m = +a[2]; d = +a[3]; }
+      else return null;
+      const dt = new Date(y, m - 1, d);
+      return (dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d && y >= 2000) ? dt : null;
+    }
+    function commitTyped(which){
+      const el = which === 'start' ? startEl : endEl, txt = el.value.trim();
+      const was = which === 'start' ? state.rangeStart : state.rangeEnd;
+      if(!txt){ showErr('', null); el.value = state.activePreset === 'All time' ? 'Any date' : fmtSlash(was); return false; }
+      const dt = parseTyped(txt);
+      if(!dt){ showErr('Enter the date as YYYY/MM/DD, for example ' + fmtSlash(TODAY) + '.', el); return false; }
+      if(dt > TODAY){ showErr('That date is in the future — choose today or earlier.', el); return false; }
+      showErr('', null);
+      if(state.activePreset === 'All time'){ state.rangeStart = new Date(TODAY); state.rangeEnd = new Date(TODAY); }
+      if(which === 'start'){ state.rangeStart = dt; if(dt > state.rangeEnd) state.rangeEnd = new Date(dt); }
+      else { state.rangeEnd = dt; if(dt < state.rangeStart) state.rangeStart = new Date(dt); }
+      state.activePreset = 'Custom range'; state.customPickStep = 0;
+      startEl.value = fmtSlash(state.rangeStart); endEl.value = fmtSlash(state.rangeEnd);
+      state.calMonth = dt.getMonth(); state.calYear = dt.getFullYear();
+      renderPresets(); renderCal();
+      return true;
+    }
+    [['start', startEl], ['end', endEl]].forEach(([which, el]) => {
+      el.addEventListener('click', e => e.stopPropagation());                        // typing must not close the pop-up
+      el.addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); if(commitTyped(which)) document.getElementById(prefix+'Apply').click(); } });
+      el.addEventListener('change', () => commitTyped(which));
+      el.addEventListener('input', () => { if(errEl.style.display !== 'none') showErr('', null); });
+    });
+    document.getElementById(prefix+'Cancel').addEventListener('click', () => showErr('', null));
     document.getElementById(prefix+'Prev').addEventListener('click', ()=>{ state.calMonth--; if(state.calMonth<0){state.calMonth=11;state.calYear--;} renderCal(); });
     document.getElementById(prefix+'Next').addEventListener('click', ()=>{ state.calMonth++; if(state.calMonth>11){state.calMonth=0;state.calYear++;} renderCal(); });
     document.getElementById(prefix+'Cancel').addEventListener('click', closeAllPopovers);
     document.getElementById(prefix+'Apply').addEventListener('click', ()=>{
+      // a date typed but not yet confirmed (no Enter / tab-out) still counts; a bad one stops Apply
+      const typedStart = startEl.value.trim(), typedEnd = endEl.value.trim();
+      if(state.activePreset !== 'All time'){
+        if(typedStart !== fmtSlash(state.rangeStart) && !commitTyped('start')) return;
+        if(typedEnd !== fmtSlash(state.rangeEnd) && !commitTyped('end')) return;
+      }
       document.getElementById(prefix+'Label').textContent = state.activePreset === "Custom range"
         ? `${fmtSlash(state.rangeStart)} – ${fmtSlash(state.rangeEnd)}` : state.activePreset;
       closeAllPopovers();
@@ -5364,9 +5408,9 @@ const AureumSync = (function(){
       document.getElementById('pfDescription').value = '';
       document.getElementById('pfPrice').value = '';
       document.getElementById('pfCost').value = '';
-      setSwitchOn('pfStockControlToggle', false);
+      setSwitchOn('pfStockControlToggle', true);                                          // a new product tracks its stock from the start (switch it off for items that aren't counted)
       setSwitchOn('pfTaxableToggle', POS_SETTINGS.taxDefaultOnNewProducts !== false);   // Settings → Taxes → "Apply tax to all new products by default"
-      document.getElementById('pfStockQtyWrap').style.display = 'none';
+      document.getElementById('pfStockQtyWrap').style.display = 'block';
       document.getElementById('pfStock').value = '';
       document.getElementById('pfLowStockThreshold').value = '';
       document.getElementById('pfSafetyStock').value = '';
@@ -5375,6 +5419,7 @@ const AureumSync = (function(){
     shopTableExpanded = true;
     document.getElementById('pfShopShowToggle').textContent = 'Show less';
     renderProductShopTable(id ? PRODUCTS.find(x=>x.id===id) : null);
+    try{ syncStockInputs(); }catch(e){}
     setUploadPreview(pendingImage, document.getElementById('uploadZone'), document.getElementById('uploadPrompt'));
     switchToProductCreate();
   }
@@ -8975,6 +9020,7 @@ const AureumSync = (function(){
   /* ===== EXPORT / IMPORT WIRING ===== */
   const EXPORT_RENDERERS = { productTableBody:()=>renderProducts(), sbpBody:()=>renderSalesByProduct(), rcpTableBody:()=>renderReceiptsTable(), poTableBody:()=>renderPOTable(), grnTableBody:()=>renderGRNTable(), stockAdjTableBody:()=>renderStockAdjTable(), transferTableBody:()=>renderTransfers(),
     repInventoryBody:()=>renderReportInventory(), repValuationBody:()=>renderReportValuation(), repSummaryBody:()=>renderReportSummary(), repLowStockBody:()=>renderReportLowStock(), repClosedShiftsBody:()=>renderReportShifts(), repStaffBody:()=>renderReportStaff() };
+  const EXPORT_SHOP_FILTERS = { productTableBody:'productShopFilter', sbpBody:'sbpShopFilter', rcpTableBody:'rcpShopFilter', poTableBody:'poShopFilter', grnTableBody:'grnShopFilter', stockAdjTableBody:'saShopFilter', transferTableBody:'trShopFilter' };
   function withAllRows(source, fn){
     const r = EXPORT_RENDERERS[source];
     if(!r){ fn(); return; }
@@ -8986,11 +9032,27 @@ const AureumSync = (function(){
       e.stopPropagation();
       try{
         const { source, filename, fmt, title } = opt.dataset;
-        withAllRows(source, ()=>{
+        const runExport = () => withAllRows(source, ()=>{
           if(fmt === 'csv') exportTableToCSV(source, filename + '.csv');
           else if(fmt === 'excel') exportTableToExcel(source, filename, title || filename);
           else exportTableToPDF(source, filename, title || filename);
         });
+        /* with more than one shop: choose which shop to export (or all of them) — the list's own shop filter is used, then put back */
+        const selId = EXPORT_SHOP_FILTERS[source], sel = selId && document.getElementById(selId);
+        if(sel && SHOPS.length > 1){
+          const before = sel.value, label = title || filename;
+          openDetailModal('Export ' + label, `<div style="font-size:13px;color:var(--ivory-dim);margin-bottom:10px;">Which shop do you want in this export?</div>
+            <select class="modal-field" id="exportShopPick" aria-label="Shop to export">${[...sel.options].map(o => `<option value="${escHtml(o.value)}" ${o.value === before ? 'selected' : ''}>${escHtml(o.textContent)}</option>`).join('')}</select>`,
+            `<div class="modal-btn ghost" data-close="detailModal">Cancel</div><div class="modal-btn solid" id="exportShopGo">Export</div>`);
+          document.getElementById('exportShopGo').addEventListener('click', () => {
+            const pick = document.getElementById('exportShopPick').value;
+            try{
+              if(pick !== before){ sel.value = pick; sel.dispatchEvent(new Event('change', { bubbles:true })); }
+              runExport();
+            }catch(err){ alert('Export failed: ' + err.message); }
+            finally{ if(sel.value !== before){ sel.value = before; sel.dispatchEvent(new Event('change', { bubbles:true })); } closeModal('detailModal'); }
+          });
+        } else runExport();
       }catch(err){
         console.error('Export failed:', err);
         alert('Export failed: ' + err.message + '\n\nPlease screenshot this and send it to support.');
@@ -9083,7 +9145,7 @@ const AureumSync = (function(){
     // a heading row has a name column, or at least two recognised columns — one stray matching word (a title like
     // "Stock take — Main store") isn't enough
     for(const i of nonEmpty.slice(0, 15)){ const m = impAutoMap(rows[i]); if(m.name > -1 || IMP_ORDER.filter(k => m[k] > -1).length >= 2){ headerRow = i; break; } }
-    imp = { fileName, sheetName, rows, width, firstRow: nonEmpty[0], headerRow, hasHeader: true, adjust: 'no', map:{}, stockShop: (viewingShop && viewingShop !== 'All Shops' && SHOPS.includes(viewingShop)) ? viewingShop : (SHOPS[0] || ''), result:null };
+    imp = { fileName, sheetName, rows, width, firstRow: nonEmpty[0], headerRow, hasHeader: true, adjust: 'no', target: 'all', map:{}, stockShop: (viewingShop && viewingShop !== 'All Shops' && SHOPS.includes(viewingShop)) ? viewingShop : (SHOPS[0] || ''), result:null };
     impRemap();
     return {};
   }
@@ -9201,6 +9263,7 @@ const AureumSync = (function(){
       <div class="form-section-title" style="margin-top:14px;">Match your columns</div>
       <table class="imp-map">${IMP_FIELDS.map(f => `<tr><td class="l">${f.label}${f.required ? ' *' : ''}</td><td><select class="modal-field imp-sel" data-key="${f.key}" aria-label="Column for ${f.label}">${opts(m[f.key])}</select></td><td class="s">${status(f)}</td></tr>`).join('')}</table>
       ${extras.length ? `<div class="imp-extras">Also found and imported: ${extras.join(', ')}.</div>` : ''}
+      ${SHOPS.length > 1 ? `<div class="imp-stockshop"><label>Import these products into <select class="modal-field" id="impTarget" aria-label="Shop to import into"><option value="all" ${imp.target === 'all' ? 'selected' : ''}>All shops</option>${SHOPS.map(sh => `<option value="${escHtml(sh)}" ${sh === imp.target ? 'selected' : ''}>${escHtml(sh)} only</option>`).join('')}</select></label></div>` : ''}
       ${hasStock && SHOPS.length ? `<div class="imp-stockshop"><label>Add the stock to <select class="modal-field" id="impStockShop" ${multi ? '' : 'disabled'}>${SHOPS.map(sh => `<option ${sh === imp.stockShop ? 'selected' : ''}>${escHtml(sh)}</option>`).join('')}</select></label></div>` : ''}
       ${existPanel}
       <div class="imp-sum ${(ready.length || adjustCount) ? 'good' : 'none'}">${m.name < 0 ? 'Choose which column holds the <b>Product Name</b> to continue.' : (ready.length || adjustCount) ? `${ready.length ? `✓ <b>${ready.length}</b> new product${ready.length === 1 ? '' : 's'} ready to import — a product code will be created for each` : ''}${ready.length && adjustCount ? '<br>' : ''}${adjustCount ? `✓ <b>${adjustCount}</b> existing product${adjustCount === 1 ? '' : 's'} will have ${adjustCount === 1 ? 'its' : 'their'} quantity ${imp.adjust === 'add' ? 'increased' : 'updated'}` : ''}` : 'Nothing new to import from this file.'}</div>
@@ -9212,11 +9275,12 @@ const AureumSync = (function(){
     modal.querySelector('#impHasHeader').addEventListener('change', e => { imp.hasHeader = e.target.checked; impRemap(); impRenderPreview(); });
     modal.querySelectorAll('.imp-sel').forEach(sel => sel.addEventListener('change', () => { imp.map[sel.dataset.key] = parseInt(sel.value, 10); impRenderPreview(); }));
     const ss = modal.querySelector('#impStockShop'); if(ss) ss.addEventListener('change', () => { imp.stockShop = ss.value; });
+    const tg = modal.querySelector('#impTarget'); if(tg) tg.addEventListener('change', () => { imp.target = tg.value; if(imp.target !== 'all') imp.stockShop = imp.target; impRenderPreview(); });
     modal.querySelectorAll('input[name="impAdj"]').forEach(r => r.addEventListener('change', () => { imp.adjust = r.value; impRenderPreview(); }));
     modal.querySelector('#impGo').addEventListener('click', () => { if(ready.length || adjustCount) impRun(); });
   }
   function impRun(){
-    const plan = impPlan(), shopFor = imp.stockShop;     // codes are worked out again from the live product list, so they can't clash
+    const plan = impPlan(), shopFor = (imp.target && imp.target !== 'all' && SHOPS.includes(imp.target)) ? imp.target : imp.stockShop;     // codes are worked out again from the live product list, so they can't clash
     let added = 0, adjusted = 0;
     if(imp.adjust !== 'no'){                              // the person chose to adjust the quantities of products that already exist
       plan.existing.filter(e => e.hasQty && e.p && e.p.stockControl !== false).forEach(e => {
@@ -9228,7 +9292,7 @@ const AureumSync = (function(){
       });
     }
     plan.ready.forEach(r => {
-      const shops = r.shops.length ? r.shops : [...SHOPS];
+      const shops = (imp.target && imp.target !== 'all' && SHOPS.includes(imp.target)) ? [imp.target] : (r.shops.length ? r.shops : [...SHOPS]);
       const prod = { id: nextProductId++, name: r.name, price: r.price, cost: r.cost, cat: r.category, stock: r.stock, image:null, code: r.code, barcode: r.barcode, soldBy:'each', description: r.description, shops, stockControl:true, taxable: POS_SETTINGS.taxDefaultOnNewProducts !== false };
       if(shops.length){                                   // stock belongs to ONE shop — the one chosen — not shared across them
         const ss = {}; shops.forEach(sh => { ss[sh] = 0; });

@@ -132,9 +132,13 @@
   .scan-btn:hover{ background: var(--emerald); border-color: var(--gold-dim); }
   .scan-btn .dot{ width:6px; height:6px; border-radius:50%; background: var(--gold-bright); }
 
-  .categories{
-    display:flex; gap:10px; flex-wrap:wrap;
+  .categories{                                 /* always ONE line: with many categories, scroll sideways */
+    display:flex; gap:10px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; padding-bottom:6px;
+    scrollbar-width:thin; scrollbar-color: var(--line-strong) transparent; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
   }
+  .categories > *{ flex:0 0 auto; white-space:nowrap; }
+  .categories::-webkit-scrollbar{ height:5px; }
+  .categories::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:4px; }
   .cat-pill{
     padding:9px 18px;
     border-radius:999px;
@@ -2255,9 +2259,20 @@ async function restoreOnlineSession(){
 
   function renderCategories(){
     const cats = getCategories();
+    const keepScroll = catsEl.scrollLeft;
     catsEl.innerHTML = cats.map(c =>
       `<div class="cat-pill ${c===activeCat?'active':''}" data-cat="${c}">${c}</div>`
     ).join('');
+    catsEl.scrollLeft = keepScroll;
+    try{ const a = catsEl.querySelector('.cat-pill.active'); if(a){ const l = a.offsetLeft, r = l + a.offsetWidth; if(l < catsEl.scrollLeft) catsEl.scrollLeft = l - 8; else if(r > catsEl.scrollLeft + catsEl.clientWidth) catsEl.scrollLeft = r - catsEl.clientWidth + 8; } }catch(e){}
+    if(!catsEl._wheel){ catsEl._wheel = true;      // mouse wheel scrolls the row sideways; a mouse can also drag it
+      catsEl.addEventListener('wheel', e => { if(catsEl.scrollWidth > catsEl.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)){ catsEl.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive:false });
+      let dn = null, moved = false;
+      catsEl.addEventListener('pointerdown', e => { if(e.pointerType === 'mouse'){ dn = { x:e.clientX, s:catsEl.scrollLeft }; moved = false; } });
+      window.addEventListener('pointermove', e => { if(dn){ const d = e.clientX - dn.x; if(Math.abs(d) > 4){ moved = true; catsEl.scrollLeft = dn.s - d; } } });
+      window.addEventListener('pointerup', () => { dn = null; });
+      catsEl.addEventListener('click', e => { if(moved){ e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    }
     catsEl.querySelectorAll('.cat-pill').forEach(el=>{
       el.addEventListener('click', ()=>{ activeCat = el.dataset.cat; sectionLabel.textContent = activeCat==="All"?"All Products":activeCat; renderCatalog(); renderCategories(); });
     });
@@ -3803,7 +3818,7 @@ async function restoreOnlineSession(){
   document.getElementById('chargeBtn').addEventListener('click', async function(){
     if(window.AureumViewOnly && AureumViewOnly.active()) return;
     if(this.classList.contains('disabled')) return;
-    if(!checkSessionStillMine()) return;            // this account is now in use on another device
+    if(!checkSessionStillMine(true)) return;            // this account is now in use on another device
     if(!activeShop || !activeEmployee){ aureumToast('Start a shift (shop + PIN) before ringing up a sale.', 'danger'); openShiftGate(); return; }
 
     const { ids, subtotal, discountAmount, tax, total } = computeTotals();
@@ -4070,8 +4085,11 @@ async function restoreOnlineSession(){
   const liveEmployee = e => (e && EMPLOYEES.find(x => x.id === e.id)) || e;           // the lists are replaced by every sync — always look the person up afresh
   function readLock(emp){ try{ const a = JSON.parse((emp && emp.sessionLock) || 'null'); return Array.isArray(a) ? { key:a[0], name:a[1], at:a[2], released:!!a[3] } : null; }catch(e){ return null; } }
   const lockFresh = l => !!l && !l.released && (Date.now() - new Date(l.at).getTime()) < SESSION_STALE_MS;
-  function lockedElsewhere(emp){ const l = readLock(emp); return (oneDeviceOn() && l && l.key !== DEVICE_KEY && lockFresh(l)) ? l : null; }
-  function claimSession(emp){ emp = liveEmployee(emp); if(!emp) return; emp.sessionLock = JSON.stringify([DEVICE_KEY, describeThisDevice().name, new Date().toISOString()]); persistAureum(); }
+  /* The one-device rule is for cashier-type accounts only. Shop managers and administrators often share a login across tills
+     and are never signed out because of it. */
+  const lockApplies = emp => !!emp && oneDeviceOn() && !['Shop Manager', 'Administrator'].includes(emp.role);
+  function lockedElsewhere(emp){ const l = readLock(emp); return (lockApplies(emp) && l && l.key !== DEVICE_KEY && lockFresh(l)) ? l : null; }
+  function claimSession(emp){ emp = liveEmployee(emp); if(!emp || !lockApplies(emp)) return; emp.sessionLock = JSON.stringify([DEVICE_KEY, describeThisDevice().name, new Date().toISOString()]); persistAureum(); }
   function releaseSession(emp){ emp = liveEmployee(emp); const l = readLock(emp); if(emp && l && l.key === DEVICE_KEY){ emp.sessionLock = JSON.stringify([DEVICE_KEY, l.name, new Date().toISOString(), 1]); persistAureum(); try{ AureumSync.whenSaved(6000); }catch(e){} } }   // a 'released' marker (not null) so the sign-out is an ordinary change that every device picks up at once
   // Another device now holds this account: leave the till here (never mid-sale: nothing is charged by a device that lost the account).
   function sessionLost(l){
@@ -4079,14 +4097,23 @@ async function restoreOnlineSession(){
     try{ aureumToast(`${who} was signed in on another device (${l.name}) — you've been signed out here.`, 'danger'); }catch(e){}
     signOutOfTill();
   }
-  function checkSessionStillMine(){
+  /* A till is only signed out when another device has really taken the account: it must be seen on two checks at least 25 s apart
+     (a passing sync oddity never ejects anyone), and never in the middle of a sale — the cashier finishes the ticket first.
+     strict = the moment of charging: nothing is charged by a device that has lost the account. */
+  let _lostSince = 0;
+  function checkSessionStillMine(strict){
     if(!activeEmployee) return true;
     const l = lockedElsewhere(liveEmployee(activeEmployee));
-    if(l){ sessionLost(l); return false; }
-    return true;
+    if(!l){ _lostSince = 0; return true; }
+    if(strict){ sessionLost(l); return false; }
+    if(!_lostSince){ _lostSince = Date.now(); return true; }
+    if(Date.now() - _lostSince < 25000) return true;
+    if(Object.keys(cart).length || ticketBeingEdited()){ if(!checkSessionStillMine._warned){ checkSessionStillMine._warned = true; try{ aureumToast(`${activeEmployee.name} is now signed in on ${l.name}. Finish this sale — you will be signed out after it.`, 'danger'); }catch(e){} } return true; }
+    checkSessionStillMine._warned = false; _lostSince = 0;
+    sessionLost(l); return false;
   }
   setInterval(() => {
-    if(!activeEmployee || !oneDeviceOn() || document.hidden) return;
+    if(!activeEmployee || !lockApplies(liveEmployee(activeEmployee)) || document.hidden) return;
     if(checkSessionStillMine()) claimSession(activeEmployee);      // still mine (or free / stale): refresh the "last seen" time
   }, 60 * 1000);
   /* the till starts every ticket on the tax rate saved in Back Office → Settings → Taxes (the cashier cannot change it) */
@@ -4366,7 +4393,7 @@ async function restoreOnlineSession(){
     _uiGuardUntil = Date.now() + 900; _cardDown = null;
     activeShop = shopName;
     activeEmployee = employee;
-    if(oneDeviceOn()) claimSession(employee);
+    if(lockApplies(employee)) claimSession(employee);
     checkInDevice();
     let sh = findOpenShift(shopName, employee);
     if(!sh){

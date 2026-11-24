@@ -1,5 +1,12 @@
 # Changelog
 
+## v93 — fewer sign-outs, stock control on by default, per-shop import/export, typed dates, one-line categories
+- **Till sign-outs (urgent):** the one-device rule now applies to cashier accounts only — shop managers and administrators (who often share a login across tills) are never signed out by it. A till is only signed out after another device has held the account for at least 25 seconds, and never in the middle of a sale: the cashier is told to finish the ticket and is signed out after it. If it still happens, switch the rule off in Settings → Users & Permissions → "One device per staff account".
+- **New products start with Stock control ON** (the quantity box is open); switch it off for items you don't count.
+- **Import:** choose which shop the products go into — one shop or all shops. **Export:** every list with a shop filter now asks which shop (or all) before exporting.
+- **Date filters everywhere:** the Start and End dates can be typed (YYYY/MM/DD, also DD/MM/YYYY, YYYY-MM-DD…) as well as picked on the calendar; bad or future dates are refused with a message, and Enter applies.
+- **Till categories** stay on one line and scroll sideways (finger, mouse wheel or drag) instead of wrapping into rows.
+
 ## v92 — one date range for Sales by Category, values on the sales bars, offline start in the Play apps
 - **Sales by Category** no longer has its own period picker: it follows the date range, time of day and shop filters at the top of Sales by Product. Its category box stays.
 - **Dashboard bar chart:** the Net sales value is written on top of each bar (e.g. $1.3K, $87.25). On busy ranges the biggest bars are labelled first and any label that would touch another is left out, so it stays tidy; the full figure is still in the tooltip.
