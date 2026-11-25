@@ -1,5 +1,11 @@
 # Changelog
 
+## v95 — offline readiness for the till
+- The Play POS app always remembers the account sign-in, so the stored offline sign-in is never wiped (the "Keep me signed in" box can no longer switch it off inside the app).
+- The till checks whether this device is ready to work with no internet (saved copy of the app + stored sign-in and data). It tells you once ("This device is ready to work offline") and shows it on the Sync pill's tooltip.
+- The till asks Android/Chrome to keep its storage permanently so the saved copy and data are never cleared to make room.
+- Cold start with no internet still needs the v92 Android build (web view serves its saved copy).
+
 ## v94 — shop label, date typing on tablets, Shop column in imports
 - **Till:** the shop name next to Sync is now a plain gold label — it no longer looks or acts like a button (Shift keeps its own button).
 - **Date filters:** typing a date no longer vanishes. On phones and tablets the on-screen keyboard opening or changing size used to close the date pop-up and throw away what was typed; it now stays open.

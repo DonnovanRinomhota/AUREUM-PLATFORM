@@ -1311,7 +1311,9 @@
   const sb = supaReady ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth:{ storage: AUREUM_AUTH_STORAGE, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }) : null;
   function applyRememberChoice(email){
     const box = document.getElementById('authRemember');
-    const remember = !box || box.checked;
+    /* The installed Play app always remembers the sign-in, so the till can start with no internet (like any till app). */
+    let inApp = false; try{ if(/[?&]store=1/.test(location.search)) localStorage.setItem('aureum.storeApp', '1'); inApp = localStorage.getItem('aureum.storeApp') === '1' || !!window.AureumNative; }catch(e){}
+    const remember = !box || box.checked || inApp;
     try{
       if(remember){
         sessionStorage.removeItem('aureum_session_only');
@@ -4871,6 +4873,25 @@ async function restoreOnlineSession(){
 /* Offline support: installs /sw.js (https only). The app works the same without it. */
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+  /* "Ready for offline" check. Once the saved copy of the app is on this device and the sign-in/data are stored, the till can be
+     opened with no internet at all. Shown on the Sync pill (hover/long-press) and announced once. Also asks the browser to keep
+     this storage permanently so it is never cleared to make room. */
+  window.addEventListener('load', function(){
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+    var check = function(attempt){
+      Promise.all([ navigator.serviceWorker.ready, caches.keys() ]).then(function(r){
+        return Promise.all(r[1].map(function(k){ return caches.open(k).then(function(c){ return c.match('/pos-checkout.html'); }); }));
+      }).then(function(hits){
+        var shell = hits.some(Boolean), data = !!(localStorage.getItem('aureum_offline_auth_v1') && localStorage.getItem('aureum_pos_profile_v1'));
+        window.AureumOfflineReady = { shell: shell, data: data, ready: shell && data };
+        var el = document.getElementById('syncStatus');
+        if(el){ el.dataset.offline = (shell && data) ? 'ready' : 'preparing'; el.title = (shell && data) ? 'Sync status — this device is ready to work with no internet' : 'Sync status — preparing offline mode: stay online and signed in for a minute'; }
+        if(shell && data && !localStorage.getItem('aureum.offlineAnnounced')){ localStorage.setItem('aureum.offlineAnnounced', '1'); try{ aureumToast('This device is ready to work offline.', 'ok'); }catch(e){} }
+        else if(!(shell && data) && attempt < 6) setTimeout(function(){ check(attempt + 1); }, 10000);
+      }).catch(function(){});
+    };
+    setTimeout(function(){ check(0); }, 4000);
+  });
 }
 </script>
 <script src="/guide.js"></script>
