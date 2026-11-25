@@ -4634,7 +4634,16 @@ const AureumSync = (function(){
     }
     closeAllPopovers();
   });
-  window.addEventListener('resize', closeAllPopovers);
+  /* Close pop-ups when the window really changes size. A phone/tablet on-screen keyboard also fires 'resize' (height only) every
+     time it opens, closes or its suggestion bar changes — that used to close the date pop-up while a date was being typed and
+     throw the typing away. So: ignore height-only changes, and never close while a box inside a pop-up has the cursor. */
+  let _lastWinW = window.innerWidth;
+  window.addEventListener('resize', () => {
+    const ae = document.activeElement;
+    if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest('.popover')) return;
+    if(window.innerWidth === _lastWinW) return;
+    _lastWinW = window.innerWidth; closeAllPopovers();
+  });
 
   /* ===== DATE RANGE POPOVER — generic, reusable per page =====
      Starts collapsed showing just "Today"; the presets/calendar only
@@ -9166,16 +9175,39 @@ const AureumSync = (function(){
       return int ? Math.round(v.value) : Math.round((v.value + Number.EPSILON) * 100) / 100;
     };
     if(m.name < 0) return plan;
+    plan.badShops = []; plan.badShopRows = 0; plan.merged = 0;
+    const readyByKey = new Map();
+    /* The Shop column: "All" (or "All Shops") = every shop; otherwise one or more shop names separated by , ; or /. Blank = the shop chosen in the dialog. */
+    const parseShopCell = cell => {
+      const raw = String(cell || '').trim(); if(!raw) return { blank:true, shops:[], bad:[] };
+      const toks = raw.split(/[,;\/|]+/).map(x => x.trim()).filter(Boolean);
+      if(toks.some(t => /^(all|all shops|every shop|\*)$/i.test(t))) return { blank:false, all:true, shops:[...SHOPS], bad:[] };
+      const shops = [], bad = [];
+      toks.forEach(t => { const hit = SHOPS.find(sh => sh.toLowerCase() === t.toLowerCase()); if(hit){ if(!shops.includes(hit)) shops.push(hit); } else bad.push(t); });
+      return { blank:false, shops, bad };
+    };
     for(const r of impDataRows()){
       const name = impClean(r[m.name]);
       if(!name){ plan.noName++; continue; }
       const key = impNameKey(name);
+      const sc = parseShopCell(m.shops > -1 ? r[m.shops] : '');
+      sc.bad.forEach(b => { if(!plan.badShops.includes(b)) plan.badShops.push(b); });
+      if(!sc.blank && !sc.shops.length){ plan.badShopRows++; continue; }               // it names only shops that don't exist: skipped and reported
       if(existing.has(key) && !seenExisting.has(key)){      // already in the system: remember its quantity from the file so the person can choose to adjust it
         seenExisting.add(key);
         const raw = m.stock > -1 ? impNumber(r[m.stock]) : { empty:true };
         const hasQty = m.stock > -1 && !raw.empty && !raw.bad && raw.value >= 0;
-        plan.existing.push({ p: existingByKey.get(key), name, hasQty, qty: hasQty ? Math.round(raw.value) : 0 });
+        plan.existing.push({ p: existingByKey.get(key), name, hasQty, qty: hasQty ? Math.round(raw.value) : 0, shop: (!sc.blank && sc.shops.length === 1) ? sc.shops[0] : '' });
         continue;
+      }
+      if(seen.has(key) && !existing.has(key) && !sc.blank){          // the same product on another row for a different shop: one product, stock kept per shop
+        const hit = readyByKey.get(key);
+        if(hit && sc.shops.some(sh => !hit.shops.includes(sh))){
+          const qty = num(r, m.stock, 'Stock', true), only = sc.shops.length === 1 ? sc.shops[0] : '';
+          sc.shops.forEach(sh => { if(!hit.shops.includes(sh)) hit.shops.push(sh); });
+          if(only && qty > 0){ hit.stockBy = hit.stockBy || {}; hit.stockBy[only] = (hit.stockBy[only] || 0) + qty; }
+          plan.merged++; continue;
+        }
       }
       if(existing.has(key) || seen.has(key)){ plan.dups.push(name); continue; }
       seen.add(key);
@@ -9183,24 +9215,27 @@ const AureumSync = (function(){
       if(code && usedCodes.has(code.toLowerCase())){ plan.codeClash++; code = ''; }
       if(!code){ let n = maxCode + 1; while(usedCodes.has(String(n))) n++; code = String(n); maxCode = n; }
       usedCodes.add(code.toLowerCase());
-      const shopsCell = m.shops > -1 ? impClean(r[m.shops]) : '';
-      plan.ready.push({
+      const entry = {
         name, code,
         category: m.category > -1 ? (impClean(r[m.category]) || 'Others') : 'Others',
         price: num(r, m.price, 'Price', false), cost: num(r, m.cost, 'Cost', false), stock: num(r, m.stock, 'Stock', true),
         barcode: m.barcode > -1 ? impClean(r[m.barcode]) : '', description: m.description > -1 ? impClean(r[m.description]) : '',
-        shops: shopsCell && shopsCell.toLowerCase() !== 'all shops' ? shopsCell.split(/[,;]/).map(x => x.trim()).filter(x => SHOPS.includes(x)) : []
-      });
+        shops: sc.blank ? [] : sc.shops, explicit: !sc.blank, stockBy: null
+      };
+      if(entry.explicit && sc.shops.length === 1 && entry.stock > 0){ entry.stockBy = { [sc.shops[0]]: entry.stock }; }
+      plan.ready.push(entry); readyByKey.set(key, entry);
     }
     return plan;
   }
 
-  function impTemplateRows(){ return [['Product Name','Category','Price','Cost','Stock'], ['Sparkling Water 500ml','Beverages',1.25,0.6,120], ['Sea Salt Crackers','Snacks',2.1,1.05,90]]; }
+  function impTemplateRows(){
+    if(SHOPS.length > 1) return [['Product Name','Category','Price','Cost','Stock','Shop'], ['Sparkling Water 500ml','Beverages',1.25,0.6,120,'All'], ['Sea Salt Crackers','Snacks',2.1,1.05,90,SHOPS[0]], ['Sea Salt Crackers','Snacks',2.1,1.05,40,SHOPS[1]]];
+    return [['Product Name','Category','Price','Cost','Stock'], ['Sparkling Water 500ml','Beverages',1.25,0.6,120], ['Sea Salt Crackers','Snacks',2.1,1.05,90]]; }
   function impDownloadTemplate(kind){
     const rows = impTemplateRows();
     if(kind === 'xlsx'){
       const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols'] = [{ wch:28 }, { wch:16 }, { wch:10 }, { wch:10 }, { wch:10 }];
+      ws['!cols'] = [{ wch:28 }, { wch:16 }, { wch:10 }, { wch:10 }, { wch:10 }, { wch:18 }];
       XLSX.utils.book_append_sheet(wb, ws, 'Products');
       XLSX.writeFile(wb, 'AUREUM-product-import-template.xlsx');
     } else {
@@ -9213,6 +9248,7 @@ const AureumSync = (function(){
   const IMP_HELP = `<div class="imp-help">
       <p>Choose an <b>Excel</b> or <b>CSV</b> file. The only thing every row needs is a <b>Product Name</b>.</p>
       <p>These columns are optional: <b>Category</b>, <b>Price</b>, <b>Cost</b> and <b>Stock</b>. Leave out any you don't have.</p>
+      ${SHOPS.length > 1 ? `<p><b>Which shop?</b> Add a <b>Shop</b> column: write <b>All</b>, or the shop name (<i>${escHtml(SHOPS.slice(0, 2).join('</i>, <i>'))}</i>…), or several names with commas. To give different stock per shop, put the same product on one row per shop. A blank Shop uses the shop you pick on the next step. Exported product lists already have this column.</p>` : ''}
       <p>A <b>product code is created automatically</b> for every product. Your column headings can be anything — you can match them yourself on the next step.</p>
     </div>`;
   function impShow(title, bodyHtml, actionsHtml){
@@ -9251,6 +9287,9 @@ const AureumSync = (function(){
         : `<p class="imp-exist-q">${m.stock < 0 ? 'No Stock column is matched, so they are' : 'The file has no usable quantity for them, so they are'} skipped and not imported again.</p>`}
       </div>` : '';
 
+    if(plan.badShopRows) warn.push(`${plan.badShopRows} row${plan.badShopRows === 1 ? '' : 's'} skipped — the Shop column names a shop that doesn't exist (${escHtml(plan.badShops.slice(0, 3).join(', '))}). Your shops: ${escHtml(SHOPS.join(', '))}.`);
+    else if(plan.badShops.length) warn.push(`Unknown shop name${plan.badShops.length === 1 ? '' : 's'} ignored: ${escHtml(plan.badShops.slice(0, 3).join(', '))}.`);
+    if(plan.merged) warn.push(`${plan.merged} row${plan.merged === 1 ? '' : 's'} for the same product in another shop were combined into one product.`);
     if(plan.noName) warn.push(`${plan.noName} row${plan.noName === 1 ? '' : 's'} with no product name — skipped`);
     if(plan.badPrice) warn.push(`${plan.badPrice} price${plan.badPrice === 1 ? '' : 's'} couldn't be read — set to 0`);
     if(plan.badCost) warn.push(`${plan.badCost} cost${plan.badCost === 1 ? '' : 's'} couldn't be read — set to 0`);
@@ -9261,9 +9300,9 @@ const AureumSync = (function(){
       <div class="imp-file"><b>${escHtml(imp.fileName)}</b>${imp.sheetName ? ` · sheet “${escHtml(imp.sheetName)}”` : ''} · ${impDataRows().length} row${impDataRows().length === 1 ? '' : 's'} <a href="#" id="impAnother">Choose another file</a></div>
       <label class="imp-check"><input type="checkbox" id="impHasHeader" ${imp.hasHeader ? 'checked' : ''}> The first row contains column headings</label>
       <div class="form-section-title" style="margin-top:14px;">Match your columns</div>
-      <table class="imp-map">${IMP_FIELDS.map(f => `<tr><td class="l">${f.label}${f.required ? ' *' : ''}</td><td><select class="modal-field imp-sel" data-key="${f.key}" aria-label="Column for ${f.label}">${opts(m[f.key])}</select></td><td class="s">${status(f)}</td></tr>`).join('')}</table>
+      <table class="imp-map">${[...IMP_FIELDS, ...(SHOPS.length > 1 ? [{ key:'shops', label:'Shop' }] : [])].map(f => `<tr><td class="l">${f.label}${f.required ? ' *' : ''}</td><td><select class="modal-field imp-sel" data-key="${f.key}" aria-label="Column for ${f.label}">${opts(m[f.key])}</select></td><td class="s">${status(f)}</td></tr>`).join('')}</table>
       ${extras.length ? `<div class="imp-extras">Also found and imported: ${extras.join(', ')}.</div>` : ''}
-      ${SHOPS.length > 1 ? `<div class="imp-stockshop"><label>Import these products into <select class="modal-field" id="impTarget" aria-label="Shop to import into"><option value="all" ${imp.target === 'all' ? 'selected' : ''}>All shops</option>${SHOPS.map(sh => `<option value="${escHtml(sh)}" ${sh === imp.target ? 'selected' : ''}>${escHtml(sh)} only</option>`).join('')}</select></label></div>` : ''}
+      ${SHOPS.length > 1 ? `<div class="imp-stockshop"><label>Rows with no Shop go into <select class="modal-field" id="impTarget" aria-label="Shop to import into"><option value="all" ${imp.target === 'all' ? 'selected' : ''}>All shops</option>${SHOPS.map(sh => `<option value="${escHtml(sh)}" ${sh === imp.target ? 'selected' : ''}>${escHtml(sh)} only</option>`).join('')}</select></label></div>` : ''}
       ${hasStock && SHOPS.length ? `<div class="imp-stockshop"><label>Add the stock to <select class="modal-field" id="impStockShop" ${multi ? '' : 'disabled'}>${SHOPS.map(sh => `<option ${sh === imp.stockShop ? 'selected' : ''}>${escHtml(sh)}</option>`).join('')}</select></label></div>` : ''}
       ${existPanel}
       <div class="imp-sum ${(ready.length || adjustCount) ? 'good' : 'none'}">${m.name < 0 ? 'Choose which column holds the <b>Product Name</b> to continue.' : (ready.length || adjustCount) ? `${ready.length ? `✓ <b>${ready.length}</b> new product${ready.length === 1 ? '' : 's'} ready to import — a product code will be created for each` : ''}${ready.length && adjustCount ? '<br>' : ''}${adjustCount ? `✓ <b>${adjustCount}</b> existing product${adjustCount === 1 ? '' : 's'} will have ${adjustCount === 1 ? 'its' : 'their'} quantity ${imp.adjust === 'add' ? 'increased' : 'updated'}` : ''}` : 'Nothing new to import from this file.'}</div>
@@ -9284,7 +9323,7 @@ const AureumSync = (function(){
     let added = 0, adjusted = 0;
     if(imp.adjust !== 'no'){                              // the person chose to adjust the quantities of products that already exist
       plan.existing.filter(e => e.hasQty && e.p && e.p.stockControl !== false).forEach(e => {
-        const target = SHOPS.includes(shopFor) ? shopFor : SHOPS[0]; if(!target) return;
+        const target = (e.shop && SHOPS.includes(e.shop)) ? e.shop : (SHOPS.includes(shopFor) ? shopFor : SHOPS[0]); if(!target) return;
         const before = stockSnapshot(e.p);
         if(imp.adjust === 'add') addStock(e.p, target, e.qty); else setStock(e.p, target, e.qty);
         logProductStockChanges(e.p, before, imp.adjust === 'add' ? 'Import (added to stock)' : 'Import (quantity set)');
@@ -9292,12 +9331,12 @@ const AureumSync = (function(){
       });
     }
     plan.ready.forEach(r => {
-      const shops = (imp.target && imp.target !== 'all' && SHOPS.includes(imp.target)) ? [imp.target] : (r.shops.length ? r.shops : [...SHOPS]);
+      const shops = r.shops.length ? r.shops.slice() : ((imp.target && imp.target !== 'all' && SHOPS.includes(imp.target)) ? [imp.target] : [...SHOPS]);
       const prod = { id: nextProductId++, name: r.name, price: r.price, cost: r.cost, cat: r.category, stock: r.stock, image:null, code: r.code, barcode: r.barcode, soldBy:'each', description: r.description, shops, stockControl:true, taxable: POS_SETTINGS.taxDefaultOnNewProducts !== false };
       if(shops.length){                                   // stock belongs to ONE shop — the one chosen — not shared across them
         const ss = {}; shops.forEach(sh => { ss[sh] = 0; });
-        const dest = shops.includes(shopFor) ? shopFor : shops[0];
-        if(r.stock > 0) ss[dest] = r.stock;
+        if(r.stockBy){ Object.keys(r.stockBy).forEach(sh => { if(ss[sh] !== undefined) ss[sh] = r.stockBy[sh]; }); }       // the file said which shop each quantity belongs to
+        else { const dest = shops.includes(shopFor) ? shopFor : shops[0]; if(r.stock > 0) ss[dest] = r.stock; }
         prod.shopStock = ss;
       }
       PRODUCTS.push(prod); added++;

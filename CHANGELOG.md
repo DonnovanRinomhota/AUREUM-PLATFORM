@@ -1,5 +1,10 @@
 # Changelog
 
+## v94 — shop label, date typing on tablets, Shop column in imports
+- **Till:** the shop name next to Sync is now a plain gold label — it no longer looks or acts like a button (Shift keeps its own button).
+- **Date filters:** typing a date no longer vanishes. On phones and tablets the on-screen keyboard opening or changing size used to close the date pop-up and throw away what was typed; it now stays open.
+- **Import with several shops:** add a **Shop** column — `All`, one shop name, or several separated by commas. Put the same product on one row per shop to give each shop its own stock; those rows are combined into one product. A blank Shop uses the shop chosen in the import window; a shop name that doesn't exist is skipped and reported. Exported product lists already have a Shops column, and the import template now includes one.
+
 ## v93 — fewer sign-outs, stock control on by default, per-shop import/export, typed dates, one-line categories
 - **Till sign-outs (urgent):** the one-device rule now applies to cashier accounts only — shop managers and administrators (who often share a login across tills) are never signed out by it. A till is only signed out after another device has held the account for at least 25 seconds, and never in the middle of a sale: the cashier is told to finish the ticket and is signed out after it. If it still happens, switch the rule off in Settings → Users & Permissions → "One device per staff account".
 - **New products start with Stock control ON** (the quantity box is open); switch it off for items you don't count.
