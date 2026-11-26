@@ -4872,7 +4872,7 @@ async function restoreOnlineSession(){
 <script>
 /* Offline support: installs /sw.js (https only). The app works the same without it. */
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+  navigator.serviceWorker.register('/sw.js').catch(function(){});        // as early as possible, so the saved copy is in place after the very first visit
   /* "Ready for offline" check. Once the saved copy of the app is on this device and the sign-in/data are stored, the till can be
      opened with no internet at all. Shown on the Sync pill (hover/long-press) and announced once. Also asks the browser to keep
      this storage permanently so it is never cleared to make room. */

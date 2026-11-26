@@ -1,5 +1,10 @@
 # Changelog
 
+## v96 — fix: the "Saved" pop-up for stock adjustments, orders, GRNs and transfers
+- **Bug fixed (introduced in v87):** a second function with the same name replaced the "Saved" pop-up, so after Save the page looked frozen, people clicked again, and the adjustment was saved several times. The pop-up is back for Stock Adjustments, Purchase Orders, Goods Received Notes and Stock Transfers. Product saving keeps its own toast.
+- The "saved on this device but has not reached the server yet" message is now red only when the server is really failing or the device is offline; a merely slow save shows a calm "still being sent" note.
+- Offline: the saved copy now also answers when the app opens with `?app=pos` / `app=bo` and the exact page isn't found; the service worker is registered as early as possible.
+
 ## v95 — offline readiness for the till
 - The Play POS app always remembers the account sign-in, so the stored offline sign-in is never wiped (the "Keep me signed in" box can no longer switch it off inside the app).
 - The till checks whether this device is ready to work with no internet (saved copy of the app + stored sign-in and data). It tells you once ("This device is ready to work offline") and shows it on the Sync pill's tooltip.

@@ -7,7 +7,7 @@
      • it never touches your data. Anything going to Supabase, Stripe, Paynow or any other site (and every
        non-GET request) is left completely alone — data is kept offline by the app itself, not by this file.
    Bump VERSION on each release so old copies are cleared. */
-const VERSION = 'aureum-v95';
+const VERSION = 'aureum-v96';
 const SHELL = [
   '/offline.html', '/backoffice.html', '/pos-checkout.html', '/labels.js', '/viewonly.js', '/fiscal/flag.js', '/fiscal/fiscal-core.js', '/fiscal/profiles.js', '/fiscal/countries/generic.js', '/fiscal/devices/local-connector.js',
   '/a11y.js', '/noautofill.js', '/native-bridge.js', '/safe-html.js', '/countries.js', '/guide.js', '/guide-pos.js', '/guide-bo.js', '/fiscal/countries/zw.js', '/fiscal/devices/zw-virtual-fdms.js',
@@ -52,7 +52,13 @@ async function networkFirst(request, url){
   }catch(err){
     const saved = (await cache.match(url.origin + url.pathname)) || (url.pathname === '/' ? await cache.match(url.origin + '/backoffice.html') : null);
     if(saved) return saved;
-    if(request.mode === 'navigate') return (await cache.match('/offline.html')) || Response.error();
+    if(request.mode === 'navigate'){
+      // the installed apps open /pos-checkout.html?...&app=pos (or app=bo): if that exact page isn't found, still start the right app
+      const app = url.searchParams.get('app');
+      const own = app === 'pos' ? await cache.match(url.origin + '/pos-checkout.html') : (app === 'bo' || app === 'backoffice') ? await cache.match(url.origin + '/backoffice.html') : null;
+      if(own) return own;
+      return (await cache.match('/offline.html')) || Response.error();
+    }
     return Response.error();
   }
 }

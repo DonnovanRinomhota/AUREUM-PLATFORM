@@ -5953,12 +5953,15 @@ const AureumSync = (function(){
     renderAlerts();
     switchToProductList();
     persistAureum();
-    confirmSaved('Product "' + name + '"');
+    confirmProductSaved('Product "' + name + '"');
   });
   // "Saved" is only said once the server really has it; otherwise the person is told it is waiting (and it keeps retrying).
-  function confirmSaved(what){
-    AureumSync.whenSaved(8000).then(ok => {
-      try{ aureumToast(ok ? what + ' saved.' : what + ' is saved on this device but has not reached the server yet — it keeps retrying. Check the sync indicator before closing.', ok ? 'ok' : 'danger'); }catch(e){}
+  function confirmProductSaved(what){      // (own name: a second function called confirmSaved replaced the "Saved" pop-up used by stock adjustments, orders, GRNs and transfers)
+    AureumSync.whenSaved(15000).then(ok => {
+      /* Red only when the server really is failing or the device is offline. A save that is merely slow is not an error: say so calmly. */
+      let st = ''; try{ st = AureumSync.status().state; }catch(e){}
+      const failing = !ok && (st === 'error' || st === 'offline');
+      try{ aureumToast(ok ? what + ' saved.' : (failing ? what + ' is saved on this device but has not reached the server yet — it keeps retrying. Check the sync indicator before closing.' : what + ' is saved on this device and is still being sent — it will finish in a moment.'), ok ? 'ok' : (failing ? 'danger' : 'ok')); }catch(e){}
     });
   }
 
