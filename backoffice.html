@@ -1561,7 +1561,7 @@
             </div>
             <div>
               <div class="field-label">Barcode (Optional)</div>
-              <input type="text" id="pfBarcode" class="modal-field" placeholder="Scan or type a barcode">
+              <div style="display:flex;gap:6px;"><input type="text" id="pfBarcode" class="modal-field" placeholder="Scan or type a barcode" style="flex:1;min-width:0;"><div class="btn-ghost-sm" id="pfBarcodeGen" role="button" tabindex="0" title="Make a store barcode (starts with 2)" style="white-space:nowrap;align-self:center;">Generate</div></div>
             </div>
             <div style="grid-column:1/-1;">
               <div class="field-label">Description (Optional)</div>
@@ -3179,6 +3179,8 @@
     </div>
     <div class="modal-actions">
       <div class="modal-btn ghost" data-close="labelsModal" role="button" tabindex="0">Close</div>
+      <div class="modal-btn ghost" id="lblCsvBtn" role="button" tabindex="0">Download list (CSV)</div>
+      <div class="modal-btn ghost" id="lblDlBtn" role="button" tabindex="0">Download labels (HTML)</div>
       <div class="modal-btn ghost" id="lblOpenBtn" role="button" tabindex="0">Open in new tab</div>
       <div class="modal-btn solid" id="lblPrintBtn" role="button" tabindex="0">Print labels</div>
     </div>
@@ -6069,7 +6071,7 @@ const AureumSync = (function(){
       const missing = noCode.filter(i => !i.value), invalid = noCode.filter(i => i.value);
       if(missing.length){
         html += `<div class="lbl-warn">${missing.length} product${missing.length === 1 ? ' has' : 's have'} no ${src === 'sku' ? 'SKU' : 'barcode'} (${escHtml(missing.slice(0, 3).map(i => i.name).join(', '))}${missing.length > 3 ? '…' : ''}) — ${missing.length === 1 ? 'it prints' : 'they print'} without a barcode.` +
-          (src === 'barcode' ? ` <br><button type="button" class="btn-ghost-sm" id="lblGenBtn">Create ${missing.length} barcode${missing.length === 1 ? '' : 's'} for ${missing.length === 1 ? 'it' : 'them'}</button> <span class="lbl-note">Makes our own store numbers (they start with 2, so they never clash with a maker's barcode) and saves them on the products.</span>` : '') + '</div>';
+          ((src === 'barcode' || src === 'either') ? ` <br><button type="button" class="btn-ghost-sm" id="lblGenBtn">Create ${missing.length} barcode${missing.length === 1 ? '' : 's'} for ${missing.length === 1 ? 'it' : 'them'}</button> <span class="lbl-note">Makes our own store numbers (they start with 2, so they never clash with a maker's barcode) and saves them on the products.</span>` : '') + '</div>';
       }
       if(invalid.length) html += `<div class="lbl-warn bad">${invalid.length} product${invalid.length === 1 ? '' : 's'} ${invalid.length === 1 ? 'has a code' : 'have codes'} that can't be a barcode: ${escHtml(invalid.slice(0, 3).map(i => i.name + ' (' + i.barcode.error + ')').join('; '))}${invalid.length > 3 ? '…' : ''}. Fix ${invalid.length === 1 ? 'it' : 'them'} on the product, or ${invalid.length === 1 ? 'it prints' : 'they print'} without a barcode.</div>`;
     }
@@ -6091,15 +6093,31 @@ const AureumSync = (function(){
     pids.forEach(pid => { if(!lbl.rows.some(r => r.pid === pid)){ lbl.rows.push({ pid, qty: Math.max(1, qtyFor ? qtyFor(pid) : 1) }); added++; } });
     return added;
   }
+  function nextStoreBarcode(extraUsed){
+    const used = new Set(extraUsed || []); let maxSerial = 0;
+    PRODUCTS.forEach(p => [p.barcode, p.code].forEach(c => { c = String(c || '').trim(); if(c) used.add(c); if(/^2\d{12}$/.test(c) && AureumLabels.validEan(c, 13)) maxSerial = Math.max(maxSerial, +c.slice(1, 12)); }));
+    let c; do{ maxSerial++; c = AureumLabels.makeInternalEan(maxSerial); }while(used.has(c));
+    return c;
+  }
+  (function(){ const b = document.getElementById('pfBarcodeGen'); if(!b) return; const go = () => { const f = document.getElementById('pfBarcode'); if(f.value.trim() && !confirm('Replace the current barcode?')) return; f.value = nextStoreBarcode(); aureumToast('Barcode made — press Save product to keep it.', 'ok'); };
+    b.addEventListener('click', go); b.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } }); })();
+  function lblDownload(name, mime, text){ const url = URL.createObjectURL(new Blob([text], { type: mime })); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
+  function lblCsv(){
+    const rows = [['Product','Barcode','SKU','Price','Labels']];
+    lbl.rows.forEach(r => { const p = PRODUCTS.find(x => x.id === r.pid); if(p) rows.push([p.name, p.barcode || '', p.code || '', p.price, r.qty]); });
+    if(rows.length < 2){ aureumToast('Add products to the list first.', 'danger'); return; }
+    lblDownload('barcodes-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv', '\ufeff' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n'));
+  }
+  function lblDownloadHtml(){
+    if(lblEl('lblPrintBtn').classList.contains('is-disabled')){ aureumToast('Add products to the list first.', 'danger'); return; }
+    lblDownload('labels-' + new Date().toISOString().slice(0, 10) + '.html', 'text/html', lblPrintHtml());
+  }
   function lblGenerate(){
     const btn = lblEl('lblGenBtn'); if(!btn) return;
     if(btn.dataset.sure !== '1'){ btn.dataset.sure = '1'; btn.textContent = 'Yes — create and save them'; return; }
-    const used = new Set(); let maxSerial = 0;
-    PRODUCTS.forEach(p => [p.barcode, p.code].forEach(c => { c = String(c || '').trim(); if(c) used.add(c); if(/^2\d{12}$/.test(c) && AureumLabels.validEan(c, 13)) maxSerial = Math.max(maxSerial, +c.slice(1, 12)); }));
-    let n = 0;
+    let n = 0; const made = [];
     lbl.rows.forEach(r => { const p = PRODUCTS.find(x => x.id === r.pid); if(!p || String(p.barcode || '').trim()) return;
-      let c; do{ maxSerial++; c = AureumLabels.makeInternalEan(maxSerial); }while(used.has(c));
-      used.add(c); p.barcode = c; n++; });
+      const c = nextStoreBarcode(made); made.push(c); p.barcode = c; n++; });
     if(n){ try{ persistAureum(); }catch(e){} try{ renderProducts(); }catch(e){} aureumToast(n + ' barcode' + (n === 1 ? '' : 's') + ' created and saved on the product' + (n === 1 ? '' : 's') + '.', 'ok'); }
     lblRefresh();
   }
@@ -6173,7 +6191,7 @@ const AureumSync = (function(){
     lblEl('lblBySup').addEventListener('change', function(){ if(!this.value) return; const set = lblSuppliers()[this.value] || new Set(); const n = lblAdd([...set]); this.value = ''; aureumToast(n ? n + ' product' + (n === 1 ? '' : 's') + ' added.' : 'Those products are already in the list.', n ? 'ok' : undefined); lblRefresh(); });
     act('lblSetAll', () => { lbl.rows.forEach(r => r.qty = 1); lblRefresh(); });
     act('lblClear', () => { lbl.rows = []; lblRefresh(); });
-    act('lblPrintBtn', lblPrint); act('lblOpenBtn', lblOpenTab);
+    act('lblPrintBtn', lblPrint); act('lblOpenBtn', lblOpenTab); act('lblCsvBtn', lblCsv); act('lblDlBtn', lblDownloadHtml);
     act('productLabelsBtn', () => {
       // Products screen: ticked products, else what the list shows, 1 label each — or start empty if there are very many
       // Starts with ONLY the products you ticked in the list; if none are ticked it starts empty (search or add a category / supplier inside)

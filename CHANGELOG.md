@@ -1,5 +1,10 @@
 # Changelog
 
+## v97 — fix: generated barcodes now save on the product; barcodes can be downloaded
+- **Bug fixed:** "Create barcodes" only appeared when *Barcode from* was set to "Barcode", so on the default setting ("Barcode, else SKU") nothing could be generated. It now appears there too and saves the numbers on the products.
+- New **Generate** button beside the Barcode field on the product form (press Save product to keep it).
+- Print labels: **Download list (CSV)** (product, barcode, SKU, price) and **Download labels (HTML)** (open it and print/save as PDF).
+
 ## v96 — fix: the "Saved" pop-up for stock adjustments, orders, GRNs and transfers
 - **Bug fixed (introduced in v87):** a second function with the same name replaced the "Saved" pop-up, so after Save the page looked frozen, people clicked again, and the adjustment was saved several times. The pop-up is back for Stock Adjustments, Purchase Orders, Goods Received Notes and Stock Transfers. Product saving keeps its own toast.
 - The "saved on this device but has not reached the server yet" message is now red only when the server is really failing or the device is offline; a merely slow save shows a calm "still being sent" note.
